@@ -261,9 +261,9 @@ function initMapLayers() {
         "filter": ["==", "$type", "LineString"],
     });
 
-    // Cycleway lines
+    // Cycleway solid lines
     map.addLayer({
-        "id": "cycleways",
+        "id": "cycleways-lines",
         "type": "line",
         "source": "osm",
         "layout": {
@@ -296,8 +296,6 @@ function initMapLayers() {
                 ["==", ["get", "cycleway"], "share_busway"], "yellow",
                 ["==", ["get", "cycleway"], "shared"], "yellow",
 
-                ["==", ["get", "maxspeed"], "30"], "yellow",
-
                 "red"
             ],
             "line-width": [
@@ -311,7 +309,31 @@ function initMapLayers() {
         "filter": ["==", "$type", "LineString"],
     });
 
-    map.on("mousemove", "cycleways", function (e) {
+    // Cycleway solid lines
+    map.addLayer({
+        "id": "cycleways-dashedlines",
+        "type": "line",
+        "source": "osm",
+        "paint": {
+            "line-color": [
+                "case",
+                    ["==", ["get", "maxspeed"], "30"], "lightblue",
+
+                    "transparent"
+            ],
+            'line-dasharray': [1, 0.6],
+            "line-width": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                8,
+                3
+            ]
+
+        },
+        "filter": ["==", "$type", "LineString"],
+    });
+
+    map.on("mousemove", "cycleways-lines", function (e) {
         if (e.features.length > 0) {
             // Cursor
             map.getCanvas().style.cursor = 'pointer';
@@ -327,7 +349,7 @@ function initMapLayers() {
         }
     });
 
-    map.on("mouseleave", "cycleways", function () {
+    map.on("mouseleave", "cycleways-lines", function () {
         // Hover style
         if (hoveredCycleway) {
             map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: false });
