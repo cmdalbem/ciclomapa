@@ -166,6 +166,7 @@ function updateMap() {
             }
         ).fail(function (e) {
             console.log("Deu erro! Saca só:",e);
+            alert(e.statusText);
         })
     });
 }
@@ -177,11 +178,223 @@ function initStylesSwitcher() {
     function switchLayer(layer) {
         var layerId = layer.target.id;
         map.setStyle('mapbox://styles/mapbox/' + layerId);
+        map.on('style.load', function() {
+            initMapLayers();
+        });
     }
 
     for (var i = 0; i < inputs.length; i++) {
         inputs[i].onclick = switchLayer;
     }
+}
+
+function initMapLayers() {
+    map.addSource("osm", {
+        "type": "geojson",
+        "data": {
+            'type': 'FeatureCollection',
+            'features': []
+        },
+        "generateId": true
+    });
+
+    // Cycleway solid borders
+    map.addLayer({
+        "id": "cycleways-solidborder",
+        "type": "line",
+        "source": "osm",
+        "layout": {
+            "line-join": "round",
+            "line-cap": "round"
+        },
+        "paint": {
+            "line-color": [
+                "case",
+                ["==", ["get", "highway"], "cycleway"], "green",
+                ["==", ["get", "cycleway"], "track"], "green",
+                ["==", ["get", "cycleway:left"], "track"], "green",
+                ["==", ["get", "cycleway:right"], "track"], "green",
+                ["==", ["get", "cycleway"], "opposite_track"], "green",
+                ["==", ["get", "cycleway"], "segregated"], "green",
+                // ["==", ["get", "bicycle"], "designated"], "green",
+                ["==", ["get", "cycleway"], "lane"], "green",
+                ["==", ["get", "cycleway:left"], "lane"], "green",
+                ["==", ["get", "cycleway:right"], "lane"], "green",
+
+                ["==", ["get", "cycleway"], "share_busway"], "orange",
+                ["==", ["get", "cycleway"], "shared"], "orange",
+
+                "transparent"
+            ],
+            "line-width": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                12,
+                5
+            ]
+        },
+        "filter": ["==", "$type", "LineString"],
+    });
+
+    // Cycleways dashed borders
+    map.addLayer({
+        "id": "cycleways-dashedborder",
+        "type": "line",
+        "source": "osm",
+        "paint": {
+            "line-color": [
+                "case",
+                ["==", ["get", "cycleway"], "shared_lane"], "orange",
+                ["==", ["get", "cycleway:left"], "shared_lane"], "orange",
+                ["==", ["get", "cycleway:right"], "shared_lane"], "orange",
+
+                "transparent"
+            ],
+            'line-dasharray': [1, 0.6],
+            "line-width": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                12,
+                6
+            ]
+        },
+        "filter": ["==", "$type", "LineString"],
+    });
+
+    // Cycleway lines
+    map.addLayer({
+        "id": "cycleways",
+        "type": "line",
+        "source": "osm",
+        "layout": {
+            "line-join": "round",
+            "line-cap": "round"
+        },
+        "paint": {
+            "line-color": [
+                "case",
+                ["==", ["get", "highway"], "cycleway"], "lightgreen",
+                ["==", ["get", "cycleway"], "track"], "lightgreen",
+                ["==", ["get", "cycleway"], "opposite_track"], "lightgreen",
+                ["==", ["get", "cycleway"], "segregated"], "lightgreen",
+                ["==", ["get", "cycleway"], "lane"], "lightgreen",
+                ["==", ["get", "cycleway:left"], "lane"], "lightgreen",
+                ["==", ["get", "cycleway:right"], "lane"], "lightgreen",
+
+                ["==", ["get", "bicycle"], "designated"], "orange",
+                ["==", ["get", "cycleway"], "opposite"], "orange",
+                ["==", ["get", "cycleway:left"], "opposite"], "orange",
+                ["==", ["get", "cycleway:right"], "opposite"], "orange",
+                ["==", ["get", "cycleway"], "opposite_lane"], "orange",
+                ["==", ["get", "cycleway:left"], "opposite_lane"], "orange",
+                ["==", ["get", "cycleway:right"], "opposite_lane"], "orange",
+                ["==", ["get", "cycleway"], "crossing"], "orange",
+
+                ["==", ["get", "cycleway"], "shared_lane"], "yellow",
+                ["==", ["get", "cycleway:left"], "shared_lane"], "yellow",
+                ["==", ["get", "cycleway:right"], "shared_lane"], "yellow",
+                ["==", ["get", "cycleway"], "share_busway"], "yellow",
+                ["==", ["get", "cycleway"], "shared"], "yellow",
+
+                ["==", ["get", "maxspeed"], "30"], "yellow",
+
+                "red"
+            ],
+            "line-width": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                8,
+                3
+            ]
+
+        },
+        "filter": ["==", "$type", "LineString"],
+    });
+
+    map.on("mousemove", "cycleways", function (e) {
+        if (e.features.length > 0) {
+            // Cursor
+            map.getCanvas().style.cursor = 'pointer';
+
+            // Hover style
+            if (hoveredCycleway) {
+                map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: false });
+            }
+            hoveredCycleway = e.features[0].id;
+            map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: true });
+
+            showPopup(e);
+        }
+    });
+
+    map.on("mouseleave", "cycleways", function () {
+        // Hover style
+        if (hoveredCycleway) {
+            map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: false });
+
+            // Cursor cursor
+            map.getCanvas().style.cursor = '';
+
+            hidePopup();
+        }
+        hoveredCycleway = null;
+    });
+
+    if (DEBUG_BOUNDS_OPTIMIZATION) {
+        map.addLayer({
+            'id': 'debug-polygon-1',
+            'type': 'line',
+            'source': {
+                'type': 'geojson',
+                "data": {
+                    'type': 'FeatureCollection',
+                    'features': []
+                }
+            },
+            'paint': {
+                "line-color": "red",
+                "line-width": 2
+            }
+        });
+
+        updateDebugPolygon(largestBoundsYet, 1);
+
+        map.addLayer({
+            'id': 'debug-polygon-2',
+            'type': 'fill',
+            'source': {
+                'type': 'geojson',
+                "data": {
+                    'type': 'FeatureCollection',
+                    'features': []
+                }
+            },
+            'paint': {
+                'fill-color': 'green',
+                'fill-opacity': 0.1
+            }
+        });
+    }
+
+    map.on('moveend', () => {
+        let newBounds = map.getBounds();
+
+        if (DEBUG_BOUNDS_OPTIMIZATION) {
+            updateDebugPolygon(newBounds, 2);
+        }
+
+        // Only redo the query if we need new data
+        if (!doesAContainsB(largestBoundsYet, newBounds)) {
+            updateMap();
+            largestBoundsYet = newBounds;
+
+            if (DEBUG_BOUNDS_OPTIMIZATION) {
+                updateDebugPolygon(largestBoundsYet, 1);
+            }
+        }
+    });
+
+    updateMap();
 }
 
 function initMap() {
@@ -214,221 +427,18 @@ function initMap() {
     map.on('load', function () {
         largestBoundsYet = map.getBounds();
 
-        map.addSource("osm", {
-            "type": "geojson",
-            "data": {
-                'type': 'FeatureCollection',
-                'features': []
-            },
-            "generateId": true
-        });
-
-        // Cycleway solid borders
-        map.addLayer({
-            "id": "cycleways-solidborder",
-            "type": "line",
-            "source": "osm",
-            "layout": {
-                "line-join": "round",
-                "line-cap": "round"
-            },
-            "paint": {
-                "line-color": [
-                    "case",
-                        ["==", ["get", "highway"], "cycleway"], "green",
-                        ["==", ["get", "cycleway"], "track"], "green",
-                        ["==", ["get", "cycleway:left"], "track"], "green",
-                        ["==", ["get", "cycleway:right"], "track"], "green",
-                        ["==", ["get", "cycleway"], "opposite_track"], "green",
-                        ["==", ["get", "cycleway"], "segregated"], "green",
-                        // ["==", ["get", "bicycle"], "designated"], "green",
-                        ["==", ["get", "cycleway"], "lane"], "green",
-                        ["==", ["get", "cycleway:left"], "lane"], "green",
-                        ["==", ["get", "cycleway:right"], "lane"], "green",
-                    
-                        ["==", ["get", "cycleway"], "share_busway"], "orange",
-                        ["==", ["get", "cycleway"], "shared"], "orange",
-                    
-                        "transparent"
-                ],
-                "line-width": [
-                    "case",
-                        ["boolean", ["feature-state", "hover"], false],
-                        12,
-                        5
-                ]
-            },
-            "filter": ["==", "$type", "LineString"],
-        });
-
-        // Cycleways dashed borders
-        map.addLayer({
-            "id": "cycleways-dashedborder",
-            "type": "line",
-            "source": "osm",
-            "paint": {
-                "line-color": [
-                    "case",
-                        ["==", ["get", "cycleway"], "shared_lane"], "orange",
-                        ["==", ["get", "cycleway:left"], "shared_lane"], "orange",
-                        ["==", ["get", "cycleway:right"], "shared_lane"], "orange",
-                    
-                        "transparent"
-                ],
-                'line-dasharray': [1, 0.6],
-                "line-width": [
-                    "case",
-                        ["boolean", ["feature-state", "hover"], false],
-                        12,
-                        6
-                ]
-            },
-            "filter": ["==", "$type", "LineString"],
-        });
-
-        // Cycleway lines
-        map.addLayer({
-            "id": "cycleways",
-            "type": "line",
-            "source": "osm",
-            "layout": {
-                "line-join": "round",
-                "line-cap": "round"
-            },
-            "paint": {
-                "line-color": [
-                    "case",
-                        ["==", ["get", "highway"], "cycleway"], "lightgreen",
-                        ["==", ["get", "bicycle"], "designated"], "lightgreen",
-                        ["==", ["get", "cycleway"], "track"], "lightgreen",
-                        ["==", ["get", "cycleway"], "opposite_track"], "lightgreen",
-                        ["==", ["get", "cycleway"], "segregated"], "lightgreen",
-                        ["==", ["get", "cycleway"], "lane"], "lightgreen",
-                        ["==", ["get", "cycleway:left"], "lane"], "lightgreen",
-                        ["==", ["get", "cycleway:right"], "lane"], "lightgreen",
-                        ["==", ["get", "cycleway"], "opposite"], "orange",
-                        ["==", ["get", "cycleway:left"], "opposite"], "orange",
-                        ["==", ["get", "cycleway:right"], "opposite"], "orange",
-                        ["==", ["get", "cycleway"], "opposite_lane"], "orange",
-                        ["==", ["get", "cycleway:left"], "opposite_lane"], "orange",
-                        ["==", ["get", "cycleway:right"], "opposite_lane"], "orange",
-                        ["==", ["get", "cycleway"], "crossing"], "orange",
-                        
-                        ["==", ["get", "cycleway"], "shared_lane"], "yellow",
-                        ["==", ["get", "cycleway:left"], "shared_lane"], "yellow",
-                        ["==", ["get", "cycleway:right"], "shared_lane"], "yellow",
-                        ["==", ["get", "cycleway"], "share_busway"], "yellow",
-                        ["==", ["get", "cycleway"], "shared"], "yellow",
-
-                        ["==", ["get", "maxspeed"], "30"], "yellow",
-
-                        "red"
-                ],
-                "line-width": [
-                    "case",
-                        ["boolean", ["feature-state", "hover"], false],
-                        8,
-                        3
-                ]
-
-            },
-            "filter": ["==", "$type", "LineString"],
-        });
-
-        // Create a popup, but don't add it to the map yet.
-        popup = new mapboxgl.Popup({
-            closeButton: false,
-            closeOnClick: false
-        });
-
-        map.on("mousemove", "cycleways", function (e) {
-            if (e.features.length > 0) {
-                // Cursor
-                map.getCanvas().style.cursor = 'pointer';
-
-                // Hover style
-                if (hoveredCycleway) {
-                    map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: false });
-                }
-                hoveredCycleway = e.features[0].id;
-                map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: true });
-
-                showPopup(e);
-            }
-        });
-
-        map.on("mouseleave", "cycleways", function () {
-            // Hover style
-            if (hoveredCycleway) {
-                map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: false });
-
-                // Cursor cursor
-                map.getCanvas().style.cursor = '';
-
-                hidePopup();
-            }
-            hoveredCycleway = null;
-        });
-
-        if (DEBUG_BOUNDS_OPTIMIZATION) {
-            map.addLayer({
-                'id': 'debug-polygon-1',
-                'type': 'line',
-                'source': {
-                    'type': 'geojson',
-                    "data": {
-                        'type': 'FeatureCollection',
-                        'features': []
-                    }
-                },
-                'paint': {
-                    "line-color": "red",
-                    "line-width": 2
-                }
-            });
-            
-            updateDebugPolygon(largestBoundsYet,1);
-            
-            map.addLayer({
-                'id': 'debug-polygon-2',
-                'type': 'fill',
-                'source': {
-                    'type': 'geojson',
-                    "data": {
-                        'type': 'FeatureCollection',
-                        'features': []
-                    }
-                },
-                'paint': {
-                    'fill-color': 'green',
-                    'fill-opacity': 0.1
-                }
-            });
-        }
-
-        map.on('moveend', () => {
-            let newBounds = map.getBounds();
-
-            if (DEBUG_BOUNDS_OPTIMIZATION) {
-                updateDebugPolygon(newBounds,2);
-            }
-
-            // Only redo the query if we need new data
-            if (!doesAContainsB(largestBoundsYet, newBounds)) {
-                updateMap();
-                largestBoundsYet = newBounds;
-                
-                if (DEBUG_BOUNDS_OPTIMIZATION) {
-                    updateDebugPolygon(largestBoundsYet,1);
-                }
-            }
-        });
-
-        updateMap();
+        initMapLayers();
     });
 } 
 
 $(document).ready(function () {
-    // initStylesSwitcher();
+    initStylesSwitcher();
+
+    // Create a popup, but don't add it to the map yet.
+    popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false
+    });
+
     initMap();
 });
