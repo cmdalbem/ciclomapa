@@ -1,7 +1,24 @@
 const DEBUG_BOUNDS_OPTIMIZATION = false;
 
-let map;
+let map, popup;
 let largestBoundsYet;
+let hoveredCycleway;
+
+function showPopup(e) {
+    const coords = e.lngLat;
+    const props = e.features[0].properties;
+    const prettyProps = JSON.stringify(props, null, 2)
+        .replace(/(?:\r\n|\r|\n)/g, '<br/>')
+        .replace(/\"|\,|\{|\}/g, '');
+    
+    popup.setLngLat(coords)
+        .setHTML(prettyProps)
+        .addTo(map);
+}
+
+function hidePopup() {
+    popup.remove();
+}
 
 function doesAContainsB(a, b) {
     if (a && b) {
@@ -18,28 +35,25 @@ function getQuery(bbox) {
     return `
         [out:json][timeout:100];
         (
-            ///////////////
-            // Ciclovias //
-            ///////////////
-            
+            // Quando a ciclovia é mapeada separadamente da estrada (veja Bicicleta).
             way["highway"="cycleway"](${bbox});
+            way[highway~'path$|^footway$'][bicycle=designated](${bbox});
 
+            // A trilha é uma rota que é separado da estrada.
+            way["cycleway"="track"](${bbox});
+            way["cycleway:right"="track"](${bbox});
+            way["cycleway:left"="track"](${bbox});
 
-            /////////////////
-            // Ciclofaixas //
-            /////////////////
+            // A lane é uma rota que se encontra dentro da pista	
+            way['cycleway'=lane](${bbox});
+            way['cycleway:left'=lane](${bbox});
+            way['cycleway:right'=lane](${bbox});
 
-            // Ciclovia na estrada ou ciclofaixa: faixa integrada na estrada destinada a bicicletas. Pode ter simplesmente marcas no piso e eventualmente pequenos pilaretes de plástico a separar a faixa da estrada rodoviária.	
-            way["cycleway"="lane"](${bbox});
-
-            // Usada em vias com oneway=yes onde é permitido pedalar em ambos os sentidos.
+            // Usada em vias com oneway=yes onde é permitido pedalar em ambos os sentidos (só em países onde é legalmente permitido).	
             way["cycleway"="opposite"](${bbox});
 
             // Utilizadas em formas com oneway=yes, que tem uma pista de ciclismo indo na direção oposta do fluxo de tráfego normal (um "contramão" da pista)	
             way["cycleway"="opposite_lane"](${bbox});
-
-            // A trilha é uma rota que é separado da estrada.
-            way["cycleway"="track"](${bbox});
 
             // Usada em vias com oneway=yes com uma ciclovia separada indo no sentido oposto ao do tráfego normal}.	
             way["cycleway"="opposite_track"](${bbox});
@@ -50,16 +64,26 @@ function getQuery(bbox) {
             // Usada em vias com oneway=yes que tèm uma faixa de ônibus/autocarro em que os ciclistas também podem usar, e que vão no sentido oposto do sentido normal do trânsito. Usado junto com oneway:bicycle=no.	
             way["cycleway"="opposite_share_busway"](${bbox});
 
-
             // Cyclists share space with other traffic on this highway.	
             way["cycleway"="shared"](${bbox});
+            way["cycleway:right"="shared"](${bbox});
+            way["cycleway:left"="shared"](${bbox});
 
-            // Cyclists share a lane with motor vehicles, but there are markings indicating that they should share the lane with motorists.
+            // Cyclists share a lane with motor vehicles, but there are markings indicating that they should share the lane with motorists. The road markings are usually there to highlight a cycle route or to remind drivers that you can cycle there. Also used for the on-road shared-lane marking called a "sharrow"[1].	
             way["cycleway"="shared_lane"](${bbox});
+            way["cycleway:right"="shared_lane"](${bbox});
+            way["cycleway:left"="shared_lane"](${bbox});
 
+            // cyclestreets
+            way['cycleway'=cyclestreet](${bbox});
+            way[bicycle_road=yes](${bbox});
+            way[cyclestreet=yes](${bbox});
 
+            /////////////
             // Vias com limite de velocidade de 30km/h
-            //way["maxspeed"="30"](${bbox});
+            //
+            
+            way["maxspeed"="30"](${bbox});
         );
         out body;
         >;
@@ -140,7 +164,9 @@ function updateMap() {
 
                 resolve();
             }
-        ); 
+        ).fail(function (e) {
+            console.log("Deu erro! Saca só:",e);
+        })
     });
 }
 
@@ -163,10 +189,11 @@ function initMap() {
     map = new mapboxgl.Map({
         container: 'map',
         // style: 'mapbox://styles/mapbox/streets-v11',
-        style: 'mapbox://styles/mapbox/light-v10',
         // style: 'mapbox://styles/cmdalbem/cjwo31j95588k1cqxbs7smwd3',
-        center: [-43.190754999999996, -22.9758283],
-        zoom: 10
+        style: 'mapbox://styles/mapbox/light-v10',
+        center: [-43.19663687394814, -22.968419833847065],
+        // zoom: 10
+        zoom: 13
     });
 
     map.addControl(new mapboxgl.NavigationControl());
@@ -185,16 +212,20 @@ function initMap() {
     );
 
     map.on('load', function () {
+        largestBoundsYet = map.getBounds();
+
         map.addSource("osm", {
             "type": "geojson",
             "data": {
                 'type': 'FeatureCollection',
                 'features': []
-            }
+            },
+            "generateId": true
         });
 
+        // Cycleway solid borders
         map.addLayer({
-            "id": "cyclewaysBorder",
+            "id": "cycleways-solidborder",
             "type": "line",
             "source": "osm",
             "layout": {
@@ -206,15 +237,56 @@ function initMap() {
                     "case",
                         ["==", ["get", "highway"], "cycleway"], "green",
                         ["==", ["get", "cycleway"], "track"], "green",
+                        ["==", ["get", "cycleway:left"], "track"], "green",
+                        ["==", ["get", "cycleway:right"], "track"], "green",
                         ["==", ["get", "cycleway"], "opposite_track"], "green",
                         ["==", ["get", "cycleway"], "segregated"], "green",
+                        // ["==", ["get", "bicycle"], "designated"], "green",
+                        ["==", ["get", "cycleway"], "lane"], "green",
+                        ["==", ["get", "cycleway:left"], "lane"], "green",
+                        ["==", ["get", "cycleway:right"], "lane"], "green",
+                    
+                        ["==", ["get", "cycleway"], "share_busway"], "orange",
+                        ["==", ["get", "cycleway"], "shared"], "orange",
+                    
                         "transparent"
                 ],
-                "line-width": 5
+                "line-width": [
+                    "case",
+                        ["boolean", ["feature-state", "hover"], false],
+                        12,
+                        5
+                ]
             },
             "filter": ["==", "$type", "LineString"],
         });
 
+        // Cycleways dashed borders
+        map.addLayer({
+            "id": "cycleways-dashedborder",
+            "type": "line",
+            "source": "osm",
+            "paint": {
+                "line-color": [
+                    "case",
+                        ["==", ["get", "cycleway"], "shared_lane"], "orange",
+                        ["==", ["get", "cycleway:left"], "shared_lane"], "orange",
+                        ["==", ["get", "cycleway:right"], "shared_lane"], "orange",
+                    
+                        "transparent"
+                ],
+                'line-dasharray': [1, 0.6],
+                "line-width": [
+                    "case",
+                        ["boolean", ["feature-state", "hover"], false],
+                        12,
+                        6
+                ]
+            },
+            "filter": ["==", "$type", "LineString"],
+        });
+
+        // Cycleway lines
         map.addLayer({
             "id": "cycleways",
             "type": "line",
@@ -226,22 +298,78 @@ function initMap() {
             "paint": {
                 "line-color": [
                     "case",
-                        ["==", ["get", "cycleway"], "lane"], "orange",
+                        ["==", ["get", "highway"], "cycleway"], "lightgreen",
+                        ["==", ["get", "bicycle"], "designated"], "lightgreen",
+                        ["==", ["get", "cycleway"], "track"], "lightgreen",
+                        ["==", ["get", "cycleway"], "opposite_track"], "lightgreen",
+                        ["==", ["get", "cycleway"], "segregated"], "lightgreen",
+                        ["==", ["get", "cycleway"], "lane"], "lightgreen",
+                        ["==", ["get", "cycleway:left"], "lane"], "lightgreen",
+                        ["==", ["get", "cycleway:right"], "lane"], "lightgreen",
                         ["==", ["get", "cycleway"], "opposite"], "orange",
+                        ["==", ["get", "cycleway:left"], "opposite"], "orange",
+                        ["==", ["get", "cycleway:right"], "opposite"], "orange",
                         ["==", ["get", "cycleway"], "opposite_lane"], "orange",
+                        ["==", ["get", "cycleway:left"], "opposite_lane"], "orange",
+                        ["==", ["get", "cycleway:right"], "opposite_lane"], "orange",
                         ["==", ["get", "cycleway"], "crossing"], "orange",
-                        ["==", ["get", "cycleway"], "shared_lane"], "orange",
-                        ["==", ["get", "cycleway"], "share_busway"], "orange",
-                        ["==", ["get", "cycleway"], "shared"], "red",
-                        "lightgreen"
+                        
+                        ["==", ["get", "cycleway"], "shared_lane"], "yellow",
+                        ["==", ["get", "cycleway:left"], "shared_lane"], "yellow",
+                        ["==", ["get", "cycleway:right"], "shared_lane"], "yellow",
+                        ["==", ["get", "cycleway"], "share_busway"], "yellow",
+                        ["==", ["get", "cycleway"], "shared"], "yellow",
+
+                        ["==", ["get", "maxspeed"], "30"], "yellow",
+
+                        "red"
                 ],
-                "line-width": 2
+                "line-width": [
+                    "case",
+                        ["boolean", ["feature-state", "hover"], false],
+                        8,
+                        3
+                ]
+
             },
             "filter": ["==", "$type", "LineString"],
         });
 
-        largestBoundsYet = map.getBounds();
-        
+        // Create a popup, but don't add it to the map yet.
+        popup = new mapboxgl.Popup({
+            closeButton: false,
+            closeOnClick: false
+        });
+
+        map.on("mousemove", "cycleways", function (e) {
+            if (e.features.length > 0) {
+                // Cursor
+                map.getCanvas().style.cursor = 'pointer';
+
+                // Hover style
+                if (hoveredCycleway) {
+                    map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: false });
+                }
+                hoveredCycleway = e.features[0].id;
+                map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: true });
+
+                showPopup(e);
+            }
+        });
+
+        map.on("mouseleave", "cycleways", function () {
+            // Hover style
+            if (hoveredCycleway) {
+                map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: false });
+
+                // Cursor cursor
+                map.getCanvas().style.cursor = '';
+
+                hidePopup();
+            }
+            hoveredCycleway = null;
+        });
+
         if (DEBUG_BOUNDS_OPTIMIZATION) {
             map.addLayer({
                 'id': 'debug-polygon-1',
