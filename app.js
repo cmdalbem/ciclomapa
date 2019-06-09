@@ -2,17 +2,26 @@ const DEBUG_BOUNDS_OPTIMIZATION = false;
 
 let map, popup;
 let largestBoundsYet;
-let hoveredCycleway;
+let hoveredCycleway, selectedCycleway;
 
 function showPopup(e) {
     const coords = e.lngLat;
     const props = e.features[0].properties;
+    const osmID = props.id;
     const prettyProps = JSON.stringify(props, null, 2)
         .replace(/(?:\r\n|\r|\n)/g, '<br/>')
         .replace(/\"|\,|\{|\}/g, '');
     
+    let html;
+    html += prettyProps;
+    html += `
+        <br>
+        <hr>
+        <a target="_BLANK" rel="noopener" href="https://www.openstreetmap.org/${osmID}">Editar no OSM</a>
+    `;
+    
     popup.setLngLat(coords)
-        .setHTML(prettyProps)
+        .setHTML(html)
         .addTo(map);
 }
 
@@ -166,7 +175,7 @@ function updateMap() {
             }
         ).fail(function (e) {
             console.log("Deu erro! Saca só:",e);
-            alert(e.statusText);
+            alert('Overpass returned an error: ',e.statusText);
         })
     });
 }
@@ -228,7 +237,7 @@ function initMapLayers() {
             ],
             "line-width": [
                 "case",
-                ["boolean", ["feature-state", "hover"], false],
+                ["boolean", ["feature-state", "highlight"], false],
                 12,
                 5
             ]
@@ -253,7 +262,7 @@ function initMapLayers() {
             'line-dasharray': [1, 0.6],
             "line-width": [
                 "case",
-                ["boolean", ["feature-state", "hover"], false],
+                ["boolean", ["feature-state", "highlight"], false],
                 12,
                 5
             ]
@@ -304,7 +313,7 @@ function initMapLayers() {
             ],
             "line-width": [
                 "case",
-                ["boolean", ["feature-state", "hover"], false],
+                ["boolean", ["feature-state", "highlight"], false],
                 8,
                 2
             ]
@@ -328,7 +337,7 @@ function initMapLayers() {
             'line-dasharray': [1, 0.6],
             "line-width": [
                 "case",
-                ["boolean", ["feature-state", "hover"], false],
+                ["boolean", ["feature-state", "highlight"], false],
                 8,
                 3
             ]
@@ -337,26 +346,28 @@ function initMapLayers() {
         "filter": ["==", "$type", "LineString"],
     });
 
-    map.on("mousemove", "cycleways-lines", function (e) {
+    map.on("mouseenter", "cycleways-lines", function (e) {
         if (e.features.length > 0) {
+            selectedCycleway = null;
+
             // Cursor
             map.getCanvas().style.cursor = 'pointer';
 
             // Hover style
             if (hoveredCycleway) {
-                map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: false });
+                map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
             }
             hoveredCycleway = e.features[0].id;
-            map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: true });
+            map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: true });
 
             showPopup(e);
         }
     });
 
-    map.on("mouseleave", "cycleways-lines", function () {
+    map.on("mouseleave", "cycleways-lines", function (e) {
         // Hover style
-        if (hoveredCycleway) {
-            map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { hover: false });
+        if (hoveredCycleway && !selectedCycleway) {
+            map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
 
             // Cursor cursor
             map.getCanvas().style.cursor = '';
@@ -364,6 +375,14 @@ function initMapLayers() {
             hidePopup();
         }
         hoveredCycleway = null;
+    });
+
+    map.on("click", "cycleways-lines", function (e) {
+        if (e.features.length > 0) {
+            selectedCycleway = e.features[0].id;
+
+            showPopup(e);
+        }
     });
 
     if (DEBUG_BOUNDS_OPTIMIZATION) {
