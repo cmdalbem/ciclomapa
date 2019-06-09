@@ -124,7 +124,7 @@ function updateMap() {
 
         let geoJson;
         $.getJSON(
-            `http://overpass-api.de/api/interpreter?data=${encodedQuery}`,
+            `https://overpass-api.de/api/interpreter?data=${encodedQuery}`,
             data => {
                 console.log(data);
 
