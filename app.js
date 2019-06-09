@@ -255,7 +255,7 @@ function initMapLayers() {
                 "case",
                 ["boolean", ["feature-state", "hover"], false],
                 12,
-                6
+                5
             ]
         },
         "filter": ["==", "$type", "LineString"],
@@ -275,11 +275,13 @@ function initMapLayers() {
                 "case",
                 ["==", ["get", "highway"], "cycleway"], "lightgreen",
                 ["==", ["get", "cycleway"], "track"], "lightgreen",
+                ["==", ["get", "cycleway:left"], "track"], "lightgreen",
+                ["==", ["get", "cycleway:right"], "track"], "lightgreen",
                 ["==", ["get", "cycleway"], "opposite_track"], "lightgreen",
                 ["==", ["get", "cycleway"], "segregated"], "lightgreen",
                 ["==", ["get", "cycleway"], "lane"], "lightgreen",
                 ["==", ["get", "cycleway:left"], "lane"], "lightgreen",
-                ["==", ["get", "cycleway:right"], "lane"], "lightgreen",
+                ["==", ["get", "cycleway:right"], "lane"], "lightgreen", 
 
                 ["==", ["get", "bicycle"], "designated"], "orange",
                 ["==", ["get", "cycleway"], "opposite"], "orange",
@@ -296,13 +298,15 @@ function initMapLayers() {
                 ["==", ["get", "cycleway"], "share_busway"], "yellow",
                 ["==", ["get", "cycleway"], "shared"], "yellow",
 
+                ["==", ["get", "maxspeed"], "30"], "transparent",
+
                 "red"
             ],
             "line-width": [
                 "case",
                 ["boolean", ["feature-state", "hover"], false],
                 8,
-                3
+                2
             ]
 
         },
@@ -317,7 +321,7 @@ function initMapLayers() {
         "paint": {
             "line-color": [
                 "case",
-                    ["==", ["get", "maxspeed"], "30"], "lightblue",
+                    ["==", ["get", "maxspeed"], "30"], "orange",
 
                     "transparent"
             ],
@@ -431,13 +435,18 @@ function initMap() {
         zoom: 13
     });
 
-    map.addControl(new mapboxgl.NavigationControl());
+    map.addControl(
+        new mapboxgl.NavigationControl(),
+        'bottom-right'
+    );
     map.addControl(new mapboxgl.GeolocateControl({
-        positionOptions: {
-            enableHighAccuracy: true
-        },
-        trackUserLocation: true
-    }));
+            positionOptions: {
+                enableHighAccuracy: true
+            },
+            trackUserLocation: true
+        }),
+        'bottom-right'
+    );
     // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
     map.addControl(new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
