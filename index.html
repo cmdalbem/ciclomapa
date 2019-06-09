@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8' />
+    <title>Add a GeoJSON line</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.0.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.0.0/mapbox-gl.css' rel='stylesheet' />
+
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.3.0/mapbox-gl-geocoder.min.js'></script>
+    <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.3.0/mapbox-gl-geocoder.css' type='text/css' />
+
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    
+    <script src='osmtogeojson.js'></script>
+
+    <script src='app.js'></script>
+    <link href='styles.css' rel='stylesheet' />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id='map'></div>
+
+    <div id="spinner" class="loader-container">
+        <div class="loader">
+            <svg class="circular" viewBox="25 25 50 50">
+                <circle class="path" cx="50" cy="50" r="20" fill="none" stroke-width="4" stroke-miterlimit="10" />
+            </svg>
+        </div>
+    </div>
+
+    <!-- <div id='styles-menu'>
+        <input id='streets-v11' type='radio' name='rtoggle' value='streets' checked='checked'>
+        <label for='streets'>streets</label>
+        <input id='light-v10' type='radio' name='rtoggle' value='light'>
+        <label for='light'>light</label>
+        <input id='dark-v10' type='radio' name='rtoggle' value='dark'>
+        <label for='dark'>dark</label>
+        <input id='outdoors-v11' type='radio' name='rtoggle' value='outdoors'>
+        <label for='outdoors'>outdoors</label>
+        <input id='satellite-v9' type='radio' name='rtoggle' value='satellite'>
+        <label for='satellite'>satellite</label>
+    </div> -->
+
+</body>
+
+</html>
