@@ -3,6 +3,50 @@ const DEBUG_BOUNDS_OPTIMIZATION = false;
 let map, popup;
 let largestBoundsYet;
 let hoveredCycleway, selectedCycleway;
+let geoJson, currentBBox;
+
+/* Idea from Stack Overflow https://stackoverflow.com/a/51683226  */
+class MapboxGLButtonControl {
+    constructor({
+        className = "",
+        title = "",
+        eventHandler = evtHndlr
+    }) {
+        this._className = className;
+        this._title = title;
+        this._eventHandler = eventHandler;
+    }
+
+    onAdd(map) {
+        this._btn = document.createElement("button");
+        this._btn.className = "mapboxgl-ctrl-icon" + " " + this._className;
+        this._btn.type = "button";
+        this._btn.title = this._title;
+        this._btn.onclick = this._eventHandler;
+
+        this._container = document.createElement("div");
+        this._container.className = "mapboxgl-ctrl-group mapboxgl-ctrl";
+        this._container.appendChild(this._btn);
+
+        return this._container;
+    }
+
+    onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+    }
+}
+
+// Thanks https://stackoverflow.com/questions/19721439/download-json-object-as-a-file-from-browser
+function downloadObjectAsJson(exportObj, exportName) {
+    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
+    var downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", exportName + ".json");
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
 
 function showPopup(e) {
     const coords = e.lngLat;
@@ -151,11 +195,10 @@ function updateMap() {
 
         $('#spinner').show();
 
-        const bbox = getCurrentBBox();
-        const query = getQuery(bbox);
+        currentBBox = getCurrentBBox();
+        const query = getQuery(currentBBox);
         const encodedQuery = encodeURI(query);
 
-        let geoJson;
         $.getJSON(
             // `https://overpass-api.de/api/interpreter?data=${encodedQuery}`,
             `https://overpass.kumi.systems/api/interpreter?data=${encodedQuery}`,
@@ -471,8 +514,17 @@ function initMap() {
     map.addControl(new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl
-    }),
+        }),
         'top-left'
+    );
+
+    map.addControl(new MapboxGLButtonControl({
+        className: "mapbox-gl-download-btn",
+        title: "Download",
+        eventHandler: e => {
+            downloadObjectAsJson(geoJson, `mapa-cicloviario-${currentBBox}`);
+        }}),
+        "bottom-right"
     );
 
     map.on('load', function () {

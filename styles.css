@@ -96,3 +96,11 @@
     stroke: var(--yellow);
   }
 }
+
+.mapbox-gl-download-btn {
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: auto;
+  background-size: 22px;
+  background-image: url(data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9JzMwMHB4JyB3aWR0aD0nMzAwcHgnICBmaWxsPSIjMDAwMDAwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeD0iMHB4IiB5PSIwcHgiPjx0aXRsZT5kb3dubG9hZF8xPC90aXRsZT48cGF0aCBkPSJNMTIsMTZhMSwxLDAsMCwxLS43MS0uMjlsLTQtNGExLDEsMCwwLDEsMS40MS0xLjQxTDEyLDEzLjU5bDMuMjktMy4yOWExLDEsMCwwLDEsMS40MSwxLjQxbC00LDRBMSwxLDAsMCwxLDEyLDE2WiI+PC9wYXRoPjxwYXRoIGQ9Ik0xMiwxNmExLDEsMCwwLDEtMS0xVjVhMSwxLDAsMCwxLDIsMFYxNUExLDEsMCwwLDEsMTIsMTZaIj48L3BhdGg+PHBhdGggZD0iTTE5LDIwSDVhMSwxLDAsMCwxLTEtMVYxNWExLDEsMCwwLDEsMiwwdjNIMThWMTVhMSwxLDAsMCwxLDIsMHY0QTEsMSwwLDAsMSwxOSwyMFoiPjwvcGF0aD48L3N2Zz4=);
+}
