@@ -157,7 +157,8 @@ function updateMap() {
 
         let geoJson;
         $.getJSON(
-            `https://overpass-api.de/api/interpreter?data=${encodedQuery}`,
+            // `https://overpass-api.de/api/interpreter?data=${encodedQuery}`,
+            `https://overpass.kumi.systems/api/interpreter?data=${encodedQuery}`,
             data => {
                 console.log(data);
 
