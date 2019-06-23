@@ -3,11 +3,9 @@ body {
     padding: 0;
 }
 
-#map {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 100%;
+.mapboxgl-map {
+    width: 100vw;
+    height: 100vh;
 }
 
 :root {
@@ -51,7 +49,7 @@ body {
     padding-top: 100%;
 }
 
-.circular {
+.loader .circular {
   animation: rotate 1.5s linear infinite;
   height: 100%;
   transform-origin: center center;
@@ -64,7 +62,7 @@ body {
   margin: auto;
 }
 
-.path {
+.loader .circular .path {
   stroke-dasharray: 1, 200;
   stroke-dashoffset: 0;
   animation: dash 1s ease-in-out infinite, color 6s ease-in-out infinite;
