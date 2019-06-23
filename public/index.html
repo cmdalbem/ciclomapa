@@ -2,40 +2,22 @@
 <html>
 
 <head>
-    <meta charset='utf-8' />
-    <title>Add a GeoJSON line</title>
+    <meta charset="utf-8">
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
 
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.0.0/mapbox-gl.js'></script>
+    <title>OpenBikeMap</title>
+
+    <!-- Mapbox -->
+    <!-- <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.0.0/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.0.0/mapbox-gl.css' rel='stylesheet' />
-
     <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.3.0/mapbox-gl-geocoder.min.js'></script>
-    <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.3.0/mapbox-gl-geocoder.css' type='text/css' />
-
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
-    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-    
-    <script src='osmtogeojson.js'></script>
-
-    <script src='app.js'></script>
-    <link href='styles.css' rel='stylesheet' />
-
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-        }
-
-        #map {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 100%;
-        }
-    </style>
+    <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.3.0/mapbox-gl-geocoder.css' type='text/css' /> -->
 </head>
 
 <body>
+    <div id="root"></div>
+    
     <div id='map'></div>
 
     <div id="spinner" class="loader-container">

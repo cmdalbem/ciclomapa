@@ -1,3 +1,17 @@
+import React, { Component } from 'react';
+import './App.css';
+
+import $ from 'jquery';
+
+import osmtogeojson from 'osmtogeojson'
+
+import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css';
+
+import MapboxGeocoder from 'mapbox-gl-geocoder'
+import 'mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
+
+
 const DEBUG_BOUNDS_OPTIMIZATION = false;
 
 let map, popup;
@@ -10,7 +24,7 @@ class MapboxGLButtonControl {
     constructor({
         className = "",
         title = "",
-        eventHandler = evtHndlr
+        eventHandler = null
     }) {
         this._className = className;
         this._title = title;
@@ -19,7 +33,7 @@ class MapboxGLButtonControl {
 
     onAdd(map) {
         this._btn = document.createElement("button");
-        this._btn.className = "mapboxgl-ctrl-icon" + " " + this._className;
+        this._btn.className = "mapboxgl-ctrl-icon " + this._className;
         this._btn.type = "button";
         this._btn.title = this._title;
         this._btn.onclick = this._eventHandler;
@@ -54,8 +68,8 @@ function showPopup(e) {
     const osmID = props.id;
     const prettyProps = JSON.stringify(props, null, 2)
         .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-        .replace(/\"|\,|\{|\}/g, '');
-    
+        .replace(/"|,|\{|\}/g, '');
+
     let html;
     html += prettyProps;
     html += `
@@ -63,7 +77,7 @@ function showPopup(e) {
         <hr>
         <a target="_BLANK" rel="noopener" href="https://www.openstreetmap.org/${osmID}">Editar no OSM</a>
     `;
-    
+
     popup.setLngLat(coords)
         .setHTML(html)
         .addTo(map);
@@ -148,7 +162,7 @@ function updateDebugPolygon(bbox, id) {
     const polygon = createPolygonFromBBox(bbox);
     console.log('polygon', polygon);
 
-    map.getSource('debug-polygon-'+id).setData(polygon);
+    map.getSource('debug-polygon-' + id).setData(polygon);
 }
 
 function createPolygonFromBBox(bbox) {
@@ -205,7 +219,7 @@ function updateMap() {
             data => {
                 console.log(data);
 
-                geoJson = osmtogeojson(data, {flatProperties: true});
+                geoJson = osmtogeojson(data, { flatProperties: true });
 
                 console.log(geoJson);
 
@@ -218,8 +232,8 @@ function updateMap() {
                 resolve();
             }
         ).fail(function (e) {
-            console.log("Deu erro! Saca só:",e);
-            alert('Overpass returned an error: ',e.statusText);
+            console.log("Deu erro! Saca só:", e);
+            alert('Overpass returned an error: ', e.statusText);
         })
     });
 }
@@ -231,7 +245,7 @@ function initStylesSwitcher() {
     function switchLayer(layer) {
         var layerId = layer.target.id;
         map.setStyle('mapbox://styles/mapbox/' + layerId);
-        map.on('style.load', function() {
+        map.on('style.load', function () {
             initMapLayers();
         });
     }
@@ -334,7 +348,7 @@ function initMapLayers() {
                 ["==", ["get", "cycleway"], "segregated"], "lightgreen",
                 ["==", ["get", "cycleway"], "lane"], "lightgreen",
                 ["==", ["get", "cycleway:left"], "lane"], "lightgreen",
-                ["==", ["get", "cycleway:right"], "lane"], "lightgreen", 
+                ["==", ["get", "cycleway:right"], "lane"], "lightgreen",
 
                 ["==", ["get", "bicycle"], "designated"], "orange",
                 ["==", ["get", "cycleway"], "opposite"], "orange",
@@ -374,9 +388,9 @@ function initMapLayers() {
         "paint": {
             "line-color": [
                 "case",
-                    ["==", ["get", "maxspeed"], "30"], "orange",
+                ["==", ["get", "maxspeed"], "30"], "orange",
 
-                    "transparent"
+                "transparent"
             ],
             'line-dasharray': [1, 0.6],
             "line-width": [
@@ -503,18 +517,18 @@ function initMap() {
         'bottom-right'
     );
     map.addControl(new mapboxgl.GeolocateControl({
-            positionOptions: {
-                enableHighAccuracy: true
-            },
-            trackUserLocation: true
-        }),
+        positionOptions: {
+            enableHighAccuracy: true
+        },
+        trackUserLocation: true
+    }),
         'bottom-right'
     );
     // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
     map.addControl(new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl
-        }),
+    }),
         'top-left'
     );
 
@@ -523,7 +537,8 @@ function initMap() {
         title: "Download",
         eventHandler: e => {
             downloadObjectAsJson(geoJson, `mapa-cicloviario-${currentBBox}`);
-        }}),
+        }
+    }),
         "bottom-right"
     );
 
@@ -532,16 +547,26 @@ function initMap() {
 
         initMapLayers();
     });
-} 
+}
 
-$(document).ready(function () {
-    initStylesSwitcher();
+class App extends Component {
+    componentDidMount() {
+        initStylesSwitcher();
 
-    // Create a popup, but don't add it to the map yet.
-    popup = new mapboxgl.Popup({
-        closeButton: false,
-        closeOnClick: false
-    });
+        // Create a popup, but don't add it to the map yet.
+        popup = new mapboxgl.Popup({
+            closeButton: false,
+            closeOnClick: false
+        });
 
-    initMap();
-});
+        initMap();
+    }
+
+    render() {
+        return (
+            <div></div>
+        );
+    }
+}
+
+export default App;
