@@ -19,3 +19,21 @@ export function downloadObjectAsJson(exportObj, exportName) {
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
 }
+
+export function createPolygonFromBBox(bbox) {
+    return {
+        'type': 'Feature',
+        'geometry': {
+            'type': 'Polygon',
+            'coordinates': [
+                [
+                    bbox.getNorthWest().toArray(),
+                    bbox.getNorthEast().toArray(),
+                    bbox.getSouthEast().toArray(),
+                    bbox.getSouthWest().toArray(),
+                    bbox.getNorthWest().toArray()
+                ]
+            ]
+        }
+    };
+}
