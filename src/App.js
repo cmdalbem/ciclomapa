@@ -3,6 +3,8 @@ import './App.css';
 
 import Map from './Map.js'
 
+import OSMController from './OSMController.js'
+
 
 // function initStylesSwitcher() {
 //     var layerList = document.getElementById('styles-menu');
@@ -22,23 +24,50 @@ import Map from './Map.js'
 // }
 
 class App extends Component {
-    componentDidMount() {
-        // initStylesSwitcher();
+    geoJson;
+
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            geoJson: null,
+            loading: true
+        };
+
+        this.updateData = this.updateData.bind(this);
+    }
+
+    updateData(bbox) {
+        this.setState({ loading: true });
+
+        OSMController.getData(bbox)
+            .then(data => {
+                this.setState({
+                    geoJson: data,
+                    loading: false
+                });
+            });
     }
 
     render() {
         return (
             <div>
-                <Map/>
+                <Map
+                    data={this.state.geoJson}
+                    updateData={this.updateData}
+                />
 
-                <div id="spinner" className="loader-container">
-                    <div className="loader">
-                        <svg className="circular" viewBox='25 25 50 50'>
-                            <circle className="path" cx='50' cy='50' r='20' fill='none' strokeWidth='4' strokeMiterlimit='10'
-                            />
-                        </svg>
+                {
+                    this.state.loading &&
+                    <div id="spinner" className="loader-container">
+                        <div className="loader">
+                            <svg className="circular" viewBox='25 25 50 50'>
+                                <circle className="path" cx='50' cy='50' r='20' fill='none' strokeWidth='4' strokeMiterlimit='10'
+                                />
+                            </svg>
+                        </div>
                     </div>
-                </div>
+                }
 
                 <div id='styles-menu'>
                     <label>

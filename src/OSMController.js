@@ -80,8 +80,6 @@ class OSMController {
 
                     console.log(geoJson);
 
-                    $('#spinner').hide();
-
                     resolve(geoJson);
                 }
             ).fail(e => {

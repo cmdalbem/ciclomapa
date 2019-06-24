@@ -1,7 +1,5 @@
 import React, { Component } from 'react';
 
-import $ from 'jquery'
-
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -10,17 +8,14 @@ import 'mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
 import { doesAContainsB, downloadObjectAsJson, createPolygonFromBBox } from './utils.js'
 
-import OSMController from './OSMController.js'
+import { DEBUG_BOUNDS_OPTIMIZATION } from './constants.js'
 
-
-const DEBUG_BOUNDS_OPTIMIZATION = false;
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiY21kYWxiZW0iLCJhIjoiY2pnbXhjZnplMDJ6MjMzbnk0OGthZGE1ayJ9.n1flNO8ndRYKQcR9wNIT9w';
 
 let map, popup;
 let largestBoundsYet;
 let hoveredCycleway, selectedCycleway;
-let geoJson;
 let currentBBox;
 
 
@@ -102,27 +97,11 @@ class Map extends Component {
     }
 
     update() {
-        return new Promise((resolve, reject) => {
-            if (!map) {
-                reject();
-            }
-
-            // Temporary so we don't download absurds quantities of data
-            if (map.getZoom < 10) {
-                reject();
-            }
-
-            $('#spinner').show();
-
-            OSMController.getData(this.getCurrentBBox())
-                .then( data => {
-                    geoJson = data;
-
-                    if (map.getSource('osm')) {
-                        map.getSource('osm').setData(geoJson);
-                    }
-                });
-        });
+        if (!map || map.getZoom < 10) {
+            return;
+        } else {
+            this.props.updateData(this.getCurrentBBox());
+        }
     }
 
     initLayers() {
@@ -370,6 +349,13 @@ class Map extends Component {
         this.update();
     }
 
+    componentDidUpdate(prevProps) {
+        // Check if changed data
+        if (this.props.data !== prevProps.data) {
+            map.getSource('osm').setData(this.props.data);
+        }
+    }
+    
     componentDidMount() {
         map = new mapboxgl.Map({
             container: this.mapContainer,
@@ -408,7 +394,7 @@ class Map extends Component {
             className: "mapbox-gl-download-btn",
             title: "Download",
             eventHandler: e => {
-                downloadObjectAsJson(geoJson, `mapa-cicloviario-${currentBBox}`);
+                downloadObjectAsJson(this.props.data, `mapa-cicloviario-${currentBBox}`);
             }
         }),
             "bottom-right"
@@ -433,6 +419,7 @@ class Map extends Component {
 
     render() {
         return (
+            // Thanks https://blog.mapbox.com/mapbox-gl-js-react-764da6cc074a
             <div ref={el => this.mapContainer = el}></div>
         )
     }
