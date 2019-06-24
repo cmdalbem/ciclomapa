@@ -1,27 +1,12 @@
 import React, { Component } from 'react';
+import { withRouter } from "react-router-dom";
+
 import './App.css';
 
 import Map from './Map.js'
-
+import Spinner from './Spinner.js'
+import MapStyleSwitcher from './MapStyleSwitcher.js'
 import OSMController from './OSMController.js'
-
-
-// function initStylesSwitcher() {
-//     var layerList = document.getElementById('styles-menu');
-//     var inputs = layerList.getElementsByTagName('input');
-
-//     function switchLayer(layer) {
-//         var layerId = layer.target.id;
-//         map.setStyle('mapbox://styles/mapbox/' + layerId);
-//         map.on('style.load', function () {
-//             initMapLayers();
-//         });
-//     }
-
-//     for (var i = 0; i < inputs.length; i++) {
-//         inputs[i].onclick = switchLayer;
-//     }
-// }
 
 class App extends Component {
     geoJson;
@@ -29,12 +14,35 @@ class App extends Component {
     constructor(props) {
         super(props);
 
+        this.updateData = this.updateData.bind(this);
+        this.onMapStyleChange = this.onMapStyleChange.bind(this);
+        this.onMapMoved = this.onMapMoved.bind(this);
+
+        const urlParams = this.getParamsFromURL();
         this.state = {
             geoJson: null,
-            loading: true
+            loading: true,
+            mapStyle: 'mapbox://styles/mapbox/light-v10',
+            zoom: urlParams.z || 13,
+            center: [
+                urlParams.lat || -43.19663687394814,
+                urlParams.lng || -22.968419833847065]
         };
+    }
 
-        this.updateData = this.updateData.bind(this);
+    getParamsFromURL() {
+        const possibleParams = ['z', 'lat', 'lng'];
+        const urlParams = new URLSearchParams(this.props.location.search);
+        let paramsObj = {}
+
+        possibleParams.forEach( p => {
+            let value = urlParams.get(p);
+            if (value) {
+                paramsObj[p] = value;
+            }
+        })
+
+        return paramsObj;
     }
 
     updateData(bbox) {
@@ -49,51 +57,52 @@ class App extends Component {
             });
     }
 
+    onMapStyleChange(newMapStyle) {
+        this.setState({ mapStyle: newMapStyle});
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (this.props.location !== prevProps.location) {
+            this.onRouteChanged();
+        }
+        
+        if (this.state.zoom !== prevState.zoom) {
+            this.props.history.push({
+                // pathname: '/dresses',
+                search: `?zoom=${this.state.zoom}`
+            })
+        }
+    }
+
+    onRouteChanged() {
+        this.setState(this.getParamsFromURL());
+    }
+
+    onMapMoved(newState) {
+        console.log('map moved!', newState);
+        
+        // @todo Fix infinite loop
+        // this.setState(newState);
+    }
+
     render() {
         return (
             <div>
                 <Map
                     data={this.state.geoJson}
+                    style={this.state.mapStyle}
+                    zoom={this.state.zoom}
+                    center={this.state.center}
                     updateData={this.updateData}
+                    onMapMoved={this.onMapMoved}
                 />
 
-                {
-                    this.state.loading &&
-                    <div id="spinner" className="loader-container">
-                        <div className="loader">
-                            <svg className="circular" viewBox='25 25 50 50'>
-                                <circle className="path" cx='50' cy='50' r='20' fill='none' strokeWidth='4' strokeMiterlimit='10'
-                                />
-                            </svg>
-                        </div>
-                    </div>
-                }
+                <Spinner loading={this.state.loading}/>
 
-                <div id='styles-menu'>
-                    <label>
-                        <input id='streets-v11' type='radio' name='rtoggle' value='streets' />
-                        Streets
-                    </label>
-                    <label>
-                        <input id='light-v10' type='radio' name='rtoggle' value='light' defaultChecked />
-                        Light
-                    </label>
-                    <label>
-                        <input id='dark-v10' type='radio' name='rtoggle' value='dark' />
-                        Dark
-                    </label>
-                    <label>
-                        <input id='outdoors-v11' type='radio' name='rtoggle' value='outdoors' />
-                        Outdoors
-                    </label>
-                    <label>
-                        <input id='satellite-v9' type='radio' name='rtoggle' value='satellite' />
-                        Satellite
-                    </label>
-                </div>
+                <MapStyleSwitcher onMapStyleChange={this.onMapStyleChange}/>
             </div>
         );
     }
 }
 
-export default App;
+export default withRouter(App);

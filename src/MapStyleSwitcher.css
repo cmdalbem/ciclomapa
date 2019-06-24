@@ -1,0 +1,22 @@
+#styles-menu {
+    border-radius: 3px;
+    background: white;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+
+    position: fixed;
+    padding: 10px;
+    font-family: 'Open Sans', sans-serif;
+    top: 10px;
+    right: 10px;
+    font-size: 10px; 
+    text-transform: uppercase;
+}
+
+#styles-menu label {
+    margin-right: 6px;
+    cursor: pointer;
+}
+
+#styles-menu label:hover {
+    background: #fafafa;
+}

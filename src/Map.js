@@ -8,10 +8,10 @@ import 'mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
 import { doesAContainsB, downloadObjectAsJson, createPolygonFromBBox } from './utils.js'
 
-import { DEBUG_BOUNDS_OPTIMIZATION } from './constants.js'
+import { DEBUG_BOUNDS_OPTIMIZATION, MAPBOX_ACCESS_TOKEN } from './constants.js'
 
+import './Map.css'
 
-mapboxgl.accessToken = 'pk.eyJ1IjoiY21kYWxiZW0iLCJhIjoiY2pnbXhjZnplMDJ6MjMzbnk0OGthZGE1ayJ9.n1flNO8ndRYKQcR9wNIT9w';
 
 let map, popup;
 let largestBoundsYet;
@@ -51,6 +51,12 @@ class MapboxGLButtonControl {
 }
 
 class Map extends Component {
+    constructor(props) {
+        super(props);
+
+        this.onMapMoved = this.onMapMoved.bind(this);
+    }
+
     showPopup(e) {
         const coords = e.lngLat;
         const props = e.features[0].properties;
@@ -96,11 +102,35 @@ class Map extends Component {
         }
     }
 
-    update() {
+    updateData() {
         if (!map || map.getZoom < 10) {
             return;
         } else {
             this.props.updateData(this.getCurrentBBox());
+        }
+    }
+
+    onMapMoved() {
+        this.props.onMapMoved({
+            lat: map.getCenter().lat,
+            lng: map.getCenter().lng,
+            zoom: map.getZoom()
+        });
+
+        let newBounds = map.getBounds();
+
+        if (DEBUG_BOUNDS_OPTIMIZATION) {
+            this.updateDebugPolygon(newBounds, 2);
+        }
+
+        // Only redo the query if we need new data
+        if (!doesAContainsB(largestBoundsYet, newBounds)) {
+            this.updateData();
+            largestBoundsYet = newBounds;
+
+            if (DEBUG_BOUNDS_OPTIMIZATION) {
+                this.updateDebugPolygon(largestBoundsYet, 1);
+            }
         }
     }
 
@@ -328,43 +358,37 @@ class Map extends Component {
             });
         }
 
-        map.on('moveend', () => {
-            let newBounds = map.getBounds();
+        map.on('moveend', this.onMapMoved);
 
-            if (DEBUG_BOUNDS_OPTIMIZATION) {
-                this.updateDebugPolygon(newBounds, 2);
-            }
-
-            // Only redo the query if we need new data
-            if (!doesAContainsB(largestBoundsYet, newBounds)) {
-                this.update();
-                largestBoundsYet = newBounds;
-
-                if (DEBUG_BOUNDS_OPTIMIZATION) {
-                    this.updateDebugPolygon(largestBoundsYet, 1);
-                }
-            }
-        });
-
-        this.update();
+        this.updateData();
     }
 
     componentDidUpdate(prevProps) {
-        // Check if changed data
         if (this.props.data !== prevProps.data) {
             map.getSource('osm').setData(this.props.data);
+        }
+        
+        if (this.props.style !== prevProps.style) {
+            map.setStyle(this.props.style);
+        }
+        
+        if (this.props.zoom !== prevProps.zoom) {
+            map.setZoom(this.props.zoom);
+        }
+        
+        if (this.props.center !== prevProps.center) {
+            map.setCenter(this.props.center);
         }
     }
     
     componentDidMount() {
+        mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
+        
         map = new mapboxgl.Map({
             container: this.mapContainer,
-            // style: 'mapbox://styles/mapbox/streets-v11',
-            // style: 'mapbox://styles/cmdalbem/cjwo31j95588k1cqxbs7smwd3',
-            style: 'mapbox://styles/mapbox/light-v10',
-            center: [-43.19663687394814, -22.968419833847065],
-            // zoom: 10
-            zoom: 13
+            style: this.props.style,
+            center: this.props.center,
+            zoom: this.props.zoom
         });
 
         
@@ -407,6 +431,11 @@ class Map extends Component {
             largestBoundsYet = map.getBounds();
 
             this.initLayers();
+
+            // Further chages on styles reinitilizes layers
+            map.on('style.load', () => {
+                this.initLayers();
+            });
         });
 
 
