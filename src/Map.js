@@ -103,7 +103,7 @@ class Map extends Component {
     }
 
     updateData() {
-        if (!map || map.getZoom < 10) {
+        if (!map || map.getZoom() < 10) {
             return;
         } else {
             this.props.updateData(this.getCurrentBBox());
@@ -392,7 +392,7 @@ class Map extends Component {
         });
 
         
-        // Controls
+        // Native Mapbox map controls
 
         map.addControl(
             new mapboxgl.NavigationControl(),

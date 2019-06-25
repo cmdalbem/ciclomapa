@@ -76,7 +76,6 @@ class App extends Component {
             params += `&lng=${this.state.lng.toFixed(7)}`;
             params += `&z=${this.state.zoom.toFixed(2)}`;
             this.props.history.push({
-                // pathname: '/dresses',
                 search: params
             })
         }
