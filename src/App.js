@@ -27,8 +27,8 @@ class App extends Component {
             mapStyle: 'mapbox://styles/mapbox/light-v10',
             zoom: urlParams.z || 13,
             center: [
-                urlParams.lat || -43.19663687394814,
-                urlParams.lng || -22.968419833847065]
+                urlParams.lng || -43.19663687394814,
+                urlParams.lat || -22.968419833847065]
         };
     }
 
@@ -68,23 +68,27 @@ class App extends Component {
             this.onRouteChanged();
         }
         
-        if (this.state.zoom !== prevState.zoom) {
+        if (this.state.zoom !== prevState.zoom ||
+            this.state.lat !== prevState.lat ||
+            this.state.lng !== prevState.lng) {
+            let params = '?';
+            params += `lat=${this.state.lat.toFixed(7)}`;
+            params += `&lng=${this.state.lng.toFixed(7)}`;
+            params += `&z=${this.state.zoom.toFixed(2)}`;
             this.props.history.push({
                 // pathname: '/dresses',
-                search: `?zoom=${this.state.zoom}`
+                search: params
             })
         }
     }
 
     onRouteChanged() {
-        this.setState(this.getParamsFromURL());
+        // @todo Fix infinite loop
+        // this.setState(this.getParamsFromURL());
     }
 
     onMapMoved(newState) {
-        console.log('map moved!', newState);
-        
-        // @todo Fix infinite loop
-        // this.setState(newState);
+        this.setState(newState);
     }
 
     render() {
