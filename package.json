@@ -4,6 +4,7 @@
   "private": true,
   "homepage": "https://cmdalbem.github.io/openbikemap",
   "dependencies": {
+    "antd": "^3.19.8",
     "gh-pages": "^2.0.1",
     "jquery": "^3.4.1",
     "mapbox-gl": "^1.0.0",

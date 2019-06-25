@@ -8,6 +8,8 @@ import Spinner from './Spinner.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import OSMController from './OSMController.js'
 
+import "antd/dist/antd.css";
+
 class App extends Component {
     geoJson;
 
