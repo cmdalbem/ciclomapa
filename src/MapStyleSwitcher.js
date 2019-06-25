@@ -25,10 +25,10 @@ class MapStyleSwitcher extends Component {
                     width: '200px'
                 }}
             >
-                <Option value='light'>Light</Option>
-                <Option value='streets'>Streets</Option>
-                <Option value='outdoors'>Outdoors</Option>
-                <Option value='satellite'>Satellite</Option>
+                <Option value='light-v10'>Light</Option>
+                <Option value='streets-v11'>Streets</Option>
+                <Option value='outdoors-v11'>Outdoors</Option>
+                <Option value='satellite-v9'>Satellite</Option>
             </Select>
         )
     }
