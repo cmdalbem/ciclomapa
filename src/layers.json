@@ -3,6 +3,8 @@
         "name": "Ciclovia",
         "filters": [
             ["highway", "cycleway"],
+            [["highway","path"],["bicycle","designated"]],
+            [["highway","footway"],["bicycle","designated"]],
             ["cycleway", "track"],
             ["cycleway:left", "track"], 
             ["cycleway:right", "track"]
@@ -27,7 +29,7 @@
         ],
         "style": {
             "lineColor": "lightgreen",
-            "lineWidth": 3
+            "lineWidth": 4
         }
     },
     {

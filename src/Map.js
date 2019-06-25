@@ -142,8 +142,20 @@ class Map extends Component {
         l.style.lineStyle = l.style.lineStyle || 'solid';
         l.id = slugify(l.name);
 
-        let filters = l.filters.map(f => ["==", ["get", f[0]], f[1]]);
-        filters.unshift('any');
+        const filters = [
+            "any",
+            ...l.filters.map(f => 
+                typeof f[0] === 'string' ?
+                    ["==", ["get", f[0]], f[1]]
+                    :
+                    [ "all",
+                        ...f.map(f2 =>
+                            ["==", ["get", f2[0]], f2[1]]
+                        )
+                    ]
+                )
+        ];
+        console.debug(filters);
 
         // Check if layer has a border color set. If that's the case the logic is a
         //  little different and we'll need 2 layers, one for the line itself and 
@@ -207,6 +219,9 @@ class Map extends Component {
             });
         }
 
+        
+        // Interactions
+
         map.on("mouseenter", l.id, e => {
             if (e.features.length > 0) {
                 selectedCycleway = null;
@@ -221,7 +236,7 @@ class Map extends Component {
                 hoveredCycleway = e.features[0].id;
                 map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: true });
 
-                // this.showPopup(e);
+                this.showPopup(e);
             }
         });
 
@@ -233,18 +248,18 @@ class Map extends Component {
                 // Cursor cursor
                 map.getCanvas().style.cursor = '';
 
-                // this.hidePopup();
+                this.hidePopup();
             }
             hoveredCycleway = null;
         });
 
-        map.on("click", "cycleways-lines", e => {
-            if (e.features.length > 0) {
-                selectedCycleway = e.features[0].id;
+        // map.on("click", l.id, e => {
+        //     if (e.features.length > 0) {
+        //         selectedCycleway = e.features[0].id;
 
-                this.showPopup(e);
-            }
-        });
+        //         this.showPopup(e);
+        //     }
+        // });
     }
 
     initLayers() {
