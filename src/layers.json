@@ -78,5 +78,18 @@
             "lineWidth": 2,
             "lineStyle": "dashed"
         }
+    },
+    {
+        "name": "Bicicleta proibida",
+        "filters": [
+            ["bicycle", "no"],
+            ["bicycle", "dismount"],
+            ["bicycle", "use_sidepath"]
+        ],
+        "style": {
+            "lineColor": "gray",
+            "lineWidth": 2,
+            "lineStyle": "dashed"
+        }
     }
 ]
