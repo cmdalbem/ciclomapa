@@ -1,0 +1,80 @@
+[
+    {
+        "name": "Ciclovia",
+        "filters": [
+            ["highway", "cycleway"],
+            ["cycleway", "track"],
+            ["cycleway:left", "track"], 
+            ["cycleway:right", "track"]
+        ],
+        "style": {
+            "lineColor": "lightgreen",
+            "lineWidth": 5,
+            "borderColor": "green",
+            "borderStyle": "solid"
+        }
+    },
+    {
+        "name": "Ciclofaixa",
+        "filters": [
+            ["cycleway", "lane"],
+            ["cycleway:left", "lane"],
+            ["cycleway:right", "lane"],
+            ["cycleway:both", "lane"],
+            ["cycleway", "opposite_lane"],
+            ["cycleway:right", "opposite_lane"],
+            ["cycleway:left", "opposite_lane"]
+        ],
+        "style": {
+            "lineColor": "lightgreen",
+            "lineWidth": 3
+        }
+    },
+    {
+        "name": "Ciclorota",
+        "filters": [
+            ["cycleway", "sidepath"],
+            ["cycleway:left", "sidepath"],
+            ["cycleway:right", "sidepath"],
+            ["cycleway", "shared"],
+            ["cycleway:right", "shared"],
+            ["cycleway:left", "shared"],
+            ["cycleway", "opposite_track"],
+            ["cycleway:left", "opposite_track"],
+            ["cycleway:right", "opposite_track"],
+            ["cycleway", "buffered_lane"],
+            ["cycleway:left", "buffered_lane"],
+            ["cycleway:right", "buffered_lane"],
+            ["cycleway", "shared_lane"],
+            ["cycleway", "opposite"]
+        ],
+        "style": {
+            "lineColor": "orange",
+            "lineWidth": 3
+        }
+    },
+    {
+        "name": "Via compartilhada com onibus",
+        "filters": [
+            ["cycleway", "share_busway"],
+            ["cycleway", "opposite_share_busway"]
+        ],
+        "style": {
+            "lineColor": "orange",
+            "lineWidth": 3,
+            "borderColor": "orange",
+            "borderStyle": "dashed"
+        }
+    },
+    {
+        "name": "Via local",
+        "filters": [
+            ["maxspeed", "30"]
+        ],
+        "style": {
+            "lineColor": "orange",
+            "lineWidth": 2,
+            "lineStyle": "dashed"
+        }
+    }
+]

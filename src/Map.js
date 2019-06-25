@@ -6,9 +6,11 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxGeocoder from 'mapbox-gl-geocoder'
 import 'mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
-import { doesAContainsB, downloadObjectAsJson, createPolygonFromBBox } from './utils.js'
+import { doesAContainsB, downloadObjectAsJson, createPolygonFromBBox, slugify } from './utils.js'
 
 import { DEBUG_BOUNDS_OPTIMIZATION, MAPBOX_ACCESS_TOKEN } from './constants.js'
+
+import * as layers from './layers.json';
 
 import './Map.css'
 
@@ -134,156 +136,78 @@ class Map extends Component {
         }
     }
 
-    initLayers() {
-        map.addSource("osm", {
-            "type": "geojson",
-            "data": {
-                'type': 'FeatureCollection',
-                'features': []
-            },
-            "generateId": true
-        });
+    addDynamicLayer(l) {
+        const BORDER_WIDTH = 3;
 
-        // Cycleway solid borders
-        map.addLayer({
-            "id": "cycleways-solidborder",
-            "type": "line",
-            "source": "osm",
-            "layout": {
-                "line-join": "round",
-                "line-cap": "round"
-            },
-            "paint": {
-                "line-color": [
-                    "case",
-                    ["==", ["get", "highway"], "cycleway"], "green",
-                    ["==", ["get", "cycleway"], "track"], "green",
-                    ["==", ["get", "cycleway:left"], "track"], "green",
-                    ["==", ["get", "cycleway:right"], "track"], "green",
-                    ["==", ["get", "cycleway"], "opposite_track"], "green",
-                    ["==", ["get", "cycleway"], "segregated"], "green",
-                    // ["==", ["get", "bicycle"], "designated"], "green",
-                    ["==", ["get", "cycleway"], "lane"], "green",
-                    ["==", ["get", "cycleway:left"], "lane"], "green",
-                    ["==", ["get", "cycleway:right"], "lane"], "green",
+        l.style.lineStyle = l.style.lineStyle || 'solid';
+        l.id = slugify(l.name);
 
-                    ["==", ["get", "cycleway"], "share_busway"], "orange",
-                    ["==", ["get", "cycleway"], "shared"], "orange",
+        let filters = l.filters.map(f => ["==", ["get", f[0]], f[1]]);
+        filters.unshift('any');
 
-                    "transparent"
-                ],
-                "line-width": [
-                    "case",
-                    ["boolean", ["feature-state", "highlight"], false],
-                    12,
-                    5
-                ]
-            },
-            "filter": ["==", "$type", "LineString"],
-        });
+        // Check if layer has a border color set. If that's the case the logic is a
+        //  little different and we'll need 2 layers, one for the line itself and 
+        //  another for the line underneath which creates the illusion of a border.
+        if (l.style.borderColor) {
+            l.style.borderStyle = l.style.borderStyle || 'solid';
 
-        // Cycleways dashed borders
-        map.addLayer({
-            "id": "cycleways-dashedborder",
-            "type": "line",
-            "source": "osm",
-            "paint": {
-                "line-color": [
-                    "case",
-                    ["==", ["get", "cycleway"], "shared_lane"], "orange",
-                    ["==", ["get", "cycleway:left"], "shared_lane"], "orange",
-                    ["==", ["get", "cycleway:right"], "shared_lane"], "orange",
+            // Border
+            map.addLayer({
+                "id": l.id+'--border',
+                "type": "line",
+                "source": "osm",
+                "paint": {
+                    "line-color": l.style.borderColor,
+                    "line-width": [
+                        "case",
+                        ["boolean", ["feature-state", "highlight"], false],
+                        12,
+                        l.style.lineWidth
+                    ],
+                    ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
+                },
+                "filter": filters,
+            });
 
-                    "transparent"
-                ],
-                'line-dasharray': [1, 0.6],
-                "line-width": [
-                    "case",
-                    ["boolean", ["feature-state", "highlight"], false],
-                    12,
-                    5
-                ]
-            },
-            "filter": ["==", "$type", "LineString"],
-        });
+            // Line
+            map.addLayer({
+                "id": l.id,
+                "type": "line",
+                "source": "osm",
+                "text-field": l.name,
+                "paint": {
+                    "line-color": l.style.lineColor,
+                    "line-width": [
+                        "case",
+                        ["boolean", ["feature-state", "highlight"], false],
+                        12,
+                        l.style.lineWidth - BORDER_WIDTH
+                    ],
+                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
+                },
+                "filter": filters,
+            });
+        } else {
+            map.addLayer({
+                "id": l.id,
+                "type": "line",
+                "source": "osm",
+                "text-field": l.name,
+                "paint": {
+                    "line-color": l.style.lineColor,
+                    "line-width": [
+                        "case",
+                        ["boolean", ["feature-state", "highlight"], false],
+                        12,
+                        l.style.lineWidth
+                    ],
+                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
+                },
+                "filter": filters,
+            });
+        }
 
-        // Cycleway solid lines
-        map.addLayer({
-            "id": "cycleways-lines",
-            "type": "line",
-            "source": "osm",
-            "layout": {
-                "line-join": "round",
-                "line-cap": "round"
-            },
-            "paint": {
-                "line-color": [
-                    "case",
-                    ["==", ["get", "highway"], "cycleway"], "lightgreen",
-                    ["==", ["get", "cycleway"], "track"], "lightgreen",
-                    ["==", ["get", "cycleway:left"], "track"], "lightgreen",
-                    ["==", ["get", "cycleway:right"], "track"], "lightgreen",
-                    ["==", ["get", "cycleway"], "opposite_track"], "lightgreen",
-                    ["==", ["get", "cycleway"], "segregated"], "lightgreen",
-                    ["==", ["get", "cycleway"], "lane"], "lightgreen",
-                    ["==", ["get", "cycleway:left"], "lane"], "lightgreen",
-                    ["==", ["get", "cycleway:right"], "lane"], "lightgreen",
-
-                    ["==", ["get", "bicycle"], "designated"], "orange",
-                    ["==", ["get", "cycleway"], "opposite"], "orange",
-                    ["==", ["get", "cycleway:left"], "opposite"], "orange",
-                    ["==", ["get", "cycleway:right"], "opposite"], "orange",
-                    ["==", ["get", "cycleway"], "opposite_lane"], "orange",
-                    ["==", ["get", "cycleway:left"], "opposite_lane"], "orange",
-                    ["==", ["get", "cycleway:right"], "opposite_lane"], "orange",
-                    ["==", ["get", "cycleway"], "crossing"], "orange",
-
-                    ["==", ["get", "cycleway"], "shared_lane"], "yellow",
-                    ["==", ["get", "cycleway:left"], "shared_lane"], "yellow",
-                    ["==", ["get", "cycleway:right"], "shared_lane"], "yellow",
-                    ["==", ["get", "cycleway"], "share_busway"], "yellow",
-                    ["==", ["get", "cycleway"], "shared"], "yellow",
-
-                    ["==", ["get", "maxspeed"], "30"], "transparent",
-
-                    "red"
-                ],
-                "line-width": [
-                    "case",
-                    ["boolean", ["feature-state", "highlight"], false],
-                    8,
-                    2
-                ]
-
-            },
-            "filter": ["==", "$type", "LineString"],
-        });
-
-        // Cycleway solid lines
-        map.addLayer({
-            "id": "cycleways-dashedlines",
-            "type": "line",
-            "source": "osm",
-            "paint": {
-                "line-color": [
-                    "case",
-                    ["==", ["get", "maxspeed"], "30"], "orange",
-
-                    "transparent"
-                ],
-                'line-dasharray': [1, 0.6],
-                "line-width": [
-                    "case",
-                    ["boolean", ["feature-state", "highlight"], false],
-                    8,
-                    3
-                ]
-
-            },
-            "filter": ["==", "$type", "LineString"],
-        });
-
-        map.on("mouseenter", "cycleways-lines", e => {
+        map.on("mouseenter", l.id, e => {
             if (e.features.length > 0) {
                 selectedCycleway = null;
 
@@ -297,11 +221,11 @@ class Map extends Component {
                 hoveredCycleway = e.features[0].id;
                 map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: true });
 
-                this.showPopup(e);
+                // this.showPopup(e);
             }
         });
 
-        map.on("mouseleave", "cycleways-lines", e => {
+        map.on("mouseleave", l.id, e => {
             // Hover style
             if (hoveredCycleway && !selectedCycleway) {
                 map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
@@ -309,7 +233,7 @@ class Map extends Component {
                 // Cursor cursor
                 map.getCanvas().style.cursor = '';
 
-                this.hidePopup();
+                // this.hidePopup();
             }
             hoveredCycleway = null;
         });
@@ -320,6 +244,23 @@ class Map extends Component {
 
                 this.showPopup(e);
             }
+        });
+    }
+
+    initLayers() {
+        map.addSource("osm", {
+            "type": "geojson",
+            "data": {
+                'type': 'FeatureCollection',
+                'features': []
+            },
+            "generateId": true
+        });
+
+        // In GeoJSON layers are from most important to least important, but we 
+        //   want the most important ones to be on top.
+        layers.default.reverse().forEach(l => {
+            this.addDynamicLayer(l);
         });
 
         if (DEBUG_BOUNDS_OPTIMIZATION) {
@@ -357,10 +298,6 @@ class Map extends Component {
                 }
             });
         }
-
-        map.on('moveend', this.onMapMoved);
-
-        this.updateData();
     }
 
     componentDidUpdate(prevProps) {
@@ -431,6 +368,10 @@ class Map extends Component {
             largestBoundsYet = map.getBounds();
 
             this.initLayers();
+
+            this.updateData();
+
+            map.on('moveend', this.onMapMoved);
 
             // Further chages on styles reinitilizes layers
             map.on('style.load', () => {
