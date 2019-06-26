@@ -31,7 +31,7 @@ class LayersPanel extends Component {
                                             : `repeating-linear-gradient(90deg, ${l.style.lineColor}, ${l.style.lineColor} 3px, white 3px, white 6px)`,
                                         borderColor: l.style.borderColor,
                                         borderStyle: l.style.borderStyle,
-                                        borderWidth: l.style.borderWidth/2,
+                                        borderWidth: l.style.borderWidth ? l.style.borderWidth/2 : '0',
                                         borderLeft: 'none',
                                         borderRight: 'none'
                                 }}

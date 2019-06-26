@@ -5,6 +5,8 @@
             ["highway", "cycleway"],
             [["highway","path"],["bicycle","designated"]],
             [["highway","footway"],["bicycle","designated"]],
+            [["highway","pedestrian"],["bicycle","designated"]],
+            [["highway","steps"],["bicycle","designated"]],
             ["cycleway", "track"],
             ["cycleway:left", "track"], 
             ["cycleway:right", "track"]
@@ -76,6 +78,19 @@
         "style": {
             "lineColor": "orange",
             "lineWidth": 2,
+            "lineStyle": "dashed"
+        }
+    },
+    {
+        "name": "Off road",
+        "isActive": false,
+        "filters": [
+            [["highway","track"],["bicycle","designated"]],
+            [["highway","track"],["bicycle","yes"]]
+        ],
+        "style": {
+            "lineColor": "brown",
+            "lineWidth": 3,
             "lineStyle": "dashed"
         }
     },
