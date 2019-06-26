@@ -3,24 +3,24 @@
     top: 60px;
     right: 10px;
     background: white;
-    padding: 12px;
+    padding: 8px 0;
     box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
     border-radius: 3px;
-    min-width: 240px;
-    /* max-width: 360px; */
+    min-width: 100px;
+    max-width: 200px;
 }
 
 .layer-row {
     display: flex;
     cursor: pointer;
-    align-items: center;
+    /* align-items: center; */
     justify-content: space-between;
-    padding: 4px 0;
+    padding: 8px 12px;
 }
 
 .layer-row > div {
     display: flex;
-    align-items: center;   
+    /* align-items: center;    */
 }
 
 .layer-row:hover {
@@ -28,11 +28,12 @@
 }
 
 .layer-miniature {
-    width: 24px;
-    margin: 0 4px;
+    min-width: 24px;
+    margin: 6px 4px 0 0;
     display: inline-block;
 }
 
 .layer-name {
     margin: 0 4px;
+    line-height: 1.2em;
 }

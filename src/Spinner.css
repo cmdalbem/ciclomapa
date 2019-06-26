@@ -1,4 +1,12 @@
 .loader-container {
+    --green: #008744;
+    --blue: #0057e7;
+    --red: #d62d20;
+    --yellow: #ffa700;
+    --white: #eee;
+    
+    --width: 60px;
+
     position: fixed;
     top: 0;
     bottom: 0;

@@ -1,8 +1,6 @@
 import React, { Component } from 'react';
 import { withRouter } from "react-router-dom";
 
-import './App.css';
-
 import Map from './Map.js'
 import Spinner from './Spinner.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
@@ -10,6 +8,7 @@ import LayersPanel from './LayersPanel.js'
 import OSMController from './OSMController.js'
 
 import "antd/dist/antd.css";
+import './App.css';
 
 class App extends Component {
     geoJson;
