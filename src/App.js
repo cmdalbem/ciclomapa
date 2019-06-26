@@ -6,6 +6,7 @@ import './App.css';
 import Map from './Map.js'
 import Spinner from './Spinner.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
+import LayersPanel from './LayersPanel.js'
 import OSMController from './OSMController.js'
 
 import "antd/dist/antd.css";
@@ -19,11 +20,13 @@ class App extends Component {
         this.updateData = this.updateData.bind(this);
         this.onMapStyleChange = this.onMapStyleChange.bind(this);
         this.onMapMoved = this.onMapMoved.bind(this);
+        this.onLayersChange = this.onLayersChange.bind(this);
 
         const urlParams = this.getParamsFromURL();
         this.state = {
             geoJson: null,
             loading: true,
+            layers: OSMController.getLayers(),
             mapStyle: 'mapbox://styles/mapbox/light-v10',
             zoom: urlParams.z || 13,
             center: [
@@ -53,7 +56,7 @@ class App extends Component {
         OSMController.getData(bbox)
             .then(data => {
                 this.setState({
-                    geoJson: data,
+                    geoJson: data.geoJson,
                     loading: false
                 });
             });
@@ -61,6 +64,14 @@ class App extends Component {
 
     onMapStyleChange(newMapStyle) {
         this.setState({ mapStyle: newMapStyle});
+    }
+
+    onLayersChange(id, newVal) {
+        let newLayers = Object.assign([], this.state.layers);
+        let modifiedLayer = newLayers.filter(l => l.id === id)[0];
+        modifiedLayer.isActive = newVal;
+
+        this.setState({ layers: newLayers });
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -95,6 +106,7 @@ class App extends Component {
             <div>
                 <Map
                     data={this.state.geoJson}
+                    layers={this.state.layers}
                     style={this.state.mapStyle}
                     zoom={this.state.zoom}
                     center={this.state.center}
@@ -105,6 +117,11 @@ class App extends Component {
                 <Spinner loading={this.state.loading}/>
 
                 <MapStyleSwitcher onMapStyleChange={this.onMapStyleChange}/>
+ 
+                <LayersPanel
+                    layers={this.state.layers}
+                    onLayersChange={this.onLayersChange}
+                />
             </div>
         );
     }

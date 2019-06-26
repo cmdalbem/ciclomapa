@@ -1,0 +1,38 @@
+.layers-panel {
+    position: fixed;
+    top: 60px;
+    right: 10px;
+    background: white;
+    padding: 12px;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+    border-radius: 3px;
+    min-width: 240px;
+    /* max-width: 360px; */
+}
+
+.layer-row {
+    display: flex;
+    cursor: pointer;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.layer-row > div {
+    display: flex;
+    align-items: center;   
+}
+
+.layer-row:hover {
+    background: #fafafa;
+}
+
+.layer-miniature {
+    width: 24px;
+    margin: 0 4px;
+    display: inline-block;
+}
+
+.layer-name {
+    margin: 0 4px;
+}

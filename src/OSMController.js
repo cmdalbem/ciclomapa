@@ -4,6 +4,9 @@ import $ from 'jquery'
 
 import { notification } from 'antd';
 
+import { DEFAULT_BORDER_WIDTH } from './constants.js'
+import { slugify } from './utils.js'
+
 import * as layers from './layers.json';
 
 class OSMController {
@@ -30,6 +33,28 @@ class OSMController {
         `;
     }
 
+    static massageLayersData() {
+        layers.default.forEach(l => {
+            // Omitted values
+            l.style.lineStyle = l.style.lineStyle || 'solid';
+            l.isActive = l.isActive !== undefined ? l.isActive : true;
+
+            if (l.style.borderColor) {
+                l.style.borderStyle = l.style.borderStyle || 'solid';
+                l.style.borderWidth = DEFAULT_BORDER_WIDTH;
+            }
+            
+            // Generate an ID based on name
+            l.id = slugify(l.name);
+        });
+
+        return layers.default;
+    }
+
+    static getLayers() {
+        return this.massageLayersData();
+    }
+
     static getData(bbox) {
         return new Promise((resolve, reject) => {
             const query = OSMController.getQuery(bbox);
@@ -44,12 +69,12 @@ class OSMController {
                 `https://overpass.kumi.systems/api/interpreter?data=${encodedQuery}`,
                 data => {
                     console.debug('osm data: ', data);
-
                     geoJson = osmtogeojson(data, { flatProperties: true });
-
                     console.debug('converted to geoJSON: ', geoJson);
 
-                    resolve(geoJson);
+                    resolve({
+                        geoJson: geoJson
+                    });
                 }
             ).fail(e => {
                 console.error("Deu erro! Saca só:", e);

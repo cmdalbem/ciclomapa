@@ -64,7 +64,7 @@
         "style": {
             "lineColor": "orange",
             "lineWidth": 3,
-            "borderColor": "orange",
+            "borderColor": "red",
             "borderStyle": "dashed"
         }
     },
@@ -81,6 +81,7 @@
     },
     {
         "name": "Bicicleta proibida",
+        "isActive": false,
         "filters": [
             ["bicycle", "no"],
             ["bicycle", "dismount"],

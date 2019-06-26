@@ -6,11 +6,9 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxGeocoder from 'mapbox-gl-geocoder'
 import 'mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
-import { doesAContainsB, downloadObjectAsJson, createPolygonFromBBox, slugify } from './utils.js'
+import { doesAContainsB, downloadObjectAsJson, createPolygonFromBBox } from './utils.js'
 
 import { DEBUG_BOUNDS_OPTIMIZATION, MAPBOX_ACCESS_TOKEN } from './constants.js'
-
-import * as layers from './layers.json';
 
 import './Map.css'
 
@@ -137,11 +135,6 @@ class Map extends Component {
     }
 
     addDynamicLayer(l) {
-        const BORDER_WIDTH = 3;
-
-        l.style.lineStyle = l.style.lineStyle || 'solid';
-        l.id = slugify(l.name);
-
         const filters = [
             "any",
             ...l.filters.map(f => 
@@ -161,8 +154,6 @@ class Map extends Component {
         //  little different and we'll need 2 layers, one for the line itself and 
         //  another for the line underneath which creates the illusion of a border.
         if (l.style.borderColor) {
-            l.style.borderStyle = l.style.borderStyle || 'solid';
-
             // Border
             map.addLayer({
                 "id": l.id+'--border',
@@ -193,7 +184,7 @@ class Map extends Component {
                         "case",
                         ["boolean", ["feature-state", "highlight"], false],
                         12,
-                        l.style.lineWidth - BORDER_WIDTH
+                        l.style.lineWidth - l.style.borderWidth
                     ],
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
@@ -274,9 +265,10 @@ class Map extends Component {
 
         // In GeoJSON layers are from most important to least important, but we 
         //   want the most important ones to be on top.
-        layers.default.reverse().forEach(l => {
+        // Slice is used here to don't destructively reverse the original array.
+        this.props.layers.slice().reverse().forEach(l => {
             this.addDynamicLayer(l);
-        });
+        }); 
 
         if (DEBUG_BOUNDS_OPTIMIZATION) {
             map.addLayer({
@@ -330,6 +322,16 @@ class Map extends Component {
         
         if (this.props.center !== prevProps.center) {
             map.setCenter(this.props.center);
+        }
+        
+        // Compare only 'isActive' field of layers
+        if (this.props.layers.map(l => l.isActive).join() === prevProps.layers.map(l => l.isActive).join()) {
+            this.props.layers.forEach( l => {
+                map.setLayoutProperty(l.id, 'visibility', l.isActive ? 'visible' : 'none');
+                if (l.style.borderColor) {
+                    map.setLayoutProperty(l.id+'--border', 'visibility', l.isActive ? 'visible' : 'none');
+                }
+            })
         }
     }
     
