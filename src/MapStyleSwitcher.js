@@ -6,16 +6,14 @@ const { Option } = Select;
 
 class MapStyleSwitcher extends Component {
 
-    onChange(layerId) {
-        // console.log(`selected ${value}`);
-        this.props.onMapStyleChange('mapbox://styles/mapbox/' + layerId)
+    onChange(url) {
+        this.props.onMapStyleChange(url)
     }
 
     render() {
         return (
             <Select
-                defaultValue="light"
-                placeholder="Estilo do mapa"
+                defaultValue="Mapa light"
                 optionFilterProp="children"
                 onChange={this.onChange.bind(this)}
                 style={{
@@ -25,10 +23,10 @@ class MapStyleSwitcher extends Component {
                     width: '200px'
                 }}
             >
-                <Option value='light-v10'>Light</Option>
-                <Option value='streets-v11'>Streets</Option>
-                <Option value='outdoors-v11'>Outdoors</Option>
-                <Option value='satellite-v9'>Satellite</Option>
+                <Option value='mapbox://styles/mapbox/light-v10'>Mapa light</Option>
+                <Option value='mapbox://styles/mapbox/streets-v11'>Mapa normal</Option>
+                {/* <Option value='mapbox://styles/mapbox/outdoors-v11'>Outdoors</Option> */}
+                <Option value='mapbox://styles/cmdalbem/cjxsdwb907bfi1cqevxio2bst'>Mapa com satélite</Option>
             </Select>
         )
     }
