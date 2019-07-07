@@ -15,7 +15,7 @@ import './Map.css'
 
 let map, popup;
 let largestBoundsYet;
-let hoveredCycleway, selectedCycleway;
+let selectedCycleway;
 let currentBBox;
 
 
@@ -58,7 +58,6 @@ class Map extends Component {
     }
 
     showPopup(e) {
-        console.debug(e);
         console.debug(e.features[0]);
 
         const coords = e.lngLat;
@@ -271,7 +270,11 @@ class Map extends Component {
 
         map.on("click", interactiveId, e => {
             if (e.features.length > 0) {
+                if (selectedCycleway) {
+                    map.setFeatureState({ source: 'osm', id: selectedCycleway }, { highlight: false });
+                }
                 selectedCycleway = e.features[0].id;
+                map.setFeatureState({ source: 'osm', id: selectedCycleway }, { highlight: true });
 
                 this.showPopup(e);
             }
@@ -422,9 +425,14 @@ class Map extends Component {
         });
 
 
-        // Create a popup, but don't add it to the map yet.
         popup = new mapboxgl.Popup({
             closeOnClick: false
+        });
+        popup.on('close', e => {
+            if (selectedCycleway) {
+                map.setFeatureState({ source: 'osm', id: selectedCycleway }, { highlight: false });
+            }
+            selectedCycleway = null;
         });
     }
 

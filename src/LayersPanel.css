@@ -6,21 +6,20 @@
     padding: 8px 0;
     box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
     border-radius: 3px;
-    min-width: 100px;
-    max-width: 200px;
+    width: 200px;
 }
 
 .layer-row {
     display: flex;
     cursor: pointer;
-    /* align-items: center; */
+    align-items: center;
     justify-content: space-between;
     padding: 8px 12px;
 }
 
 .layer-row > div {
     display: flex;
-    /* align-items: center;    */
+    align-items: center;   
 }
 
 .layer-row:hover {
@@ -29,7 +28,7 @@
 
 .layer-miniature {
     min-width: 24px;
-    margin: 6px 4px 0 0;
+    margin-right: 4px;
     display: inline-block;
 }
 

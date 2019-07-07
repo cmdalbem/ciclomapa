@@ -19,20 +19,20 @@
         "description": "É um espaço segregado para fluxo de bicicletas. Isso significa que há uma separação física isolando os ciclistas dos demais veículos. A maioria das ciclovias de orla de praia são exemplos de vias segregadas.",
         "filters": [
             ["highway", "cycleway"],
-            [["highway","path"],["bicycle","designated"]],
-            [["highway","footway"],["bicycle","designated"]],
-            [["highway","pedestrian"],["bicycle","designated"]],
-            [["highway","steps"],["bicycle","designated"]],
-            [["highway","path"],["bicycle","yes"]],
-            [["highway","footway"],["bicycle","yes"]],
-            [["highway","pedestrian"],["bicycle","yes"]],
-            [["highway","steps"],["bicycle","yes"]],
             ["cycleway", "track"],
             ["cycleway:left", "track"], 
             ["cycleway:right", "track"],
             ["cycleway", "opposite_track"],
             ["cycleway:left", "opposite_track"],
-            ["cycleway:right", "opposite_track"]
+            ["cycleway:right", "opposite_track"],
+            [["highway","path"],["bicycle","designated"]],
+            [["highway","path"],["bicycle","yes"]],
+            [["highway","footway"],["bicycle","designated"]],
+            [["highway","footway"],["bicycle","yes"]],
+            [["highway","pedestrian"],["bicycle","designated"]],
+            [["highway","pedestrian"],["bicycle","yes"]],
+            [["highway","steps"],["bicycle","designated"]],
+            [["highway","steps"],["bicycle","yes"]]
         ],
         "style": {
             "lineColor": "#65df97",
@@ -111,7 +111,7 @@
         }
     },
     {
-        "name": "Bicicleta proibida",
+        "name": "Proibido",
         "description": "Vias onde expressamente não é permitido passar de bicicleta.",
         "isActive": false,
         "filters": [
