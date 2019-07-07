@@ -58,19 +58,42 @@ class Map extends Component {
     }
 
     showPopup(e) {
+        console.debug(e);
+        console.debug(e.features[0]);
+
         const coords = e.lngLat;
         const props = e.features[0].properties;
-        const osmID = props.id;
-        const prettyProps = JSON.stringify(props, null, 2)
-            .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-            .replace(/"|,|\{|\}/g, '');
 
-        let html;
-        html += prettyProps;
+        const layer = this.props.layers.find(l =>
+            l.id == e.features[0].layer.id.split('--')[0]
+        );
+
+        let html = '';
+
+        // const prettyProps = JSON.stringify(props, null, 2)
+        //     .replace(/(?:\r\n|\r|\n)/g, '<br/>')
+        //     .replace(/"|,|\{|\}/g, '');
+        // html += prettyProps;
+
+        if (props.name) {
+            html += `<h2>${props.name}</h2>`;
+        } else {
+            html += '<i>Sem nome</i>';
+        }
+        
+        html += `<p>Tipo: <b>${layer.name}</b></p>`;
+
+        // html += `<h3>Tipo: ${layer.name}</h3>`;
+        // html += `<p>${layer.description}</p>`;
+
         html += `
-        <br>
-        <hr>
-        <a target="_BLANK" rel="noopener" href="https://www.openstreetmap.org/${osmID}">Editar no OSM</a>
+            <a
+                target="_BLANK"
+                rel="noopener"
+                href="https://www.openstreetmap.org/${props.id}"
+            >
+                Editar no OSM
+            </a>
     `;
 
         popup.setLngLat(coords)
@@ -159,6 +182,8 @@ class Map extends Component {
                 "id": l.id+'--border',
                 "type": "line",
                 "source": "osm",
+                "name": l.name,
+                "description": l.description,
                 "paint": {
                     "line-color": l.style.borderColor,
                     "line-width": [
@@ -177,7 +202,8 @@ class Map extends Component {
                 "id": l.id,
                 "type": "line",
                 "source": "osm",
-                "text-field": l.name,
+                "name": l.name,
+                "description": l.description,
                 "paint": {
                     "line-color": l.style.lineColor,
                     "line-width": [
@@ -195,7 +221,8 @@ class Map extends Component {
                 "id": l.id,
                 "type": "line",
                 "source": "osm",
-                "text-field": l.name,
+                "name": l.name,
+                "description": l.description,
                 "paint": {
                     "line-color": l.style.lineColor,
                     "line-width": [
@@ -213,44 +240,42 @@ class Map extends Component {
         
         // Interactions
 
-        map.on("mouseenter", l.id, e => {
-            if (e.features.length > 0) {
-                selectedCycleway = null;
+        const interactiveId = l.style.borderColor ? 
+            l.id + '--border'
+            : l.id;
 
+        map.on("mouseenter", interactiveId, e => {
+            if (e.features.length > 0) {
                 // Cursor
                 map.getCanvas().style.cursor = 'pointer';
 
                 // Hover style
-                if (hoveredCycleway) {
-                    map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
-                }
-                hoveredCycleway = e.features[0].id;
-                map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: true });
+                // if (hoveredCycleway) {
+                //     map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
+                // }
+                // hoveredCycleway = e.features[0].id;
+                // map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: true });
+            }
+        });
+
+        map.on("mouseleave", interactiveId, e => {
+            // Hover style
+            // if (hoveredCycleway && !selectedCycleway) {
+                // map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
+
+                // Cursor cursor
+                map.getCanvas().style.cursor = '';
+            // }
+            // hoveredCycleway = null;
+        });
+
+        map.on("click", interactiveId, e => {
+            if (e.features.length > 0) {
+                selectedCycleway = e.features[0].id;
 
                 this.showPopup(e);
             }
         });
-
-        map.on("mouseleave", l.id, e => {
-            // Hover style
-            if (hoveredCycleway && !selectedCycleway) {
-                map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
-
-                // Cursor cursor
-                map.getCanvas().style.cursor = '';
-
-                this.hidePopup();
-            }
-            hoveredCycleway = null;
-        });
-
-        // map.on("click", l.id, e => {
-        //     if (e.features.length > 0) {
-        //         selectedCycleway = e.features[0].id;
-
-        //         this.showPopup(e);
-        //     }
-        // });
     }
 
     initLayers() {
@@ -385,7 +410,6 @@ class Map extends Component {
             largestBoundsYet = map.getBounds();
 
             this.initLayers();
-
             this.updateData();
 
             map.on('moveend', this.onMapMoved);
@@ -393,13 +417,13 @@ class Map extends Component {
             // Further chages on styles reinitilizes layers
             map.on('style.load', () => {
                 this.initLayers();
+                this.updateData();
             });
         });
 
 
         // Create a popup, but don't add it to the map yet.
         popup = new mapboxgl.Popup({
-            closeButton: false,
             closeOnClick: false
         });
     }

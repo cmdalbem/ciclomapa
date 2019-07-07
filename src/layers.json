@@ -8,9 +8,9 @@
             ["cyclestreet", "yes"]
         ],
         "style": {
-            "lineColor": "lightblue",
-            "lineWidth": 5,
-            "borderColor": "blue",
+            "lineColor": "#57c8b1",
+            "lineWidth": 6,
+            "borderColor": "#347c6d",
             "borderStyle": "solid"
         }
     },
@@ -35,9 +35,9 @@
             ["cycleway:right", "opposite_track"]
         ],
         "style": {
-            "lineColor": "lightgreen",
-            "lineWidth": 5,
-            "borderColor": "green",
+            "lineColor": "#65df97",
+            "lineWidth": 6,
+            "borderColor": "#4ba96e",
             "borderStyle": "solid"
         }
     },
@@ -54,7 +54,7 @@
             ["cycleway:left", "opposite_lane"]
         ],
         "style": {
-            "lineColor": "lightgreen",
+            "lineColor": "green",
             "lineWidth": 4
         }
     },
@@ -105,7 +105,7 @@
             [["highway","track"],["bicycle","yes"]]
         ],
         "style": {
-            "lineColor": "brown",
+            "lineColor": "#996633",
             "lineWidth": 3,
             "lineStyle": "dashed"
         }
