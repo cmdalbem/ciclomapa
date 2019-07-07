@@ -1,6 +1,22 @@
 [
     {
+        "name": "Cyclestreets",
+        "description": "Estradas ou ruas exclusivas para bicicletas.",
+        "filters": [
+            ["cycleway", "cyclestreet"],
+            ["bicycle_road", "yes"],
+            ["cyclestreet", "yes"]
+        ],
+        "style": {
+            "lineColor": "lightblue",
+            "lineWidth": 5,
+            "borderColor": "blue",
+            "borderStyle": "solid"
+        }
+    },
+    {
         "name": "Ciclovia",
+        "description": "É um espaço segregado para fluxo de bicicletas. Isso significa que há uma separação física isolando os ciclistas dos demais veículos. A maioria das ciclovias de orla de praia são exemplos de vias segregadas.",
         "filters": [
             ["highway", "cycleway"],
             [["highway","path"],["bicycle","designated"]],
@@ -20,6 +36,7 @@
     },
     {
         "name": "Ciclofaixa",
+        "description": "É quando há apenas uma faixa pintada no chão, sem separação física de qualquer tipo (inclusive cones ou cavaletes). Pode haver “olhos de gato” ou no máximo os tachões do tipo “tartaruga”, como os que separam as faixas de ônibus.",
         "filters": [
             ["cycleway", "lane"],
             ["cycleway:left", "lane"],
@@ -36,6 +53,7 @@
     },
     {
         "name": "Ciclorota",
+        "description": "O conceito original de ciclorrota (ou ciclo-rota) é o um caminho, sinalizado ou não, que representa a rota recomendada para o ciclista, seja para chegar a um destino ou para fazer um circuito turístico ou esportivo. Representa efetivamente um trajeto, não uma faixa da via, um trecho segregado ou uma zona de segurança (embora uma ciclorrota possa se utilizar parcial ou totalmente desses recursos, ou até mesmo de ciclovias).",
         "filters": [
             ["cycleway", "sidepath"],
             ["cycleway:left", "sidepath"],
@@ -50,7 +68,11 @@
             ["cycleway:left", "buffered_lane"],
             ["cycleway:right", "buffered_lane"],
             ["cycleway", "shared_lane"],
-            ["cycleway", "opposite"]
+            ["cycleway", "opposite"],
+            ["cycleway", "share_busway"],
+            ["cycleway:left", "share_busway"],
+            ["cycleway:right", "share_busway"],
+            ["cycleway", "opposite_share_busway"]
         ],
         "style": {
             "lineColor": "orange",
@@ -58,20 +80,9 @@
         }
     },
     {
-        "name": "Via compartilhada com onibus",
-        "filters": [
-            ["cycleway", "share_busway"],
-            ["cycleway", "opposite_share_busway"]
-        ],
-        "style": {
-            "lineColor": "orange",
-            "lineWidth": 3,
-            "borderColor": "red",
-            "borderStyle": "dashed"
-        }
-    },
-    {
-        "name": "Via local",
+        "name": "Zona 30",
+        "description": "Vias com limite de velocidade de 30km/h",
+        "isActive": false,
         "filters": [
             ["maxspeed", "30"]
         ],
@@ -83,6 +94,7 @@
     },
     {
         "name": "Off road",
+        "description": "Vias não pavimentadas, normalmente em áreas rurais, acessíveis de bicicleta.",
         "isActive": false,
         "filters": [
             [["highway","track"],["bicycle","designated"]],
@@ -96,6 +108,7 @@
     },
     {
         "name": "Bicicleta proibida",
+        "description": "Vias onde expressamente não é permitido passar de bicicleta.",
         "isActive": false,
         "filters": [
             ["bicycle", "no"],

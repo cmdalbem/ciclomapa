@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 
-import { Switch } from 'antd';
+import { Switch, Tooltip, Icon } from 'antd';
 
 import './LayersPanel.css';
 
@@ -40,6 +40,13 @@ class LayersPanel extends Component {
                                 <span className="layer-name">
                                     {l.name}
                                 </span>
+
+                                {
+                                    l.description &&
+                                    <Tooltip title={l.description}>
+                                        <Icon type="question-circle" style={{ opacity: '.5' }} />
+                                    </Tooltip>
+                                }
                             </div>
 
                             <Switch size="small" checked={l.isActive}/>
