@@ -40,16 +40,21 @@ class LayersPanel extends Component {
                                 <span className="layer-name">
                                     {l.name}
                                 </span>
-
-                                {
-                                    l.description &&
-                                    <Tooltip title={l.description}>
-                                        <Icon type="question-circle" style={{ opacity: '.5' }} />
-                                    </Tooltip>
-                                }
                             </div>
 
-                            <Switch size="small" checked={l.isActive}/>
+                            <div>
+                                {
+                                    l.description &&
+                                    <div style={{marginRight: '6px'}}>
+                                        <Tooltip placement="left" title={l.description}>
+                                            <Icon type="question-circle" style={{ opacity: '.5' }} />
+                                        </Tooltip>
+                                    </div>
+                                }
+
+                                <Switch size="small" checked={l.isActive}/>
+                            </div>
+
                         </div>
                     )
                 }
