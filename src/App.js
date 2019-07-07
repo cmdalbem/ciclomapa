@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import { withRouter } from "react-router-dom";
 
+// import { openDB, deleteDB, wrap, unwrap } from 'idb';
+
 import Map from './Map.js'
 import Spinner from './Spinner.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
@@ -28,9 +30,10 @@ class App extends Component {
             layers: OSMController.getLayers(),
             mapStyle: 'mapbox://styles/mapbox/light-v10',
             zoom: urlParams.z || 13,
+            area: 'Niterói, Rio de Janeiro, Brazil',
             center: [
-                urlParams.lng || -43.19663687394814,
-                urlParams.lat || -22.968419833847065]
+                urlParams.lng || -43.1098110,
+                urlParams.lat || -22.8948963]
         };
     }
 
@@ -49,16 +52,18 @@ class App extends Component {
         return paramsObj;
     }
 
-    updateData(bbox) {
-        this.setState({ loading: true });
+    updateData() {
+        if (this.state.zoom > 10) {
+            this.setState({ loading: true });
 
-        OSMController.getData(bbox)
-            .then(data => {
-                this.setState({
-                    geoJson: data.geoJson,
-                    loading: false
+            OSMController.getData({area: this.state.area})
+                .then(data => {
+                    this.setState({
+                        geoJson: data.geoJson,
+                        loading: false
+                    });
                 });
-            });
+        }
     }
 
     onMapStyleChange(newMapStyle) {
@@ -76,6 +81,21 @@ class App extends Component {
     componentDidUpdate(prevProps, prevState) {
         if (this.props.location !== prevProps.location) {
             this.onRouteChanged();
+        }
+
+        if (this.state.area !== prevState.area) {
+            console.log(`Changed area from ${prevState.area} to ${this.state.area}`);
+            this.updateData();
+
+            // Only redo the query if we need new data
+            // if (!doesAContainsB(largestBoundsYet, newBounds)) {
+            //     this.props.updateData();
+            //     largestBoundsYet = newBounds;
+
+            //     if (DEBUG_BOUNDS_OPTIMIZATION) {
+            //         this.updateDebugPolygon(largestBoundsYet, 1);
+            //     }
+            // }
         }
         
         if (this.state.zoom !== prevState.zoom ||
@@ -97,6 +117,9 @@ class App extends Component {
     }
 
     onMapMoved(newState) {
+        // Ignore new area changes from Map
+        delete newState.area;
+
         this.setState(newState);
     }
 
@@ -113,7 +136,10 @@ class App extends Component {
                     onMapMoved={this.onMapMoved}
                 />
 
-                <Spinner loading={this.state.loading}/>
+                <h1 className="areaName">
+                    {this.state.area}
+                    <Spinner loading={this.state.loading} />
+                </h1>
 
                 <MapStyleSwitcher onMapStyleChange={this.onMapStyleChange}/>
  

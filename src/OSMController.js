@@ -10,7 +10,10 @@ import { slugify } from './utils.js'
 import * as layers from './layers.json';
 
 class OSMController {
-    static getQuery(bbox) {
+    static getQuery(constraints) {
+        const bbox = constraints.bbox;
+        const area = constraints.area.split(',')[0];
+
         const body = layers.default.map(l =>
             l.filters.map(f =>
                 'way'
@@ -20,12 +23,16 @@ class OSMController {
                     f.map(f_inner =>
                         `["${f_inner[0]}"="${f_inner[1]}"]`
                     ).join(""))
-                + `(${bbox});\n`
+                 + (bbox ? 
+                    `(${bbox});\n`
+                    :
+                    `(area.searchArea);\n`)
             ).join("")
         ).join("");
 
         return `
             [out:json][timeout:100];
+            ${!bbox && `(area[name="${area}"];)->.searchArea;`}
             (
                 ${body}
             );
@@ -55,9 +62,9 @@ class OSMController {
         return this.massageLayersData();
     }
 
-    static getData(bbox) {
+    static getData(constraints) {
         return new Promise((resolve, reject) => {
-            const query = OSMController.getQuery(bbox);
+            const query = OSMController.getQuery(constraints);
             console.debug('generated query: ', query);
 
             const encodedQuery = encodeURI(query);

@@ -6,17 +6,20 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxGeocoder from 'mapbox-gl-geocoder'
 import 'mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
+import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
+
 import { doesAContainsB, downloadObjectAsJson, createPolygonFromBBox } from './utils.js'
 
-import { DEBUG_BOUNDS_OPTIMIZATION, MAPBOX_ACCESS_TOKEN } from './constants.js'
+import { MAPBOX_ACCESS_TOKEN } from './constants.js'
 
 import './Map.css'
 
 
 let map, popup;
-let largestBoundsYet;
 let selectedCycleway;
 let currentBBox;
+
+const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
 
 class MapboxGLButtonControl {
@@ -64,15 +67,10 @@ class Map extends Component {
         const props = e.features[0].properties;
 
         const layer = this.props.layers.find(l =>
-            l.id == e.features[0].layer.id.split('--')[0]
+            l.id === e.features[0].layer.id.split('--')[0]
         );
 
         let html = '';
-
-        // const prettyProps = JSON.stringify(props, null, 2)
-        //     .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-        //     .replace(/"|,|\{|\}/g, '');
-        // html += prettyProps;
 
         if (props.name) {
             html += `<h2>${props.name}</h2>`;
@@ -85,7 +83,13 @@ class Map extends Component {
         // html += `<h3>Tipo: ${layer.name}</h3>`;
         // html += `<p>${layer.description}</p>`;
 
+        const prettyProps = JSON.stringify(props, null, 2)
+            .replace(/(?:\r\n|\r|\n)/g, '<br/>')
+            .replace(/"|,|\{|\}/g, '');
+        html += prettyProps;
+
         html += `
+            <br>
             <a
                 target="_BLANK"
                 rel="noopener"
@@ -104,13 +108,6 @@ class Map extends Component {
         popup.remove();
     }
 
-    updateDebugPolygon(bbox, id) {
-        const polygon = createPolygonFromBBox(bbox);
-        console.log('polygon', polygon);
-
-        map.getSource('debug-polygon-' + id).setData(polygon);
-    }
-
     // southern-most latitude, western-most longitude, northern-most latitude, eastern-most longitude
     getCurrentBBox() {
         const fallback = "-23.036345361742164,-43.270405878917785,-22.915284125684607,-43.1111041211104";
@@ -124,36 +121,38 @@ class Map extends Component {
         }
     }
 
-    updateData() {
-        if (!map || map.getZoom() < 10) {
-            return;
-        } else {
-            this.props.updateData(this.getCurrentBBox());
-        }
-    }
-
     onMapMoved() {
-        this.props.onMapMoved({
-            lat: map.getCenter().lat,
-            lng: map.getCenter().lng,
-            zoom: map.getZoom()
-        });
+        const lat = map.getCenter().lat;
+        const lng = map.getCenter().lng;
+        const zoom = map.getZoom();
+        // const newBounds = map.getBounds();
 
-        let newBounds = map.getBounds();
+        geocodingClient
+            .reverseGeocode({
+                query: [lng, lat],
+                types: ['place'],
+                limit: 1
+            })
+            .send()
+            .then(response => {
+                const match = response.body;
+                let mapMovedObj = {
+                    lat: lat,
+                    lng: lng,
+                    zoom: zoom,
+                }
 
-        if (DEBUG_BOUNDS_OPTIMIZATION) {
-            this.updateDebugPolygon(newBounds, 2);
-        }
+                console.debug(match);
 
-        // Only redo the query if we need new data
-        if (!doesAContainsB(largestBoundsYet, newBounds)) {
-            this.updateData();
-            largestBoundsYet = newBounds;
+                if (match.features && match.features[0]) {
+                    mapMovedObj.area = match.features[0].place_name;
+                }
 
-            if (DEBUG_BOUNDS_OPTIMIZATION) {
-                this.updateDebugPolygon(largestBoundsYet, 1);
-            }
-        }
+                this.props.onMapMoved(mapMovedObj);
+            })
+            .catch(err => {
+                console.error(err.message);
+            });
     }
 
     addDynamicLayer(l) {
@@ -297,42 +296,6 @@ class Map extends Component {
         this.props.layers.slice().reverse().forEach(l => {
             this.addDynamicLayer(l);
         }); 
-
-        if (DEBUG_BOUNDS_OPTIMIZATION) {
-            map.addLayer({
-                'id': 'debug-polygon-1',
-                'type': 'line',
-                'source': {
-                    'type': 'geojson',
-                    "data": {
-                        'type': 'FeatureCollection',
-                        'features': []
-                    }
-                },
-                'paint': {
-                    "line-color": "red",
-                    "line-width": 2
-                }
-            });
-
-            this.updateDebugPolygon(largestBoundsYet, 1);
-
-            map.addLayer({
-                'id': 'debug-polygon-2',
-                'type': 'fill',
-                'source': {
-                    'type': 'geojson',
-                    "data": {
-                        'type': 'FeatureCollection',
-                        'features': []
-                    }
-                },
-                'paint': {
-                    'fill-color': 'green',
-                    'fill-opacity': 0.1
-                }
-            });
-        }
     }
 
     componentDidUpdate(prevProps) {
@@ -410,17 +373,15 @@ class Map extends Component {
         // Listeners
 
         map.on('load', () => {
-            largestBoundsYet = map.getBounds();
-
             this.initLayers();
-            this.updateData();
+            this.props.updateData();
 
             map.on('moveend', this.onMapMoved);
 
             // Further chages on styles reinitilizes layers
             map.on('style.load', () => {
                 this.initLayers();
-                this.updateData();
+                this.props.updateData();
             });
         });
 

@@ -4,3 +4,9 @@ body {
 
     font-family: 'Roboto', sans-serif;
 }
+
+.areaName {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+}

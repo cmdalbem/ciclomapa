@@ -4,8 +4,10 @@
   "private": true,
   "homepage": "https://cmdalbem.github.io/openbikemap",
   "dependencies": {
+    "@mapbox/mapbox-sdk": "^0.6.0",
     "antd": "^3.19.8",
     "gh-pages": "^2.0.1",
+    "idb": "^4.0.3",
     "jquery": "^3.4.1",
     "mapbox-gl": "^1.0.0",
     "mapbox-gl-geocoder": "^2.0.1",
