@@ -23,9 +23,16 @@
             [["highway","footway"],["bicycle","designated"]],
             [["highway","pedestrian"],["bicycle","designated"]],
             [["highway","steps"],["bicycle","designated"]],
+            [["highway","path"],["bicycle","yes"]],
+            [["highway","footway"],["bicycle","yes"]],
+            [["highway","pedestrian"],["bicycle","yes"]],
+            [["highway","steps"],["bicycle","yes"]],
             ["cycleway", "track"],
             ["cycleway:left", "track"], 
-            ["cycleway:right", "track"]
+            ["cycleway:right", "track"],
+            ["cycleway", "opposite_track"],
+            ["cycleway:left", "opposite_track"],
+            ["cycleway:right", "opposite_track"]
         ],
         "style": {
             "lineColor": "lightgreen",
@@ -58,17 +65,12 @@
             ["cycleway", "sidepath"],
             ["cycleway:left", "sidepath"],
             ["cycleway:right", "sidepath"],
-            ["cycleway", "shared"],
-            ["cycleway:right", "shared"],
-            ["cycleway:left", "shared"],
-            ["cycleway", "opposite_track"],
-            ["cycleway:left", "opposite_track"],
-            ["cycleway:right", "opposite_track"],
             ["cycleway", "buffered_lane"],
             ["cycleway:left", "buffered_lane"],
             ["cycleway:right", "buffered_lane"],
             ["cycleway", "shared_lane"],
-            ["cycleway", "opposite"],
+            ["cycleway:left", "shared_lane"],
+            ["cycleway:right", "shared_lane"],
             ["cycleway", "share_busway"],
             ["cycleway:left", "share_busway"],
             ["cycleway:right", "share_busway"],
@@ -84,7 +86,9 @@
         "description": "Vias com limite de velocidade de 30km/h",
         "isActive": false,
         "filters": [
-            ["maxspeed", "30"]
+            ["maxspeed", "30"],
+            [["highway","living_street"],["bicycle","yes"]],
+            [["highway","unclassified"],["bicycle","yes"]]
         ],
         "style": {
             "lineColor": "orange",
