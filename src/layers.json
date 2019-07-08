@@ -54,8 +54,10 @@
             ["cycleway:left", "opposite_lane"]
         ],
         "style": {
-            "lineColor": "green",
-            "lineWidth": 4
+            "lineColor": "#b4fad0",
+            "lineWidth": 5,
+            "borderColor": "#69b991",
+            "borderStyle": "solid"
         }
     },
     {
