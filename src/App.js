@@ -177,7 +177,6 @@ class App extends Component {
 
                 <h1 className="areaName">
                     {this.state.area}
-                    <Spinner loading={this.state.loading} />
                 </h1>
 
                 <MapStyleSwitcher onMapStyleChange={this.onMapStyleChange}/>
@@ -186,6 +185,11 @@ class App extends Component {
                     layers={this.state.layers}
                     onLayersChange={this.onLayersChange}
                 />
+
+                {
+                    this.state.loading &&
+                    <Spinner />
+                }
             </div>
         );
     }
