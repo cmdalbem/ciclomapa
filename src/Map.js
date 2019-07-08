@@ -8,7 +8,7 @@ import 'mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
-import { doesAContainsB, downloadObjectAsJson, createPolygonFromBBox } from './utils.js'
+import { downloadObjectAsJson } from './utils.js'
 
 import { MAPBOX_ACCESS_TOKEN } from './constants.js'
 
@@ -18,6 +18,7 @@ import './Map.css'
 let map, popup;
 let selectedCycleway;
 let currentBBox;
+let lastZoom;
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
@@ -125,8 +126,9 @@ class Map extends Component {
         const lat = map.getCenter().lat;
         const lng = map.getCenter().lng;
         const zoom = map.getZoom();
-        // const newBounds = map.getBounds();
 
+        // @todo: Doing this query at every map change is making everything super slow!
+        //   Could we use something like map.queryRenderedFeatures() instead?
         geocodingClient
             .reverseGeocode({
                 query: [lng, lat],
@@ -142,7 +144,7 @@ class Map extends Component {
                     zoom: zoom,
                 }
 
-                console.debug(match);
+                console.debug('onMapMoved', match.features);
 
                 if (match.features && match.features[0]) {
                     mapMovedObj.area = match.features[0].place_name;
@@ -169,7 +171,6 @@ class Map extends Component {
                     ]
                 )
         ];
-        console.debug(filters);
 
         // Check if layer has a border color set. If that's the case the logic is a
         //  little different and we'll need 2 layers, one for the line itself and 
@@ -374,14 +375,14 @@ class Map extends Component {
 
         map.on('load', () => {
             this.initLayers();
-            this.props.updateData();
+            this.onMapMoved();
 
             map.on('moveend', this.onMapMoved);
 
             // Further chages on styles reinitilizes layers
             map.on('style.load', () => {
                 this.initLayers();
-                this.props.updateData();
+                this.onMapMoved();
             });
         });
 

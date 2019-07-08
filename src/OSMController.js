@@ -12,7 +12,8 @@ import * as layers from './layers.json';
 class OSMController {
     static getQuery(constraints) {
         const bbox = constraints.bbox;
-        const area = constraints.area.split(',')[0];
+        // const area = constraints.area.split(',')[0];
+        const areaId = constraints.areaId;
 
         const body = layers.default.map(l =>
             l.filters.map(f =>
@@ -26,13 +27,13 @@ class OSMController {
                  + (bbox ? 
                     `(${bbox});\n`
                     :
-                    `(area.searchArea);\n`)
+                    `(area.a);\n`)
             ).join("")
         ).join("");
 
         return `
             [out:json][timeout:100];
-            ${!bbox && `(area[name="${area}"];)->.searchArea;`}
+            ${!bbox && `area(${areaId})->.a;`}
             (
                 ${body}
             );
@@ -64,35 +65,53 @@ class OSMController {
 
     static getData(constraints) {
         return new Promise((resolve, reject) => {
-            const query = OSMController.getQuery(constraints);
-            console.debug('generated query: ', query);
-
-            const encodedQuery = encodeURI(query);
-
             let geoJson;
 
             $.getJSON(
-                // `https://overpass-api.de/api/interpreter?data=${encodedQuery}`,
-                `https://overpass.kumi.systems/api/interpreter?data=${encodedQuery}`,
-                data => {
-                    console.debug('osm data: ', data);
-                    geoJson = osmtogeojson(data, { flatProperties: true });
-                    console.debug('converted to geoJSON: ', geoJson);
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURI(constraints.area)}`,
+                nominatimData => {
+                    console.debug('nominatimData', nominatimData);
 
-                    resolve({
-                        geoJson: geoJson
+                    // Source: https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL#By_area_.28area.29
+                    const areaId = 3600000000 + nominatimData[0].osm_id;
+
+                    const query = OSMController.getQuery({ areaId: areaId});
+                    
+                    console.debug('generated query: ', query);
+
+                    const encodedQuery = encodeURI(query);
+
+                    $.getJSON(
+                        // `https://overpass-api.de/api/interpreter?data=${encodedQuery}`,
+                        `https://overpass.kumi.systems/api/interpreter?data=${encodedQuery}`,
+                        data => {
+                            console.debug('osm data: ', data);
+                            geoJson = osmtogeojson(data, { flatProperties: true });
+                            console.debug('converted to geoJSON: ', geoJson);
+
+                            resolve({
+                                geoJson: geoJson
+                            });
+                        }).fail(e => {
+                            console.error("Deu erro! Saca só:", e);
+                            notification['error']({
+                                message: 'Erro',
+                                description:
+                                    'Ops, erro na API do Overpass. Abra o console para ver mais detalhes.',
+                            });
+
+                            reject();
+                        });
+                }).fail(e => {
+                    console.error("Deu erro! Saca só:", e);
+                    notification['error']({
+                        message: 'Erro',
+                        description:
+                            'Ops, erro na API do Nominatim. Abra o console para ver mais detalhes.',
                     });
-                }
-            ).fail(e => {
-                console.error("Deu erro! Saca só:", e);
-                notification['error']({
-                    message: 'Erro',
-                    description:
-                        'Ops, erro do Overpass. Abra o console para ver mais detalhes.',
-                });
 
-                reject();
-            })
+                    reject();
+                });
         });
     }
 }

@@ -1,13 +1,16 @@
 import React, { Component } from 'react';
 import { withRouter } from "react-router-dom";
 
-// import { openDB, deleteDB, wrap, unwrap } from 'idb';
+import { get, set } from 'idb-keyval';
 
 import Map from './Map.js'
 import Spinner from './Spinner.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
 import OSMController from './OSMController.js'
+import { DEFAULT_AREA, DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS } from './constants.js'
+
+import { notification } from 'antd';
 
 import "antd/dist/antd.css";
 import './App.css';
@@ -26,14 +29,14 @@ class App extends Component {
         const urlParams = this.getParamsFromURL();
         this.state = {
             geoJson: null,
-            loading: true,
+            loading: false,
             layers: OSMController.getLayers(),
             mapStyle: 'mapbox://styles/mapbox/light-v10',
             zoom: urlParams.z || 13,
-            area: 'Niterói, Rio de Janeiro, Brazil',
+            area: null,
             center: [
-                urlParams.lng || -43.1098110,
-                urlParams.lat || -22.8948963]
+                urlParams.lng || DEFAULT_LNG,
+                urlParams.lat || DEFAULT_LAT]
         };
     }
 
@@ -52,17 +55,50 @@ class App extends Component {
         return paramsObj;
     }
 
-    updateData() {
-        if (this.state.zoom > 10) {
-            this.setState({ loading: true });
+    isDataFresh(data) {
+        const now = new Date();
+        const dataLastUpdate = new Date(data.updatedAt);
 
-            OSMController.getData({area: this.state.area})
+        return now - dataLastUpdate < OSM_DATA_MAX_AGE_MS;
+    }
+
+    updateData() {
+        if (this.state.zoom > 10 && this.state.area) {
+            // Try to retrieve previously saved data for this area
+            get(this.state.area)
                 .then(data => {
-                    this.setState({
-                        geoJson: data.geoJson,
-                        loading: false
+                    console.debug('IndexedDB result:', data);
+                    
+                    if (data && this.isDataFresh(data)) {
+                        console.debug('IndexedDB data is fresh.');
+                        this.setState({ geoJson: data.geoJson })
+                    } else {
+                        console.debug(`Couldn't find data for area ${this.state.area} or it isn't fresh, hitting OSM...`);
+                        this.setState({ loading: true });
+
+                        OSMController.getData({ area: this.state.area })
+                            .then(data => {
+                                set(this.state.area, {
+                                    geoJson: data.geoJson,
+                                    updatedAt: new Date()
+                                });
+
+                                this.setState({
+                                    geoJson: data.geoJson,
+                                    loading: false
+                                });
+                            });
+                    }
+                })
+                .catch(e => {
+                    notification['error']({
+                        message: 'Erro',
+                        description:
+                            'Ocorreu um erro ao tentar recuperar os dados salvos no IndexedDB.',
                     });
                 });
+        } else {
+            this.setState({ loading: false });
         }
     }
 
@@ -84,12 +120,13 @@ class App extends Component {
         }
 
         if (this.state.area !== prevState.area) {
-            console.log(`Changed area from ${prevState.area} to ${this.state.area}`);
+            console.debug(`Changed area from ${prevState.area} to ${this.state.area}`);
+            
             this.updateData();
 
             // Only redo the query if we need new data
             // if (!doesAContainsB(largestBoundsYet, newBounds)) {
-            //     this.props.updateData();
+            //     this.updateData();
             //     largestBoundsYet = newBounds;
 
             //     if (DEBUG_BOUNDS_OPTIMIZATION) {
@@ -101,13 +138,13 @@ class App extends Component {
         if (this.state.zoom !== prevState.zoom ||
             this.state.lat !== prevState.lat ||
             this.state.lng !== prevState.lng) {
-            let params = '?';
-            params += `lat=${this.state.lat.toFixed(7)}`;
-            params += `&lng=${this.state.lng.toFixed(7)}`;
-            params += `&z=${this.state.zoom.toFixed(2)}`;
-            this.props.history.push({
-                search: params
-            })
+                let params = '?';
+                params += `lat=${this.state.lat.toFixed(7)}`;
+                params += `&lng=${this.state.lng.toFixed(7)}`;
+                params += `&z=${this.state.zoom.toFixed(2)}`;
+                this.props.history.push({
+                    search: params
+                })
         }
     }
 
@@ -118,7 +155,9 @@ class App extends Component {
 
     onMapMoved(newState) {
         // Ignore new area changes from Map
-        delete newState.area;
+        // if (this.state.area) {
+        //     delete newState.area;
+        // }
 
         this.setState(newState);
     }
