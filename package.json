@@ -6,25 +6,25 @@
   "dependencies": {
     "@mapbox/mapbox-gl-geocoder": "^4.4.0",
     "@mapbox/mapbox-sdk": "^0.6.0",
-    "antd": "^3.19.8",
+    "antd": "^3.20.1",
     "gh-pages": "^2.0.1",
     "idb-keyval": "^3.2.0",
     "jquery": "^3.4.1",
-    "mapbox-gl": "^1.0.0",
+    "mapbox-gl": "^1.1.0",
     "osmtogeojson": "^3.0.0-beta.3",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-router-dom": "^5.0.1",
-    "react-scripts": "3"
+    "react-scripts": "3.0.1"
   },
-  "devDependencies": {},
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
   },
   "browserslist": {
     "production": [

@@ -8,7 +8,7 @@ import Spinner from './Spinner.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
 import OSMController from './OSMController.js'
-import { DEFAULT_AREA, DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS } from './constants.js'
+import { DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS } from './constants.js'
 
 import { notification } from 'antd';
 

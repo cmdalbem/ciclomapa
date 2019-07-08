@@ -18,7 +18,6 @@ import './Map.css'
 let map, popup;
 let selectedCycleway;
 let currentBBox;
-let lastZoom;
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
