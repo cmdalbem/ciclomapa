@@ -3,8 +3,8 @@ import React, { Component } from 'react';
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-import MapboxGeocoder from 'mapbox-gl-geocoder'
-import 'mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
+import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
+import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
