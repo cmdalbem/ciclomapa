@@ -26,13 +26,7 @@
             ["cycleway:left", "opposite_track"],
             ["cycleway:right", "opposite_track"],
             [["highway","path"],["bicycle","designated"]],
-            [["highway","path"],["bicycle","yes"]],
-            [["highway","footway"],["bicycle","designated"]],
-            [["highway","footway"],["bicycle","yes"]],
-            [["highway","pedestrian"],["bicycle","designated"]],
-            [["highway","pedestrian"],["bicycle","yes"]],
-            [["highway","steps"],["bicycle","designated"]],
-            [["highway","steps"],["bicycle","yes"]]
+            [["highway","path"],["bicycle","yes"]]
         ],
         "style": {
             "lineColor": "#65df97",
@@ -58,6 +52,20 @@
             "lineWidth": 5,
             "borderColor": "#69b991",
             "borderStyle": "solid"
+        }
+    },
+    {
+        "name": "Calçada compartilhada",
+        "description": "?",
+        "filters": [
+            [["highway","footway"],["bicycle","designated"]],
+            [["highway","footway"],["bicycle","yes"]],
+            [["highway","pedestrian"],["bicycle","designated"]],
+            [["highway","pedestrian"],["bicycle","yes"]]
+        ],
+        "style": {
+            "lineColor": "#65df97",
+            "lineWidth": 4
         }
     },
     {
@@ -122,7 +130,7 @@
             ["bicycle", "use_sidepath"]
         ],
         "style": {
-            "lineColor": "gray",
+            "lineColor": "red",
             "lineWidth": 2,
             "lineStyle": "dashed"
         }
