@@ -154,6 +154,12 @@ class Map extends Component {
             .catch(err => {
                 console.error(err.message);
             });
+
+        // this.props.onMapMoved({
+        //     lat: lat,
+        //     lng: lng,
+        //     zoom: zoom,
+        // });
     }
 
     addDynamicLayer(l) {
@@ -283,7 +289,7 @@ class Map extends Component {
     initLayers() {
         map.addSource("osm", {
             "type": "geojson",
-            "data": {
+            "data": this.props.data || {
                 'type': 'FeatureCollection',
                 'features': []
             },
@@ -299,6 +305,10 @@ class Map extends Component {
     }
 
     componentDidUpdate(prevProps) {
+        if (!map || !map.getSource('osm')) {
+            return;
+        }
+
         if (this.props.data !== prevProps.data) {
             map.getSource('osm').setData(this.props.data);
         }
@@ -307,9 +317,9 @@ class Map extends Component {
             map.setStyle(this.props.style);
         }
         
-        if (this.props.zoom !== prevProps.zoom) {
-            map.setZoom(this.props.zoom);
-        }
+        // if (this.props.zoom !== prevProps.zoom) {
+        //     map.setZoom(this.props.zoom);
+        // }
         
         if (this.props.center !== prevProps.center) {
             map.setCenter(this.props.center);
@@ -340,7 +350,9 @@ class Map extends Component {
         // Native Mapbox map controls
 
         map.addControl(
-            new mapboxgl.NavigationControl(),
+            new mapboxgl.NavigationControl({
+                showCompass: false
+            }),
             'bottom-right'
         );
         map.addControl(new mapboxgl.GeolocateControl({
