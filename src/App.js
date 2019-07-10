@@ -8,7 +8,7 @@ import Spinner from './Spinner.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
 import OSMController from './OSMController.js'
-import { DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS } from './constants.js'
+import { DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS, MIN_ZOOM_TO_LOAD_DATA } from './constants.js'
 
 import { notification } from 'antd';
 
@@ -31,13 +31,17 @@ class App extends Component {
             geoJson: null,
             loading: false,
             layers: OSMController.getLayers(),
-            mapStyle: 'mapbox://styles/mapbox/light-v10',
+            mapStyle: 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb',
             zoom: urlParams.z || 13,
-            area: null,
+            area: 'Niterói, Rio De Janeiro, Brazil',
             center: [
                 urlParams.lng || DEFAULT_LNG,
                 urlParams.lat || DEFAULT_LAT]
         };
+
+        if (this.state.area) {
+            this.updateData();
+        }
     }
 
     getParamsFromURL() {
@@ -63,7 +67,7 @@ class App extends Component {
     }
 
     updateData() {
-        if (this.state.zoom > 10 && this.state.area) {
+        if (this.state.zoom > MIN_ZOOM_TO_LOAD_DATA && this.state.area) {
             // Try to retrieve previously saved data for this area
             get(this.state.area)
                 .then(data => {
