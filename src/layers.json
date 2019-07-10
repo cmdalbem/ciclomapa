@@ -59,9 +59,11 @@
         "description": "?",
         "filters": [
             [["highway","footway"],["bicycle","designated"]],
-            [["highway","footway"],["bicycle","yes"]],
             [["highway","pedestrian"],["bicycle","designated"]],
-            [["highway","pedestrian"],["bicycle","yes"]]
+            [["highway","pedestrian"],["bicycle","yes"]],
+            ["cycleway", "sidepath"],
+            ["cycleway:left", "sidepath"],
+            ["cycleway:right", "sidepath"]
         ],
         "style": {
             "lineColor": "#65df97",
@@ -72,9 +74,6 @@
         "name": "Ciclorota",
         "description": "O conceito original de ciclorrota (ou ciclo-rota) é o um caminho, sinalizado ou não, que representa a rota recomendada para o ciclista, seja para chegar a um destino ou para fazer um circuito turístico ou esportivo. Representa efetivamente um trajeto, não uma faixa da via, um trecho segregado ou uma zona de segurança (embora uma ciclorrota possa se utilizar parcial ou totalmente desses recursos, ou até mesmo de ciclovias).",
         "filters": [
-            ["cycleway", "sidepath"],
-            ["cycleway:left", "sidepath"],
-            ["cycleway:right", "sidepath"],
             ["cycleway", "buffered_lane"],
             ["cycleway:left", "buffered_lane"],
             ["cycleway:right", "buffered_lane"],
