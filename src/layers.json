@@ -44,9 +44,11 @@
         "description": "?",
         "filters": [
             [["highway","footway"],["bicycle","designated"]],
-            [["highway","footway"],["bicycle","yes"]],
             [["highway","pedestrian"],["bicycle","designated"]],
-            [["highway","pedestrian"],["bicycle","yes"]]
+            [["highway","pedestrian"],["bicycle","yes"]],
+            ["cycleway", "sidepath"],
+            ["cycleway:left", "sidepath"],
+            ["cycleway:right", "sidepath"]
         ],
         "style": {
             "lineColor": "#65df97",
@@ -57,9 +59,6 @@
         "name": "Ciclorota",
         "description": "Via com sinalização para o tráfego compartilhado, com preferência para bicicletas.",
         "filters": [
-            ["cycleway", "sidepath"],
-            ["cycleway:left", "sidepath"],
-            ["cycleway:right", "sidepath"],
             ["cycleway", "buffered_lane"],
             ["cycleway:left", "buffered_lane"],
             ["cycleway:right", "buffered_lane"],
