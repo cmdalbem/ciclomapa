@@ -1,22 +1,7 @@
 [
     {
-        "name": "Cyclestreets",
-        "description": "Estradas ou ruas exclusivas para bicicletas.",
-        "filters": [
-            ["cycleway", "cyclestreet"],
-            ["bicycle_road", "yes"],
-            ["cyclestreet", "yes"]
-        ],
-        "style": {
-            "lineColor": "#57c8b1",
-            "lineWidth": 6,
-            "borderColor": "#347c6d",
-            "borderStyle": "solid"
-        }
-    },
-    {
         "name": "Ciclovia",
-        "description": "É um espaço segregado para fluxo de bicicletas. Isso significa que há uma separação física isolando os ciclistas dos demais veículos. A maioria das ciclovias de orla de praia são exemplos de vias segregadas.",
+        "description": "É um espaço segregado para fluxo de bicicletas. Existem muitas situações capazes de caracterizar uma ciclovia. A mais clássica corresponde ao espaço em desnível com relação à via, separado por elemento físico delimitador. Contudo, as ciclovias também podem estar no mesmo nível da pista e separadas do fluxo veicular por uma série de medidas de segregação efetiva, tais como: ilhas e/ou calçadas; elementos de confinamento prefabricados (blocos pré-moldados ou balizadores); faixas separadoras (canteiro central fictício); vegetação ou áreas verdes ou ainda área de estacionamento adjacente.",
         "filters": [
             ["highway", "cycleway"],
             ["cycleway", "track"],
@@ -37,7 +22,7 @@
     },
     {
         "name": "Ciclofaixa",
-        "description": "É quando há apenas uma faixa pintada no chão, sem separação física de qualquer tipo (inclusive cones ou cavaletes). Pode haver “olhos de gato” ou no máximo os tachões do tipo “tartaruga”, como os que separam as faixas de ônibus.",
+        "description": "A ciclofaixa é o espaço na pista de rolamento destinado exclusivamente à circulação de bicicletas. A ciclofaixa não é segregada fisicamente (ao contrário da ciclovia). Sua delimitação é feita por meio de marcas no pavimento e, ocasionalmente, alguns elementos delimitadores (tachas ou tachões retrorrefletivos).",
         "filters": [
             ["cycleway", "lane"],
             ["cycleway:left", "lane"],
@@ -70,7 +55,7 @@
     },
     {
         "name": "Ciclorota",
-        "description": "O conceito original de ciclorrota (ou ciclo-rota) é o um caminho, sinalizado ou não, que representa a rota recomendada para o ciclista, seja para chegar a um destino ou para fazer um circuito turístico ou esportivo. Representa efetivamente um trajeto, não uma faixa da via, um trecho segregado ou uma zona de segurança (embora uma ciclorrota possa se utilizar parcial ou totalmente desses recursos, ou até mesmo de ciclovias).",
+        "description": "Via com sinalização para o tráfego compartilhado, com preferência para bicicletas.",
         "filters": [
             ["cycleway", "sidepath"],
             ["cycleway:left", "sidepath"],
@@ -92,8 +77,8 @@
         }
     },
     {
-        "name": "Zona 30",
-        "description": "Vias com limite de velocidade de 30km/h",
+        "name": "Baixa velocidade",
+        "description": "Vias com limite de velocidade regulamentada de até 30km/h.",
         "isActive": false,
         "filters": [
             ["maxspeed", "30"],
