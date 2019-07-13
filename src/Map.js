@@ -8,50 +8,16 @@ import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
-import { downloadObjectAsJson } from './utils.js'
-
-import { MAPBOX_ACCESS_TOKEN, TOPBAR_HEIGHT } from './constants.js'
+import { MAPBOX_ACCESS_TOKEN } from './constants.js'
 
 import './Map.css'
 
 
 let map, popup;
 let selectedCycleway;
-let currentBBox;
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
-
-class MapboxGLButtonControl {
-    constructor({
-        className = "",
-        title = "",
-        eventHandler = null
-    }) {
-        this._className = className;
-        this._title = title;
-        this._eventHandler = eventHandler;
-    }
-
-    onAdd(map) {
-        this._btn = document.createElement("button");
-        this._btn.className = "mapboxgl-ctrl-icon " + this._className;
-        this._btn.type = "button";
-        this._btn.title = this._title;
-        this._btn.onclick = this._eventHandler;
-
-        this._container = document.createElement("div");
-        this._container.className = "mapboxgl-ctrl-group mapboxgl-ctrl";
-        this._container.appendChild(this._btn);
-
-        return this._container;
-    }
-
-    onRemove() {
-        this._container.parentNode.removeChild(this._container);
-        this._map = undefined;
-    }
-}
 
 class Map extends Component {
     constructor(props) {
@@ -369,16 +335,6 @@ class Map extends Component {
             mapboxgl: mapboxgl
         }),
             'top-left'
-        );
-
-        map.addControl(new MapboxGLButtonControl({
-            className: "mapbox-gl-download-btn",
-            title: "Download",
-            eventHandler: e => {
-                downloadObjectAsJson(this.props.data, `mapa-cicloviario-${currentBBox}`);
-            }
-        }),
-            "bottom-right"
         );
 
 

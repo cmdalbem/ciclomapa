@@ -1,6 +1,10 @@
 .mapboxgl-map {
-    width: 100%;
-    height: calc(100vh - 64px);
+  width: 100%;
+  height: calc(100vh - 64px);
+}
+
+.mapboxgl-ctrl-geocoder {
+  width: 100%;
 }
 
 .mapbox-gl-download-btn {

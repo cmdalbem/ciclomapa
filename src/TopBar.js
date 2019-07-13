@@ -19,7 +19,7 @@ class TopBar extends Component {
                 </h2>
                 
                 <div>
-                    <Button>Download</Button>
+                    <Button onClick={this.props.downloadData}>Baixar</Button>
                 </div>
             </div>
         )

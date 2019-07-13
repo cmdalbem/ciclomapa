@@ -13,6 +13,7 @@ import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
 import OSMController from './OSMController.js'
 import { DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS, MIN_ZOOM_TO_LOAD_DATA } from './constants.js'
+import { downloadObjectAsJson } from './utils.js'
 
 import './App.css';
 
@@ -26,6 +27,7 @@ class App extends Component {
         this.onMapStyleChange = this.onMapStyleChange.bind(this);
         this.onMapMoved = this.onMapMoved.bind(this);
         this.onLayersChange = this.onLayersChange.bind(this);
+        this.downloadData = this.downloadData.bind(this);
 
         const urlParams = this.getParamsFromURL();
         this.state = {
@@ -119,6 +121,10 @@ class App extends Component {
         this.setState({ layers: newLayers });
     }
 
+    downloadData() {
+        downloadObjectAsJson(this.props.geoJson, `mapa-cicloviario-${this.state.area}`);
+    }
+
     componentDidUpdate(prevProps, prevState) {
         if (this.props.location !== prevProps.location) {
             this.onRouteChanged();
@@ -172,6 +178,7 @@ class App extends Component {
             <div>
                 <TopBar
                     title={this.state.area}
+                    downloadData={this.downloadData}
                 />
 
                 <Map
