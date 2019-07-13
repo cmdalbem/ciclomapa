@@ -40,22 +40,6 @@
         }
     },
     {
-        "name": "Calçada compartilhada",
-        "description": "?",
-        "filters": [
-            [["highway","footway"],["bicycle","designated"]],
-            [["highway","pedestrian"],["bicycle","designated"]],
-            [["highway","pedestrian"],["bicycle","yes"]],
-            ["cycleway", "sidepath"],
-            ["cycleway:left", "sidepath"],
-            ["cycleway:right", "sidepath"]
-        ],
-        "style": {
-            "lineColor": "#65df97",
-            "lineWidth": 4
-        }
-    },
-    {
         "name": "Ciclorota",
         "description": "Via com sinalização para o tráfego compartilhado, com preferência para bicicletas.",
         "filters": [
@@ -76,6 +60,22 @@
         }
     },
     {
+        "name": "Calçada compartilhada",
+        "description": "?",
+        "filters": [
+            [["highway","footway"],["bicycle","designated"]],
+            [["highway","pedestrian"],["bicycle","designated"]],
+            [["highway","pedestrian"],["bicycle","yes"]],
+            ["cycleway", "sidepath"],
+            ["cycleway:left", "sidepath"],
+            ["cycleway:right", "sidepath"]
+        ],
+        "style": {
+            "lineColor": "orange",
+            "lineWidth": 4
+        }
+    },
+    {
         "name": "Baixa velocidade",
         "description": "Vias com limite de velocidade regulamentada de até 30km/h.",
         "isActive": false,
@@ -91,7 +91,7 @@
         }
     },
     {
-        "name": "Off road",
+        "name": "Trilha",
         "description": "Vias não pavimentadas, normalmente em áreas rurais, acessíveis de bicicleta.",
         "isActive": false,
         "filters": [
