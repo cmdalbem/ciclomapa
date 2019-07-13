@@ -18,8 +18,8 @@ class MapStyleSwitcher extends Component {
                 onChange={this.onChange.bind(this)}
                 style={{
                     position: 'fixed',
-                    bottom: '42px',
-                    left: '8px',
+                    bottom: '32px',
+                    right: '50px',
                     width: '160px'
                 }}
             >
