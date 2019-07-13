@@ -32,7 +32,7 @@ class OSMController {
         ).join("");
 
         return `
-            [out:json][timeout:100];
+            [out:json][timeout:500];
             ${!bbox && `area(${areaId})->.a;`}
             (
                 ${body}

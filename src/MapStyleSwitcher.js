@@ -18,9 +18,9 @@ class MapStyleSwitcher extends Component {
                 onChange={this.onChange.bind(this)}
                 style={{
                     position: 'fixed',
-                    top: '10px',
-                    right: '10px',
-                    width: '200px'
+                    bottom: '42px',
+                    left: '8px',
+                    width: '160px'
                 }}
             >
                 <Option value='mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'>Mapa light</Option>
