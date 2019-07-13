@@ -332,7 +332,9 @@ class Map extends Component {
         // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
         map.addControl(new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
-            mapboxgl: mapboxgl
+            mapboxgl: mapboxgl,
+            countries: 'br',
+            language: 'pt-br'
         }),
             'top-left'
         );
