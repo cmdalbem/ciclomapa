@@ -3,16 +3,17 @@ import { withRouter } from "react-router-dom";
 
 import { get, set } from 'idb-keyval';
 
+import { notification } from 'antd';
+import "antd/dist/antd.css";
+
 import Map from './Map.js'
 import Spinner from './Spinner.js'
+import TopBar from './TopBar.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
 import OSMController from './OSMController.js'
 import { DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS, MIN_ZOOM_TO_LOAD_DATA } from './constants.js'
 
-import { notification } from 'antd';
-
-import "antd/dist/antd.css";
 import './App.css';
 
 class App extends Component {
@@ -169,6 +170,10 @@ class App extends Component {
     render() {
         return (
             <div>
+                <TopBar
+                    title={this.state.area}
+                />
+
                 <Map
                     data={this.state.geoJson}
                     layers={this.state.layers}
@@ -178,10 +183,6 @@ class App extends Component {
                     updateData={this.updateData}
                     onMapMoved={this.onMapMoved}
                 />
-
-                <h1 className="areaName">
-                    {this.state.area}
-                </h1>
 
                 <MapStyleSwitcher onMapStyleChange={this.onMapStyleChange}/>
  

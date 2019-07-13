@@ -10,3 +10,5 @@ const ONE_DAY_MS = 1000 * 60 * 60 * 24;
 export const OSM_DATA_MAX_AGE_MS = 7 * ONE_DAY_MS;
 
 export const MIN_ZOOM_TO_LOAD_DATA = 10;
+
+export const TOPBAR_HEIGHT = 64;

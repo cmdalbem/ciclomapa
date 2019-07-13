@@ -1,0 +1,21 @@
+h1, h2 {
+    margin: 0;
+}
+
+.topbar {
+    width: 100%;
+    background: white;
+    z-index: 2;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+    position: relative;
+
+    padding: 12px;
+    
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.title {
+    color: #1890ff;
+}

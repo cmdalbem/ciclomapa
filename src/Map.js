@@ -10,7 +10,7 @@ import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
 import { downloadObjectAsJson } from './utils.js'
 
-import { MAPBOX_ACCESS_TOKEN } from './constants.js'
+import { MAPBOX_ACCESS_TOKEN, TOPBAR_HEIGHT } from './constants.js'
 
 import './Map.css'
 
