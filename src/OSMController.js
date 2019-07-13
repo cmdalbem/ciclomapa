@@ -49,7 +49,7 @@ class OSMController {
 
             if (l.style.borderColor) {
                 l.style.borderStyle = l.style.borderStyle || 'solid';
-                l.style.borderWidth = DEFAULT_BORDER_WIDTH;
+                l.style.borderWidth = l.style.borderWidth || DEFAULT_BORDER_WIDTH;
             }
             
             // Generate an ID based on name

@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 
-import { Switch, Tooltip, Icon } from 'antd';
+import { Switch, Tooltip } from 'antd';
 
 import './LayersPanel.css';
 

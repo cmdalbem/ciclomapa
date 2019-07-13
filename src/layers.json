@@ -1,7 +1,7 @@
 [
     {
         "name": "Ciclovia",
-        "description": "É um espaço segregado para fluxo de bicicletas. Existem muitas situações capazes de caracterizar uma ciclovia. A mais clássica corresponde ao espaço em desnível com relação à via, separado por elemento físico delimitador. Contudo, as ciclovias também podem estar no mesmo nível da pista e separadas do fluxo veicular por uma série de medidas de segregação efetiva, tais como: ilhas e/ou calçadas; elementos de confinamento prefabricados (blocos pré-moldados ou balizadores); faixas separadoras (canteiro central fictício); vegetação ou áreas verdes ou ainda área de estacionamento adjacente.",
+        "description": "É um espaço segregado para fluxo de bicicletas.",
         "filters": [
             ["highway", "cycleway"],
             ["cycleway", "track"],
@@ -9,9 +9,7 @@
             ["cycleway:right", "track"],
             ["cycleway", "opposite_track"],
             ["cycleway:left", "opposite_track"],
-            ["cycleway:right", "opposite_track"],
-            [["highway","path"],["bicycle","designated"]],
-            [["highway","path"],["bicycle","yes"]]
+            ["cycleway:right", "opposite_track"]
         ],
         "style": {
             "lineColor": "#65df97",
@@ -22,7 +20,7 @@
     },
     {
         "name": "Ciclofaixa",
-        "description": "A ciclofaixa é o espaço na pista de rolamento destinado exclusivamente à circulação de bicicletas. A ciclofaixa não é segregada fisicamente (ao contrário da ciclovia). Sua delimitação é feita por meio de marcas no pavimento e, ocasionalmente, alguns elementos delimitadores (tachas ou tachões retrorrefletivos).",
+        "description": "A ciclofaixa é o espaço na pista destinado exclusivamente à circulação de bicicletas. A ciclofaixa não é segregada fisicamente.",
         "filters": [
             ["cycleway", "lane"],
             ["cycleway:left", "lane"],
@@ -55,24 +53,29 @@
             ["cycleway", "opposite_share_busway"]
         ],
         "style": {
-            "lineColor": "orange",
-            "lineWidth": 3
+            "lineColor": "#f8c9ae",
+            "lineWidth": 4,
+            "borderColor": "#398371",
+            "borderWidth": 2
         }
     },
     {
         "name": "Calçada compartilhada",
-        "description": "?",
+        "description": "Calçada com sinalização para circulação de bicicletas, compartilhando o mesmo espaço com pedestres.",
         "filters": [
             [["highway","footway"],["bicycle","designated"]],
             [["highway","pedestrian"],["bicycle","designated"]],
             [["highway","pedestrian"],["bicycle","yes"]],
             ["cycleway", "sidepath"],
             ["cycleway:left", "sidepath"],
-            ["cycleway:right", "sidepath"]
+            ["cycleway:right", "sidepath"],
+            ["bicycle", "use_sidepath"]
         ],
         "style": {
-            "lineColor": "orange",
-            "lineWidth": 4
+            "lineColor": "#f8c9ae",
+            "lineWidth": 4,
+            "borderColor": "#f0763a",
+            "borderWidth": 2
         }
     },
     {
@@ -96,11 +99,13 @@
         "isActive": false,
         "filters": [
             [["highway","track"],["bicycle","designated"]],
-            [["highway","track"],["bicycle","yes"]]
+            [["highway","track"],["bicycle","yes"]],
+            [["highway","path"],["bicycle","designated"]],
+            [["highway","path"],["bicycle","yes"]]
         ],
         "style": {
             "lineColor": "#996633",
-            "lineWidth": 3,
+            "lineWidth": 2,
             "lineStyle": "dashed"
         }
     },
@@ -110,8 +115,7 @@
         "isActive": false,
         "filters": [
             ["bicycle", "no"],
-            ["bicycle", "dismount"],
-            ["bicycle", "use_sidepath"]
+            ["bicycle", "dismount"]
         ],
         "style": {
             "lineColor": "red",
