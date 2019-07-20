@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 
 import { TOPBAR_HEIGHT } from './constants'
 
-import { Modal, Button, Divider } from 'antd';
+import { Modal, Button, Divider, Icon } from 'antd';
 
 import './TopBar.css'
 
@@ -38,7 +38,9 @@ class TopBar extends Component {
 
                         <Divider type="vertical" />
 
-                        <Button type="link" onClick={this.props.downloadData}>Baixar dados</Button>
+                        <Button type="link" onClick={this.props.downloadData}>
+                            <Icon type="download" /> Baixar dados
+                        </Button>
                     </div>
                 </div>
             </div>
