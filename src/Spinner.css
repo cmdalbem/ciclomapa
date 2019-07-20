@@ -1,9 +1,8 @@
 .loader-container {
-    --green: #008744;
-    --blue: #0057e7;
-    --red: #d62d20;
-    --yellow: #ffa700;
-    --white: #eee;
+    --color1: #65df97;
+    --color2: orange;
+    --color3: #996633;
+    --color4: red;
     
     --width: 60px;
 
@@ -14,13 +13,13 @@
     right: 0;
     display: flex;
     z-index: 2;
-    background: rgba(0,0,0,0.1);
+    background: rgba(255,255,255,0.7);
 } 
 
 .loader {
   position: relative;
   margin: 0 auto;
-  width: var(--width);
+  max-width: 30%;
 }
 .loader:before {
     content: '';
@@ -28,20 +27,12 @@
     padding-top: 100%;
 }
 
-.loader .circular {
+.loader .spinnersvg {
+  width: var(--width);
   animation: rotate 1.5s linear infinite;
-  height: 100%;
-  transform-origin: center center;
-  width: 100%;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  margin: auto;
 }
 
-.loader .circular .path {
+.loader .spinnersvg .path {
   stroke-dasharray: 1, 200;
   stroke-dashoffset: 0;
   animation: dash 1s ease-in-out infinite, color 6s ease-in-out infinite;
@@ -72,16 +63,16 @@
 @keyframes color {
   100%,
   0% {
-    stroke: var(--red);
+    stroke: var(--color1);
   }
   40% {
-    stroke: var(--blue);
+    stroke: var(--color2);
   }
   66% {
-    stroke: var(--green);
+    stroke: var(--color3);
   }
   80%,
   90% {
-    stroke: var(--yellow);
+    stroke: var(--color4);
   }
 }

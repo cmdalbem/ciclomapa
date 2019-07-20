@@ -200,7 +200,7 @@ class App extends Component {
 
                 {
                     this.state.loading &&
-                    <Spinner />
+                    <Spinner area={this.state.area}/>
                 }
             </div>
         );
