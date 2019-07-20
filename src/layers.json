@@ -1,7 +1,7 @@
 [
     {
         "name": "Ciclovia",
-        "description": "É um espaço segregado para fluxo de bicicletas.",
+        "description": "Espaço segregado para fluxo de bicicletas que pode ser implementados com ou sem desnível com relação à via e como elemento físico delimitador ou outras medidas de segregação como ilhas e/ou calçadas, elementos de confinamento prefabricados, faixas separadoras, vegetação, áreas verdes ou ainda área de estacionamento adjacente.",
         "filters": [
             ["highway", "cycleway"],
             ["cycleway", "track"],
@@ -20,7 +20,7 @@
     },
     {
         "name": "Ciclofaixa",
-        "description": "A ciclofaixa é o espaço na pista destinado exclusivamente à circulação de bicicletas. A ciclofaixa não é segregada fisicamente.",
+        "description": "Espaço sem segregação física destinado exclusivamente à circulação de bicicletas delimitada por marcas no pavimento e, ocasionalmente, alguns elementos delimitadores como tachas ou tachões retrorrefletivos.",
         "filters": [
             ["cycleway", "lane"],
             ["cycleway:left", "lane"],
@@ -39,7 +39,7 @@
     },
     {
         "name": "Ciclorota",
-        "description": "Via com sinalização para o tráfego compartilhado, com preferência para bicicletas.",
+        "description": "Via com sinalização para o tráfego compartilhado com véiculos motorizados, com preferência para bicicletas.",
         "filters": [
             ["cycleway", "buffered_lane"],
             ["cycleway:left", "buffered_lane"],
@@ -61,7 +61,7 @@
     },
     {
         "name": "Calçada compartilhada",
-        "description": "Calçada com sinalização para circulação de bicicletas, compartilhando o mesmo espaço com pedestres.",
+        "description": "Calçada com sinalização para circulação de bicicletas compartilhada em que pedestres possuem a prioridade.",
         "filters": [
             [["highway","footway"],["bicycle","designated"]],
             [["highway","pedestrian"],["bicycle","designated"]],
@@ -95,7 +95,7 @@
     },
     {
         "name": "Trilha",
-        "description": "Vias não pavimentadas, normalmente em áreas rurais, acessíveis de bicicleta.",
+        "description": "Caminhos geralmente não pavimentados com acesso permitido ou destinado a bicicleta.",
         "isActive": false,
         "filters": [
             [["highway","track"],["bicycle","designated"]],
