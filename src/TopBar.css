@@ -2,6 +2,11 @@ h1, h2 {
     margin: 0;
 }
 
+.logo {
+    font-weight: 900;
+    font-size: 21px;
+}
+
 .topbar {
     width: 100%;
     background: white;
@@ -16,5 +21,19 @@ h1, h2 {
     justify-content: space-between;
 }
 
-.title {
+.city {
+
+}
+
+.state {
+    margin-right: .25em;
+    color: gray;
+    font-weight: 300;
+ 
+    /* font-size: .5em; */
+    /* text-transform: uppercase; */
+}
+
+.state:after {
+    content: ' /';
 }

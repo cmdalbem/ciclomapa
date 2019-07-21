@@ -4,6 +4,11 @@ import './Spinner.css'
 
 class Spinner extends Component {
     render() {
+        const parts = this.props.area.split(',');
+        const city = parts[0],
+            state = parts[1],
+            country = parts[2];
+
         return (
             <div id="spinner" className="loader-container">
                 <div className="loader">
@@ -14,7 +19,7 @@ class Spinner extends Component {
 
                     <div className="content">
                         <h2>
-                            Carregando mapa cicloviário de <b>{this.props.area}</b>
+                            Carregando mapa cicloviário de <b>{city} ({state})</b>
                         </h2>
 
                         <div>

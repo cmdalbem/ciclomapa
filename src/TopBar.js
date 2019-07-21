@@ -20,28 +20,34 @@ class TopBar extends Component {
     }
 
     render() {
+        const parts = this.props.title.split(',');
+        const city = parts[0], 
+            state = parts[1], 
+            country = parts[2];
+        
         return (
-            <div>
-                <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
-                    <div>
-                        <h1>
-                            BICIMAPA
-                        </h1>
-                    </div>
+            <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
+                <div>
+                    <h1 className="logo">
+                        BICIMAPA
+                    </h1>
+                </div>
 
-                    <h2 className="title">
-                        {this.props.title}
-                    </h2>
-                    
-                    <div>
-                        <Button type="link" onClick={this.info}>Sobre</Button>
+                <h2 className="city">
+                    <span className="state">
+                        {state}
+                    </span>
+                    {city}
+                </h2>
+                
+                <div>
+                    <Button type="link" onClick={this.info}>Sobre</Button>
 
-                        <Divider type="vertical" />
+                    <Divider type="vertical" />
 
-                        <Button type="link" onClick={this.props.downloadData}>
-                            <Icon type="download" /> Baixar dados
-                        </Button>
-                    </div>
+                    <Button type="link" onClick={this.props.downloadData}>
+                        <Icon type="download" /> Baixar dados
+                    </Button>
                 </div>
             </div>
         )
