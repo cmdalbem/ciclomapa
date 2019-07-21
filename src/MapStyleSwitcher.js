@@ -1,34 +1,58 @@
 import React, { Component } from 'react';
 
-import { Select } from 'antd';
+import light from './img/light.png';
+import normal from './img/normal.png';
+import satelite from './img/satelite.png';
 
-const { Option } = Select;
+import './MapStyleSwitcher.css'
 
 class MapStyleSwitcher extends Component {
+    options = [
+        {
+            name: 'Light',
+            img: light,
+            url: 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'
+        },
+        {
+            name: 'Normal',
+            img: normal,
+            url: 'mapbox://styles/mapbox/streets-v11'
+        },
+        // {
+        //     name: 'Dorsia',
+        //     img: {},
+        //     url: 'mapbox://styles/cmdalbem/cjgmxgkbw000n2rqtucat5zjz'
+        // },
+        {
+            name: 'Mapa com satelite',
+            img: satelite,
+            url: 'mapbox://styles/cmdalbem/cjxsdwb907bfi1cqevxio2bst'
+        },
+    ];
+    
+    state = { selected: 0 };
 
-    onChange(url) {
-        this.props.onMapStyleChange(url)
+    componentDidUpdate(prevProps, prevState) {
+        if (this.state !== prevState) {
+            const selected = this.options[this.state.selected]
+            this.props.onMapStyleChange(selected.url)
+        }
     }
 
     render() {
         return (
-            <Select
-                defaultValue="Mapa light"
-                optionFilterProp="children"
-                onChange={this.onChange.bind(this)}
-                style={{
-                    position: 'fixed',
-                    bottom: '32px',
-                    right: '50px',
-                    width: '160px'
-                }}
-            >
-                <Option value='mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'>Mapa light</Option>
-                <Option value='mapbox://styles/mapbox/streets-v11'>Mapa normal</Option>
-                <Option value='mapbox://styles/cmdalbem/cjgmxgkbw000n2rqtucat5zjz'>Dorsia</Option>
-                {/* <Option value='mapbox://styles/mapbox/outdoors-v11'>Outdoors</Option> */}
-                <Option value='mapbox://styles/cmdalbem/cjxsdwb907bfi1cqevxio2bst'>Mapa com satélite</Option>
-            </Select>
+            <div className="switcher-bar">
+                {
+                    this.options.map( (option, i) =>
+                        <div
+                            onClick={() => this.setState({ selected: i })}
+                            className={this.state.selected === i ? 'selected' : ''}
+                        >
+                            <img src={option.img} alt=""></img>
+                        </div>
+                    )
+                }
+            </div>
         )
     }
 }

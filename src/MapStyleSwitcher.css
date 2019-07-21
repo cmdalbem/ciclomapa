@@ -1,0 +1,34 @@
+.switcher-bar {
+    display: flex;
+    position: fixed;
+    bottom: 30px;
+    right: 50px;
+}
+
+.switcher-bar > div {
+    width: 60px;
+    height: 60px;
+    margin-left: 6px;
+    background: lightgray;
+    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.25);
+    border: 2px solid white;
+    border-radius: 4px;
+    overflow: hidden;
+
+    transition: all .3s;
+}
+
+.switcher-bar > div img {
+    width: 100%;
+    height: 100%;
+}
+
+.switcher-bar > div:hover {
+    /* border: 2px solid white; */
+    box-shadow: 0px 2px 7px rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+}
+
+.switcher-bar > div.selected {
+    border: 2px solid #1890ff;
+}
