@@ -16,38 +16,40 @@ class LayersPanel extends Component {
                 {
                     this.props.layers &&
                     this.props.layers.map(l =>
-                        <div
-                            key={l.name}
-                            className="layer-row"
-                            onClick={this.onChange.bind(this, l.id, !l.isActive)}
+                        <Tooltip
+                            placement="left"
+                            title={l.description}
+                            arrowPointAtCenter={true}
                         >
-                            <Tooltip
-                                placement="left"
-                                title={l.description}
-                                arrowPointAtCenter={true}
+                            <div
+                                key={l.name}
+                                className="layer-row"
+                                onClick={this.onChange.bind(this, l.id, !l.isActive)}
                             >
-                                <span
-                                    className="layer-miniature" 
-                                    style={{
-                                        height: l.style.lineWidth * 2,
-                                        background: l.style.lineStyle === 'solid' ?
-                                            l.style.lineColor
-                                            : `repeating-linear-gradient(90deg, ${l.style.lineColor}, ${l.style.lineColor} 3px, white 3px, white 6px)`,
-                                        borderColor: l.style.borderColor,
-                                        borderStyle: l.style.borderStyle,
-                                        borderWidth: l.style.borderWidth ? l.style.borderWidth/2 : '0',
-                                        borderLeft: 'none',
-                                        borderRight: 'none'
-                                }}
-                                ></span>
+                                <div>
+                                    <span
+                                        className="layer-miniature" 
+                                        style={{
+                                            height: l.style.lineWidth * 2,
+                                            background: l.style.lineStyle === 'solid' ?
+                                                l.style.lineColor
+                                                : `repeating-linear-gradient(90deg, ${l.style.lineColor}, ${l.style.lineColor} 3px, white 3px, white 6px)`,
+                                            borderColor: l.style.borderColor,
+                                            borderStyle: l.style.borderStyle,
+                                            borderWidth: l.style.borderWidth ? l.style.borderWidth/2 : '0',
+                                            borderLeft: 'none',
+                                            borderRight: 'none'
+                                    }}
+                                    ></span>
 
-                                <span className="layer-name">
-                                    {l.name}
-                                </span>
-                            </Tooltip>
+                                    <span className="layer-name">
+                                        {l.name}
+                                    </span>
+                                </div>
 
-                            <Switch size="small" checked={l.isActive}/>
-                        </div>
+                                <Switch size="small" checked={l.isActive}/>
+                            </div>
+                        </Tooltip>
                     )
                 }
             </div>

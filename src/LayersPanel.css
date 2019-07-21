@@ -17,7 +17,7 @@
     padding: 8px 12px;
 }
 
-.layer-row > span {
+.layer-row > div {
     display: flex;
     align-items: center;   
 }
