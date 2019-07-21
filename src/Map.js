@@ -49,13 +49,12 @@ class Map extends Component {
         // html += `<h3>Tipo: ${layer.name}</h3>`;
         // html += `<p>${layer.description}</p>`;
 
-        const prettyProps = JSON.stringify(props, null, 2)
-            .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-            .replace(/"|,|\{|\}/g, '');
-        html += prettyProps;
+        // const prettyProps = JSON.stringify(props, null, 2)
+        //     .replace(/(?:\r\n|\r|\n)/g, '<br/>')
+        //     .replace(/"|,|\{|\}/g, '');
+        // html += prettyProps;
 
         html += `
-            <br>
             <a
                 target="_BLANK"
                 rel="noopener"
