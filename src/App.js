@@ -122,7 +122,7 @@ class App extends Component {
     }
 
     downloadData() {
-        downloadObjectAsJson(this.props.geoJson, `mapa-cicloviario-${this.state.area}`);
+        downloadObjectAsJson(this.state.geoJson, `mapa-cicloviario-${this.state.area}`);
     }
 
     componentDidUpdate(prevProps, prevState) {
