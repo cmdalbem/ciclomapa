@@ -19,11 +19,11 @@ class Spinner extends Component {
 
                     <div className="content">
                         <h2>
-                            Carregando mapa cicloviário de <b>{city} ({state})</b>
+                            Carregando mapa cicloviário de <b>{city}</b>.
                         </h2>
 
                         <div>
-                            Como é a primeira vez que você carrega esta área do OSM pode demorar um pouquinho :)
+                            Como é a primeira vez que você carrega esta cidade pode demorar um pouquinho :)
                         </div>
                     </div>
                 </div>
