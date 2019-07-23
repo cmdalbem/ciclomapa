@@ -97,7 +97,7 @@ class OSMController {
                             notification['error']({
                                 message: 'Erro',
                                 description:
-                                    'Ops, erro na API do Overpass. Abra o console para ver mais detalhes.',
+                                    `Ops, erro na API do Overpass (erro ${e.status}). Abra o console para ver mais detalhes.`,
                             });
 
                             reject();

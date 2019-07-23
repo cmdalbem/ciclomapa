@@ -69,24 +69,24 @@ class TopBar extends Component {
 
         // const updatedAt = this.props.lastUpdate;// && this.props.lastUpdate.format();
 
-        const citySelector = <Select
-            showSearch
-            style={{ width: 200 }}
-            onChange={this.onChange.bind(this)}
-        >
-            <Option value="Porto Alegre, Rio Grande Do Sul, Brazil">
-                Porto Alegre
-                        </Option>
-            <Option value="Rio De Janeiro, Rio De Janeiro, Brazil"	>
-                Rio de Janeiro
-                        </Option>
-            <Option value="São Paulo, São Paulo, Brazil">
-                São Paulo
-                        </Option>
-            <Option value="Fortaleza, Ceará">
-                Fortaleza
-                        </Option>
-        </Select>
+        // const citySelector = <Select
+        //     showSearch
+        //     style={{ width: 200 }}
+        //     onChange={this.onChange.bind(this)}
+        // >
+        //     <Option value="Porto Alegre, Rio Grande Do Sul, Brazil">
+        //         Porto Alegre
+        //                 </Option>
+        //     <Option value="Rio De Janeiro, Rio De Janeiro, Brazil"	>
+        //         Rio de Janeiro
+        //                 </Option>
+        //     <Option value="São Paulo, São Paulo, Brazil">
+        //         São Paulo
+        //                 </Option>
+        //     <Option value="Fortaleza, Ceará">
+        //         Fortaleza
+        //                 </Option>
+        // </Select>
         
         return (
             <div className="topbar" style={{height: TOPBAR_HEIGHT}}>

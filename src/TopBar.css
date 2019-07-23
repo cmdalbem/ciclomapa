@@ -7,9 +7,16 @@ h1, h2 {
     font-size: 21px;
 }
 
+.topbar .ant-btn-link,
+.topbar .logo,
+.topbar .city {
+    color: white;
+}
+
 .topbar {
     width: 100%;
-    background: white;
+    background: #4ba96e;
+    color: white;
     z-index: 2;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05);
     position: relative;
@@ -21,13 +28,9 @@ h1, h2 {
     justify-content: space-between;
 }
 
-.city {
-
-}
-
 .state {
     margin-right: .25em;
-    color: gray;
+    opacity: 0.8;
     font-weight: 300;
  
     /* font-size: .5em; */
