@@ -34,7 +34,7 @@ class App extends Component {
             geoJson: null,
             loading: false,
             layers: OSMController.getLayers(),
-            mapStyle: 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb',
+            mapStyle: 'mapbox://styles/cmdalbem/cjgmxgkbw000n2rqtucat5zjz',
             zoom: urlParams.z || 13,
             area: '',
             center: [
@@ -99,6 +99,11 @@ class App extends Component {
                                     geoJson: data.geoJson,
                                     loading: false,
                                     dataUpdatedAt: now
+                                });
+                            })
+                            .catch(e => {
+                                this.setState({
+                                    error: true
                                 });
                             });
                     }
@@ -208,7 +213,7 @@ class App extends Component {
 
                 {
                     this.state.loading &&
-                    <Spinner area={this.state.area}/>
+                    <Spinner area={this.state.area} error={this.state.error}/>
                 }
             </div>
         );
