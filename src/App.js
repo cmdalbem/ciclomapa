@@ -36,10 +36,10 @@ class App extends Component {
             layers: OSMController.getLayers(),
             mapStyle: 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb',
             zoom: urlParams.z || 13,
-            area: 'Niterói, Rio De Janeiro, Brazil',
+            area: '',
             center: [
-                urlParams.lng || DEFAULT_LNG,
-                urlParams.lat || DEFAULT_LAT]
+                parseFloat(urlParams.lng) || DEFAULT_LNG,
+                parseFloat(urlParams.lat) || DEFAULT_LAT]
         };
 
         if (this.state.area) {

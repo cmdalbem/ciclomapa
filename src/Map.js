@@ -86,10 +86,10 @@ class Map extends Component {
         }
     }
 
-    reverseGeocode(lat, lng) {
+    reverseGeocode(lngLat) {
         geocodingClient
             .reverseGeocode({
-                query: [lng, lat],
+                query: lngLat,
                 types: ['place'],
                 limit: 1
             })
@@ -295,6 +295,10 @@ class Map extends Component {
     }
     
     componentDidMount() {
+        console.log(this.props.center);
+
+        this.reverseGeocode(this.props.center);
+
         mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
         
         map = new mapboxgl.Map({
@@ -332,9 +336,7 @@ class Map extends Component {
         geocoder.on('result', result => {
             console.log('geocoder result', result);
 
-            const lng = result.result.center[0],
-                lat = result.result.center[1];
-            this.reverseGeocode(lat, lng);
+            this.reverseGeocode(result.result.center);
         });
 
         map.addControl(geocoder, 'top-left');
