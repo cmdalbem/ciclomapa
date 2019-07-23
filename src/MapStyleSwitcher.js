@@ -16,12 +16,9 @@ class MapStyleSwitcher extends Component {
         },
         {
             img: normal,
-            url: 'mapbox://styles/mapbox/streets-v11'
+            // url: 'mapbox://styles/mapbox/streets-v11'
+            url: 'mapbox://styles/cmdalbem/cjgmxgkbw000n2rqtucat5zjz'
         },
-        // {
-        //     img: {},
-        //     url: 'mapbox://styles/cmdalbem/cjgmxgkbw000n2rqtucat5zjz'
-        // },
         {
             img: satelite,
             url: 'mapbox://styles/cmdalbem/cjxsdwb907bfi1cqevxio2bst'
