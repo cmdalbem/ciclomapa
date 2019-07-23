@@ -11,13 +11,13 @@ class MapStyleSwitcher extends Component {
 
     options = [
         {
-            img: light,
-            url: 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'
-        },
-        {
             img: normal,
             // url: 'mapbox://styles/mapbox/streets-v11'
             url: 'mapbox://styles/cmdalbem/cjgmxgkbw000n2rqtucat5zjz'
+        },
+        {
+            img: light,
+            url: 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'
         },
         {
             img: satelite,
