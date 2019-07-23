@@ -86,13 +86,7 @@ class Map extends Component {
         }
     }
 
-    onMapMoved() {
-        const lat = map.getCenter().lat;
-        const lng = map.getCenter().lng;
-        const zoom = map.getZoom();
-
-        // @todo: Doing this query at every map change is making everything super slow!
-        //   Could we use something like map.queryRenderedFeatures() instead?
+    reverseGeocode(lat, lng) {
         geocodingClient
             .reverseGeocode({
                 query: [lng, lat],
@@ -102,29 +96,28 @@ class Map extends Component {
             .send()
             .then(response => {
                 const match = response.body;
-                let mapMovedObj = {
-                    lat: lat,
-                    lng: lng,
-                    zoom: zoom,
-                }
 
-                console.debug('onMapMoved', match.features);
+                console.debug('reverseGeocode', match.features);
 
                 if (match.features && match.features[0]) {
-                    mapMovedObj.area = match.features[0].place_name;
+                    this.props.onMapMoved({area: match.features[0].place_name});
                 }
-
-                this.props.onMapMoved(mapMovedObj);
             })
             .catch(err => {
                 console.error(err.message);
             });
+    }
 
-        // this.props.onMapMoved({
-        //     lat: lat,
-        //     lng: lng,
-        //     zoom: zoom,
-        // });
+    onMapMoved() {
+        const lat = map.getCenter().lat;
+        const lng = map.getCenter().lng;
+        const zoom = map.getZoom();
+
+        this.props.onMapMoved({
+            lat: lat,
+            lng: lng,
+            zoom: zoom,
+        });
     }
 
     addDynamicLayer(l) {
@@ -329,14 +322,22 @@ class Map extends Component {
             'bottom-right'
         );
         // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
-        map.addControl(new MapboxGeocoder({
+        
+        const geocoder = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
             mapboxgl: mapboxgl,
             countries: 'br',
             language: 'pt-br'
-        }),
-            'top-left'
-        );
+        });
+        geocoder.on('result', result => {
+            console.log('geocoder result', result);
+
+            const lng = result.result.center[0],
+                lat = result.result.center[1];
+            this.reverseGeocode(lat, lng);
+        });
+
+        map.addControl(geocoder, 'top-left');
 
 
         // Listeners

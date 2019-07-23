@@ -43,6 +43,7 @@ class MapStyleSwitcher extends Component {
                         <div
                             onClick={() => this.setState({ selected: i })}
                             className={this.state.selected === i ? 'selected' : ''}
+                            key={option.img}
                         >
                             <img src={option.img} alt=""/>
                         </div>

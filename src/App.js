@@ -78,21 +78,27 @@ class App extends Component {
                     
                     if (data && this.isDataFresh(data)) {
                         console.debug('IndexedDB data is fresh.');
-                        this.setState({ geoJson: data.geoJson })
-                    } else {
+                        this.setState({
+                            geoJson: data.geoJson,
+                            dataUpdatedAt: new Date(data.updatedAt)
+                        });
+                    } else { 
                         console.debug(`Couldn't find data for area ${this.state.area} or it isn't fresh, hitting OSM...`);
                         this.setState({ loading: true });
 
                         OSMController.getData({ area: this.state.area })
                             .then(data => {
+                                const now = new Date();
+
                                 set(this.state.area, {
                                     geoJson: data.geoJson,
-                                    updatedAt: new Date()
+                                    updatedAt: now
                                 });
 
                                 this.setState({
                                     geoJson: data.geoJson,
-                                    loading: false
+                                    loading: false,
+                                    dataUpdatedAt: now
                                 });
                             });
                     }
@@ -178,6 +184,7 @@ class App extends Component {
             <div>
                 <TopBar
                     title={this.state.area}
+                    lastUpdate={this.state.dataUpdatedAt}
                     downloadData={this.downloadData}
                 />
 

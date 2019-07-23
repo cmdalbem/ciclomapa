@@ -20,9 +20,9 @@ class LayersPanel extends Component {
                             placement="left"
                             title={l.description}
                             arrowPointAtCenter={true}
+                            key={l.name}
                         >
                             <div
-                                key={l.name}
                                 className="layer-row"
                                 onClick={this.onChange.bind(this, l.id, !l.isActive)}
                             >
