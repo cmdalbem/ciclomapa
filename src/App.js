@@ -186,6 +186,7 @@ class App extends Component {
                     title={this.state.area}
                     lastUpdate={this.state.dataUpdatedAt}
                     downloadData={this.downloadData}
+                    onMapMoved={this.onMapMoved}
                 />
 
                 <Map

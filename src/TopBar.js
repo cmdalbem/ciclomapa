@@ -2,12 +2,14 @@ import React, { Component } from 'react';
 
 import { TOPBAR_HEIGHT } from './constants'
 
-import { Modal, Button, Divider, Icon } from 'antd';
+import { Modal, Button, Divider, Icon, Select } from 'antd';
 
 import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
 
 import './TopBar.css'
+
+const { Option } = Select;
 
 class TopBar extends Component {
     info() {
@@ -42,6 +44,12 @@ class TopBar extends Component {
         });
     }
 
+    onChange(value) {
+        console.log(`selected ${value}`);
+        this.props.onMapMoved({ area: value });
+    }
+
+
     render() {
         const parts = this.props.title.split(',');
         const city = parts[0], 
@@ -49,6 +57,25 @@ class TopBar extends Component {
             country = parts[2];
 
         // const updatedAt = this.props.lastUpdate;// && this.props.lastUpdate.format();
+
+        const citySelector = <Select
+            showSearch
+            style={{ width: 200 }}
+            onChange={this.onChange.bind(this)}
+        >
+            <Option value="Porto Alegre, Rio Grande Do Sul, Brazil">
+                Porto Alegre
+                        </Option>
+            <Option value="Rio De Janeiro, Rio De Janeiro, Brazil"	>
+                Rio de Janeiro
+                        </Option>
+            <Option value="São Paulo, São Paulo, Brazil">
+                São Paulo
+                        </Option>
+            <Option value="Fortaleza, Ceará">
+                Fortaleza
+                        </Option>
+        </Select>
         
         return (
             <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
@@ -63,6 +90,8 @@ class TopBar extends Component {
                         {state}
                     </span>
                     {city}
+
+                    {/* {citySelector} */}
 
                     {/* <span className="lastUpdate">
                         atualizado em {updatedAt}
