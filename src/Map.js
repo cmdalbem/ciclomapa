@@ -330,8 +330,10 @@ class Map extends Component {
         const geocoder = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
             mapboxgl: mapboxgl,
+            language: 'pt-br',
+            placeholder: 'Buscar cidades',
             countries: 'br',
-            language: 'pt-br'
+            types: 'place'
         });
         geocoder.on('result', result => {
             console.log('geocoder result', result);
