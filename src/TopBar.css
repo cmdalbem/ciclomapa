@@ -37,3 +37,14 @@ h1, h2 {
 .state:after {
     content: ' /';
 }
+
+.about-modal .logos {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+.about-modal .logos img {
+    width: 100px;
+    height: auto;
+}
