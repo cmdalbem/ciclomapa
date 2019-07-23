@@ -1,7 +1,7 @@
 [
     {
         "name": "Ciclovia",
-        "description": "Espaço segregado para fluxo de bicicletas que pode ser implementados com ou sem desnível com relação à via e como elemento físico delimitador ou outras medidas de segregação como ilhas e/ou calçadas, elementos de confinamento prefabricados, faixas separadoras, vegetação, áreas verdes ou ainda área de estacionamento adjacente.",
+        "description": "Vias segregadas exclusivas para fluxo de bicicletas.",
         "filters": [
             ["highway", "cycleway"],
             ["cycleway", "track"],
@@ -20,7 +20,7 @@
     },
     {
         "name": "Ciclofaixa",
-        "description": "Espaço sem segregação física destinado exclusivamente à circulação de bicicletas delimitada por marcas no pavimento e, ocasionalmente, alguns elementos delimitadores como tachas ou tachões retrorrefletivos.",
+        "description": "Vias sem segregação física destinadas exclusivamente à circulação de bicicletas delineadas por elementos delimitadores.",
         "filters": [
             ["cycleway", "lane"],
             ["cycleway:left", "lane"],
@@ -39,7 +39,7 @@
     },
     {
         "name": "Ciclorota",
-        "description": "Via com sinalização para o tráfego compartilhado com véiculos motorizados, com preferência para bicicletas.",
+        "description": "Vias com sinalização para o tráfego compartilhado com véiculos motorizados, com preferência para bicicletas.",
         "filters": [
             ["cycleway", "buffered_lane"],
             ["cycleway:left", "buffered_lane"],
@@ -61,7 +61,7 @@
     },
     {
         "name": "Calçada compartilhada",
-        "description": "Calçada com sinalização para circulação de bicicletas compartilhada em que pedestres possuem a prioridade.",
+        "description": "Calçadas com sinalização para circulação compartilhada de bicicletas em que pedestres possuem a prioridade.",
         "filters": [
             [["highway","footway"],["bicycle","designated"]],
             [["highway","pedestrian"],["bicycle","designated"]],
@@ -80,7 +80,7 @@
     },
     {
         "name": "Baixa velocidade",
-        "description": "Vias com limite de velocidade regulamentada de até 30km/h.",
+        "description": "Vias com limite de velocidade regulamentado de até 30km/h.",
         "isActive": false,
         "filters": [
             ["maxspeed", "30"],
@@ -111,7 +111,7 @@
     },
     {
         "name": "Proibido",
-        "description": "Vias onde expressamente não é permitido passar de bicicleta.",
+        "description": "Vias onde é expressamente proibido passar de bicicleta.",
         "isActive": false,
         "filters": [
             ["bicycle", "no"],
