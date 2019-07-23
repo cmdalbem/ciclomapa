@@ -4,6 +4,8 @@ import { TOPBAR_HEIGHT } from './constants'
 
 import { Modal, Button, Divider, Icon, Select } from 'antd';
 
+import { get, set } from 'idb-keyval';
+
 import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
 
@@ -49,6 +51,15 @@ class TopBar extends Component {
         this.props.onMapMoved({ area: value });
     }
 
+    componentDidMount() {
+        get('hasSeenWelcomeMsg')
+                .then(data => {
+                    if (!data) {
+                        this.info();
+                        set('hasSeenWelcomeMsg', true);
+                    }
+                });
+    }
 
     render() {
         const parts = this.props.title.split(',');
