@@ -84,8 +84,8 @@
         "isActive": false,
         "filters": [
             ["maxspeed", "30"],
-            [["highway","living_street"],["bicycle","yes"]],
-            [["highway","unclassified"],["bicycle","yes"]]
+            ["maxspeed", "20"],
+            [["highway","living_street"],["bicycle","yes"]]
         ],
         "style": {
             "lineColor": "orange",
