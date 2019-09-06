@@ -110,7 +110,7 @@
     },
     {
         "name": "Proibido",
-        "description": "Vias onde é expressamente proibido passar de bicicleta.",
+        "description": "Vias onde é proibido pedalar em cima da bicicleta, mas você pode desmontar e passar empurrando ela.",
         "isActive": false,
         "filters": [
             ["bicycle", "no"],
