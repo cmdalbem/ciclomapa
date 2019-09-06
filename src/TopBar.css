@@ -5,6 +5,7 @@ h1, h2 {
 .logo {
     font-weight: 900;
     font-size: 21px;
+    text-transform: uppercase;
 }
 
 .topbar .ant-btn-link,

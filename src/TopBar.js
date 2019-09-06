@@ -19,7 +19,7 @@ class TopBar extends Component {
             content: (
                 <div>
                     <p>
-                        A plataforma BICIMAPA é uma ferramenta que buscar ampliar a visibilidade das infraestruturas cicloviárias mapeadas no OpenStreetMap e engajar uma comunidade de mapeadores para atualização colaborativa de dados e incidência em políticas públicas de mobilidade urbana.
+                        A plataforma CicloMapa é uma ferramenta que buscar ampliar a visibilidade das infraestruturas cicloviárias mapeadas no OpenStreetMap e engajar uma comunidade de mapeadores para atualização colaborativa de dados e incidência em políticas públicas de mobilidade urbana.
                     </p>
 
                     <p>
@@ -90,7 +90,7 @@ class TopBar extends Component {
             <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
                 <div>
                     <h1 className="logo">
-                        BICIMAPA
+                        CicloMapa
                     </h1>
                 </div>
 

@@ -151,9 +151,9 @@ class App extends Component {
                             (propertyKey === filter[0] &&
                              feature.properties[propertyKey] === filter[1]))
                         {
-                            feature.type = layer.name;
+                            feature.properties['type'] = layer.name;
                             // console.debug(feature.properties.id + ' ' + feature.properties.name, layer.name);
-                        }
+                        } 
                     });
                 })
             });
@@ -163,7 +163,8 @@ class App extends Component {
         this.state.geoJson.features.forEach(feature => {
             Object.keys(feature.properties).forEach(propertyKey => {
                 if (propertyKey !== 'id' &&
-                    propertyKey !== 'name')
+                    propertyKey !== 'name' &&
+                    propertyKey !== 'type')
                     delete feature.properties[propertyKey];
             });
         });
