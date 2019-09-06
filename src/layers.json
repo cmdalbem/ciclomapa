@@ -68,8 +68,7 @@
             [["highway","pedestrian"],["bicycle","yes"]],
             ["cycleway", "sidepath"],
             ["cycleway:left", "sidepath"],
-            ["cycleway:right", "sidepath"],
-            ["bicycle", "use_sidepath"]
+            ["cycleway:right", "sidepath"]
         ],
         "style": {
             "lineColor": "#f8c9ae",
