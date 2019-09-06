@@ -92,7 +92,6 @@ class OSMController {
 
                     let requests = [];
                     for (let i = 0; i < servers.length; i++) {
-                    // for (let i = 0; i < 3; i++) {
                         const endpoint = servers[i] + '?data=' + encodedQuery;
                         
                         console.debug('Attempting OSM server: ' + servers[i]);

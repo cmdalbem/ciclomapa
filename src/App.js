@@ -134,6 +134,40 @@ class App extends Component {
     }
 
     downloadData() {
+        // Fill out typologies
+        this.state.geoJson.features.forEach( feature => {
+            this.state.layers.forEach( layer => {
+                layer.filters.forEach( filter => {
+                    Object.keys(feature.properties).forEach(propertyKey => {
+                        // console.debug(propertyKey, filter[0]);
+                        // console.debug(feature.properties[propertyKey], filter[1]);
+                        if ((typeof filter[0] === 'object'
+                            &&
+                             (propertyKey === filter[0][0] &&
+                              feature.properties[propertyKey] === filter[0][1]) ||
+                             (propertyKey === filter[1][0] &&
+                              feature.properties[propertyKey] === filter[1][1]))
+                            ||
+                            (propertyKey === filter[0] &&
+                             feature.properties[propertyKey] === filter[1]))
+                        {
+                            feature.type = layer.name;
+                            // console.debug(feature.properties.id + ' ' + feature.properties.name, layer.name);
+                        }
+                    });
+                })
+            });
+        });
+
+        // Delete unwanted OSM properties
+        this.state.geoJson.features.forEach(feature => {
+            Object.keys(feature.properties).forEach(propertyKey => {
+                if (propertyKey !== 'id' &&
+                    propertyKey !== 'name')
+                    delete feature.properties[propertyKey];
+            });
+        });
+        
         downloadObjectAsJson(this.state.geoJson, `mapa-cicloviario-${this.state.area}`);
     }
 
