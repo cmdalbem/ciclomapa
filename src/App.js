@@ -12,7 +12,7 @@ import TopBar from './TopBar.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
 import OSMController from './OSMController.js'
-import { DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS, MIN_ZOOM_TO_LOAD_DATA } from './constants.js'
+import { DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS } from './constants.js'
 import { downloadObjectAsJson } from './utils.js'
 
 import './App.css';
@@ -70,7 +70,8 @@ class App extends Component {
     }
 
     updateData() {
-        if (this.state.zoom > MIN_ZOOM_TO_LOAD_DATA && this.state.area) {
+        // if (this.state.zoom > MIN_ZOOM_TO_LOAD_DATA && this.state.area) {
+        if (this.state.area) {
             // Try to retrieve previously saved data for this area
             get(this.state.area)
                 .then(data => {

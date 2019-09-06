@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 
 import { TOPBAR_HEIGHT } from './constants'
 
-import { Modal, Button, Divider, Icon, Select } from 'antd';
+import { Modal, Button, Divider, Icon } from 'antd';
 
 import { get, set } from 'idb-keyval';
 
@@ -10,8 +10,6 @@ import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
 
 import './TopBar.css'
-
-const { Option } = Select;
 
 class TopBar extends Component {
     info() {
@@ -64,8 +62,8 @@ class TopBar extends Component {
     render() {
         const parts = this.props.title.split(',');
         const city = parts[0], 
-            state = parts[1], 
-            country = parts[2];
+            state = parts[1];
+            // country = parts[2];
 
         // const updatedAt = this.props.lastUpdate;// && this.props.lastUpdate.format();
 

@@ -295,8 +295,6 @@ class Map extends Component {
     }
     
     componentDidMount() {
-        console.log(this.props.center);
-
         this.reverseGeocode(this.props.center);
 
         mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;

@@ -5,9 +5,9 @@ import './Spinner.css'
 class Spinner extends Component {
     render() {
         const parts = this.props.area.split(',');
-        const city = parts[0],
-            state = parts[1],
-            country = parts[2];
+        const city = parts[0];
+            // state = parts[1],
+            // country = parts[2];
 
         return (
             <div id="spinner" className="loader-container">

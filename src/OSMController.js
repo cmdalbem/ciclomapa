@@ -1,3 +1,4 @@
+/* eslint-disable no-loop-func */
 import osmtogeojson from 'osmtogeojson'
 
 import $ from 'jquery'
@@ -8,6 +9,14 @@ import { DEFAULT_BORDER_WIDTH } from './constants.js'
 import { slugify } from './utils.js'
 
 import * as layers from './layers.json';
+
+const servers = [
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass-api.de/api/interpreter',
+    'http://overpass.openstreetmap.fr/api/interpreter',
+    'http://overpass.osm.ch/api/interpreter',
+    'https://overpass.nchc.org.tw'
+];
 
 class OSMController {
     static getQuery(constraints) {
@@ -81,27 +90,48 @@ class OSMController {
 
                     const encodedQuery = encodeURI(query);
 
-                    $.getJSON(
-                        // `https://overpass-api.de/api/interpreter?data=${encodedQuery}`,
-                        `https://overpass.kumi.systems/api/interpreter?data=${encodedQuery}`,
-                        data => {
-                            console.debug('osm data: ', data);
-                            geoJson = osmtogeojson(data, { flatProperties: true });
-                            console.debug('converted to geoJSON: ', geoJson);
+                    let requests = [];
+                    for (let i = 0; i < servers.length; i++) {
+                    // for (let i = 0; i < 3; i++) {
+                        const endpoint = servers[i] + '?data=' + encodedQuery;
+                        
+                        console.debug('Attempting OSM server: ' + servers[i]);
 
-                            resolve({
-                                geoJson: geoJson
+                        requests[i] = $.getJSON(
+                            endpoint,
+                            data => {
+                                if (data.elements.length > 0) {
+                                    console.debug('SUCCESS! @ ' + i);
+                                    for (let r = 0; r < requests.length; r++) {
+                                        if (r !== i) {
+                                            console.debug('Aborting ' + r);
+                                            requests[r].abort();
+                                        }
+                                    }
+    
+                                    console.debug('osm data: ', data);
+                                    geoJson = osmtogeojson(data, { flatProperties: true });
+                                    console.debug('converted to geoJSON: ', geoJson);
+        
+                                    resolve({
+                                        geoJson: geoJson
+                                    });
+                                }
+                            }).fail(e => {
+                                if (e.statusText !== 'abort') {
+                                    console.error("Deu erro! Saca só:", e);
+                                }
                             });
-                        }).fail(e => {
-                            console.error("Deu erro! Saca só:", e);
-                            notification['error']({
-                                message: 'Erro',
-                                description:
-                                    `Ops, erro na API do Overpass (erro ${e.status}). Abra o console para ver mais detalhes.`,
-                            });
+                    }
+                    
+                    // console.error("Deu erro! Saca só:", e);
+                    // notification['error']({
+                    //     message: 'Erro',
+                    //     description:
+                    //         `Ops, erro na API do Overpass (erro ${e.status}). Abra o console para ver mais detalhes.`,
+                    // });
+                    // reject();
 
-                            reject();
-                        });
                 }).fail(e => {
                     console.error("Deu erro! Saca só:", e);
                     notification['error']({
