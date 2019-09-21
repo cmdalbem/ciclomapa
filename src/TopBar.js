@@ -23,7 +23,7 @@ class TopBar extends Component {
                     </p>
 
                     <p>
-                        Este é um projeto Open Source, e seu código pode ser encontrado no <a href="https://github.com/cmdalbem/openbikemap/">Github</a>.
+                        Este é um projeto Open Source, e seu código pode ser encontrado no <a href="https://github.com/cmdalbem/ciclomapa/">Github</a>.
                     </p>
 
                     <p>
