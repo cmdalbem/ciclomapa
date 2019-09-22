@@ -16,7 +16,7 @@ class Spinner extends Component {
                         this.props.error ?
                             <div>
                                 <div style={{fontSize: '42px'}}>
-                                    😓
+                                    <span role="img" aria-label="Emoji triste">😓</span>
                                 </div>
 
                                 <div className="content">
