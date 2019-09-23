@@ -75,15 +75,15 @@ class App extends Component {
         // if (this.state.zoom > MIN_ZOOM_TO_LOAD_DATA && this.state.area) {
         if (this.state.area) {
             // Try to retrieve previously saved data for this area
-            this.storage.load(this.state.area)
-                .then(data => {
-                    if (data && this.isDataFresh(data)) {
-                        console.debug('Database data is fresh.');
-                        this.setState({
-                            geoJson: data.geoJson,
-                            dataUpdatedAt: new Date(data.updatedAt)
-                        });
-                    } else { 
+            // this.storage.load(this.state.area)
+                // .then(data => {
+                    // if (data && this.isDataFresh(data)) {
+                    //     console.debug('Database data is fresh.');
+                    //     this.setState({
+                    //         geoJson: data.geoJson,
+                    //         dataUpdatedAt: new Date(data.updatedAt)
+                    //     });
+                    // } else { 
                         console.debug(`Couldn't find data for area ${this.state.area} or it isn't fresh, hitting OSM...`);
                         this.setState({ loading: true });
 
@@ -104,16 +104,16 @@ class App extends Component {
                                 });
                             });
                     }
-                }).catch(e => {
-                    notification['error']({
-                        message: 'Erro',
-                        description:
-                            'Ocorreu um erro ao acessar o banco de dados.',
-                    });
-                });
-        } else {
-            this.setState({ loading: false });
-        }
+                // }).catch(e => {
+                //     notification['error']({
+                //         message: 'Erro',
+                //         description:
+                //             'Ocorreu um erro ao acessar o banco de dados.',
+                //     });
+                // });
+        // } else {
+        //     this.setState({ loading: false });
+        // }
     }
 
     onMapStyleChange(newMapStyle) {
@@ -189,11 +189,11 @@ class App extends Component {
         }
 
         if (this.state.geoJson !== prevState.geoJson) {
-            if (!this.state.geoJson.features.length || this.state.geoJson.features.length === 0) {
+            if (!this.state.geoJson || !this.state.geoJson.features || this.state.geoJson.features.length === 0) {
                 notification['warning']({
                     message: 'Ops',
                     description:
-                        'Não encontramos dados cicloviários para esta cidade.',
+                        'Não há dados cicloviários para esta cidade.',
                 });
             }
         }

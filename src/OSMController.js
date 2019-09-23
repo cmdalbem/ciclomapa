@@ -94,7 +94,7 @@ class OSMController {
                     for (let i = 0; i < servers.length; i++) {
                         const endpoint = servers[i] + '?data=' + encodedQuery;
                         
-                        console.debug('Attempting OSM server: ' + servers[i]);
+                        console.debug(i + ' OSM server: ' + servers[i]);
 
                         requests[i] = $.getJSON(
                             endpoint,
@@ -111,14 +111,30 @@ class OSMController {
                                     console.debug('osm data: ', data);
                                     geoJson = osmtogeojson(data, { flatProperties: true });
                                     console.debug('converted to geoJSON: ', geoJson);
-        
+                                    
                                     resolve({
                                         geoJson: geoJson
                                     });
+                                } else {
+                                    console.debug(`Server ${i} returned an empty result.`);
+
+                                    // Check if I'm the last one
+                                    let isLastRemainingRequest = true;
+                                    for (let r = 0; r < requests.length; r++) {
+                                        if (r !== i) {
+                                            if (requests[r].status === undefined) {
+                                                isLastRemainingRequest = false;
+                                            }
+                                        }
+                                    }
+                                    if (isLastRemainingRequest) {
+                                        console.debug('I was the last one, so probably the result is empty.');
+                                        resolve({ geoJson: null });
+                                    }
                                 }
                             }).fail(e => {
                                 if (e.statusText !== 'abort') {
-                                    console.error("Deu erro! Saca só:", e);
+                                    console.error(`Servidor ${i} deu erro:`, e);
                                 }
                             });
                     }
