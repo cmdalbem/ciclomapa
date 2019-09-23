@@ -1,8 +1,6 @@
 import React, { Component } from 'react';
 import { withRouter } from "react-router-dom";
 
-import { get, set } from 'idb-keyval';
-
 import { notification } from 'antd';
 import "antd/dist/antd.css";
 
@@ -12,6 +10,7 @@ import TopBar from './TopBar.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
 import OSMController from './OSMController.js'
+import Storage from './Storage.js'
 import { DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS } from './constants.js'
 import { downloadObjectAsJson } from './utils.js'
 
@@ -19,6 +18,7 @@ import './App.css';
 
 class App extends Component {
     geoJson;
+    storage;
 
     constructor(props) {
         super(props);
@@ -41,6 +41,8 @@ class App extends Component {
                 parseFloat(urlParams.lng) || DEFAULT_LNG,
                 parseFloat(urlParams.lat) || DEFAULT_LAT]
         };
+
+        this.storage = new Storage();
 
         if (this.state.area) {
             this.updateData();
@@ -73,12 +75,10 @@ class App extends Component {
         // if (this.state.zoom > MIN_ZOOM_TO_LOAD_DATA && this.state.area) {
         if (this.state.area) {
             // Try to retrieve previously saved data for this area
-            get(this.state.area)
+            this.storage.load(this.state.area)
                 .then(data => {
-                    console.debug('IndexedDB result:', data);
-                    
                     if (data && this.isDataFresh(data)) {
-                        console.debug('IndexedDB data is fresh.');
+                        console.debug('Database data is fresh.');
                         this.setState({
                             geoJson: data.geoJson,
                             dataUpdatedAt: new Date(data.updatedAt)
@@ -89,31 +89,26 @@ class App extends Component {
 
                         OSMController.getData({ area: this.state.area })
                             .then(data => {
+                                // Persist data
                                 const now = new Date();
-
-                                set(this.state.area, {
-                                    geoJson: data.geoJson,
-                                    updatedAt: now
-                                });
-
+                                this.storage.save(this.state.area, data.geoJson, now);
+                                
                                 this.setState({
                                     geoJson: data.geoJson,
                                     loading: false,
                                     dataUpdatedAt: now
                                 });
-                            })
-                            .catch(e => {
+                            }).catch(e => {
                                 this.setState({
                                     error: true
                                 });
                             });
                     }
-                })
-                .catch(e => {
+                }).catch(e => {
                     notification['error']({
                         message: 'Erro',
                         description:
-                            'Ocorreu um erro ao tentar recuperar os dados salvos no IndexedDB.',
+                            'Ocorreu um erro ao acessar o banco de dados.',
                     });
                 });
         } else {
@@ -169,7 +164,7 @@ class App extends Component {
             });
         });
         
-        downloadObjectAsJson(this.state.geoJson, `mapa-cicloviario-${this.state.area}`);
+        downloadObjectAsJson(this.state.geoJson, `ciclomapa-${this.state.area}`);
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -191,6 +186,16 @@ class App extends Component {
             //         this.updateDebugPolygon(largestBoundsYet, 1);
             //     }
             // }
+        }
+
+        if (this.state.geoJson !== prevState.geoJson) {
+            if (!this.state.geoJson.features.length || this.state.geoJson.features.length === 0) {
+                notification['warning']({
+                    message: 'Ops',
+                    description:
+                        'Não encontramos dados cicloviários para esta cidade.',
+                });
+            }
         }
         
         if (this.state.zoom !== prevState.zoom ||
