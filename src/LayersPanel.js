@@ -25,7 +25,10 @@ class LayersPanel extends Component {
                             <div
                                 className="layer-row"
                                 onClick={this.onChange.bind(this, l.id, !l.isActive)}
+                                style={{ opacity: l.isActive ? 1 : .6 }}
                             >
+                                <Switch size="small" checked={l.isActive} />
+
                                 <div>
                                     <span
                                         className="layer-miniature" 
@@ -46,8 +49,6 @@ class LayersPanel extends Component {
                                         {l.name}
                                     </span>
                                 </div>
-
-                                <Switch size="small" checked={l.isActive}/>
                             </div>
                         </Tooltip>
                     )

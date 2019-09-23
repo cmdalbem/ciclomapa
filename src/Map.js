@@ -301,6 +301,13 @@ class Map extends Component {
         this.props.layers.slice().reverse().forEach(l => {
             this.addDynamicLayer(l);
         }); 
+
+        // map.addSource('some id', {
+        //     type: 'geojson',
+        //     // data: 'http://overpass-api.de/api/interpreter?data=node[amenity=school](bbox);out;(way[amenity=school](bbox);node(w););out;'
+        //     // data: 'http://overpass-api.de/api/interpreter?data=node[name=%22Im Tannenbusch%22][highway=bus_stop];out+skel;'
+        //     data: 'https://firebasestorage.googleapis.com/v0/b/ciclomapa-app.appspot.com/o/ciclomapa-Nitero%CC%81i%2C%20Rio%20De%20Janeiro%2C%20Brazil.json?alt=media&token=79733a19-009d-46f1-af7b-e55bb3dd9bb5'
+        // });
     }
 
     componentDidUpdate(prevProps) {

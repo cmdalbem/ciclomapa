@@ -2,18 +2,18 @@
     position: fixed;
     top: 84px;
     right: 10px;
-    background: white;
+    /* background: white; */
     padding: 8px 0;
-    box-shadow: 0 0 10px 2px rgba(0,0,0,.1);
+    /* box-shadow: 0 0 10px 2px rgba(0,0,0,.1); */
     border-radius: 4px;
-    width: 200px;
+    width: 180px;
 }
 
 .layer-row {
     display: flex;
     cursor: pointer;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     padding: 8px 12px;
 }
 
@@ -23,7 +23,7 @@
 }
 
 .layer-row:hover {
-    background: #fafafa;
+    background: rgba(255,255,255,0.5);
 }
 
 .layer-miniature {
@@ -35,8 +35,17 @@
 .layer-name {
     margin: 0 4px;
     line-height: 1.2em;
+    font-weight: 500;
 }
 
 .ant-tooltip-inner {
     background: #333;
 }
+
+.layer-row .ant-switch {
+    display: none;
+}
+
+/* .layer-row:hover .ant-switch {
+    opacity: 1;
+} */
