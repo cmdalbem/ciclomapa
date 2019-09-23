@@ -331,7 +331,8 @@ class Map extends Component {
             language: 'pt-br',
             placeholder: 'Buscar cidades',
             countries: 'br',
-            types: 'place'
+            types: 'place',
+            marker: false
         });
         geocoder.on('result', result => {
             console.log('geocoder result', result);
