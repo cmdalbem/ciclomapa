@@ -26,7 +26,7 @@ class TopBar extends Component {
                         Este é um projeto Open Source, e seu código pode ser encontrado no <a href="https://github.com/cmdalbem/ciclomapa/">Github</a>.
                     </p>
 
-                    <p>
+                    <div>
                         Apoio:
 
                         <div className="logos">
@@ -37,7 +37,7 @@ class TopBar extends Component {
                                 <img src={ucb} alt="Logo da UCB"></img>
                             </a>
                         </div>
-                    </p>
+                    </div>
                 </div>
             ),
             onOk() { },
