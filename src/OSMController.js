@@ -82,7 +82,12 @@ class OSMController {
                     console.debug('nominatimData', nominatimData);
 
                     // Source: https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL#By_area_.28area.29
-                    const areaId = 3600000000 + nominatimData[0].osm_id;
+                    let areaId
+                    if (constraints.area === 'Brasília, Distrito Federal, Brazil') {
+                        areaId = 3600059470;
+                    } else {
+                        areaId = 3600000000 + nominatimData[0].osm_id;
+                    }
 
                     const query = OSMController.getQuery({ areaId: areaId});
                     
