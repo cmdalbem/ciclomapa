@@ -44,6 +44,11 @@ class TopBar extends Component {
         });
     }
 
+    showCityPicker() {
+        let body = document.querySelector('body');
+        body.classList.add('show-city-picker')
+    }
+
     onChange(value) {
         console.log(`selected ${value}`);
         this.props.onMapMoved({ area: value });
@@ -94,11 +99,16 @@ class TopBar extends Component {
                     </h1>
                 </div>
 
-                <h2 className="city">
+                <h2 className="areaname">
                     <span className="state">
                         {state}
                     </span>
-                    {city}
+                    <span className="city">
+                        {city}
+                    </span>
+
+                    <Button ghost onClick={this.showCityPicker} icon="edit">
+                    </Button>
 
                     {/* {citySelector} */}
 

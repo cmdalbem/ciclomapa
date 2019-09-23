@@ -203,6 +203,8 @@ class App extends Component {
                     onMapMoved={this.onMapMoved}
                 />
 
+                <div id="backdrop"></div>
+
                 <Map
                     data={this.state.geoJson}
                     layers={this.state.layers}

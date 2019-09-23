@@ -337,22 +337,32 @@ class Map extends Component {
         );
         // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
         
-        const geocoder = new MapboxGeocoder({
+        const searchBar = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
             mapboxgl: mapboxgl,
             language: 'pt-br',
-            placeholder: 'Buscar cidades',
+            placeholder: 'Buscar endereços, estabelecimentos, ...',
+            countries: 'br',
+            // collapsed: true
+        });
+        map.addControl(searchBar, 'top-left');
+
+        const cityPicker = new MapboxGeocoder({
+            accessToken: mapboxgl.accessToken,
+            mapboxgl: mapboxgl,
+            language: 'pt-br',
+            placeholder: 'Buscar cidades brasileiras',
             countries: 'br',
             types: 'place',
-            marker: false
+            marker: false,
+            clearOnBlur: true
         });
-        geocoder.on('result', result => {
-            console.log('geocoder result', result);
-
+        cityPicker.on('result', result => {
+            console.debug('geocoder result', result);
             this.reverseGeocode(result.result.center);
+            document.querySelector('body').classList.remove('show-city-picker');
         });
-
-        map.addControl(geocoder, 'top-left');
+        map.addControl(cityPicker, 'top-left');
 
 
         // Listeners
