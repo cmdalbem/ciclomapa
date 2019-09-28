@@ -20,6 +20,7 @@ const firebaseConfig = {
 
 class Storage {
     db;
+    buffer;
     
     constructor() {
         firebase.initializeApp({
@@ -39,23 +40,36 @@ class Storage {
     }
 
     compressJson(data) {
-        // console.log('Before: ', sizeOf(data));
+        console.log('Before: ', sizeOf(data));
 
         // Minimize size by cleaning clearing OSM tags
         // @todo DOESNT WORK because Mapbox needs the OSM tags to render the layers
         // cleanUpOSMTags(data);
         
         // Compress with gzip
-        // const compressed = gzipCompress(data);
+        const compressed = gzipCompress(data);
 
-        // console.log('After: ', sizeOf(compressed));
+        console.log('After: ', sizeOf(compressed));
 
-        // return compressed;
+        return compressed;
+    }
+
+    saveToFirestore(name, jsonStr, updatedAt, part) {
+        let slug = slugify(name);
+
+        if (part === 2) {
+            slug += 2;
+        }
+
+        return this.db.collection('cities').doc(slug).set({
+            name: name,
+            geoJson: jsonStr,
+            updatedAt: updatedAt,
+            part: part || ''
+        });
     }
 
     save(name, geoJson, updatedAt) {
-        const slug = slugify(name);
-
         // Save to Local Storage
         set(name, {
             geoJson: geoJson,
@@ -64,17 +78,34 @@ class Storage {
 
         // Save to Firestore
         try {
-            // this.compressJson(geoJson);
+            const jsonStr = JSON.stringify(geoJson);
 
-            this.db.collection('cities').doc(slug).set({
-                name: name,
-                geoJson: JSON.stringify(geoJson),
-                updatedAt: updatedAt
-            }).then(() => {
-                console.debug("[Firebase] Document written successfully.");
-            }).catch(error => {
-                console.error("[Firebase] Error adding document: ", error);
-            });
+            // geoJson = this.compressJson(geoJson);
+            this.saveToFirestore(name, jsonStr, updatedAt)
+                .then(() => {
+                    console.debug("[Firebase] Document written successfully.");
+                }).catch(error => {
+                    // console.error("[Firebase] Error adding document: ", error);
+                    console.debug('[Firestore] Failed saving full data, splitting in 2...')
+
+                    const part1 = jsonStr.slice(0, Math.ceil(jsonStr.length/2));
+                    const part2 = jsonStr.slice(Math.ceil(jsonStr.length/2));
+
+                    this.saveToFirestore(name, part1, updatedAt, 1) 
+                    .then(() => {
+                        console.debug("[Firebase] Document written successfully.");
+                    }).catch(error => {
+                        console.error("[Firebase] Error adding document: ", error);
+                    });        
+ 
+                    this.saveToFirestore(name, part2, updatedAt, 2)
+                    .then(() => {
+                        console.debug("[Firebase] Document written successfully.");
+                    }).catch(error => {
+                        console.error("[Firebase] Error adding document: ", error);
+                    });        
+
+                });
         } catch (e) {
             console.error(e);
         }
@@ -89,6 +120,13 @@ class Storage {
 
                 // Decompress gzip
                 // data.geoJson = gzipDecompress(data.geoJson)
+
+                if (data.part === 1) {
+                    this.buffer = data.geoJson; 
+                    return this.getDataFromDB(slug + '2', resolve, reject);
+                } else if (data.part === 2) {
+                    data.geoJson = this.buffer + data.geoJson;
+                }
 
                 // Massage data
                 data.geoJson = JSON.parse(data.geoJson);
