@@ -7,6 +7,7 @@ import { slugify, sizeOf } from './utils.js'
 import pako from 'pako';
 
 
+const DISABLE_LOCAL_STORAGE = true;
 
 const firebaseConfig = {
     apiKey: "AIzaSyDUbMY3UuyJ9vVVBblhUR9L1B3TV6a3eRU",
@@ -90,38 +91,46 @@ class Storage {
         }
     }
 
+    getDataFromDB(slug, resolve, reject) {
+        this.db.collection("cities").doc(slug).get().then(doc => {
+            if (doc.exists) {
+                let data = doc.data();
+
+                console.debug("[Firebase] Document data:", data);
+
+                // Decompress gzip
+                // data.geoJson = JSON.parse(pako.inflate(data.geoJson), { to: 'string' });
+
+                // Massage data
+                data.geoJson = JSON.parse(data.geoJson);
+                data.updatedAt = data.updatedAt.toDate();
+
+                resolve(data);
+            } else {
+                console.debug("[Firebase] No document for: ", slug);
+                resolve();
+            }
+        }).catch(error => {
+            console.error(`[Firebase] Error getting document: ${slug}`, error);
+            reject();
+        });
+    }
+
     load(name) {
         const slug = slugify(name);
 
         return new Promise((resolve, reject) => {
-            get(name).then( local => {
-                if (local) {
-                    resolve(local);
-                } else {
-                    this.db.collection("cities").doc(slug).get().then(doc => {
-                        if (doc.exists) {
-                            let data = doc.data();
-                            
-                            console.debug("[Firebase] Document data:", data);
-
-                            // Decompress gzip
-                            // data.geoJson = JSON.parse(pako.inflate(data.geoJson), { to: 'string' });
-                            
-                            // Massage data
-                            data.geoJson = JSON.parse(data.geoJson);
-                            data.updatedAt = data.updatedAt.toDate();
-                            
-                            resolve(data);
-                        } else {
-                            console.debug("[Firebase] No document for: ", name);
-                            resolve();
-                        }
-                    }).catch(error => {
-                        console.error(`[Firebase] Error getting document: ${name}`, error);
-                        reject();
-                    });
-                }
-            })
+            if (!DISABLE_LOCAL_STORAGE) {
+                get(name).then( local => {
+                    if (local) {
+                        resolve(local);
+                    } else {
+                        this.getDataFromDB(slug, resolve, reject);
+                    }
+                })
+            } else {
+                this.getDataFromDB(slug, resolve, reject);
+            }
         });
     }
 }

@@ -85,6 +85,8 @@ class OSMController {
                     let areaId
                     if (constraints.area === 'Brasília, Distrito Federal, Brazil') {
                         areaId = 3600059470;
+                    } else if (constraints.area === 'Vitória, Espirito Santo, Brazil') {
+                        areaId = 3601825817;
                     } else {
                         areaId = 3600000000 + nominatimData[0].osm_id;
                     }
