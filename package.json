@@ -2,7 +2,7 @@
   "name": "ciclomapa",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://cmdalbem.github.io/ciclomapa",
+  "homepage": "https://ciclomapa.org.br",
   "dependencies": {
     "@mapbox/mapbox-gl-geocoder": "^4.4.0",
     "@mapbox/mapbox-sdk": "^0.6.0",
