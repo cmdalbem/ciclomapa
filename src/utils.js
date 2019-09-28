@@ -1,3 +1,6 @@
+import { saveAs } from 'file-saver';
+
+
 export function doesAContainsB(a, b) {
     if (a && b) {
         return a.getNorth() >= b.getNorth()
@@ -10,14 +13,12 @@ export function doesAContainsB(a, b) {
 }
 
 // Thanks https://stackoverflow.com/questions/19721439/download-json-object-as-a-file-from-browser
-export function downloadObjectAsJson(exportObj, exportName) {
-    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
-    var downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", exportName + ".json");
-    document.body.appendChild(downloadAnchorNode); // required for firefox
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+export function downloadObjectAsJson(data, fileName) {
+    const blob = new Blob([JSON.stringify(data)], {
+        type: 'application/json',
+        name: fileName
+    }); 
+    saveAs(blob, fileName);
 }
 
 export function createPolygonFromBBox(bbox) {
