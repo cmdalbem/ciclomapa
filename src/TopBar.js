@@ -100,11 +100,11 @@ class TopBar extends Component {
                 </div>
 
                 <Button 
-                    ghost
+                    // ghost
                     size="large"
                     onClick={this.showCityPicker}
                 >
-                    <h2 className="areaname">
+                    <h3 className="areaname">
                         <span className="state">
                             {state}
                         </span>
@@ -118,8 +118,13 @@ class TopBar extends Component {
                             atualizado em {updatedAt}
                         </span>  */}
                         
-                        <Icon type="edit"></Icon>
-                    </h2>
+                        <Icon
+                            type="down"
+                            size="small"
+                            style={{ fontSize: '16px', color: '#4ba96e' }}
+                        >
+                        </Icon>
+                    </h3>
                 </Button>
                 
                 <div>

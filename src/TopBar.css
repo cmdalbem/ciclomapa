@@ -1,4 +1,4 @@
-h1, h2 {
+h1, h2, h3 {
     margin: 0;
 }
 
@@ -9,8 +9,7 @@ h1, h2 {
 }
 
 .topbar .ant-btn-link,
-.topbar .logo,
-.topbar .areaname {
+.topbar .logo {
     color: white;
 }
 
@@ -31,20 +30,22 @@ h1, h2 {
 
 .city {
     padding-right: 6px;
+    font-weight: 600;
+    margin-right: .25em;
 }
 
 .state {
-    margin-right: .5em;
-    opacity: 0.8;
-    font-weight: 600;
- 
+    /* margin-right: .5em; */
+    /* opacity: 0.8; */
+    
+    /* font-weight: 600;
     font-size: .5em;
-    text-transform: uppercase;
+    text-transform: uppercase; */
 }
 
-/* .state:after {
-    content: ' /';
-} */
+.state:after {
+    content: ', ';
+}
 
 .about-modal .logos {
     display: flex;
