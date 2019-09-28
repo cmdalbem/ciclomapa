@@ -23,7 +23,7 @@ class TopBar extends Component {
                     </p>
 
                     <p>
-                        Este é um projeto Open Source, e seu código pode ser encontrado no <a href="https://github.com/cmdalbem/ciclomapa/">Github</a>.
+                        Este é um projeto Open Source, e seu código pode ser encontrado no <a href="https://github.com/cmdalbem/ciclomapa/">GitHub</a>.
                     </p>
 
                     <div>
@@ -99,30 +99,35 @@ class TopBar extends Component {
                     </h1>
                 </div>
 
-                <h2 className="areaname">
-                    <span className="state">
-                        {state}
-                    </span>
-                    <span className="city">
-                        {city}
-                    </span>
+                <Button 
+                    ghost
+                    size="large"
+                    onClick={this.showCityPicker}
+                >
+                    <h2 className="areaname">
+                        <span className="state">
+                            {state}
+                        </span>
+                        <span className="city">
+                            {city}
+                        </span> 
 
-                    <Button ghost onClick={this.showCityPicker} icon="edit">
-                    </Button>
+                        {/* {citySelector} */}
 
-                    {/* {citySelector} */}
-
-                    {/* <span className="lastUpdate">
-                        atualizado em {updatedAt}
-                    </span>  */}
-                </h2>
+                        {/* <span className="lastUpdate">
+                            atualizado em {updatedAt}
+                        </span>  */}
+                        
+                        <Icon type="edit"></Icon>
+                    </h2>
+                </Button>
                 
                 <div>
-                    <Button type="link" onClick={this.info}>Sobre</Button>
+                    <Button size="large" type="link" onClick={this.info}>Sobre</Button>
 
                     <Divider type="vertical" />
 
-                    <Button type="link" onClick={this.props.downloadData}>
+                    <Button size="large" type="link" onClick={this.props.downloadData}>
                         <Icon type="download" /> Baixar dados
                     </Button>
                 </div>

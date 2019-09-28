@@ -321,22 +321,6 @@ class Map extends Component {
         
         // Native Mapbox map controls
 
-        map.addControl(
-            new mapboxgl.NavigationControl({
-                showCompass: false
-            }),
-            'bottom-right'
-        );
-        map.addControl(new mapboxgl.GeolocateControl({
-            positionOptions: {
-                enableHighAccuracy: true
-            },
-            trackUserLocation: true
-        }),
-            'bottom-right'
-        );
-        // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
-        
         const searchBar = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
             mapboxgl: mapboxgl,
@@ -345,7 +329,7 @@ class Map extends Component {
             countries: 'br',
             // collapsed: true
         });
-        map.addControl(searchBar, 'top-left');
+        map.addControl(searchBar, 'bottom-right');
 
         const cityPicker = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
@@ -361,8 +345,25 @@ class Map extends Component {
             console.debug('geocoder result', result);
             this.reverseGeocode(result.result.center);
             document.querySelector('body').classList.remove('show-city-picker');
+            cityPicker.clear();
         });
         map.addControl(cityPicker, 'top-left');
+
+        map.addControl(
+            new mapboxgl.NavigationControl({
+                showCompass: false
+            }),
+            'bottom-right'
+        );
+        map.addControl(new mapboxgl.GeolocateControl({
+            positionOptions: {
+                enableHighAccuracy: true
+            },
+            trackUserLocation: true
+        }),
+            'bottom-right'
+        );
+        // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
 
 
         // Listeners

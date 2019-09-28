@@ -1,0 +1,28 @@
+#backdrop {
+    position: fixed;
+    width: 100%;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    background: rgba(255,255,255,0.8);
+    z-index: 2;
+}
+
+#closeBtn {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    margin-left: -50px;
+    margin-top: 20px;
+}
+
+body #backdrop,
+body #backdrop * {
+    visibility: hidden;
+}
+
+body.show-city-picker #backdrop,
+body.show-city-picker #backdrop * {
+    visibility: visible;
+}

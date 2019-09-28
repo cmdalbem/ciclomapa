@@ -6,6 +6,7 @@ import "antd/dist/antd.css";
 
 import Map from './Map.js'
 import Spinner from './Spinner.js'
+import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
 import TopBar from './TopBar.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
@@ -203,7 +204,7 @@ class App extends Component {
                     onMapMoved={this.onMapMoved}
                 />
 
-                <div id="backdrop"></div>
+                <CitySwitcherBackdrop/>
 
                 <Map
                     data={this.state.geoJson}

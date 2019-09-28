@@ -1,7 +1,7 @@
 .switcher-bar {
     display: flex;
     position: fixed;
-    bottom: 30px;
+    bottom: 75px;
     right: 50px;
 }
 

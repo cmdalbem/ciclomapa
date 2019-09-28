@@ -34,17 +34,17 @@ h1, h2 {
 }
 
 .state {
-    margin-right: .25em;
+    margin-right: .5em;
     opacity: 0.8;
-    font-weight: 300;
+    font-weight: 600;
  
-    /* font-size: .5em; */
-    /* text-transform: uppercase; */
+    font-size: .5em;
+    text-transform: uppercase;
 }
 
-.state:after {
+/* .state:after {
     content: ' /';
-}
+} */
 
 .about-modal .logos {
     display: flex;
