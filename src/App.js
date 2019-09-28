@@ -13,6 +13,7 @@ import OSMController from './OSMController.js'
 import Storage from './Storage.js'
 import { DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS } from './constants.js'
 import { downloadObjectAsJson } from './utils.js'
+import { computeTypologies, cleanUpOSMTags } from './geojsonUtils.js'
 
 import './App.css';
 
@@ -129,41 +130,8 @@ class App extends Component {
     }
 
     downloadData() {
-        // Fill out typologies
-        this.state.geoJson.features.forEach( feature => {
-            this.state.layers.forEach( layer => {
-                layer.filters.forEach( filter => {
-                    Object.keys(feature.properties).forEach(propertyKey => {
-                        // console.debug(propertyKey, filter[0]);
-                        // console.debug(feature.properties[propertyKey], filter[1]);
-                        if ((typeof filter[0] === 'object'
-                            &&
-                             (propertyKey === filter[0][0] &&
-                              feature.properties[propertyKey] === filter[0][1]) ||
-                             (propertyKey === filter[1][0] &&
-                              feature.properties[propertyKey] === filter[1][1]))
-                            ||
-                            (propertyKey === filter[0] &&
-                             feature.properties[propertyKey] === filter[1]))
-                        {
-                            feature.properties['type'] = layer.name;
-                            // console.debug(feature.properties.id + ' ' + feature.properties.name, layer.name);
-                        } 
-                    });
-                })
-            });
-        });
-
-        // Delete unwanted OSM properties
-        this.state.geoJson.features.forEach(feature => {
-            Object.keys(feature.properties).forEach(propertyKey => {
-                if (propertyKey !== 'id' &&
-                    propertyKey !== 'name' &&
-                    propertyKey !== 'type')
-                    delete feature.properties[propertyKey];
-            });
-        });
-        
+        computeTypologies(this.state.geoJson, this.state.layers);
+        cleanUpOSMTags(this.state.geoJson);
         downloadObjectAsJson(this.state.geoJson, `ciclomapa-${this.state.area}`);
     }
 

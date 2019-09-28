@@ -3,8 +3,7 @@ import { get, set } from 'idb-keyval';
 import firebase from 'firebase';
 
 import { slugify, sizeOf } from './utils.js'
-
-import pako from 'pako';
+import { cleanUpOSMTags, gzipCompress } from './geojsonUtils.js'
 
 
 const DISABLE_LOCAL_STORAGE = true;
@@ -40,28 +39,18 @@ class Storage {
     }
 
     compressJson(data) {
-        console.log('Before: ', sizeOf(data));
+        // console.log('Before: ', sizeOf(data));
+
+        // Minimize size by cleaning clearing OSM tags
+        // @todo DOESNT WORK because Mapbox needs the OSM tags to render the layers
+        // cleanUpOSMTags(data);
         
-        // // Minimize size by cleaning clearing OSM tags
-        // data.features.forEach(feature => {
-        //     Object.keys(feature.properties).forEach(propertyKey => {
-        //         if (propertyKey !== 'id' &&
-        //             propertyKey !== 'name' &&
-        //             propertyKey !== 'type')
-        //             delete feature.properties[propertyKey];
-        //     });
-        // });
-
         // Compress with gzip
-        const compressed = pako.deflate(JSON.stringify(data), { to: 'string' });
+        // const compressed = gzipCompress(data);
 
-        console.log('After: ', sizeOf(compressed));
+        // console.log('After: ', sizeOf(compressed));
 
-        // test
-        // const decompressed = JSON.parse(pako.inflate(compressed), { to: 'string' });
-        // console.log(decompressed);
-
-        return compressed;
+        // return compressed;
     }
 
     save(name, geoJson, updatedAt) {
@@ -75,7 +64,7 @@ class Storage {
 
         // Save to Firestore
         try {
-            // geoJson = this.compressJson(geoJson);
+            // this.compressJson(geoJson);
 
             this.db.collection('cities').doc(slug).set({
                 name: name,
@@ -99,7 +88,7 @@ class Storage {
                 console.debug("[Firebase] Document data:", data);
 
                 // Decompress gzip
-                // data.geoJson = JSON.parse(pako.inflate(data.geoJson), { to: 'string' });
+                // data.geoJson = gzipDecompress(data.geoJson)
 
                 // Massage data
                 data.geoJson = JSON.parse(data.geoJson);
