@@ -190,8 +190,8 @@ class Map extends Component {
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"],
-                            12, l.style.lineWidth - l.style.borderWidth,
-                            18, l.style.lineWidth*3
+                            12, (l.style.lineWidth - l.style.borderWidth),
+                            18, (l.style.lineWidth - l.style.borderWidth)*3
                     ],
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
