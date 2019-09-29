@@ -71,6 +71,9 @@ class TopBar extends Component {
             state = parts[1];
             // country = parts[2];
         let updatedAt;
+
+        // Super special case for Brasilia because it's so damn big and we're not loading the data into memory
+        const isDownloadUnavailable = city === 'Brasília';
         
         if (this.props.lastUpdate) {
             updatedAt = this.props.lastUpdate.toLocaleString('pt-BR');
@@ -130,11 +133,23 @@ class TopBar extends Component {
                 </div>
                 
                 <div>
-                    <Button size="large" type="link" onClick={this.info}>Sobre</Button>
+                    <Button
+                        size="large"
+                        type="link"
+                        onClick={this.info}
+                    >
+                        Sobre
+                    </Button>
 
                     <Divider type="vertical" />
 
-                    <Button size="large" type="link" onClick={this.props.downloadData}>
+                    <Button
+                        size="large"
+                        type="link"
+                        onClick={this.props.downloadData}
+                        disabled={isDownloadUnavailable}
+                        style={{ opacity: isDownloadUnavailable ? .5 : 1}}
+                    >
                         <Icon type="download" /> Baixar dados
                     </Button>
                 </div>

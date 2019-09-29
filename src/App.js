@@ -87,8 +87,8 @@ class App extends Component {
 
                 this.setState({
                     geoJson: data.geoJson,
-                    loading: false,
-                    dataUpdatedAt: now
+                    dataUpdatedAt: now,
+                    loading: false
                 });
             }).catch(e => {
                 this.setState({
@@ -98,11 +98,17 @@ class App extends Component {
     }
 
     updateData(force) {
-        // if (this.state.zoom > MIN_ZOOM_TO_LOAD_DATA && this.state.area) {
         if (this.state.area) {
             if (force) {
                 this.setState({ loading: true });
                 this.getDataFromOSM(this.state.area);
+            } else if (this.state.area === 'Brasília, Distrito Federal, Brazil'){
+                // Super special case for Brasilia because it's so damn big
+                //   More at: https://docs.mapbox.com/help/troubleshooting/working-with-large-geojson-data/#store-geojson-at-url
+                this.setState({
+                    geoJson: './ciclomapa-brasilia.geojson',
+                    dataUpdatedAt: new Date('Sun Sep 29 2019 19:04:25 GMT-0300 (Brasilia Standard Time)')
+                });
             } else {
                 // Try to retrieve previously saved data for this area
                 this.storage.load(this.state.area, force)
@@ -171,12 +177,20 @@ class App extends Component {
         }
 
         if (this.state.geoJson !== prevState.geoJson) {
-            if (!this.state.geoJson || !this.state.geoJson.features || this.state.geoJson.features.length === 0) {
+            if (!this.state.geoJson || (this.state.geoJson.features && this.state.geoJson.features.length === 0)) {
                 notification['warning']({
                     message: 'Ops',
                     description:
                         'Não há dados cicloviários para esta cidade.',
                 });
+
+                // this.setState({
+                //     isDownloadUnavailable: true
+                // });
+            } else {
+                // this.setState({
+                //     isDownloadUnavailable: false
+                // });
             }
         }
         
@@ -214,6 +228,7 @@ class App extends Component {
                     title={this.state.area}
                     lastUpdate={this.state.dataUpdatedAt}
                     downloadData={this.downloadData}
+                    // isDownloadUnavailable={this.state.isDownloadUnavailable}
                     onMapMoved={this.onMapMoved}
                     forceUpdate={this.forceUpdate}
                 />

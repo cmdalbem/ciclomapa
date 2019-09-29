@@ -83,9 +83,7 @@ class OSMController {
 
                     // Source: https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL#By_area_.28area.29
                     let areaId
-                    if (constraints.area === 'Brasília, Distrito Federal, Brazil') {
-                        areaId = 3600059470;
-                    } else if (constraints.area === 'Vitória, Espirito Santo, Brazil') {
+                    if (constraints.area === 'Vitória, Espirito Santo, Brazil') {
                         areaId = 3601825817;
                     } else {
                         areaId = 3600000000 + nominatimData[0].osm_id;
