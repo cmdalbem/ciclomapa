@@ -165,10 +165,11 @@ class Map extends Component {
                 "paint": {
                     "line-color": l.style.borderColor,
                     "line-width": [
-                        "case",
-                        ["boolean", ["feature-state", "highlight"], false],
-                        12,
-                        l.style.lineWidth
+                        "interpolate",
+                            ["exponential", 1.5],
+                            ["zoom"],
+                            12, l.style.lineWidth,
+                            18, l.style.lineWidth*3
                     ],
                     ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
@@ -186,10 +187,11 @@ class Map extends Component {
                 "paint": {
                     "line-color": l.style.lineColor,
                     "line-width": [
-                        "case",
-                        ["boolean", ["feature-state", "highlight"], false],
-                        12,
-                        l.style.lineWidth - l.style.borderWidth
+                        "interpolate",
+                            ["exponential", 1.5],
+                            ["zoom"],
+                            12, l.style.lineWidth - l.style.borderWidth,
+                            18, l.style.lineWidth*3
                     ],
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
@@ -206,10 +208,11 @@ class Map extends Component {
                 "paint": {
                     "line-color": l.style.lineColor,
                     "line-width": [
-                        "case",
-                        ["boolean", ["feature-state", "highlight"], false],
-                        12,
-                        l.style.lineWidth
+                        "interpolate",
+                            ["exponential", 1.5],
+                            ["zoom"],
+                            12, l.style.lineWidth,
+                            18, l.style.lineWidth*3
                     ],
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
