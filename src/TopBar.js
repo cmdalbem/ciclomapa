@@ -124,9 +124,7 @@ class TopBar extends Component {
                             )}
                             arrowPointAtCenter={true}
                         >
-                            <span className="lastUpdate">
-                                <Icon type="info-circle" />
-                            </span> 
+                            <Icon type="info-circle" style={{ marginLeft: '8px' }}/>
                         </Popover>
                     }
                 </div>
