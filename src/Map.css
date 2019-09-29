@@ -33,7 +33,8 @@
   z-index: 1;
 }
 
-/* #city-picker { */
+/* The Big City Selector input */
+
 .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
   position: fixed;
   left: 50%;
@@ -58,11 +59,24 @@ body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
   padding: 0;
 } */
 
-.mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder svg {
+.mapboxgl-ctrl-top-left svg {
+  width: 32px;
+  height: 32px;
+}
+
+.mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder--icon-loading {
+  top: 16px;
+  right: 16px;
+}
+
+.mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder--icon-close {
+  margin-top: 6px;
+  margin-right: 6px;
+}
+
+.mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder--icon-search {
   /* display: none; */
   top: 15px;
   left: 12px;
-  width: 32px;
-  height: 32px;
-  opacity: .5;
+  opacity: .3;
 }

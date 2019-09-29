@@ -30,6 +30,7 @@ class App extends Component {
         this.onMapMoved = this.onMapMoved.bind(this);
         this.onLayersChange = this.onLayersChange.bind(this);
         this.downloadData = this.downloadData.bind(this);
+        this.forceUpdate = this.forceUpdate.bind(this);
 
         const urlParams = this.getParamsFromURL();
         this.state = {
@@ -73,46 +74,58 @@ class App extends Component {
         return now - dataLastUpdate < OSM_DATA_MAX_AGE_MS;
     }
 
-    updateData() {
+    forceUpdate() {
+        this.updateData(true);
+    }
+
+    getDataFromOSM(area) {
+        OSMController.getData({ area: area })
+            .then(data => {
+                // Persist data
+                const now = new Date();
+                this.storage.save(area, data.geoJson, now);
+
+                this.setState({
+                    geoJson: data.geoJson,
+                    loading: false,
+                    dataUpdatedAt: now
+                });
+            }).catch(e => {
+                this.setState({
+                    error: true
+                });
+            });
+    }
+
+    updateData(force) {
         // if (this.state.zoom > MIN_ZOOM_TO_LOAD_DATA && this.state.area) {
         if (this.state.area) {
-            // Try to retrieve previously saved data for this area
-            this.storage.load(this.state.area)
-                .then(data => {
-                    if (data && this.isDataFresh(data)) {
-                        console.debug('Database data is fresh.');
-                        this.setState({
-                            geoJson: data.geoJson,
-                            dataUpdatedAt: new Date(data.updatedAt)
-                        });
-                    } else { 
-                        console.debug(`Couldn't find data for area ${this.state.area} or it isn't fresh, hitting OSM...`);
-                        this.setState({ loading: true });
-
-                        OSMController.getData({ area: this.state.area })
-                            .then(data => {
-                                // Persist data
-                                const now = new Date();
-                                this.storage.save(this.state.area, data.geoJson, now);
-                                
-                                this.setState({
-                                    geoJson: data.geoJson,
-                                    loading: false,
-                                    dataUpdatedAt: now
-                                });
-                            }).catch(e => {
-                                this.setState({
-                                    error: true
-                                });
+            if (force) {
+                this.setState({ loading: true });
+                this.getDataFromOSM(this.state.area);
+            } else {
+                // Try to retrieve previously saved data for this area
+                this.storage.load(this.state.area, force)
+                    .then(data => {
+                        if (data && this.isDataFresh(data)) {
+                            console.debug('Database data is fresh.');
+                            this.setState({
+                                geoJson: data.geoJson,
+                                dataUpdatedAt: new Date(data.updatedAt)
                             });
-                    }
-                }).catch(e => {
-                    notification['error']({
-                        message: 'Erro',
-                        description:
-                            'Ocorreu um erro ao acessar o banco de dados.',
+                        } else { 
+                            console.debug(`Couldn't find data for area ${this.state.area} or it isn't fresh, hitting OSM...`);
+                            this.setState({ loading: true });
+                            this.getDataFromOSM(this.state.area);
+                        }
+                    }).catch(e => {
+                        notification['error']({
+                            message: 'Erro',
+                            description:
+                                'Ocorreu um erro ao acessar o banco de dados.',
+                        });
                     });
-                });
+            }
         } else {
             this.setState({ loading: false });
         }
@@ -202,6 +215,7 @@ class App extends Component {
                     lastUpdate={this.state.dataUpdatedAt}
                     downloadData={this.downloadData}
                     onMapMoved={this.onMapMoved}
+                    forceUpdate={this.forceUpdate}
                 />
 
                 <CitySwitcherBackdrop/>

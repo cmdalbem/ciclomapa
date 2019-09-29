@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 
 import { TOPBAR_HEIGHT } from './constants'
 
-import { Modal, Button, Divider, Icon } from 'antd';
+import { Modal, Button, Divider, Popover, Icon } from 'antd';
 
 import { get, set } from 'idb-keyval';
 
@@ -70,27 +70,11 @@ class TopBar extends Component {
         const city = parts[0], 
             state = parts[1];
             // country = parts[2];
-
-        // const updatedAt = this.props.lastUpdate;// && this.props.lastUpdate.format();
-
-        // const citySelector = <Select
-        //     showSearch
-        //     style={{ width: 200 }}
-        //     onChange={this.onChange.bind(this)}
-        // >
-        //     <Option value="Porto Alegre, Rio Grande Do Sul, Brazil">
-        //         Porto Alegre
-        //                 </Option>
-        //     <Option value="Rio De Janeiro, Rio De Janeiro, Brazil"	>
-        //         Rio de Janeiro
-        //                 </Option>
-        //     <Option value="São Paulo, São Paulo, Brazil">
-        //         São Paulo
-        //                 </Option>
-        //     <Option value="Fortaleza, Ceará">
-        //         Fortaleza
-        //                 </Option>
-        // </Select>
+        let updatedAt;
+        
+        if (this.props.lastUpdate) {
+            updatedAt = this.props.lastUpdate.toLocaleString('pt-BR');
+        }
         
         return (
             <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
@@ -100,33 +84,52 @@ class TopBar extends Component {
                     </h1>
                 </div>
 
-                <Button 
-                    // ghost
-                    size="large"
-                    onClick={this.showCityPicker}
-                >
-                    <h3 className="areaname">
-                        <span className="state">
-                            {state}
-                        </span>
-                        <span className="city">
-                            {city}
-                        </span> 
+                <div>
+                    <Button 
+                        size="large"
+                        onClick={this.showCityPicker}
+                    >
+                        <h3 className="areaname">
+                            <span className="state">
+                                {state}
+                            </span>
+                            <span className="city">
+                                {city}
+                            </span> 
 
-                        {/* {citySelector} */}
+                            <Icon
+                                type="down"
+                                size="small"
+                                style={{ fontSize: '16px', color: '#4ba96e' }}
+                            >
+                            </Icon>
+                        </h3>
+                    </Button>
 
-                        {/* <span className="lastUpdate">
-                            atualizado em {updatedAt}
-                        </span>  */}
-                        
-                        <Icon
-                            type="down"
-                            size="small"
-                            style={{ fontSize: '16px', color: '#4ba96e' }}
+                    {
+                        updatedAt &&
+                        <Popover
+                            placement="bottom"
+                            content={(
+                                <div>
+                                    Dados obtidos do OpenStreetMaps em <b>{updatedAt}</b>.
+                                    <Button
+                                        size="small"
+                                        icon="redo"
+                                        onClick={this.props.forceUpdate}
+                                        style={{marginLeft: '0.25em'}}
+                                    >
+                                    </Button>
+                                </div>
+                            )}
+                            arrowPointAtCenter={true}
                         >
-                        </Icon>
-                    </h3>
-                </Button>
+                            <span className="lastUpdate">
+                                <Icon type="info-circle" />
+                            </span> 
+                        </Popover>
+                    }
+                </div>
                 
                 <div>
                     <Button size="large" type="link" onClick={this.info}>Sobre</Button>
