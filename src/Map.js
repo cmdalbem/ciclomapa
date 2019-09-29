@@ -135,6 +135,18 @@ class Map extends Component {
                 )
         ];
 
+        // Find the index of the first symbol layer in the map style
+
+        const layers = map.getStyle().layers;
+        // Find the index of the first symbol layer in the map style
+        let firstSymbolId;
+        for (var i = 0; i < layers.length; i++) {
+            if (layers[i].type === 'symbol') {
+                firstSymbolId = layers[i].id;
+                break;
+            }
+        }
+
         // Check if layer has a border color set. If that's the case the logic is a
         //  little different and we'll need 2 layers, one for the line itself and 
         //  another for the line underneath which creates the illusion of a border.
@@ -157,7 +169,7 @@ class Map extends Component {
                     ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
                 "filter": filters,
-            });
+            }, firstSymbolId);
 
             // Line
             map.addLayer({
@@ -177,7 +189,7 @@ class Map extends Component {
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
                 "filter": filters,
-            });
+            }, firstSymbolId);
         } else {
             map.addLayer({
                 "id": l.id,
@@ -196,7 +208,7 @@ class Map extends Component {
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
                 "filter": filters,
-            });
+            }, firstSymbolId);
         }
 
         
