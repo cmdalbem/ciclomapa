@@ -103,8 +103,8 @@ class Map extends Component {
                     const place = features[0];
 
                     map.setMaxBounds([
-                        [place.bbox[0], place.bbox[1]], // Southwest coordinates
-                        [place.bbox[2], place.bbox[3]]  // Northeast coordinates
+                        [place.bbox[0]-0.15, place.bbox[1]-0.15], // Southwest coordinates
+                        [place.bbox[2]+0.15, place.bbox[3]+0.15]  // Northeast coordinates
                     ]);
                     this.props.onMapMoved({area: place.place_name});
                 }
