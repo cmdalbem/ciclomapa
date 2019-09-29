@@ -37,7 +37,7 @@ class App extends Component {
             geoJson: null,
             loading: false,
             layers: OSMController.getLayers(),
-            mapStyle: 'mapbox://styles/cmdalbem/cjgmxgkbw000n2rqtucat5zjz',
+            mapStyle: 'mapbox://styles/cmdalbem/ck14cy14g1vb81cp8hprnh4nx',
             zoom: urlParams.z || 13,
             area: '',
             center: [

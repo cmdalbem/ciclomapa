@@ -13,7 +13,7 @@ import { MAPBOX_ACCESS_TOKEN } from './constants.js'
 import './Map.css'
 
 
-let map, popup, searchBar;
+let map, popup, searchBar, hoverPopup;
 let selectedCycleway;
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
@@ -60,12 +60,24 @@ class Map extends Component {
                 rel="noopener"
                 href="https://www.openstreetmap.org/${props.id}"
             >
-                Editar no OSM
+                Editar no OSM ›
             </a>
     `;
 
         popup.setLngLat(coords)
             .setHTML(html)
+            .addTo(map);
+    }
+
+    showHoverPopup(e) {
+        const coords = e.lngLat;
+
+        const layer = this.props.layers.find(l =>
+            l.id === e.features[0].layer.id.split('--')[0]
+        );
+
+        hoverPopup.setLngLat(coords)
+            .setHTML(`<h3>${layer.name}<h3>`)
             .addTo(map);
     }
 
@@ -244,6 +256,8 @@ class Map extends Component {
                 // }
                 // hoveredCycleway = e.features[0].id;
                 // map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: true });
+
+                this.showHoverPopup(e);
             }
         });
 
@@ -419,6 +433,11 @@ class Map extends Component {
                 map.setFeatureState({ source: 'osm', id: selectedCycleway }, { highlight: false });
             }
             selectedCycleway = null;
+        });
+
+        hoverPopup = new mapboxgl.Popup({
+            closeButton: false,
+            className: 'hover-popup'
         });
     }
 

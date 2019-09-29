@@ -29,6 +29,11 @@
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
 }
 
+.hover-popup {
+  pointer-events: none;
+  text-align: center;
+}
+
 .mapboxgl-ctrl-bottom-right {
   z-index: 1;
 }
