@@ -46,7 +46,8 @@ class TopBar extends Component {
 
     showCityPicker() {
         let body = document.querySelector('body');
-        body.classList.add('show-city-picker')
+        body.classList.add('show-city-picker');
+        body.querySelector('.mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder input').focus();
     }
 
     onChange(value) {
