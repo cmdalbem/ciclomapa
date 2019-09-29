@@ -95,12 +95,18 @@ class Map extends Component {
             })
             .send()
             .then(response => {
-                const match = response.body;
+                const features = response.body.features;
 
-                console.debug('reverseGeocode', match.features);
+                console.debug('reverseGeocode', features);
 
-                if (match.features && match.features[0]) {
-                    this.props.onMapMoved({area: match.features[0].place_name});
+                if (features && features[0]) {
+                    const place = features[0];
+
+                    map.setMaxBounds([
+                        [place.bbox[0], place.bbox[1]], // Southwest coordinates
+                        [place.bbox[2], place.bbox[3]]  // Northeast coordinates
+                    ]);
+                    this.props.onMapMoved({area: place.place_name});
                 }
             })
             .catch(err => {
