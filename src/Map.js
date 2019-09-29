@@ -257,7 +257,7 @@ class Map extends Component {
                 // hoveredCycleway = e.features[0].id;
                 // map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: true });
 
-                this.showHoverPopup(e);
+                // this.showHoverPopup(e);
             }
         });
 

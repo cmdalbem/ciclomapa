@@ -34,6 +34,16 @@
   text-align: center;
 }
 
+/* .hover-popup .mapboxgl-popup-content {
+  padding: 12px 8px; 
+  background: black;
+  color: white !important;
+}
+
+.hover-popup .mapboxgl-popup-tip {
+  border-top-color: black;
+} */
+
 .mapboxgl-ctrl-bottom-right {
   z-index: 1;
 }
