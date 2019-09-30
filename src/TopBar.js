@@ -50,11 +50,6 @@ class TopBar extends Component {
         body.querySelector('.mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder input').focus();
     }
 
-    onChange(value) {
-        console.log(`selected ${value}`);
-        this.props.onMapMoved({ area: value });
-    }
-
     componentDidMount() {
         get('hasSeenWelcomeMsg')
                 .then(data => {

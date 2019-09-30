@@ -32,7 +32,7 @@ class Storage {
         this.db = firebase.firestore();
 
         this.db.collection("cities").get().then((querySnapshot) => {
-            console.log('[Firestore] Documents found:');
+            console.debug('[Firestore] Documents found:');
             querySnapshot.forEach((doc) => {
                 console.debug('• ' + doc.id);
             });
@@ -40,7 +40,7 @@ class Storage {
     }
 
     compressJson(data) {
-        console.log('Before: ', sizeOf(data));
+        console.debug('Before: ', sizeOf(data));
 
         // Minimize size by cleaning clearing OSM tags
         // @todo DOESNT WORK because Mapbox needs the OSM tags to render the layers
@@ -49,7 +49,7 @@ class Storage {
         // Compress with gzip
         const compressed = gzipCompress(data);
 
-        console.log('After: ', sizeOf(compressed));
+        console.debug('After: ', sizeOf(compressed));
 
         return compressed;
     }

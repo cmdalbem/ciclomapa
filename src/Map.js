@@ -102,10 +102,16 @@ class Map extends Component {
                 if (features && features[0]) {
                     const place = features[0];
 
-                    map.setMaxBounds([
-                        [place.bbox[0]-0.15, place.bbox[1]-0.15], // Southwest coordinates
-                        [place.bbox[2]+0.15, place.bbox[3]+0.15]  // Northeast coordinates
-                    ]);
+                    console.debug('once moveend...');
+
+                    map.once('moveend', () => {
+                        console.debug('moveend');
+                        map.setMaxBounds([
+                            [place.bbox[0]-0.15, place.bbox[1]-0.15], // Southwest coordinates
+                            [place.bbox[2]+0.15, place.bbox[3]+0.15]  // Northeast coordinates
+                        ]); 
+                    });
+                    
                     this.props.onMapMoved({area: place.place_name});
                 }
             })
@@ -352,6 +358,8 @@ class Map extends Component {
             clearOnBlur: true
         });
         cityPicker.on('result', result => {
+            map.setMaxBounds(); 
+
             console.debug('geocoder result', result);
             this.reverseGeocode(result.result.center);
             document.querySelector('body').classList.remove('show-city-picker');
