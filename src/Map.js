@@ -13,7 +13,7 @@ import { MAPBOX_ACCESS_TOKEN } from './constants.js'
 import './Map.css'
 
 
-let map, popup;
+let map, popup, searchBar;
 let selectedCycleway;
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
@@ -102,10 +102,9 @@ class Map extends Component {
                 if (features && features[0]) {
                     const place = features[0];
 
-                    console.debug('once moveend...');
+                    searchBar.setBbox(place.bbox);
 
                     map.once('moveend', () => {
-                        console.debug('moveend');
                         map.setMaxBounds([
                             [place.bbox[0]-0.15, place.bbox[1]-0.15], // Southwest coordinates
                             [place.bbox[2]+0.15, place.bbox[3]+0.15]  // Northeast coordinates
@@ -337,7 +336,7 @@ class Map extends Component {
         
         // Native Mapbox map controls
 
-        const searchBar = new MapboxGeocoder({
+        searchBar = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
             mapboxgl: mapboxgl,
             language: 'pt-br',
