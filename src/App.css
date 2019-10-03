@@ -4,3 +4,10 @@ body {
 
     font-family: 'Open Sans', 'Roboto', sans-serif;
 }
+
+@font-face { 
+    font-family: 'Aku & Kamu';
+    font-style: normal;
+    font-weight: normal;
+    src: local('Aku & Kamu'), url('AKU&KAMU.woff') format('woff');
+}

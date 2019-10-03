@@ -6,10 +6,14 @@ h1, h2, h3 {
     font-weight: 900;
     font-size: 21px;
     text-transform: uppercase;
+    font-family: 'Aku & Kamu';
+    letter-spacing: 0.15em;
+    color: #b4f9d0;
+    box-shadow: 0 5px 0 #b4f9d0;
+    margin-right: -0.15em;
 }
 
-.topbar .ant-btn-link,
-.topbar .logo {
+.topbar .ant-btn-link {
     color: white;
 }
 

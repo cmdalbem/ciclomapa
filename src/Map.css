@@ -29,6 +29,8 @@
 .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder--input {
   background: #595959;
   color: white;
+  border-radius: 4px;
+  border: 1px solid gray;
 }
 
 .mapboxgl-ctrl-icon.mapboxgl-ctrl-zoom-in,
