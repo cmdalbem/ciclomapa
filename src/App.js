@@ -79,7 +79,7 @@ class App extends Component {
     }
 
     getDataFromOSM(area) {
-        OSMController.getData({ area: area })
+        return OSMController.getData({ area: area })
             .then(data => {
                 // Persist data
                 const now = new Date();
@@ -236,6 +236,7 @@ class App extends Component {
                 <CitySwitcherBackdrop/>
 
                 <Map
+                    ref={(map) => { window.map = map }}
                     data={this.state.geoJson}
                     layers={this.state.layers}
                     style={this.state.mapStyle}
@@ -261,4 +262,16 @@ class App extends Component {
     }
 }
 
-export default withRouter(App);
+const withRouterAndRef = Wrapped => {
+    const WithRouter = withRouter(({ forwardRef, ...otherProps }) => (
+        <Wrapped ref={forwardRef} {...otherProps} />
+    ))
+    const WithRouterAndRef = React.forwardRef((props, ref) => (
+        <WithRouter {...props} forwardRef={ref} />
+    ))
+    const name = Wrapped.displayName || Wrapped.name
+    WithRouterAndRef.displayName = `withRouterAndRef(${name})`
+    return WithRouterAndRef
+}
+
+export default withRouterAndRef(App);

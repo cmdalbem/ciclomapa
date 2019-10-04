@@ -7,7 +7,7 @@ import { BrowserRouter as Router } from "react-router-dom";
 
 ReactDOM.render(
   <Router>
-    <App />
+    <App ref={(app) => { window.ciclomapa = app }}/>
   </Router>,
   document.getElementById('root')
 );
