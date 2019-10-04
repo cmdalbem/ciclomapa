@@ -354,13 +354,25 @@ class Map extends Component {
             countries: 'br',
             types: 'place',
             marker: false,
-            clearOnBlur: true
+            clearOnBlur: true,
+            flyTo: false
         });
         cityPicker.on('result', result => {
-            map.setMaxBounds(); 
-
             console.debug('geocoder result', result);
+
+            // Clear previous map panning limits
+            map.setMaxBounds();
+
+            if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
+                map.flyTo({center: [-40.3144,-20.2944]});
+            } else {
+                map.flyTo({center: result.result.center});
+            }
+
             this.reverseGeocode(result.result.center);
+            
+            // Hide UI
+            // @todo refactor this to use React state
             document.querySelector('body').classList.remove('show-city-picker');
             cityPicker.clear();
         });
