@@ -27,8 +27,6 @@ class Map extends Component {
     }
 
     showPopup(e) {
-        console.debug(e.features[0]);
-
         const coords = e.lngLat;
         const props = e.features[0].properties;
 
@@ -99,6 +97,16 @@ class Map extends Component {
     }
 
     reverseGeocode(lngLat) {
+        console.debug('lngLat', lngLat);
+
+        if (!lngLat || !lngLat[0] || !lngLat[1]) {
+            console.error('Something wrong with lngLat passed.');
+            return;
+        }
+
+        // Clear previous map panning limits
+        map.setMaxBounds();
+
         geocodingClient
             .reverseGeocode({
                 query: lngLat,
@@ -343,8 +351,6 @@ class Map extends Component {
     }
     
     componentDidMount() {
-        this.reverseGeocode(this.props.center);
-
         mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
         
         map = new mapboxgl.Map({
@@ -381,14 +387,15 @@ class Map extends Component {
         cityPicker.on('result', result => {
             console.debug('geocoder result', result);
 
-            // Clear previous map panning limits
-            map.setMaxBounds();
-
+            let flyToPos;
             if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
-                map.flyTo({center: [-40.3144,-20.2944]});
+                flyToPos = [-40.3144,-20.2944];
             } else {
-                map.flyTo({center: result.result.center});
+                flyToPos = result.result.center;
             }
+            map.flyTo({
+                center: flyToPos
+            });
 
             this.reverseGeocode(result.result.center);
             
@@ -405,14 +412,19 @@ class Map extends Component {
             }),
             'bottom-right'
         );
-        map.addControl(new mapboxgl.GeolocateControl({
+        const geolocate = new mapboxgl.GeolocateControl({
             positionOptions: {
                 enableHighAccuracy: true
             },
-            trackUserLocation: true
-        }),
-            'bottom-right'
-        );
+            trackUserLocation: false
+        });
+        geolocate.on('geolocate', result => {
+            console.debug('geolocate', result); 
+            this.reverseGeocode([result.coords.longitude, result.coords.latitude]);
+        });
+        map.addControl(geolocate, 'bottom-right');
+        
+        
         // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
 
 
@@ -446,6 +458,9 @@ class Map extends Component {
             closeButton: false,
             className: 'hover-popup'
         });
+        
+        // Initialize map data center
+        this.reverseGeocode(this.props.center);
     }
 
     render() {
