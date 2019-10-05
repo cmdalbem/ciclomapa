@@ -24,10 +24,10 @@
   color: #4ba96e;
 }
 
-.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder,
 .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group,
 .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder--input {
-  background: #595959;
+  /* background: #595959; */
+  background: #1c1717;
   color: white;
   border-radius: 4px;
   border: 1px solid gray;
