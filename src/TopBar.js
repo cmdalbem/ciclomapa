@@ -68,7 +68,7 @@ class TopBar extends Component {
         let updatedAt;
 
         // Super special case for Brasilia because it's so damn big and we're not loading the data into memory
-        const isDownloadUnavailable = city === 'Brasília';
+        const isBrasilia = city === 'Brasília';
         
         if (this.props.lastUpdate) {
             updatedAt = this.props.lastUpdate.toLocaleString('pt-BR');
@@ -109,15 +109,27 @@ class TopBar extends Component {
                         <Popover
                             placement="bottom"
                             content={(
-                                <div>
-                                    Dados obtidos do OpenStreetMaps em <b>{updatedAt}</b>.
+                                <div style={{maxWidth: 300}}>
+                                    <div>
+                                        Dados obtidos do OpenStreetMaps em <b>{updatedAt}</b>.
+                                    </div>
+
                                     <Button
                                         size="small"
                                         icon="redo"
+                                        type="danger" ghost
                                         onClick={this.props.forceUpdate}
-                                        style={{marginLeft: '0.25em'}}
+                                        disabled={isBrasilia}
                                     >
+                                        Atualizar
                                     </Button>
+                                    
+                                    {
+                                        isBrasilia &&
+                                            <div style={{fontStyle: 'italic', fontSize: ''}}>
+                                                Esta cidade não pode ser atualizada automaticamente.
+                                            </div>
+                                    }
                                 </div>
                             )}
                             arrowPointAtCenter={true}
@@ -142,10 +154,10 @@ class TopBar extends Component {
                         size="large"
                         type="link"
                         onClick={this.props.downloadData}
-                        disabled={isDownloadUnavailable}
-                        style={{ opacity: isDownloadUnavailable ? .5 : 1}}
+                        disabled={isBrasilia}
+                        style={{ opacity: isBrasilia ? .5 : 1}}
                     >
-                        <Icon type="download" /> Baixar dados
+                        <Icon type="download" /> Dados
                     </Button>
                 </div>
             </div>
