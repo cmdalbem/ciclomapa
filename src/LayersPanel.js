@@ -25,6 +25,7 @@ class LayersPanel extends Component {
                             <div
                                 className="layer-row"
                                 onClick={this.onChange.bind(this, l.id, !l.isActive)}
+                                style={{ opacity: l.isActive ? 1 : .5 }}
                             >
                                 <div>
                                     <span
@@ -33,7 +34,7 @@ class LayersPanel extends Component {
                                             height: l.style.lineWidth * 2,
                                             background: l.style.lineStyle === 'solid' ?
                                                 l.style.lineColor
-                                                : `repeating-linear-gradient(90deg, ${l.style.lineColor}, ${l.style.lineColor} 3px, white 3px, white 6px)`,
+                                                : `repeating-linear-gradient(90deg, ${l.style.lineColor}, ${l.style.lineColor} 3px, transparent 3px, transparent 6px)`,
                                             borderColor: l.style.borderColor,
                                             borderStyle: l.style.borderStyle,
                                             borderWidth: l.style.borderWidth ? l.style.borderWidth/2 : '0',
@@ -47,7 +48,7 @@ class LayersPanel extends Component {
                                     </span>
                                 </div>
 
-                                <Switch size="small" checked={l.isActive}/>
+                                <Switch size="small" checked={l.isActive} />
                             </div>
                         </Tooltip>
                     )

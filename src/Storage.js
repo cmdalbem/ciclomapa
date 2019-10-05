@@ -30,11 +30,17 @@ class Storage {
         });
 
         this.db = firebase.firestore();
+    }
 
-        this.db.collection("cities").get().then((querySnapshot) => {
-            console.debug('[Firestore] Documents found:');
-            querySnapshot.forEach((doc) => {
-                console.debug('• ' + doc.id);
+    getAllCitiesDocs() {
+        return new Promise(resolve => {
+            this.db.collection("cities").get().then((querySnapshot) => {
+                console.debug('[Firestore] Documents found:');
+                querySnapshot.forEach((doc) => {
+                    console.debug('• ' + doc.id, ' => ', doc.data());
+                });
+    
+                resolve(querySnapshot);
             });
         });
     }
@@ -80,10 +86,12 @@ class Storage {
         try {
             const jsonStr = JSON.stringify(geoJson);
 
+            console.debug(`[Firebase] Saving document ${name}...`, geoJson);
+
             // geoJson = this.compressJson(geoJson);
             this.saveToFirestore(name, jsonStr, updatedAt)
                 .then(() => {
-                    console.debug("[Firebase] Document written successfully.");
+                    console.debug(`[Firebase] Document ${name} written successfully.`);
                 }).catch(error => {
                     // console.error("[Firebase] Error adding document: ", error);
                     console.debug('[Firestore] Failed saving full data, splitting in 2...')
@@ -93,14 +101,14 @@ class Storage {
 
                     this.saveToFirestore(name, part1, updatedAt, 1) 
                     .then(() => {
-                        console.debug("[Firebase] Document written successfully.");
+                        console.debug(`[Firebase] Document ${name}1 written successfully.`);
                     }).catch(error => {
                         console.error("[Firebase] Error adding document: ", error);
                     });        
  
                     this.saveToFirestore(name, part2, updatedAt, 2)
                     .then(() => {
-                        console.debug("[Firebase] Document written successfully.");
+                        console.debug(`[Firebase] Document ${name}2 written successfully.`);
                     }).catch(error => {
                         console.error("[Firebase] Error adding document: ", error);
                     });        

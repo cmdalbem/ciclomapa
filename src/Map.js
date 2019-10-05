@@ -13,7 +13,7 @@ import { MAPBOX_ACCESS_TOKEN } from './constants.js'
 import './Map.css'
 
 
-let map, popup, searchBar;
+let map, popup, searchBar, hoverPopup;
 let selectedCycleway;
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
@@ -27,8 +27,6 @@ class Map extends Component {
     }
 
     showPopup(e) {
-        console.debug(e.features[0]);
-
         const coords = e.lngLat;
         const props = e.features[0].properties;
 
@@ -60,12 +58,24 @@ class Map extends Component {
                 rel="noopener"
                 href="https://www.openstreetmap.org/${props.id}"
             >
-                Editar no OSM
+                Editar no OSM ›
             </a>
     `;
 
         popup.setLngLat(coords)
             .setHTML(html)
+            .addTo(map);
+    }
+
+    showHoverPopup(e) {
+        const coords = e.lngLat;
+
+        const layer = this.props.layers.find(l =>
+            l.id === e.features[0].layer.id.split('--')[0]
+        );
+
+        hoverPopup.setLngLat(coords)
+            .setHTML(`<h3>${layer.name}<h3>`)
             .addTo(map);
     }
 
@@ -87,6 +97,16 @@ class Map extends Component {
     }
 
     reverseGeocode(lngLat) {
+        console.debug('lngLat', lngLat);
+
+        if (!lngLat || !lngLat[0] || !lngLat[1]) {
+            console.error('Something wrong with lngLat passed.');
+            return;
+        }
+
+        // Clear previous map panning limits
+        map.setMaxBounds();
+
         geocodingClient
             .reverseGeocode({
                 query: lngLat,
@@ -173,7 +193,7 @@ class Map extends Component {
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"],
-                            12, l.style.lineWidth,
+                            10, 2,
                             18, l.style.lineWidth*3
                     ],
                     ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
@@ -195,7 +215,7 @@ class Map extends Component {
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"],
-                            12, (l.style.lineWidth - l.style.borderWidth),
+                            10, 2,
                             18, (l.style.lineWidth - l.style.borderWidth)*3
                     ],
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
@@ -216,7 +236,7 @@ class Map extends Component {
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"],
-                            12, l.style.lineWidth,
+                            10, 2,
                             18, l.style.lineWidth*3
                     ],
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
@@ -244,6 +264,8 @@ class Map extends Component {
                 // }
                 // hoveredCycleway = e.features[0].id;
                 // map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: true });
+
+                // this.showHoverPopup(e);
             }
         });
 
@@ -287,6 +309,13 @@ class Map extends Component {
         this.props.layers.slice().reverse().forEach(l => {
             this.addDynamicLayer(l);
         }); 
+
+        // map.addSource('some id', {
+        //     type: 'geojson',
+        //     // data: 'http://overpass-api.de/api/interpreter?data=node[amenity=school](bbox);out;(way[amenity=school](bbox);node(w););out;'
+        //     // data: 'http://overpass-api.de/api/interpreter?data=node[name=%22Im Tannenbusch%22][highway=bus_stop];out+skel;'
+        //     data: 'https://firebasestorage.googleapis.com/v0/b/ciclomapa-app.appspot.com/o/ciclomapa-Nitero%CC%81i%2C%20Rio%20De%20Janeiro%2C%20Brazil.json?alt=media&token=79733a19-009d-46f1-af7b-e55bb3dd9bb5'
+        // });
     }
 
     componentDidUpdate(prevProps) {
@@ -322,8 +351,6 @@ class Map extends Component {
     }
     
     componentDidMount() {
-        this.reverseGeocode(this.props.center);
-
         mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
         
         map = new mapboxgl.Map({
@@ -360,14 +387,15 @@ class Map extends Component {
         cityPicker.on('result', result => {
             console.debug('geocoder result', result);
 
-            // Clear previous map panning limits
-            map.setMaxBounds();
-
+            let flyToPos;
             if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
-                map.flyTo({center: [-40.3144,-20.2944]});
+                flyToPos = [-40.3144,-20.2944];
             } else {
-                map.flyTo({center: result.result.center});
+                flyToPos = result.result.center;
             }
+            map.flyTo({
+                center: flyToPos
+            });
 
             this.reverseGeocode(result.result.center);
             
@@ -384,14 +412,19 @@ class Map extends Component {
             }),
             'bottom-right'
         );
-        map.addControl(new mapboxgl.GeolocateControl({
+        const geolocate = new mapboxgl.GeolocateControl({
             positionOptions: {
                 enableHighAccuracy: true
             },
-            trackUserLocation: true
-        }),
-            'bottom-right'
-        );
+            trackUserLocation: false
+        });
+        geolocate.on('geolocate', result => {
+            console.debug('geolocate', result); 
+            this.reverseGeocode([result.coords.longitude, result.coords.latitude]);
+        });
+        map.addControl(geolocate, 'bottom-right');
+        
+        
         // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
 
 
@@ -420,6 +453,14 @@ class Map extends Component {
             }
             selectedCycleway = null;
         });
+
+        hoverPopup = new mapboxgl.Popup({
+            closeButton: false,
+            className: 'hover-popup'
+        });
+        
+        // Initialize map data center
+        this.reverseGeocode(this.props.center);
     }
 
     render() {

@@ -1,12 +1,16 @@
 .layers-panel {
     position: fixed;
-    top: 84px;
-    right: 10px;
-    background: white;
+    bottom: 40px;
+    left: 0;
     padding: 8px 0;
-    box-shadow: 0 0 10px 2px rgba(0,0,0,.1);
     border-radius: 4px;
-    width: 200px;
+    width: 250px;
+    color: white;
+
+    /* top: 84px;
+    right: 10px; */
+    /* background: white; */
+    /* box-shadow: 0 0 10px 2px rgba(0,0,0,.1); */
 }
 
 .layer-row {
@@ -14,7 +18,7 @@
     cursor: pointer;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
+    padding: 6px 12px;
 }
 
 .layer-row > div {
@@ -23,7 +27,7 @@
 }
 
 .layer-row:hover {
-    background: #fafafa;
+    background: rgba(255,255,255,0.5);
 }
 
 .layer-miniature {
@@ -35,8 +39,18 @@
 .layer-name {
     margin: 0 4px;
     line-height: 1.2em;
+    font-weight: 600;
 }
 
 .ant-tooltip-inner {
     background: #333;
+}
+
+.layer-row .ant-switch {
+    /* display: none; */
+    opacity: 0;
+}
+
+.layer-row:hover .ant-switch {
+    opacity: 1;
 }

@@ -13,8 +13,14 @@
     right: 0;
     display: flex;
     z-index: 2;
-    background: rgba(255,255,255,0.7);
+    /* background: rgba(255,255,255,0.7); */
+    background: rgba(37,32,29,0.8);
+    color: white;
 } 
+
+h2 {
+  color: white;
+}
 
 .loader {
   position: relative;

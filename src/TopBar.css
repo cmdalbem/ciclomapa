@@ -6,20 +6,25 @@ h1, h2, h3 {
     font-weight: 900;
     font-size: 21px;
     text-transform: uppercase;
+    font-family: 'Aku & Kamu';
+    letter-spacing: 0.15em;
+    color: #b4f9d0;
+    box-shadow: 0 5px 0 #b4f9d0;
+    margin-right: -0.15em;
 }
 
-.topbar .ant-btn-link,
-.topbar .logo {
+.topbar .ant-btn-link {
     color: white;
 }
 
 .topbar {
     width: 100%;
-    background: #4ba96e;
     color: white;
     z-index: 2;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05);
-    position: relative;
+    position: absolute;
+    
+    /* background: #424d5c; */
+    /* box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05); */
 
     padding: 12px;
     
