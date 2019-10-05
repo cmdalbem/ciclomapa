@@ -10,8 +10,8 @@
     height: 60px;
     margin-left: 6px;
     background: lightgray;
-    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.25);
-    border: 2px solid white;
+    /* box-shadow: 0px 2px 5px rgba(250,250,250, 0.25); */
+    border: 1px solid gray;
     border-radius: 4px;
     overflow: hidden;
 
@@ -25,10 +25,10 @@
 
 .switcher-bar > div:hover {
     /* border: 2px solid white; */
-    box-shadow: 0px 2px 7px rgba(0, 0, 0, 0.6);
+    box-shadow: 0px 2px 7px rgba(250,250,250, 0.6);
     cursor: pointer;
 }
 
 .switcher-bar > div.selected {
-    border: 2px solid #1890ff;
+    border: 2px solid white;
 }
