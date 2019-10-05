@@ -2,7 +2,7 @@ h1, h2, h3 {
     margin: 0;
 }
 
-.logo {
+/* .logo {
     font-weight: 900;
     font-size: 21px;
     text-transform: uppercase;
@@ -11,6 +11,10 @@ h1, h2, h3 {
     color: #b4f9d0;
     box-shadow: 0 5px 0 #b4f9d0;
     margin-right: -0.15em;
+} */
+
+#logo {
+    height: 24px;
 }
 
 .topbar .ant-btn-link {

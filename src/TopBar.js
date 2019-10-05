@@ -8,6 +8,7 @@ import { get, set } from 'idb-keyval';
 
 import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
+import logo from './img/logo_green.svg';
 
 import './TopBar.css'
 
@@ -76,11 +77,9 @@ class TopBar extends Component {
         
         return (
             <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
-                <div>
-                    <h1 className="logo">
-                        CicloMapa
-                    </h1>
-                </div>
+                <h1>
+                    <img id="logo" src={logo} alt="CICLOMAPA"></img>
+                </h1>
 
                 <div>
                     <Button 
