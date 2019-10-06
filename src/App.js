@@ -12,7 +12,7 @@ import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
 import OSMController from './OSMController.js'
 import Storage from './Storage.js'
-import { DEFAULT_LAT, DEFAULT_LNG, OSM_DATA_MAX_AGE_MS } from './constants.js'
+import { DEFAULT_LAT, DEFAULT_LNG, DEFAULT_ZOOM, OSM_DATA_MAX_AGE_MS } from './constants.js'
 import { downloadObjectAsJson } from './utils.js'
 import { computeTypologies, cleanUpOSMTags } from './geojsonUtils.js'
 
@@ -38,7 +38,7 @@ class App extends Component {
             loading: false,
             layers: OSMController.getLayers(),
             mapStyle: 'mapbox://styles/cmdalbem/ck14cy14g1vb81cp8hprnh4nx',
-            zoom: urlParams.z || 13,
+            zoom: urlParams.z || DEFAULT_ZOOM,
             area: '',
             center: [
                 parseFloat(urlParams.lng) || DEFAULT_LNG,
