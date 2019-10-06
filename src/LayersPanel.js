@@ -44,8 +44,17 @@ class LayersPanel extends Component {
                                     ></span>
 
                                     <span className="layer-name">
-                                        {l.name}
+                                        {l.name} 
                                     </span>
+
+                                    {
+                                        this.props.lengths
+                                            && Object.keys(this.props.lengths).length > 0
+                                            && this.props.lengths[l.id] > 0
+                                            && <span style={{ fontWeight: 300, opacity: .5 }}>
+                                                {Math.round(this.props.lengths[l.id])}km
+                                        </span>
+                                    }
                                 </div>
 
                                 <Switch size="small" checked={l.isActive} />

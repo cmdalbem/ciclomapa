@@ -31,6 +31,7 @@ class App extends Component {
         this.onLayersChange = this.onLayersChange.bind(this);
         this.downloadData = this.downloadData.bind(this);
         this.forceUpdate = this.forceUpdate.bind(this);
+        this.updateLengths = this.updateLengths.bind(this);
 
         const urlParams = this.getParamsFromURL();
         this.state = {
@@ -39,6 +40,7 @@ class App extends Component {
             layers: OSMController.getLayers(),
             mapStyle: 'mapbox://styles/cmdalbem/ck14cy14g1vb81cp8hprnh4nx',
             zoom: urlParams.z || DEFAULT_ZOOM,
+            lengths: {},
             area: '',
             center: [
                 parseFloat(urlParams.lng) || DEFAULT_LNG,
@@ -50,6 +52,12 @@ class App extends Component {
         if (this.state.area) {
             this.updateData();
         }
+    }
+
+    updateLengths(newLengths) {
+        this.setState({
+            lengths: newLengths
+        });
     }
 
     getParamsFromURL() {
@@ -244,12 +252,14 @@ class App extends Component {
                     center={this.state.center}
                     updateData={this.updateData}
                     onMapMoved={this.onMapMoved}
+                    updateLengths={this.updateLengths}
                 />
 
                 <MapStyleSwitcher onMapStyleChange={this.onMapStyleChange}/>
  
                 <LayersPanel
                     layers={this.state.layers}
+                    lengths={this.state.lengths}
                     onLayersChange={this.onLayersChange}
                 />
 

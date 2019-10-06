@@ -3,6 +3,8 @@ import React, { Component } from 'react';
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css';
 
+import turfLength from '@turf/length';
+
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
@@ -13,13 +15,16 @@ import { MAPBOX_ACCESS_TOKEN } from './constants.js'
 import './Map.css'
 
 
-let map, popup, searchBar, hoverPopup;
-let selectedCycleway;
-
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
 
 class Map extends Component {
+    map;
+    popup;
+    searchBar;
+    hoverPopup;
+    selectedCycleway;
+
     constructor(props) {
         super(props);
 
@@ -62,9 +67,9 @@ class Map extends Component {
             </a>
     `;
 
-        popup.setLngLat(coords)
+        this.popup.setLngLat(coords)
             .setHTML(html)
-            .addTo(map);
+            .addTo(this.map);
     }
 
     showHoverPopup(e) {
@@ -74,22 +79,22 @@ class Map extends Component {
             l.id === e.features[0].layer.id.split('--')[0]
         );
 
-        hoverPopup.setLngLat(coords)
+        this.hoverPopup.setLngLat(coords)
             .setHTML(`<h3>${layer.name}<h3>`)
-            .addTo(map);
+            .addTo(this.map);
     }
 
     hidePopup() {
-        popup.remove();
+        this.popup.remove();
     }
 
     // southern-most latitude, western-most longitude, northern-most latitude, eastern-most longitude
     getCurrentBBox() {
         const fallback = "-23.036345361742164,-43.270405878917785,-22.915284125684607,-43.1111041211104";
 
-        if (map) {
-            const sw = map.getBounds().getSouthWest();
-            const ne = map.getBounds().getNorthEast();
+        if (this.map) {
+            const sw = this.map.getBounds().getSouthWest();
+            const ne = this.map.getBounds().getNorthEast();
             return `${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
         } else {
             return fallback;
@@ -105,7 +110,7 @@ class Map extends Component {
         }
 
         // Clear previous map panning limits
-        map.setMaxBounds();
+        this.map.setMaxBounds();
 
         geocodingClient
             .reverseGeocode({
@@ -122,10 +127,10 @@ class Map extends Component {
                 if (features && features[0]) {
                     const place = features[0];
 
-                    searchBar.setBbox(place.bbox);
+                    this.searchBar.setBbox(place.bbox);
 
-                    map.once('moveend', () => {
-                        map.setMaxBounds([
+                    this.map.once('moveend', () => {
+                        this.map.setMaxBounds([
                             [place.bbox[0]-0.15, place.bbox[1]-0.15], // Southwest coordinates
                             [place.bbox[2]+0.15, place.bbox[3]+0.15]  // Northeast coordinates
                         ]); 
@@ -140,9 +145,9 @@ class Map extends Component {
     }
 
     onMapMoved() {
-        const lat = map.getCenter().lat;
-        const lng = map.getCenter().lng;
-        const zoom = map.getZoom();
+        const lat = this.map.getCenter().lat;
+        const lng = this.map.getCenter().lng;
+        const zoom = this.map.getZoom();
 
         this.props.onMapMoved({
             lat: lat,
@@ -151,20 +156,24 @@ class Map extends Component {
         });
     }
 
-    addDynamicLayer(l) {
-        const filters = [
+    getMapboxFilterForLayer(l) {
+        return [
             "any",
-            ...l.filters.map(f => 
+            ...l.filters.map(f =>
                 typeof f[0] === 'string' ?
                     ["==", ["get", f[0]], f[1]]
                     :
-                    [ "all",
+                    ["all",
                         ...f.map(f2 =>
                             ["==", ["get", f2[0]], f2[1]]
                         )
                     ]
-                )
+            )
         ];
+    }
+
+    addDynamicLayer(l) {
+        const filters = this.getMapboxFilterForLayer(l);
 
         // const layers = map.getStyle().layers;
         // // Find the index of the first symbol layer in the map style
@@ -181,7 +190,7 @@ class Map extends Component {
         //  another for the line underneath which creates the illusion of a border.
         if (l.style.borderColor) {
             // Border
-            map.addLayer({
+            this.map.addLayer({
                 "id": l.id+'--border',
                 "type": "line",
                 "source": "osm",
@@ -203,7 +212,7 @@ class Map extends Component {
             });
 
             // Line
-            map.addLayer({
+            this.map.addLayer({
                 "id": l.id,
                 "type": "line",
                 "source": "osm",
@@ -224,7 +233,7 @@ class Map extends Component {
             // }, firstSymbolId);
             });
         } else {
-            map.addLayer({
+            this.map.addLayer({
                 "id": l.id,
                 "type": "line",
                 "source": "osm",
@@ -253,40 +262,40 @@ class Map extends Component {
             l.id + '--border'
             : l.id;
 
-        map.on("mouseenter", interactiveId, e => {
+        this.map.on("mouseenter", interactiveId, e => {
             if (e.features.length > 0) {
                 // Cursor
-                map.getCanvas().style.cursor = 'pointer';
+                this.map.getCanvas().style.cursor = 'pointer';
 
                 // Hover style
                 // if (hoveredCycleway) {
-                //     map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
+                //     this.map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
                 // }
                 // hoveredCycleway = e.features[0].id;
-                // map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: true });
+                // this.map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: true });
 
                 // this.showHoverPopup(e);
             }
         });
 
-        map.on("mouseleave", interactiveId, e => {
+        this.map.on("mouseleave", interactiveId, e => {
             // Hover style
             // if (hoveredCycleway && !selectedCycleway) {
-                // map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
+                // this.map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
 
                 // Cursor cursor
-                map.getCanvas().style.cursor = '';
+                this.map.getCanvas().style.cursor = '';
             // }
             // hoveredCycleway = null;
         });
 
-        map.on("click", interactiveId, e => {
+        this.map.on("click", interactiveId, e => {
             if (e.features.length > 0) {
-                if (selectedCycleway) {
-                    map.setFeatureState({ source: 'osm', id: selectedCycleway }, { highlight: false });
+                if (this.selectedCycleway) {
+                    this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { highlight: false });
                 }
-                selectedCycleway = e.features[0].id;
-                map.setFeatureState({ source: 'osm', id: selectedCycleway }, { highlight: true });
+                this.selectedCycleway = e.features[0].id;
+                this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { highlight: true });
 
                 this.showPopup(e);
             }
@@ -294,7 +303,9 @@ class Map extends Component {
     }
 
     initLayers() {
-        map.addSource("osm", {
+        console.debug('initLayers');
+
+        this.map.addSource("osm", {
             "type": "geojson",
             "data": this.props.data || {
                 'type': 'FeatureCollection',
@@ -310,7 +321,30 @@ class Map extends Component {
             this.addDynamicLayer(l);
         }); 
 
-        // map.addSource('some id', {
+        this.map.on('sourcedata', e => {
+            if (this.map.getSource('osm') && this.map.isSourceLoaded('osm')) {
+                // console.log('source loaded!');
+                // var features = this.map.querySourceFeatures(l.id);
+                // console.log(features);
+
+                let lengths = {};
+                this.props.layers.forEach( l => {
+                    const features = this.map.querySourceFeatures('osm', { filter: this.getMapboxFilterForLayer(l) });
+                    
+                    let length = 0;
+                    features.forEach(f => {
+                        length += turfLength(f);
+                    })
+                    console.debug(`${l.name}: ${length}km`);
+
+                    lengths[l.id] = length;
+                }); 
+
+                this.props.updateLengths(lengths);
+            }
+        });
+
+        // this.map.addSource('some id', {
         //     type: 'geojson',
         //     // data: 'http://overpass-api.de/api/interpreter?data=node[amenity=school](bbox);out;(way[amenity=school](bbox);node(w););out;'
         //     // data: 'http://overpass-api.de/api/interpreter?data=node[name=%22Im Tannenbusch%22][highway=bus_stop];out+skel;'
@@ -319,32 +353,32 @@ class Map extends Component {
     }
 
     componentDidUpdate(prevProps) {
-        if (!map || !map.getSource('osm')) {
+        if (!this.map || !this.map.getSource('osm')) {
             return;
         }
 
         if (this.props.data !== prevProps.data) {
-            map.getSource('osm').setData(this.props.data);
+            this.map.getSource('osm').setData(this.props.data);
         }
         
         if (this.props.style !== prevProps.style) {
-            map.setStyle(this.props.style);
+            this.map.setStyle(this.props.style);
         }
         
         // if (this.props.zoom !== prevProps.zoom) {
-        //     map.setZoom(this.props.zoom);
+        //     this.map.setZoom(this.props.zoom);
         // }
         
         if (this.props.center !== prevProps.center) {
-            map.setCenter(this.props.center);
+            this.map.setCenter(this.props.center);
         }
         
         // Compare only 'isActive' field of layers
         if (this.props.layers.map(l => l.isActive).join() === prevProps.layers.map(l => l.isActive).join()) {
             this.props.layers.forEach( l => {
-                map.setLayoutProperty(l.id, 'visibility', l.isActive ? 'visible' : 'none');
+                this.map.setLayoutProperty(l.id, 'visibility', l.isActive ? 'visible' : 'none');
                 if (l.style.borderColor) {
-                    map.setLayoutProperty(l.id+'--border', 'visibility', l.isActive ? 'visible' : 'none');
+                    this.map.setLayoutProperty(l.id+'--border', 'visibility', l.isActive ? 'visible' : 'none');
                 }
             })
         }
@@ -353,7 +387,7 @@ class Map extends Component {
     componentDidMount() {
         mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
         
-        map = new mapboxgl.Map({
+        this.map = new mapboxgl.Map({
             container: this.mapContainer,
             style: this.props.style,
             center: this.props.center,
@@ -363,7 +397,7 @@ class Map extends Component {
         
         // Native Mapbox map controls
 
-        searchBar = new MapboxGeocoder({
+        this.searchBar = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
             mapboxgl: mapboxgl,
             language: 'pt-br',
@@ -371,7 +405,7 @@ class Map extends Component {
             countries: 'br',
             // collapsed: true
         });
-        map.addControl(searchBar, 'bottom-right');
+        this.map.addControl(this.searchBar, 'bottom-right');
 
         const cityPicker = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,
@@ -393,7 +427,7 @@ class Map extends Component {
             } else {
                 flyToPos = result.result.center;
             }
-            map.flyTo({
+            this.map.flyTo({
                 center: flyToPos
             });
 
@@ -404,9 +438,9 @@ class Map extends Component {
             document.querySelector('body').classList.remove('show-city-picker');
             cityPicker.clear();
         });
-        map.addControl(cityPicker, 'top-left');
+        this.map.addControl(cityPicker, 'top-left');
 
-        map.addControl(
+        this.map.addControl(
             new mapboxgl.NavigationControl({
                 showCompass: false
             }),
@@ -422,7 +456,7 @@ class Map extends Component {
             console.debug('geolocate', result); 
             this.reverseGeocode([result.coords.longitude, result.coords.latitude]);
         });
-        map.addControl(geolocate, 'bottom-right');
+        this.map.addControl(geolocate, 'bottom-right');
         
         
         // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
@@ -430,31 +464,31 @@ class Map extends Component {
 
         // Listeners
 
-        map.on('load', () => {
+        this.map.on('load', () => {
             this.initLayers();
             this.onMapMoved();
 
-            map.on('moveend', this.onMapMoved);
+            this.map.on('moveend', this.onMapMoved);
 
             // Further chages on styles reinitilizes layers
-            map.on('style.load', () => {
+            this.map.on('style.load', () => {
                 this.initLayers();
                 this.onMapMoved();
             });
         });
 
 
-        popup = new mapboxgl.Popup({
+        this.popup = new mapboxgl.Popup({
             closeOnClick: false
         });
-        popup.on('close', e => {
-            if (selectedCycleway) {
-                map.setFeatureState({ source: 'osm', id: selectedCycleway }, { highlight: false });
+        this.popup.on('close', e => {
+            if (this.selectedCycleway) {
+                this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { highlight: false });
             }
-            selectedCycleway = null;
+            this.selectedCycleway = null;
         });
 
-        hoverPopup = new mapboxgl.Popup({
+        this.hoverPopup = new mapboxgl.Popup({
             closeButton: false,
             className: 'hover-popup'
         });
