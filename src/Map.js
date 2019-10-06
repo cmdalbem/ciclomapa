@@ -322,7 +322,7 @@ class Map extends Component {
         }); 
 
         this.map.on('sourcedata', e => {
-            if (this.map.getSource('osm') && this.map.isSourceLoaded('osm')) {
+            if (e.isSourceLoaded) {
                 // console.log('source loaded!');
                 // var features = this.map.querySourceFeatures(l.id);
                 // console.log(features);
