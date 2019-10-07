@@ -310,28 +310,25 @@ class Map extends Component {
             this.addDynamicLayer(l);
         }); 
 
-        this.map.on('sourcedata', e => {
-            if (e.isSourceLoaded) {
-                // console.log('source loaded!');
-                // var features = this.map.querySourceFeatures(l.id);
-                // console.log(features);
-
-                let lengths = {};
-                this.props.layers.forEach( l => {
-                    const features = this.map.querySourceFeatures('osm', { filter: this.getMapboxFilterForLayer(l) });
-                    
-                    let length = 0;
-                    features.forEach(f => {
-                        length += turfLength(f);
-                    })
-                    console.debug(`${l.name}: ${length}km`);
-
-                    lengths[l.id] = length;
-                }); 
-
-                this.props.updateLengths(lengths);
-            }
-        });
+        if (!IS_MOBILE) {
+            this.map.on('sourcedata', e => {
+                if (e.isSourceLoaded) {
+                    let lengths = {};
+                    this.props.layers.forEach( l => {
+                        const features = this.map.querySourceFeatures('osm', { filter: this.getMapboxFilterForLayer(l) });
+                        
+                        let length = 0;
+                        features.forEach(f => {
+                            length += turfLength(f);
+                        })
+    
+                        lengths[l.id] = length;
+                    }); 
+    
+                    this.props.updateLengths(lengths);
+                }
+            });
+        }
 
         // this.map.addSource('some id', {
         //     type: 'geojson',

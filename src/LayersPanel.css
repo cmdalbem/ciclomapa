@@ -41,6 +41,10 @@
     font-weight: 600;
 }
 
+.layer-length {
+    font-size: 11px;
+}
+
 .ant-tooltip-inner {
     background: #333;
 }
