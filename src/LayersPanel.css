@@ -2,7 +2,6 @@
     position: fixed;
     bottom: 40px;
     left: 0;
-    padding: 8px 0;
     border-radius: 4px;
     /* width: 250px; */
     color: white;
@@ -18,7 +17,7 @@
     cursor: pointer;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 12px;
+    padding: 8px 12px;
 }
 
 .layer-row > div {
@@ -53,4 +52,31 @@
 
 .layer-row:hover .ant-switch {
     opacity: 1;
+}
+
+
+/* Mobile */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .layer-row {
+        font-size: 12px;
+        padding: 2px 8px;
+    }
+    
+    .layer-name {
+        font-weight: 300;
+    }
+
+    .layer-length {
+        display: none;
+    }
+
+    .ant-tooltip,
+    .layer-row .ant-switch {
+        display: none;
+    }
+
+    .layer-miniature {
+        min-width: 12px;
+    }
 }

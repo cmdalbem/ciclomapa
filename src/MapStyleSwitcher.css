@@ -32,3 +32,9 @@
 .switcher-bar > div.selected {
     border: 2px solid white;
 }
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .switcher-bar {
+        display: none;
+    }
+}

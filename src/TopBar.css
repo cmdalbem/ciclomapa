@@ -9,7 +9,7 @@
     margin-right: -0.15em;
 } */
 
-#logo {
+#logo img {
     height: 24px;
 }
 
@@ -67,4 +67,15 @@
 .about-modal .logos img {
     width: 100px;
     height: auto;
+}
+
+
+/* Mobile */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .nav-links,
+    .data-tooltip,
+    #logo {
+        display: none;
+    }
 }

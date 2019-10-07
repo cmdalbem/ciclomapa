@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 
-import { TOPBAR_HEIGHT } from './constants'
+import { TOPBAR_HEIGHT, IS_MOBILE } from './constants'
 
 import { Modal, Button, Divider, Popover, Icon } from 'antd';
 
@@ -77,13 +77,13 @@ class TopBar extends Component {
         
         return (
             <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
-                <h1>
-                    <img id="logo" src={logo} alt="CICLOMAPA"></img>
+                <h1 id="logo">
+                    <img src={logo} alt="CICLOMAPA"></img>
                 </h1>
 
                 <div>
                     <Button 
-                        size="large"
+                        size={IS_MOBILE ? 'default' : 'large'}
                         onClick={this.showCityPicker}
                     >
                         <h3 className="areaname">
@@ -105,40 +105,43 @@ class TopBar extends Component {
 
                     {
                         updatedAt &&
-                        <Popover
-                            placement="bottom"
-                            content={(
-                                <div style={{maxWidth: 300}}>
-                                    <div>
-                                        Dados obtidos do OpenStreetMaps em <b>{updatedAt}</b>.
-                                    </div>
+                        <div className="data-tooltip">
+                            <Popover
+                                placement="bottom"
+                                content={(
+                                    <div style={{maxWidth: 300}}>
+                                        <div>
+                                            Dados obtidos do OpenStreetMaps em <b>{updatedAt}</b>.
+                                        </div>
 
-                                    <Button
-                                        size="small"
-                                        icon="redo"
-                                        type="danger" ghost
-                                        onClick={this.props.forceUpdate}
-                                        disabled={isBrasilia}
-                                    >
-                                        Atualizar
-                                    </Button>
-                                    
-                                    {
-                                        isBrasilia &&
-                                            <div style={{fontStyle: 'italic', fontSize: ''}}>
-                                                Esta cidade não pode ser atualizada automaticamente.
-                                            </div>
-                                    }
-                                </div>
-                            )}
-                            arrowPointAtCenter={true}
-                        >
-                            <Icon type="info-circle" style={{ marginLeft: '8px' }}/>
-                        </Popover>
+                                        <Button
+                                            size="small"
+                                            icon="redo"
+                                            type="danger" ghost
+                                            onClick={this.props.forceUpdate}
+                                            disabled={isBrasilia}
+                                        >
+                                            Atualizar
+                                        </Button>
+                                        
+                                        {
+                                            isBrasilia &&
+                                                <div style={{fontStyle: 'italic', fontSize: ''}}>
+                                                    Esta cidade não pode ser atualizada automaticamente.
+                                                </div>
+                                        }
+                                    </div>
+                                )}
+                                arrowPointAtCenter={true}
+                            >
+                                <Icon type="info-circle" style={{ marginLeft: '8px' }}/>
+                            </Popover>
+                        </div>
+                            
                     }
                 </div>
                 
-                <div>
+                <div className="nav-links">
                     <Button
                         size="large"
                         type="link"

@@ -64,6 +64,7 @@
   z-index: 1;
 }
 
+
 /* The Big City Selector input */
 
 .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
@@ -111,4 +112,16 @@ body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
   top: 15px;
   left: 12px;
   opacity: .3;
+}
+
+
+/* Mobile */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
+      width: 90%;
+      margin-left: -45%;
+      font-size: 12px;
+      padding: inherit;
+    }
 }

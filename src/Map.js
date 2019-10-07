@@ -10,7 +10,7 @@ import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
-import { MAPBOX_ACCESS_TOKEN } from './constants.js'
+import { MAPBOX_ACCESS_TOKEN, IS_MOBILE } from './constants.js'
 
 import './Map.css'
 
@@ -127,7 +127,9 @@ class Map extends Component {
                 if (features && features[0]) {
                     const place = features[0];
 
-                    this.searchBar.setBbox(place.bbox);
+                    if (this.searchBar) {
+                        this.searchBar.setBbox(place.bbox);
+                    }
 
                     this.map.once('moveend', () => {
                         this.map.setMaxBounds([
@@ -384,15 +386,17 @@ class Map extends Component {
         
         // Native Mapbox map controls
 
-        this.searchBar = new MapboxGeocoder({
-            accessToken: mapboxgl.accessToken,
-            mapboxgl: mapboxgl,
-            language: 'pt-br',
-            placeholder: 'Buscar endereços, estabelecimentos, ...',
-            countries: 'br',
-            // collapsed: true
-        });
-        this.map.addControl(this.searchBar, 'bottom-right');
+        if (!IS_MOBILE) {
+            this.searchBar = new MapboxGeocoder({
+                accessToken: mapboxgl.accessToken,
+                mapboxgl: mapboxgl,
+                language: 'pt-br',
+                placeholder: 'Buscar endereços, estabelecimentos, ...',
+                countries: 'br',
+                // collapsed: IS_MOBILE
+            });
+            this.map.addControl(this.searchBar, 'bottom-right');
+        }
 
         const cityPicker = new MapboxGeocoder({
             accessToken: mapboxgl.accessToken,

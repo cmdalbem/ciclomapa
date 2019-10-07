@@ -13,3 +13,7 @@ export const OSM_DATA_MAX_AGE_MS = 7 * ONE_DAY_MS;
 export const MIN_ZOOM_TO_LOAD_DATA = 10;
 
 export const TOPBAR_HEIGHT = 64;
+
+export const MOBILE_MAX_WIDTH = '430px';
+export const DESKTOP_MIN_WIDTH = '430px';
+export const IS_MOBILE = window.matchMedia && window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH})`).matches;
