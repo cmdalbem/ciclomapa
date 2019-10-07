@@ -33,8 +33,8 @@
         "style": {
             "lineColor": "#b4fad0",
             "lineWidth": 5,
-            "borderColor": "#69b991",
-            "borderStyle": "solid"
+            "borderColor": "#f0763a",
+            "borderStyle": "dashed"
         }
     },
     {
@@ -55,7 +55,8 @@
         "style": {
             "lineColor": "#f8c9ae",
             "lineWidth": 4,
-            "borderColor": "#398371",
+            "borderColor": "#f0763a",
+            "borderStyle": "dashed",
             "borderWidth": 2
         }
     },
@@ -117,7 +118,7 @@
             ["bicycle", "dismount"]
         ],
         "style": {
-            "lineColor": "red",
+            "lineColor": "#F5222D",
             "lineWidth": 2,
             "lineStyle": "dashed"
         }
