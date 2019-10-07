@@ -175,16 +175,6 @@ class Map extends Component {
     addDynamicLayer(l) {
         const filters = this.getMapboxFilterForLayer(l);
 
-        // const layers = map.getStyle().layers;
-        // // Find the index of the first symbol layer in the map style
-        // let firstSymbolId;
-        // for (var i = 0; i < layers.length; i++) {
-        //     if (layers[i].type === 'symbol') {
-        //         firstSymbolId = layers[i].id;
-        //         break;
-        //     }
-        // }
-
         // Check if layer has a border color set. If that's the case the logic is a
         //  little different and we'll need 2 layers, one for the line itself and 
         //  another for the line underneath which creates the illusion of a border.
@@ -208,8 +198,7 @@ class Map extends Component {
                     ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
                 "filter": filters,
-            // }, firstSymbolId);
-            });
+            }, 'road-label-small');
 
             // Line
             this.map.addLayer({
@@ -230,8 +219,7 @@ class Map extends Component {
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
                 "filter": filters,
-            // }, firstSymbolId);
-            });
+            }, 'road-label-small');
         } else {
             this.map.addLayer({
                 "id": l.id,
@@ -251,8 +239,7 @@ class Map extends Component {
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
                 "filter": filters,
-            // }, firstSymbolId);
-            });
+            }, 'road-label-small');
         }
 
         
@@ -361,8 +348,8 @@ class Map extends Component {
             this.map.getSource('osm').setData(this.props.data);
         }
         
-        if (this.props.style !== prevProps.style) {
-            this.map.setStyle(this.props.style);
+        if (this.props.showSatellite !== prevProps.showSatellite) {
+            this.map.setLayoutProperty('satellite', 'visibility', this.props.showSatellite ? 'visible' : 'none');
         }
         
         // if (this.props.zoom !== prevProps.zoom) {
@@ -471,10 +458,10 @@ class Map extends Component {
             this.map.on('moveend', this.onMapMoved);
 
             // Further chages on styles reinitilizes layers
-            this.map.on('style.load', () => {
-                this.initLayers();
-                this.onMapMoved();
-            });
+            // this.map.on('style.load', () => {
+            //     this.initLayers();
+            //     this.onMapMoved();
+            // });
         });
 
 

@@ -26,7 +26,8 @@ class App extends Component {
         super(props);
 
         this.updateData = this.updateData.bind(this);
-        this.onMapStyleChange = this.onMapStyleChange.bind(this);
+        // this.onMapStyleChange = this.onMapStyleChange.bind(this);
+        this.onMapShowSatelliteChanged = this.onMapShowSatelliteChanged.bind(this);
         this.onMapMoved = this.onMapMoved.bind(this);
         this.onLayersChange = this.onLayersChange.bind(this);
         this.downloadData = this.downloadData.bind(this);
@@ -39,6 +40,7 @@ class App extends Component {
             loading: false,
             layers: OSMController.getLayers(),
             mapStyle: 'mapbox://styles/cmdalbem/ck14cy14g1vb81cp8hprnh4nx',
+            showSatellite: false,
             zoom: urlParams.z || DEFAULT_ZOOM,
             lengths: {},
             area: '',
@@ -145,8 +147,12 @@ class App extends Component {
         }
     }
 
-    onMapStyleChange(newMapStyle) {
-        this.setState({ mapStyle: newMapStyle});
+    // onMapStyleChange(newMapStyle) {
+    //     this.setState({ mapStyle: newMapStyle});
+    // }
+
+    onMapShowSatelliteChanged(showSatellite) {
+        this.setState({ showSatellite: showSatellite });
     }
 
     onLayersChange(id, newVal) {
@@ -250,12 +256,13 @@ class App extends Component {
                     style={this.state.mapStyle}
                     zoom={this.state.zoom}
                     center={this.state.center}
+                    showSatellite={this.state.showSatellite}
                     updateData={this.updateData}
                     onMapMoved={this.onMapMoved}
                     updateLengths={this.updateLengths}
                 />
 
-                <MapStyleSwitcher onMapStyleChange={this.onMapStyleChange}/>
+                <MapStyleSwitcher onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}/>
  
                 <LayersPanel
                     layers={this.state.layers}

@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 
-import light from './img/light.png';
+// import light from './img/light.png';
 import normal from './img/normal.png';
-import satelite from './img/satelite.png';
+import satellite from './img/satelite.png';
 
 import './MapStyleSwitcher.css'
 
@@ -11,23 +11,26 @@ class MapStyleSwitcher extends Component {
 
     options = [
         {
+            name: 'dark',
             img: normal,
-            url: 'mapbox://styles/cmdalbem/ck14cy14g1vb81cp8hprnh4nx'
+            // url: 'mapbox://styles/cmdalbem/ck14cy14g1vb81cp8hprnh4nx'
         },
         // {
         //     img: light,
         //     url: 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'
         // },
         {
-            img: satelite,
-            url: 'mapbox://styles/cmdalbem/cjxsdwb907bfi1cqevxio2bst'
+            name: 'satellite',
+            img: satellite
         },
     ];
 
     componentDidUpdate(prevProps, prevState) {
         if (this.state !== prevState) {
             const selected = this.options[this.state.selected]
-            this.props.onMapStyleChange(selected.url)
+            // this.props.onMapStyleChange(selected.url)
+
+            this.props.onMapShowSatelliteChanged(selected.name === 'satellite');
         }
     }
 
