@@ -105,7 +105,7 @@ class TopBar extends Component {
 
                     {
                         updatedAt &&
-                        <div className="data-tooltip">
+                        <span className="data-tooltip">
                             <Popover
                                 placement="bottom"
                                 content={(
@@ -136,7 +136,7 @@ class TopBar extends Component {
                             >
                                 <Icon type="info-circle" style={{ marginLeft: '8px' }}/>
                             </Popover>
-                        </div>
+                        </span>
                             
                     }
                 </div>
