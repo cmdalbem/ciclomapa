@@ -36,7 +36,9 @@ export function computeTypologies(data, layers) {
         }
 
         if (!feature.properties.type) {
-            layers.forEach(layer => {
+            // Reverse layers orders so the most important ones override less important ones.
+            //   Slice is used here to don't destructively reverse the original array.
+            layers.slice().reverse().forEach(layer => {
                 let match = false;
                 layer.filters.forEach(filter => {
                     let partsToMatch;
