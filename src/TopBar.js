@@ -68,9 +68,6 @@ class TopBar extends Component {
             // country = parts[2];
         let updatedAt;
 
-        // Super special case for Brasilia because it's so damn big and we're not loading the data into memory
-        const isBrasilia = city === 'Brasília';
-        
         if (this.props.lastUpdate) {
             updatedAt = this.props.lastUpdate.toLocaleString('pt-BR');
         }
@@ -119,17 +116,9 @@ class TopBar extends Component {
                                             icon="redo"
                                             type="danger" ghost
                                             onClick={this.props.forceUpdate}
-                                            disabled={isBrasilia}
                                         >
                                             Atualizar
                                         </Button>
-                                        
-                                        {
-                                            isBrasilia &&
-                                                <div style={{fontStyle: 'italic', fontSize: ''}}>
-                                                    Esta cidade não pode ser atualizada automaticamente.
-                                                </div>
-                                        }
                                     </div>
                                 )}
                                 arrowPointAtCenter={true}
@@ -156,8 +145,6 @@ class TopBar extends Component {
                         size="large"
                         type="link"
                         onClick={this.props.downloadData}
-                        disabled={isBrasilia}
-                        style={{ opacity: isBrasilia ? .5 : 1}}
                     >
                         <Icon type="download" /> Dados
                     </Button>
