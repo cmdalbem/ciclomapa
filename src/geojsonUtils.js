@@ -1,8 +1,6 @@
 import pako from 'pako';
 // import { gzip } from 'zlib';
 
-const DEBUG = false;
-
 
 export function gzipDecompress(data) {
     return JSON.parse(pako.inflate(data), { to: 'string' });
@@ -30,6 +28,8 @@ export function cleanUpOSMTags(data) {
 }
 
 export function computeTypologies(data, layers) {
+    const DEBUG = false;
+
     data.features.forEach(feature => {
         if (DEBUG) {
             console.debug(`${feature.properties.id} (${feature.properties.name})`);
@@ -69,16 +69,20 @@ export function computeTypologies(data, layers) {
 
                     if ((typeof filter[0] === 'object' && partsToMatch[0] && partsToMatch[1])
                         || partsToMatch[0]) {
-                        feature.properties.type = layer.name;
                         match = true;
+                        
+                        // "Proibido" layer should have priority over the rest
+                        if (!feature.properties.type || feature.properties.type !== 'Proibido') {
+                            feature.properties.type = layer.name;
+                        }
                         // console.debug(`.  .  → ${feature.properties.name} (${feature.properties.id}) = ${layer.name}`);
                     }
 
                     // console.debug(`.  .  ${filter} ${match ? '✓' : ''}`);
                 });
 
-                if (DEBUG) {
-                    console.debug(`.  ${layer.name} ${match ? '👍' : ''}`);
+                if (DEBUG && match) {
+                    console.debug(`.  ${layer.name}`);
                 }
             });
         }
