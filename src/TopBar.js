@@ -28,7 +28,7 @@ class TopBar extends Component {
                     </p>
 
                     <div>
-                        Apoio:
+                        Realização:
 
                         <div className="logos">
                             <a href="http://itdpbrasil.org" target="_BLANK" rel="noopener noreferrer">
