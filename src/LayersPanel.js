@@ -21,7 +21,7 @@ class LayersPanel extends Component {
                         <Popover
                             placement="left"
                             content={(
-                                <div style={{ maxWidth: '200px' }}>
+                                <div style={{ maxWidth: '250px' }}>
                                     <p>
                                         <img style={{ width: '100%' }} src={'/' + slugify(l.name) + '.png'} alt=""></img>
                                     </p>
