@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 
-import { Switch, Tooltip } from 'antd';
+import { Switch, Popover } from 'antd';
+
+import { slugify } from './utils.js'
 
 import './LayersPanel.css';
 
@@ -16,9 +18,18 @@ class LayersPanel extends Component {
                 {
                     this.props.layers &&
                     this.props.layers.map(l =>
-                        <Tooltip
+                        <Popover
                             placement="left"
-                            title={l.description}
+                            content={(
+                                <div style={{ maxWidth: '200px' }}>
+                                    <p>
+                                        <img style={{ width: '100%' }} src={'/' + slugify(l.name) + '.png'} alt=""></img>
+                                    </p>
+                                    <div>
+                                        {l.description}
+                                    </div>
+                                </div>
+                            )}
                             arrowPointAtCenter={true}
                             key={l.name}
                         >
@@ -59,7 +70,7 @@ class LayersPanel extends Component {
 
                                 <Switch size="small" checked={l.isActive} />
                             </div>
-                        </Tooltip>
+                        </Popover>
                     )
                 }
             </div>

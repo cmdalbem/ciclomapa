@@ -45,8 +45,14 @@
     font-size: 11px;
 }
 
-.ant-tooltip-inner {
+.ant-popover-inner-content {
     background: #333;
+    color: white;
+}
+
+.ant-popover-placement-right > .ant-popover-content > .ant-popover-arrow {
+    border-bottom-color: #333;
+    border-left-color: #333;
 }
 
 .layer-row .ant-switch {
