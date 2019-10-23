@@ -27,6 +27,10 @@ class TopBar extends Component {
                         Este é um projeto Open Source, e seu código pode ser encontrado no <a href="https://github.com/cmdalbem/ciclomapa/">GitHub</a>.
                     </p>
 
+                    <p>
+                        Para mais informações sobre o projeto e tutoriais de como contribur com o mapeamento da sua cidade usando o OpenStreetMaps acesse nossos <a href="https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/">tutoriais no site da UCB</a>.
+                    </p>
+
                     <div>
                         Realização:
 
