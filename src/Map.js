@@ -42,12 +42,23 @@ class Map extends Component {
         let html = '';
 
         if (props.name) {
-            html += `<h2>${props.name}</h2>`;
+            html += `
+            <h2 style="margin-top: 1em; font-size: 22px;">
+                ${props.name}
+            </h2>`;
         } else {
             html += '<i>Sem nome</i>';
         }
-        
-        html += `<p>Tipo: <b>${layer.name}</b></p>`;
+
+        html += `
+            <div style="font-size: 14px">
+                <div>
+                    Tipo: <b>${layer.name}</b>
+                </div>
+                <div>
+                    ${layer.description}
+                </div>
+            </div>`;
 
         // html += `<h3>Tipo: ${layer.name}</h3>`;
         // html += `<p>${layer.description}</p>`;
@@ -58,12 +69,16 @@ class Map extends Component {
         // html += prettyProps;
 
         html += `
+            <br>
+            <hr style="border: 0; border-top: 1px solid lightgray;">
+            Acha que este dado pode ser melhorado?
+            <br>
             <a
                 target="_BLANK"
                 rel="noopener"
                 href="https://www.openstreetmap.org/${props.id}"
             >
-                Editar no OSM ›
+                Editar no OSM →
             </a>
     `;
 
