@@ -82,6 +82,7 @@
     }
 
     .ant-tooltip,
+    .ant-popover-inner-content,
     .layer-row .ant-switch {
         display: none;
     }
