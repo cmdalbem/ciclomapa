@@ -69,6 +69,10 @@
     height: auto;
 }
 
+.nav-links > button + button {
+    margin-left: 12px;
+}
+
 
 /* Mobile */
 

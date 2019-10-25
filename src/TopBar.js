@@ -78,9 +78,9 @@ class TopBar extends Component {
         
         return (
             <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
-                <h1 id="logo">
+                <div id="logo">
                     <img src={logo} alt="CicloMapa"></img>
-                </h1>
+                </div>
 
                 <div>
                     <Button 
@@ -111,14 +111,14 @@ class TopBar extends Component {
                                 placement="bottom"
                                 content={(
                                     <div style={{maxWidth: 300}}>
-                                        <div>
+                                        <span>
                                             Dados obtidos do OpenStreetMaps em <b>{updatedAt}</b>.
-                                        </div>
+                                        </span>
 
                                         <Button
                                             size="small"
                                             icon="redo"
-                                            type="danger" ghost
+                                            ghost
                                             onClick={this.props.forceUpdate}
                                         >
                                             Atualizar
@@ -143,11 +143,8 @@ class TopBar extends Component {
                         Sobre
                     </Button>
 
-                    <Divider type="vertical" />
-
                     <Button
-                        size="large"
-                        type="link"
+                        ghost
                         onClick={this.props.downloadData}
                     >
                         <Icon type="download" /> Dados
