@@ -20,22 +20,26 @@ class TopBar extends Component {
             content: (
                 <div>
                     <p>
-                        A plataforma CicloMapa é uma ferramenta que buscar ampliar a visibilidade das infraestruturas cicloviárias mapeadas no OpenStreetMap e engajar uma comunidade de mapeadores para atualização colaborativa de dados e incidência em políticas públicas de mobilidade urbana.
+                        O <b>CicloMapa</b> é uma ferramenta que busca ampliar a visibilidade das infraestruturas cicloviárias (ou a falta delas), disponibilizando dados que auxiliem a incidência em políticas públicas para a ciclomobilidade.
                     </p>
 
                     <p>
-                        Este é um projeto Open Source, e seu código pode ser encontrado no <a href="https://github.com/cmdalbem/ciclomapa/">GitHub</a>.
+                        Utilizando o <a href="https://www.openstreetmap.org/" title="OpenStreetMap" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>, uma plataforma colaborativa de mapeamento de dados geo-espaciais abertos, também procura engajar a comunidade em sua atualização.
                     </p>
 
                     <p>
-                        Para mais informações sobre o projeto e tutoriais de como contribur com o mapeamento da sua cidade usando o OpenStreetMaps acesse nossos <a href="https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/">tutoriais no site da UCB</a>.
+                        Para saber mais sobre a iniciativa e como contribuir com o mapeamento de sua cidade, acesse a <a href="https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/" title="CicloMapa | UCB - União de Ciclistas do Brasil" target="_blank" rel="noopener noreferrer">página do projeto no site da UCB</a>.
+                    </p>
+
+                    <p>
+                        Este é um projeto de código aberto (<i>Open Source</i>) e pode ser encontrado no <a href="https://github.com/cmdalbem/ciclomapa/" title="GitHub" target="_blank" rel="noopener noreferrer">GitHub</a>.
                     </p>
 
                     <div>
                         Realização:
 
                         <div className="logos">
-                            <a href="http://itdpbrasil.org" target="_BLANK" rel="noopener noreferrer">
+                            <a href="https://itdpbrasil.org/" target="_BLANK" rel="noopener noreferrer">
                                 <img src={itdp} alt="Logo do ITDP"></img>
                             </a>
                             <a href="https://www.uniaodeciclistas.org.br/" target="_BLANK" rel="noopener noreferrer">
