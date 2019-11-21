@@ -116,7 +116,7 @@ class App extends Component {
                 // Try to retrieve previously saved data for this area
                 this.storage.load(this.state.area, force)
                     .then(data => {
-                        if (data && this.isDataFresh(data)) {
+                        if (data) {
                             console.debug('Database data is fresh.');
                             this.setState({
                                 geoJson: data.geoJson,
