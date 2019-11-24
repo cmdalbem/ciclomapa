@@ -25,3 +25,16 @@ body {
     /* background: linear-gradient(90deg, #282622 0%, transparent 30%, transparent 70%, #282622 100%); */
     background: radial-gradient(circle, transparent 60%, #282622 100%);
 }
+
+@keyframes pulse {
+  0% {
+    opacity: .4;
+  }
+  100% {
+    opacity: .8;
+  }
+}
+
+.loading {
+    animation: pulse .5s infinite alternate;
+}

@@ -1,3 +1,7 @@
+.element {
+  animation: pulse 5s infinite;
+}
+
 .layers-panel {
     position: fixed;
     bottom: 40px;
@@ -10,14 +14,22 @@
     right: 10px; */
     /* background: white; */
     /* box-shadow: 0 0 10px 2px rgba(0,0,0,.1); */
+
+    transition: background .2s ease-out;
+}
+
+.layers-panel:hover {
+    background: rgba(0,0,0,0.6);
 }
 
 .layer-row {
-    display: flex;
+    /* display: flex; */
     cursor: pointer;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
+    padding: 4px 12px;
+
+    transition: background .2s ease-out;
 }
 
 .layer-row > div {
@@ -26,19 +38,18 @@
 }
 
 .layer-row:hover {
-    background: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.2);
 }
 
 .layer-miniature {
     min-width: 24px;
+    max-width: 250px;
     margin-right: 4px;
     display: inline-block;
 }
 
 .layer-name {
-    margin: 0 4px;
-    line-height: 1.2em;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .layer-length {

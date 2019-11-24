@@ -3,6 +3,8 @@ import React, { Component } from 'react';
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css';
 
+import turfLength from '@turf/length';
+
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
@@ -325,6 +327,23 @@ class Map extends Component {
         });
     }
 
+    calculateLayersLengths() {
+        let lengths = {};
+        this.props.layers.forEach(l => {
+            // Obs: querySourceFeatures only considers what is visible in the screen!
+            const features = this.map.querySourceFeatures('osm', { filter: this.getMapboxFilterForLayer(l) });
+
+            let length = 0;
+            features.forEach(f => {
+                length += turfLength(f);
+            })
+
+            lengths[l.id] = length;
+        });
+
+        this.props.updateLengths(lengths);
+    }
+
     initLayers() {
         console.debug('initLayers');
 
@@ -348,6 +367,14 @@ class Map extends Component {
         this.props.layers.slice().reverse().forEach(l => {
             this.addDynamicLayer(l);
         }); 
+
+        if (!IS_MOBILE) {
+            this.map.on('sourcedata', e => {
+                if (e.isSourceLoaded) {
+                    this.calculateLayersLengths();
+                }
+            });
+        }
 
         // this.map.addSource('some id', {
         //     type: 'geojson',
