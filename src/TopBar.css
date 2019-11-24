@@ -32,7 +32,7 @@
     /* background: #424d5c; */
     /* box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05); */
 
-    padding: 12px;
+    padding: 12px 24px;
     
     display: flex;
     align-items: center;
@@ -52,6 +52,12 @@
     /* font-weight: 600;
     font-size: .5em;
     text-transform: uppercase; */
+}
+
+.city-picker {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .state:after {
@@ -81,5 +87,15 @@
     .data-tooltip,
     #logo {
         display: none;
+    }
+
+    .city-picker {
+        position: relative;
+        transform: none;
+        left: auto;
+    }
+
+    .topbar {
+        padding: 12px;
     }
 }

@@ -1,7 +1,7 @@
 .layers-panel {
     position: fixed;
     bottom: 40px;
-    left: 0;
+    left: 12px;
     border-radius: 4px;
     /* width: 250px; */
     color: white;
@@ -68,6 +68,10 @@
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {
+    .layers-panel {
+        left: 0;
+    }
+    
     .layer-row {
         font-size: 12px;
         padding: 2px 8px;

@@ -1,8 +1,8 @@
 .switcher-bar {
     display: flex;
     position: fixed;
-    bottom: 75px;
-    right: 50px;
+    bottom: 76px;
+    right: 70px;
 }
 
 .switcher-bar > div {
