@@ -90,7 +90,8 @@ class LayersPanel extends Component {
                                             borderWidth: l.style.borderWidth ? l.style.borderWidth/2 : '0',
                                             borderLeft: 'none',
                                             borderRight: 'none',
-                                            margin: '6px 4px 6px 0'
+                                            margin: '6px 4px 6px 0',
+                                            transition: 'width 1s ease-in-out'
                                     }}
                                     ></span>
 
