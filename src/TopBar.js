@@ -86,7 +86,7 @@ class TopBar extends Component {
                     <img src={logo} alt="CicloMapa"></img>
                 </div>
 
-                <div class="city-picker">
+                <div className="city-picker">
                     <Button 
                         size={IS_MOBILE ? 'default' : 'large'}
                         onClick={this.showCityPicker}
