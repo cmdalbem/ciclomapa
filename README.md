@@ -11,7 +11,7 @@ Today in Brazil we face a big challenge of not having data on the cycling infras
 
 We've developed the first cycling maps platform encompassing all Brazilian cities, leveraging the data and collaborativeness of [OpenStreetMap (OSM)](https://www.openstreetmap.org/), the biggest initiative of this kind. We've created an open-source web application, free and accessible from any computer or smartphone, aimed at both the average citizen who wants to know more about their city, and researchers, who will have easy access to data without needing OSM knowledge.
 
-[Read more](https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/)
+<!-- [Read more](https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/) -->
 
 
 ## Main features
