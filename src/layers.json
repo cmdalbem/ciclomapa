@@ -36,7 +36,7 @@
         }
     },
     {
-        "name": "Ciclorota",
+        "name": "Ciclorrota",
         "description": "Vias com sinalização para o tráfego compartilhado com véiculos motorizados, com preferência para bicicletas.",
         "filters": [
             ["cycleway", "buffered_lane"],
