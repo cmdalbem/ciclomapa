@@ -27,9 +27,9 @@ class TopBar extends Component {
                         Utilizando o <a href="https://www.openstreetmap.org/" title="OpenStreetMap" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>, uma plataforma colaborativa de mapeamento de dados geo-espaciais abertos, também procura engajar a comunidade em sua atualização.
                     </p>
 
-                    {/* <p>
+                    <p>
                         Para saber mais sobre a iniciativa e como contribuir com o mapeamento de sua cidade, acesse a <a href="https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/" title="CicloMapa | UCB - União de Ciclistas do Brasil" target="_blank" rel="noopener noreferrer">página do projeto no site da UCB</a>.
-                    </p> */}
+                    </p>
 
                     <p>
                         Este é um projeto de código aberto (<i>Open Source</i>) e pode ser encontrado no <a href="https://github.com/cmdalbem/ciclomapa/" title="GitHub" target="_blank" rel="noopener noreferrer">GitHub</a>.
