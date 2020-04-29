@@ -65,18 +65,23 @@ class App extends Component {
     }
 
     saveStateToLocalStorage() {
-        const state = {
-            area: this.state.area,
-            showSatellite: this.state.showSatellite,
-            zoom: this.state.zoom,
-            lng: this.state.lng,
-            lat: this.state.lat,
-        }
+        requestAnimationFrame( () => {
+            const t0 = performance.now();
 
-        let str = JSON.stringify(state);
-        window.localStorage.setItem('appstate', str);
+            const state = {
+                area: this.state.area,
+                showSatellite: this.state.showSatellite,
+                zoom: this.state.zoom,
+                lng: this.state.lng,
+                lat: this.state.lat,
+            }
 
-        console.debug('Saved state to local storage.');
+            let str = JSON.stringify(state);
+            window.localStorage.setItem('appstate', str);
+
+            const t1 = performance.now();
+            console.debug('Saved state to local storage in ' + (t1 - t0) + 'ms.');
+        });
     }
 
     updateLengths(newLengths) {
@@ -250,7 +255,9 @@ class App extends Component {
         //     delete newState.area;
         // }
 
-        this.setState(newState);
+        requestAnimationFrame(() => {
+            this.setState(newState);
+        });
     }
 
     render() {
