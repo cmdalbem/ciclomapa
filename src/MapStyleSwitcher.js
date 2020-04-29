@@ -7,7 +7,7 @@ import satellite from './img/satelite.png';
 import './MapStyleSwitcher.css'
 
 class MapStyleSwitcher extends Component {
-    state = { selected: 0 };
+    state = { selected: this.props.showSatellite ? 1 : 0 };
 
     options = [
         {

@@ -171,6 +171,8 @@ class Map extends Component {
             lng: lng,
             zoom: zoom,
         });
+
+        // console.debug('onMapMoved');
     }
 
     getMapboxFilterForLayer(l) {
@@ -309,6 +311,11 @@ class Map extends Component {
     initLayers() {
         console.debug('initLayers');
 
+        this.map.setLayoutProperty(
+            'satellite',
+            'visibility',
+            this.props.showSatellite ? 'visible' : 'none');
+
         this.map.addSource("osm", {
             "type": "geojson",
             "data": this.props.data || {
@@ -364,7 +371,10 @@ class Map extends Component {
         }
         
         if (this.props.showSatellite !== prevProps.showSatellite) {
-            this.map.setLayoutProperty('satellite', 'visibility', this.props.showSatellite ? 'visible' : 'none');
+            this.map.setLayoutProperty(
+                'satellite',
+                'visibility',
+                this.props.showSatellite ? 'visible' : 'none');
         }
         
         // if (this.props.zoom !== prevProps.zoom) {
@@ -396,7 +406,6 @@ class Map extends Component {
             zoom: this.props.zoom
         });
 
-        
         // Native Mapbox map controls
 
         if (!IS_MOBILE) {

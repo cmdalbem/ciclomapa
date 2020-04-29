@@ -34,19 +34,21 @@ class App extends Component {
         this.forceUpdate = this.forceUpdate.bind(this);
         this.updateLengths = this.updateLengths.bind(this);
 
+        const prev = this.getStateFromLocalStorage();
+
         const urlParams = this.getParamsFromURL();
         this.state = {
+            area: (prev && prev.area) || '',
+            showSatellite: (prev && prev.showSatellite) || false,
+            zoom: (prev && prev.zoom) || urlParams.z || DEFAULT_ZOOM,
+            center: [
+                (prev && prev.lng) || parseFloat(urlParams.lng) || DEFAULT_LNG,
+                (prev && prev.lat) || parseFloat(urlParams.lat) || DEFAULT_LAT],
             geoJson: null,
             loading: false,
-            layers: OSMController.getLayers(),
             mapStyle: 'mapbox://styles/cmdalbem/ck14cy14g1vb81cp8hprnh4nx',
-            showSatellite: false,
-            zoom: urlParams.z || DEFAULT_ZOOM,
-            lengths: {},
-            area: '',
-            center: [
-                parseFloat(urlParams.lng) || DEFAULT_LNG,
-                parseFloat(urlParams.lat) || DEFAULT_LAT]
+            layers: OSMController.getLayers(),
+            lengths: {}
         };
 
         this.storage = new Storage();
@@ -54,6 +56,27 @@ class App extends Component {
         if (this.state.area) {
             this.updateData();
         }
+    }
+
+    getStateFromLocalStorage() {
+        const savedState = JSON.parse(window.localStorage.getItem('appstate'));
+        console.debug('Retrived saved state from local storage:', savedState);
+        return savedState;
+    }
+
+    saveStateToLocalStorage() {
+        const state = {
+            area: this.state.area,
+            showSatellite: this.state.showSatellite,
+            zoom: this.state.zoom,
+            lng: this.state.lng,
+            lat: this.state.lat,
+        }
+
+        let str = JSON.stringify(state);
+        window.localStorage.setItem('appstate', str);
+
+        console.debug('Saved state to local storage.');
     }
 
     updateLengths(newLengths) {
@@ -211,6 +234,8 @@ class App extends Component {
                 this.props.history.push({
                     search: params
                 })
+
+                this.saveStateToLocalStorage();
         }
     }
 
@@ -255,7 +280,10 @@ class App extends Component {
                     updateLengths={this.updateLengths}
                 />
 
-                <MapStyleSwitcher onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}/>
+                <MapStyleSwitcher 
+                    showSatellite={this.state.showSatellite}
+                    onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
+                />
  
                 <LayersPanel
                     layers={this.state.layers}
