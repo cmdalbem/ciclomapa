@@ -11,26 +11,31 @@
     bottom: 0;
     left: 0;
     right: 0;
-    display: flex;
     z-index: 2;
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
     /* background: rgba(255,255,255,0.7); */
     background: rgba(37,32,29,0.8);
     color: white;
 } 
 
-.loader-container h2 {
+.loader-container h1,
+.loader-container h2,
+.loader-container h3 {
   color: white;
 }
 
 .loader {
   position: relative;
-  margin: 0 auto;
-  max-width: 30%;
+  max-width: 40%;
+  min-width: 150px;
 }
 .loader:before {
     content: '';
     display: block;
-    padding-top: 100%;
 }
 
 .loader .spinnersvg {

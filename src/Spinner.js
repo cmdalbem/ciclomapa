@@ -1,4 +1,6 @@
 import React, { Component } from 'react';
+// import { Button, Space } from 'antd';
+import { Button } from 'antd';
 
 import './Spinner.css'
 
@@ -20,13 +22,21 @@ class Spinner extends Component {
                                 </div>
 
                                 <div className="content">
-                                    <h2>
+                                    <h1>
                                         Ops!
-                                    </h2>
+                                    </h1>
 
-                                    <div>
-                                        O OSM está mal humorado neste momento. Atualize a página para tentar denovo.
-                                    </div>
+                                    {/* <Space size="large" direction="vertical"> */}
+                                        <h3 style={{marginBottom: '2em'}}>
+                                            O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.
+                                        </h3>
+
+                                        <Button 
+                                            type="primary"
+                                            onClick={this.props.onClose}>
+                                            OK
+                                        </Button>
+                                    {/* </Space> */}
                                 </div>
                             </div>
                             :
@@ -37,13 +47,13 @@ class Spinner extends Component {
                                 </svg>
 
                                 <div className="content">
-                                    <h2>
+                                    <h1>
                                         Carregando mapa cicloviário de <b>{city}</b>.
-                                    </h2>
+                                    </h1>
 
-                                    <div>
-                                        Como é a primeira vez que você carrega esta cidade pode demorar um pouquinho :)
-                                    </div>
+                                    <h3>
+                                        Estamos acessando diretamente os dados mais atualizados do OpenStreetMaps. Isso pode levar algumas dezenas segundos dependendo do tamanho da cidade.
+                                    </h3>
                                 </div>
                             </div>
 

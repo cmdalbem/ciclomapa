@@ -3,6 +3,8 @@ body {
     padding: 0;
 
     font-family: 'Open Sans', 'Roboto', sans-serif;
+
+    background: #282622;
 }
 
 @font-face { 
@@ -10,4 +12,16 @@ body {
     font-style: normal;
     font-weight: normal;
     src: local('Aku & Kamu'), url('AKU&KAMU.woff') format('woff');
+}
+
+#gradient-backdrop {
+    position: fixed;
+    width: 100%;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    pointer-events: none;
+    /* background: linear-gradient(90deg, #282622 0%, transparent 30%, transparent 70%, #282622 100%); */
+    background: radial-gradient(circle, transparent 60%, #282622 100%);
 }

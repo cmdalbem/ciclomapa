@@ -33,6 +33,7 @@ class App extends Component {
         this.downloadData = this.downloadData.bind(this);
         this.forceUpdate = this.forceUpdate.bind(this);
         this.updateLengths = this.updateLengths.bind(this);
+        this.onSpinnerClose = this.onSpinnerClose.bind(this);
 
         const prev = this.getStateFromLocalStorage();
 
@@ -56,6 +57,10 @@ class App extends Component {
         if (this.state.area) {
             this.updateData();
         }
+
+        window.addEventListener('beforeunload', e => {
+            this.saveStateToLocalStorage();
+        });
     }
 
     getStateFromLocalStorage() {
@@ -116,18 +121,76 @@ class App extends Component {
         this.updateData(true);
     }
 
-    getDataFromOSM(area) {
-        return OSMController.getData({ area: area })
-            .then(data => {
-                // Persist data
-                const now = new Date();
-                this.storage.save(area, data.geoJson, now);
+    // geoJsonDiff(oldData, newData) {
+    //     console.debug('oldData', oldData);
+    //     console.debug('newData', newData);
 
-                this.setState({
-                    geoJson: data.geoJson,
-                    dataUpdatedAt: now,
-                    loading: false
-                });
+    //     let a = new Set(oldData.features.map(i => i.id));
+    //     let b = new Set(newData.features.map(i => i.id));        
+    //     // let a = new Set(oldData.features.map(i => JSON.stringify(i)));
+    //     // let b = new Set(newData.features.map(i => JSON.stringify(i)));
+
+    //     let a_minus_b = new Set([...a].filter(x => !b.has(x)));
+    //     let b_minus_a = new Set([...b].filter(x => !a.has(x)));
+    //     let a_intersect_b = new Set([...a].filter(x => b.has(x)));
+
+    //     // a_minus_b = [...a_minus_b].map(i => JSON.parse(i));
+    //     // b_minus_a = [...b_minus_a].map(i => JSON.parse(i));
+    //     // a_intersect_b = [...a_intersect_b].map(i => JSON.parse(i));
+    //     a_minus_b = [...a_minus_b];
+    //     b_minus_a = [...b_minus_a];
+    //     a_intersect_b = [...a_intersect_b];
+
+    //     console.debug('Removed:', a_minus_b);
+    //     console.debug('Added:', b_minus_a);
+    //     console.debug('Didnt change:', a_intersect_b);
+
+    //     notification.success({
+    //         message: 'Sucesso',
+    //         description:
+    //             a_minus_b.length === 0 && b_minus_a.length === 0 ?
+    //             <span>
+    //                 Não houve alterações no mapa cicloviários desde a última atualização.
+    //             </span>
+    //             :
+    //             <span>
+    //                 <b>{a_minus_b.length}</b> caminhos removidos e <b>{b_minus_a.length}</b> adicionados.
+    //             </span>
+    //     });
+    // }
+
+    isDataHealthy(oldData, newData) {
+        console.debug('oldData', oldData);
+        console.debug('newData', newData);
+
+        const nbrOldFeatures = oldData.features.length;
+        const nbrNewFeatures = newData.features.length;
+
+        console.debug('nbrOldFeatures', nbrOldFeatures);
+        console.debug('nbrNewFeatures', nbrNewFeatures);
+
+        return !(nbrNewFeatures === 0 || nbrNewFeatures < nbrOldFeatures*0.1);
+    }
+
+    getDataFromOSM() {
+        this.setState({ loading: true });
+
+        return OSMController.getData({ area: this.state.area })
+            .then(newData => {
+                if (this.isDataHealthy(this.state.geoJson, newData.geoJson)) {
+                    const now = new Date();
+                    this.storage.save(this.state.area, newData.geoJson, now);
+    
+                    // this.geoJsonDiff(this.state.geoJson, newData.geoJson);
+    
+                    this.setState({
+                        geoJson: newData.geoJson,
+                        dataUpdatedAt: now,
+                        loading: false
+                    });
+                } else {
+                    throw "";
+                }
             }).catch(e => {
                 this.setState({
                     error: true
@@ -138,8 +201,7 @@ class App extends Component {
     updateData(force) {
         if (this.state.area) {
             if (force) {
-                this.setState({ loading: true });
-                this.getDataFromOSM(this.state.area);
+                this.getDataFromOSM();
             } else {
                 // Try to retrieve previously saved data for this area
                 this.storage.load(this.state.area, force)
@@ -152,8 +214,7 @@ class App extends Component {
                             });
                         } else { 
                             console.debug(`Couldn't find data for area ${this.state.area} or it isn't fresh, hitting OSM...`);
-                            this.setState({ loading: true });
-                            this.getDataFromOSM(this.state.area);
+                            this.getDataFromOSM();
                         }
                     }).catch(e => {
                         notification['error']({
@@ -239,8 +300,6 @@ class App extends Component {
                 this.props.history.push({
                     search: params
                 })
-
-                this.saveStateToLocalStorage();
         }
     }
 
@@ -257,6 +316,13 @@ class App extends Component {
 
         requestAnimationFrame(() => {
             this.setState(newState);
+        });
+    }
+
+    onSpinnerClose() {
+        this.setState({
+            error: false,
+            loading: false
         });
     }
 
@@ -287,6 +353,8 @@ class App extends Component {
                     updateLengths={this.updateLengths}
                 />
 
+                <div id="gradient-backdrop"/>
+
                 <MapStyleSwitcher 
                     showSatellite={this.state.showSatellite}
                     onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
@@ -300,7 +368,11 @@ class App extends Component {
 
                 {
                     this.state.loading &&
-                    <Spinner area={this.state.area} error={this.state.error}/>
+                    <Spinner
+                        area={this.state.area}
+                        error={this.state.error}
+                        onClose={this.onSpinnerClose}
+                    />
                 }
             </div>
         );

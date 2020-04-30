@@ -92,7 +92,6 @@ class OSMController {
                     }
 
                     const query = OSMController.getQuery({ areaId: areaId});
-                    
                     console.debug('generated query: ', query);
 
                     const encodedQuery = encodeURI(query);
@@ -145,15 +144,6 @@ class OSMController {
                                 }
                             });
                     }
-                    
-                    // console.error("Deu erro! Saca só:", e);
-                    // notification['error']({
-                    //     message: 'Erro',
-                    //     description:
-                    //         `Ops, erro na API do Overpass (erro ${e.status}). Abra o console para ver mais detalhes.`,
-                    // });
-                    // reject();
-
                 }).fail(e => {
                     console.error("Deu erro! Saca só:", e);
                     notification['error']({
