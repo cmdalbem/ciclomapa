@@ -2,7 +2,9 @@ import React, { Component } from 'react';
 
 import { TOPBAR_HEIGHT, IS_MOBILE } from './constants'
 
-import { Modal, Button, Divider, Popover, Icon } from 'antd';
+import Icon, { DownloadOutlined, InfoCircleOutlined, RedoOutlined } from '@ant-design/icons';
+
+import { Modal, Button, Divider, Popover } from 'antd';
 
 import { get, set } from 'idb-keyval';
 
@@ -121,7 +123,7 @@ class TopBar extends Component {
 
                                         <Button
                                             size="small"
-                                            icon="redo"
+                                            icon={<RedoOutlined />}
                                             ghost
                                             onClick={this.props.forceUpdate}
                                         >
@@ -131,7 +133,7 @@ class TopBar extends Component {
                                 )}
                                 arrowPointAtCenter={true}
                             >
-                                <Icon type="info-circle" style={{ marginLeft: '8px' }}/>
+                                <InfoCircleOutlined style={{ marginLeft: '8px' }} />
                             </Popover>
                         </span>
                             
@@ -151,11 +153,11 @@ class TopBar extends Component {
                         ghost
                         onClick={this.props.downloadData}
                     >
-                        <Icon type="download" /> Dados
+                        <DownloadOutlined /> Dados
                     </Button>
                 </div>
             </div>
-        )
+        );
     }
 }
 

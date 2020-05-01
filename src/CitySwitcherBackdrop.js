@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 
 import './CitySwitcherBackdrop.css'
 
-import { Button, Icon } from 'antd';
+import { Button } from 'antd';
 
 
 class CitySwitcherBackdrop extends Component {

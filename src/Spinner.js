@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
-// import { Button, Space } from 'antd';
-import { Button } from 'antd';
+import { Button, Space } from 'antd';
 
 import './Spinner.css'
 
@@ -26,8 +25,8 @@ class Spinner extends Component {
                                         Ops!
                                     </h1>
 
-                                    {/* <Space size="large" direction="vertical"> */}
-                                        <h3 style={{marginBottom: '2em'}}>
+                                    <Space size="large" direction="vertical">
+                                        <h3>
                                             O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.
                                         </h3>
 
@@ -36,7 +35,7 @@ class Spinner extends Component {
                                             onClick={this.props.onClose}>
                                             OK
                                         </Button>
-                                    {/* </Space> */}
+                                    </Space>
                                 </div>
                             </div>
                             :

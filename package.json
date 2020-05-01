@@ -7,7 +7,7 @@
     "@mapbox/mapbox-gl-geocoder": "^4.4.0",
     "@mapbox/mapbox-sdk": "^0.6.0",
     "@turf/length": "^6.0.2",
-    "antd": "^3.20.1",
+    "antd": "^4.2.0",
     "file-saver": "^2.0.2",
     "firebase": "^6.6.2",
     "gh-pages": "^2.0.1",

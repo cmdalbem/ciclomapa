@@ -30,7 +30,15 @@
   background: #1c1717;
   color: white;
   border-radius: 4px;
-  border: 1px solid gray;
+  border: 1px solid #41464a;
+}
+
+.mapboxgl-ctrl-group button {
+  filter: invert(1);
+}
+
+.mapboxgl-ctrl-group button+button {
+  border: none;
 }
 
 .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl {
