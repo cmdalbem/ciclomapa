@@ -3,15 +3,18 @@
 
 # CicloMapa
 
-## An open platform to democratize access to bike maps of brazilian cities.
+## An open platform to democratize access to bike maps of brazilian cities, combining the collaborative power of OpenStreetMaps with web technologies and easy-to-use design.
 
 Today in Brazil we face a big challenge of not having data on the cycling infrastructure available in our cities. This makes it very hard to paint a clear picture of our reality and calculate the relevant metrics to measure the opportunities and impacts to society of improving urban mobility. The most common problems are data not being standardized, making it hard to compare between localities, data not being available publicly or sometimes it not existing at all.
 
 [UCB (Brazil Cyclists Union)](https://www.uniaodeciclistas.org.br) and [ITDP (Transport and Development Policy Institute)](https://itdpbrasil.org/) are two civil society organizations that have joined forces to solve once and for all the problem of access to data on Brazil's cycling infrastructure.
 
-We've developed the first cycling maps platform encompassing all Brazilian cities, leveraging the data and collaborativeness of [OpenStreetMap (OSM)](https://www.openstreetmap.org/), the biggest initiative of this kind. We've created an open-source web application, free and accessible from any computer or smartphone, aimed at both the average citizen who wants to know more about their city, and researchers, who will have easy access to data without needing OSM knowledge.
+We've developed the first cycling maps platform encompassing all Brazilian cities, leveraging the data and collaborativity of [OpenStreetMap (OSM)](https://www.openstreetmap.org/), the biggest initiative of this kind. We've created an open-source web application, free and accessible from any computer or smartphone, aimed at both the average citizen who wants to know more about their city, and researchers, who will have easy access to data without needing OSM knowledge.
 
-<!-- [Read more](https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/) -->
+
+📕 [Full case study](https://cristianodalbem.com/ciclomapa/)
+
+🎓 [UCB website with more useful links and tutorials on OSM](https://www.uniaodeciclistas.org.br/atuacao/ciclomapa)
 
 
 ## Main features
@@ -86,4 +89,4 @@ Alternatively see the GitHub documentation on [creating a pull request](https://
 ## License
 <!--- If you're not sure which open license to use see https://choosealicense.com/--->
 
-This project uses the following license: **TBD**.
+This project uses the following license: **[to be defined](https://github.com/cmdalbem/ciclomapa/issues/2)**.
