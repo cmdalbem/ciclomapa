@@ -71,7 +71,7 @@ class App extends Component {
 
     saveStateToLocalStorage() {
         requestAnimationFrame( () => {
-            const t0 = performance.now();
+            // const t0 = performance.now();
 
             const state = {
                 area: this.state.area,
@@ -84,8 +84,8 @@ class App extends Component {
             let str = JSON.stringify(state);
             window.localStorage.setItem('appstate', str);
 
-            const t1 = performance.now();
-            console.debug('Saved state to local storage in ' + (t1 - t0) + 'ms.');
+            // const t1 = performance.now();
+            // console.debug('Saved state to local storage in ' + (t1 - t0) + 'ms.');
         });
     }
 
@@ -163,13 +163,18 @@ class App extends Component {
         console.debug('oldData', oldData);
         console.debug('newData', newData);
 
-        const nbrOldFeatures = oldData.features.length;
-        const nbrNewFeatures = newData.features.length;
+        if (!oldData || !oldData.features) {
+            return true;
+        } else {
+            const nbrOldFeatures = oldData.features.length;
+            const nbrNewFeatures = newData.features.length;
+    
+            console.debug('nbrOldFeatures', nbrOldFeatures);
+            console.debug('nbrNewFeatures', nbrNewFeatures);
+    
+            return !(nbrNewFeatures === 0 || nbrNewFeatures < nbrOldFeatures*0.1);
+        }
 
-        console.debug('nbrOldFeatures', nbrOldFeatures);
-        console.debug('nbrNewFeatures', nbrNewFeatures);
-
-        return !(nbrNewFeatures === 0 || nbrNewFeatures < nbrOldFeatures*0.1);
     }
 
     getDataFromOSM() {
@@ -189,7 +194,7 @@ class App extends Component {
                         loading: false
                     });
                 } else {
-                    throw "";
+                    throw new Error('New data is not healthy.');
                 }
             }).catch(e => {
                 this.setState({

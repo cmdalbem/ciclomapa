@@ -3,7 +3,8 @@ import { get, set } from 'idb-keyval';
 import firebase from 'firebase';
 
 import { slugify, sizeOf } from './utils.js'
-import { cleanUpOSMTags, gzipCompress } from './geojsonUtils.js'
+import { gzipCompress } from './geojsonUtils.js'
+import { stringify, parse } from 'zipson';
 
 
 const DISABLE_LOCAL_STORAGE = true;
@@ -20,7 +21,7 @@ const firebaseConfig = {
 
 class Storage {
     db;
-    buffer;
+    dataBuffer;
     
     constructor() {
         firebase.initializeApp({
@@ -64,7 +65,7 @@ class Storage {
         let slug = slugify(name);
 
         if (part === 2) {
-            slug += 2;
+            slug += part;
         }
 
         return this.db.collection('cities').doc(slug).set({
@@ -84,7 +85,11 @@ class Storage {
 
         // Save to Firestore
         try {
-            const jsonStr = JSON.stringify(geoJson);
+            const jsonStr = stringify(geoJson, { fullPrecisionFloats: true }); 
+
+            // Useful for checking in the console the size differences
+            // console.debug('regular stringfy:', JSON.stringify(geoJson));
+            // console.debug('zipson stringfy:', jsonStr);
 
             console.debug(`[Firebase] Saving document ${name}...`, geoJson);
 
@@ -93,7 +98,6 @@ class Storage {
                 .then(() => {
                     console.debug(`[Firebase] Document ${name} written successfully.`);
                 }).catch(error => {
-                    // console.error("[Firebase] Error adding document: ", error);
                     console.debug('[Firestore] Failed saving full data, splitting in 2...')
 
                     const part1 = jsonStr.slice(0, Math.ceil(jsonStr.length/2));
@@ -111,8 +115,7 @@ class Storage {
                         console.debug(`[Firebase] Document ${name}2 written successfully.`);
                     }).catch(error => {
                         console.error("[Firebase] Error adding document: ", error);
-                    });        
-
+                    });
                 });
         } catch (e) {
             console.error(e);
@@ -129,15 +132,20 @@ class Storage {
                 // Decompress gzip
                 // data.geoJson = gzipDecompress(data.geoJson)
 
+                // Split files case
                 if (data.part === 1) {
-                    this.buffer = data.geoJson; 
+                    this.dataBuffer = data.geoJson; 
                     return this.getDataFromDB(slug + '2', resolve, reject);
                 } else if (data.part === 2) {
-                    data.geoJson = this.buffer + data.geoJson;
+                    data.geoJson = this.dataBuffer + data.geoJson;
                 }
-
-                // Massage data
-                data.geoJson = JSON.parse(data.geoJson);
+ 
+                try {
+                    data.geoJson = parse(data.geoJson);
+                } catch(e) {
+                    // For retrocompatibility
+                    data.geoJson = JSON.parse(data.geoJson);
+                }
                 data.updatedAt = data.updatedAt.toDate();
 
                 resolve(data);
