@@ -10,6 +10,7 @@
 } */
 
 #logo img {
+    margin-top: 8px;
     height: 24px;
 }
 
@@ -35,8 +36,13 @@
     padding: 12px 24px;
     
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
+}
+
+.data-tooltip {
+    color: gray;
+    font-size: 10px;
 }
 
 .city {
