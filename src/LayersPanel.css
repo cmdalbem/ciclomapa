@@ -10,17 +10,12 @@
     /* width: 250px; */
     color: white;
 
-    /* top: 84px;
-    right: 10px; */
-    /* background: white; */
-    /* box-shadow: 0 0 10px 2px rgba(0,0,0,.1); */
-
     transition: background .2s ease-out;
 }
 
-.layers-panel:hover {
-    background: rgba(0,0,0,0.6);
-}
+/* .layers-panel:hover {
+    background: rgba(39, 37, 33,0.6);
+} */
 
 .layer-row {
     /* display: flex; */
@@ -59,11 +54,18 @@
 .ant-popover-inner-content {
     background: #333;
     color: white;
+
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
 }
 
 .ant-popover-placement-right > .ant-popover-content > .ant-popover-arrow {
     border-bottom-color: #333;
     border-left-color: #333;
+}
+
+.ant-popover-placement-left > .ant-popover-content > .ant-popover-arrow {
+    border-top-color: #333;
+    border-right-color: #333;
 }
 
 .layer-row .ant-switch {

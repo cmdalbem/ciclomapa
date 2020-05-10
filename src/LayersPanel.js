@@ -67,7 +67,7 @@ class LayersPanel extends Component {
                             <div
                                 className="layer-row"
                                 onClick={this.onChange.bind(this, l.id, !l.isActive)}
-                                style={{ opacity: l.isActive ? 1 : .5 }}
+                                style={{ opacity: l.isActive ? 1 : .3 }}
                             >
                                 <div>
                                     <span className="layer-name">

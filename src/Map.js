@@ -368,13 +368,13 @@ class Map extends Component {
             this.addDynamicLayer(l);
         }); 
 
-        if (!IS_MOBILE) {
-            this.map.on('sourcedata', e => {
-                if (e.isSourceLoaded) {
-                    this.calculateLayersLengths();
-                }
-            });
-        }
+        // if (!IS_MOBILE) {
+        //     this.map.on('sourcedata', e => {
+        //         if (e.isSourceLoaded) {
+        //             this.calculateLayersLengths();
+        //         }
+        //     });
+        // }
 
         // this.map.addSource('some id', {
         //     type: 'geojson',

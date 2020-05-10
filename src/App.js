@@ -4,6 +4,8 @@ import { withRouter } from "react-router-dom";
 import { notification } from 'antd';
 import "antd/dist/antd.css";
 
+import turfLength from '@turf/length';
+
 import Map from './Map.js'
 import Spinner from './Spinner.js'
 import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
@@ -32,7 +34,6 @@ class App extends Component {
         this.onLayersChange = this.onLayersChange.bind(this);
         this.downloadData = this.downloadData.bind(this);
         this.forceUpdate = this.forceUpdate.bind(this);
-        this.updateLengths = this.updateLengths.bind(this);
         this.onSpinnerClose = this.onSpinnerClose.bind(this);
 
         const prev = this.getStateFromLocalStorage();
@@ -102,12 +103,6 @@ class App extends Component {
 
             let str = JSON.stringify(state);
             window.localStorage.setItem('appstate', str);
-        });
-    }
-
-    updateLengths(newLengths) {
-        this.setState({
-            lengths: newLengths
         });
     }
 
@@ -274,9 +269,9 @@ class App extends Component {
     }
 
     downloadData() {
-        computeTypologies(this.state.geoJson, this.state.layers);
-        cleanUpOSMTags(this.state.geoJson);
-        downloadObjectAsJson(this.state.geoJson, `ciclomapa-${this.state.area}`);
+        const geoJsonWithTypes = computeTypologies(this.state.geoJson, this.state.layers);
+        cleanUpOSMTags(geoJsonWithTypes);
+        downloadObjectAsJson(geoJsonWithTypes, `ciclomapa-${this.state.area}`);
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -307,14 +302,13 @@ class App extends Component {
                     description:
                         'Não há dados cicloviários para esta cidade.',
                 });
-
-                // this.setState({
-                //     isDownloadUnavailable: true
-                // });
             } else {
-                // this.setState({
-                //     isDownloadUnavailable: false
-                // });
+                const geoJsonWithTypes = computeTypologies(this.state.geoJson, this.state.layers);
+                const lengths = this.calculateLayersLengths(geoJsonWithTypes);
+                
+                this.setState({
+                    lengths: lengths
+                });
             }
         }
         
@@ -329,6 +323,22 @@ class App extends Component {
                     search: params
                 })
         }
+    }
+
+    calculateLayersLengths() {
+        let lengths = {};
+        this.state.layers.forEach(l => {
+            const features = this.state.geoJson.features.filter(i => i.properties.type === l.name);
+            
+            let length = 0;
+            features.forEach(f => {
+                length += turfLength(f);
+            })
+
+            lengths[l.id] = length;
+        });
+
+        return lengths;
     }
 
     onRouteChanged() {

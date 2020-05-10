@@ -87,4 +87,6 @@ export function computeTypologies(data, layers) {
             });
         }
     });
+
+    return data;
 }
