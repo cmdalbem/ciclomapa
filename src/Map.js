@@ -3,14 +3,12 @@ import React, { Component } from 'react';
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// import turfLength from '@turf/length';
-
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
-import { MAPBOX_ACCESS_TOKEN, IS_MOBILE } from './constants.js'
+import { MAPBOX_ACCESS_TOKEN, IS_MOBILE, DEFAULT_ZOOM } from './constants.js'
 
 import './Map.css'
 
@@ -24,6 +22,7 @@ class Map extends Component {
     searchBar;
     hoverPopup;
     selectedCycleway;
+    hoveredCycleway;
 
     constructor(props) {
         super(props);
@@ -41,22 +40,15 @@ class Map extends Component {
 
         let html = '';
 
-        if (props.name) {
-            html += `
+        html += `
             <h2 style="margin-top: 1em; font-size: 22px;">
-                ${props.name}
+                ${props.name ? props.name : '<i style="color: gray;">Sem nome</i>'}
             </h2>`;
-        } else {
-            html += '<i>Sem nome</i>';
-        }
 
         html += `
             <div style="font-size: 14px">
-                <div>
-                    Tipo: <b>${layer.name}</b>
-                </div>
-                <div>
-                    ${layer.description}
+                <div class="pill" style="background-color: ${layer.style.lineColor}">
+                    ${layer.name}
                 </div>
             </div>`;
 
@@ -69,17 +61,17 @@ class Map extends Component {
         // html += prettyProps;
 
         html += `
-            <br>
-            <hr style="border: 0; border-top: 1px solid lightgray;">
-            Acha que este dado pode ser melhorado?
-            <br>
-            <a
-                target="_BLANK"
-                rel="noopener"
-                href="https://www.openstreetmap.org/${props.id}"
-            >
-                Editar no OSM →
-            </a>
+            <div class="footer">
+                Acha que este dado pode ser melhorado?
+                <br>
+                <a
+                    target="_BLANK"
+                    rel="noopener"
+                    href="https://www.openstreetmap.org/${props.id}"
+                >
+                    Editar no OSM →
+                </a>
+            </div>
     `;
 
         this.popup.setLngLat(coords)
@@ -146,12 +138,13 @@ class Map extends Component {
                         this.searchBar.setBbox(place.bbox);
                     }
 
-                    this.map.once('moveend', () => {
-                        this.map.setMaxBounds([
-                            [place.bbox[0]-0.15, place.bbox[1]-0.15], // Southwest coordinates
-                            [place.bbox[2]+0.15, place.bbox[3]+0.15]  // Northeast coordinates
-                        ]); 
-                    });
+                    // Disabled temporarily because it had a bug that it changed the map center
+                    // this.map.once('moveend', () => {
+                    //     this.map.setMaxBounds([
+                    //         [place.bbox[0]-0.15, place.bbox[1]-0.15], // Southwest coordinates
+                    //         [place.bbox[2]+0.15, place.bbox[3]+0.15]  // Northeast coordinates
+                    //     ]); 
+                    // });
                     
                     this.props.onMapMoved({area: place.place_name});
                 }
@@ -205,14 +198,22 @@ class Map extends Component {
                 "source": "osm",
                 "name": l.name,
                 "description": l.description,
+                "layout": {
+                    "line-join": "round",
+                    "line-cap": "round"
+                },
                 "paint": {
                     "line-color": l.style.borderColor,
                     "line-width": [
                         "interpolate",
                             ["exponential", 1.5],
-                            ["zoom"],
+                            ["zoom"], 
                             10, 2,
-                            18, l.style.lineWidth*3
+                            18, [ 'case',
+                                ['boolean', ['feature-state', 'hover'], false],
+                                l.style.lineWidth*6,
+                                l.style.lineWidth*3
+                            ]
                     ],
                     ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
@@ -226,6 +227,10 @@ class Map extends Component {
                 "source": "osm",
                 "name": l.name,
                 "description": l.description,
+                "layout": {
+                    "line-join": "round",
+                    "line-cap": "round"
+                },
                 "paint": {
                     "line-color": l.style.lineColor,
                     "line-width": [
@@ -233,7 +238,11 @@ class Map extends Component {
                             ["exponential", 1.5],
                             ["zoom"],
                             10, 2,
-                            18, (l.style.lineWidth - l.style.borderWidth)*3
+                            18, [ 'case',
+                                ['boolean', ['feature-state', 'hover'], false],
+                                (l.style.lineWidth - l.style.borderWidth)*6,
+                                (l.style.lineWidth - l.style.borderWidth)*3
+                            ]
                     ],
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
@@ -246,6 +255,10 @@ class Map extends Component {
                 "source": "osm",
                 "name": l.name,
                 "description": l.description,
+                "layout": {
+                    "line-join": "round",
+                    "line-cap": "round"
+                },
                 "paint": {
                     "line-color": l.style.lineColor,
                     "line-width": [
@@ -253,7 +266,11 @@ class Map extends Component {
                             ["exponential", 1.5],
                             ["zoom"],
                             10, 2,
-                            18, l.style.lineWidth*3
+                            18, [ 'case',
+                                ['boolean', ['feature-state', 'hover'], false],
+                                l.style.lineWidth*6,
+                                l.style.lineWidth*3
+                            ]
                     ],
                     ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
@@ -274,11 +291,11 @@ class Map extends Component {
                 this.map.getCanvas().style.cursor = 'pointer';
 
                 // Hover style
-                // if (hoveredCycleway) {
-                //     this.map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
-                // }
-                // hoveredCycleway = e.features[0].id;
-                // this.map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: true });
+                if (this.hoveredCycleway) {
+                    this.map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
+                }
+                this.hoveredCycleway = e.features[0].id;
+                this.map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: true });
 
                 // this.showHoverPopup(e);
             }
@@ -286,22 +303,22 @@ class Map extends Component {
 
         this.map.on("mouseleave", interactiveId, e => {
             // Hover style
-            // if (hoveredCycleway && !selectedCycleway) {
-                // this.map.setFeatureState({ source: 'osm', id: hoveredCycleway }, { highlight: false });
+            if (this.hoveredCycleway && !this.selectedCycleway) {
+                this.map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
 
                 // Cursor cursor
                 this.map.getCanvas().style.cursor = '';
-            // }
-            // hoveredCycleway = null;
+            }
+            this.hoveredCycleway = null;
         });
 
         this.map.on("click", interactiveId, e => {
             if (e.features.length > 0) {
                 if (this.selectedCycleway) {
-                    this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { highlight: false });
+                    this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: false });
                 }
                 this.selectedCycleway = e.features[0].id;
-                this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { highlight: true });
+                this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: true });
 
                 this.showPopup(e);
             }
@@ -331,27 +348,6 @@ class Map extends Component {
         this.props.layers.slice().reverse().forEach(l => {
             this.addDynamicLayer(l);
         }); 
-
-        // Temporarily disable this feature
-        // if (!IS_MOBILE) {
-        //     this.map.on('sourcedata', e => {
-        //         if (e.isSourceLoaded) {
-        //             let lengths = {};
-        //             this.props.layers.forEach( l => {
-        //                 const features = this.map.querySourceFeatures('osm', { filter: this.getMapboxFilterForLayer(l) });
-                        
-        //                 let length = 0;
-        //                 features.forEach(f => {
-        //                     length += turfLength(f);
-        //                 })
-    
-        //                 lengths[l.id] = length;
-        //             }); 
-    
-        //             this.props.updateLengths(lengths);
-        //         }
-        //     });
-        // }
 
         // this.map.addSource('some id', {
         //     type: 'geojson',
@@ -441,7 +437,10 @@ class Map extends Component {
                 flyToPos = result.result.center;
             }
             this.map.flyTo({
-                center: flyToPos
+                center: flyToPos,
+                zoom: DEFAULT_ZOOM,
+                speed: 2,
+                minZoom: 6
             });
 
             this.reverseGeocode(result.result.center);
@@ -496,7 +495,7 @@ class Map extends Component {
         });
         this.popup.on('close', e => {
             if (this.selectedCycleway) {
-                this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { highlight: false });
+                this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: false });
             }
             this.selectedCycleway = null;
         });

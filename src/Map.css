@@ -134,6 +134,43 @@ body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
   opacity: .2;
 }
 
+.mapboxgl-popup-content .footer {
+  border-top: 1px solid #555;
+  padding-top: 0.5em;
+
+  margin-top: 2em;
+  color: gray;
+}
+
+.mapboxgl-popup-content {
+    background: #333;
+    color: white;
+
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.mapboxgl-popup-content .pill {
+  display: inline-block;
+
+  padding: .25em .5em;
+  background: gray;
+  border-radius: 16px;
+
+  margin-top: 6px;
+  margin-bottom: 6px;
+
+  color: black;
+  font-weight: bold;
+}
+
+.mapboxgl-popup-content h2 {
+    color: white;
+}
+
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+    border-top-color: #333;
+}
+
 
 /* Mobile */
 
