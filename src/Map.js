@@ -215,7 +215,7 @@ class Map extends Component {
                                 l.style.lineWidth*3
                             ]
                     ],
-                    ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
+                    ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [.2, 2.5]})
                 },
                 "filter": filters,
             }, 'road-label-small');
@@ -244,7 +244,7 @@ class Map extends Component {
                                 (l.style.lineWidth - l.style.borderWidth)*3
                             ]
                     ],
-                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
+                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [.2, 2.5]})
                 },
                 "filter": filters,
             }, 'road-label-small');
@@ -272,7 +272,7 @@ class Map extends Component {
                                 l.style.lineWidth*3
                             ]
                     ],
-                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
+                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [.2, 2.5]})
                 },
                 "filter": filters,
             }, 'road-label-small');
