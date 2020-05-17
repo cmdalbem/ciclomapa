@@ -48,7 +48,7 @@ class App extends Component {
             geoJson: null,
             loading: false,
             mapStyle: 'mapbox://styles/cmdalbem/ck14cy14g1vb81cp8hprnh4nx',
-            layers: OSMController.getLayers(),
+            layers: this.loadLayers(prev.layersStates),
             lengths: {}
         };
 
@@ -63,6 +63,21 @@ class App extends Component {
         });
     }
 
+    loadLayers(layersStates) {
+        let layers = OSMController.getLayers();
+
+        // Merge with locally saved state
+        if (layersStates && Object.keys(layersStates).length > 0) {
+            layers.forEach(l => {
+                if (layersStates[l.id]) {
+                    l.isActive = layersStates[l.id];
+                }
+            });
+        }
+
+        return layers;
+    }
+
     getStateFromLocalStorage() {
         const savedState = JSON.parse(window.localStorage.getItem('appstate'));
         console.debug('Retrived saved state from local storage:', savedState);
@@ -71,7 +86,10 @@ class App extends Component {
 
     saveStateToLocalStorage() {
         requestAnimationFrame( () => {
-            // const t0 = performance.now();
+            let layersStates = {};
+            this.state.layers.forEach(l => {
+                layersStates[l.id] = l.isActive;
+            });
 
             const state = {
                 area: this.state.area,
@@ -79,13 +97,11 @@ class App extends Component {
                 zoom: this.state.zoom,
                 lng: this.state.lng,
                 lat: this.state.lat,
+                layersStates: layersStates
             }
 
             let str = JSON.stringify(state);
             window.localStorage.setItem('appstate', str);
-
-            // const t1 = performance.now();
-            // console.debug('Saved state to local storage in ' + (t1 - t0) + 'ms.');
         });
     }
 
