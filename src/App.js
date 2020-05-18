@@ -48,7 +48,7 @@ class App extends Component {
             geoJson: null,
             loading: false,
             mapStyle: 'mapbox://styles/cmdalbem/ck14cy14g1vb81cp8hprnh4nx',
-            layers: this.loadLayers(prev.layersStates),
+            layers: this.loadLayers(prev && prev.layersStates),
             lengths: {}
         };
 
