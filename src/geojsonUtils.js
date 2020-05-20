@@ -1,6 +1,8 @@
 import pako from 'pako';
 // import { gzip } from 'zlib';
 
+import turfLength from '@turf/length';
+
 
 export function gzipDecompress(data) {
     return JSON.parse(pako.inflate(data), { to: 'string' });
@@ -89,4 +91,20 @@ export function computeTypologies(data, layers) {
     });
 
     return data;
+}
+
+export function calculateLayersLengths(geoJson, layers) {
+    let lengths = {};
+    layers.forEach(l => {
+        const features = geoJson.features.filter(i => i.properties.type === l.name);
+        
+        let length = 0;
+        features.forEach(f => {
+            length += turfLength(f);
+        })
+
+        lengths[l.id] = length;
+    });
+
+    return lengths;
 }

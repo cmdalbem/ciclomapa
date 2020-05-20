@@ -4,8 +4,6 @@ import { withRouter } from "react-router-dom";
 import { notification } from 'antd';
 import "antd/dist/antd.css";
 
-import turfLength from '@turf/length';
-
 import Map from './Map.js'
 import Spinner from './Spinner.js'
 import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
@@ -16,7 +14,7 @@ import OSMController from './OSMController.js'
 import Storage from './Storage.js'
 import { DEFAULT_LAT, DEFAULT_LNG, DEFAULT_ZOOM, OSM_DATA_MAX_AGE_MS } from './constants.js'
 import { downloadObjectAsJson } from './utils.js'
-import { computeTypologies, cleanUpOSMTags } from './geojsonUtils.js'
+import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './geojsonUtils.js'
 
 import './App.css';
 
@@ -49,8 +47,7 @@ class App extends Component {
             geoJson: null,
             loading: false,
             mapStyle: 'mapbox://styles/cmdalbem/ck14cy14g1vb81cp8hprnh4nx',
-            layers: this.loadLayers(prev && prev.layersStates),
-            lengths: {}
+            layers: this.loadLayers(prev && prev.layersStates)
         };
 
         this.storage = new Storage();
@@ -202,15 +199,18 @@ class App extends Component {
                 if (forceUpdate && !this.isDataHealthy(this.state.geoJson, newData.geoJson)) {
                     throw new Error('New data is not healthy.');
                 } else {
-                    const now = new Date();
-                    this.storage.save(areaName, newData.geoJson, now);
+                    const geoJsonWithTypes = computeTypologies(this.state.geoJson, this.state.layers);
+                    const lengths = calculateLayersLengths(geoJsonWithTypes, this.state.layers);
+
+                    this.storage.save(areaName, newData.geoJson, lengths);
     
                     // this.geoJsonDiff(this.state.geoJson, newData.geoJson);
     
                     this.setState({
                         geoJson: newData.geoJson,
-                        dataUpdatedAt: now,
-                        loading: false
+                        dataUpdatedAt: new Date(),
+                        loading: false,
+                        lengths: lengths
                     });
                 }
             }).catch(e => {
@@ -233,6 +233,7 @@ class App extends Component {
                             console.debug('Database data is fresh.');
                             this.setState({
                                 geoJson: data.geoJson,
+                                lengths: data.lengths,
                                 dataUpdatedAt: new Date(data.updatedAt)
                             });
                         } else { 
@@ -303,12 +304,15 @@ class App extends Component {
                         'Não há dados cicloviários para esta cidade.',
                 });
             } else {
-                const geoJsonWithTypes = computeTypologies(this.state.geoJson, this.state.layers);
-                const lengths = this.calculateLayersLengths(geoJsonWithTypes);
-                
-                this.setState({
-                    lengths: lengths
-                });
+                // Retrocompatibility case where lengths weren't save to database
+                if (!this.state.lengths) {
+                    const geoJsonWithTypes = computeTypologies(this.state.geoJson, this.state.layers);
+                    const lengths = calculateLayersLengths(geoJsonWithTypes, this.state.layers);
+                    
+                    this.setState({
+                        lengths: lengths
+                    });
+                }
             }
         }
         
@@ -323,22 +327,6 @@ class App extends Component {
                     search: params
                 })
         }
-    }
-
-    calculateLayersLengths() {
-        let lengths = {};
-        this.state.layers.forEach(l => {
-            const features = this.state.geoJson.features.filter(i => i.properties.type === l.name);
-            
-            let length = 0;
-            features.forEach(f => {
-                length += turfLength(f);
-            })
-
-            lengths[l.id] = length;
-        });
-
-        return lengths;
     }
 
     onRouteChanged() {

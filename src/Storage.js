@@ -61,7 +61,8 @@ class Storage {
         return compressed;
     }
 
-    saveToFirestore(name, jsonStr, updatedAt, part) {
+    saveToFirestore(name, jsonStr, lengths, part) {
+        const now = new Date();
         let slug = slugify(name);
 
         if (part === 2) {
@@ -71,16 +72,19 @@ class Storage {
         return this.db.collection('cities').doc(slug).set({
             name: name,
             geoJson: jsonStr,
-            updatedAt: updatedAt,
+            updatedAt: now,
+            lengths: lengths,
             part: part || ''
         });
     }
 
-    save(name, geoJson, updatedAt) {
+    save(name, geoJson, lengths) {
+        const now = new Date();
+
         // Save to Local Storage
         set(name, {
             geoJson: geoJson,
-            updatedAt: updatedAt
+            updatedAt: now
         });
 
         // Save to Firestore
@@ -94,7 +98,7 @@ class Storage {
             console.debug(`[Firebase] Saving document ${name}...`, geoJson);
 
             // geoJson = this.compressJson(geoJson);
-            this.saveToFirestore(name, jsonStr, updatedAt)
+            this.saveToFirestore(name, jsonStr, lengths)
                 .then(() => {
                     console.debug(`[Firebase] Document ${name} written successfully.`);
                 }).catch(error => {
@@ -103,14 +107,14 @@ class Storage {
                     const part1 = jsonStr.slice(0, Math.ceil(jsonStr.length/2));
                     const part2 = jsonStr.slice(Math.ceil(jsonStr.length/2));
 
-                    this.saveToFirestore(name, part1, updatedAt, 1) 
+                    this.saveToFirestore(name, part1, lengths, 1) 
                     .then(() => {
                         console.debug(`[Firebase] Document ${name}1 written successfully.`);
                     }).catch(error => {
                         console.error("[Firebase] Error adding document: ", error);
                     });        
  
-                    this.saveToFirestore(name, part2, updatedAt, 2)
+                    this.saveToFirestore(name, part2, lengths, 2)
                     .then(() => {
                         console.debug(`[Firebase] Document ${name}2 written successfully.`);
                     }).catch(error => {
