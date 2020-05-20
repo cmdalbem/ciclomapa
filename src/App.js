@@ -193,14 +193,14 @@ class App extends Component {
 
     }
 
-    getDataFromOSM() {
+    getDataFromOSM(areaName = this.state.area) {
         this.setState({ loading: true });
 
-        return OSMController.getData({ area: this.state.area })
+        return OSMController.getData({ area: areaName })
             .then(newData => {
                 if (this.isDataHealthy(this.state.geoJson, newData.geoJson)) {
                     const now = new Date();
-                    this.storage.save(this.state.area, newData.geoJson, now);
+                    this.storage.save(areaName, newData.geoJson, now);
     
                     // this.geoJsonDiff(this.state.geoJson, newData.geoJson);
     
@@ -213,6 +213,7 @@ class App extends Component {
                     throw new Error('New data is not healthy.');
                 }
             }).catch(e => {
+                console.error(e);
                 this.setState({
                     error: true
                 });
