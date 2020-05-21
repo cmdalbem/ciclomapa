@@ -193,12 +193,20 @@ class App extends Component {
 
     }
 
-    getDataFromOSM(areaName = this.state.area) {
+    getDataFromOSM(options = {}) {
+        const {areaName = this.state.area, forceUpdate} = options;
+
+        console.log('options', options);
+        console.log('areaName', areaName);
+        console.log('forceUpdate', forceUpdate);
+
         this.setState({ loading: true });
 
         return OSMController.getData({ area: areaName })
             .then(newData => {
-                if (this.isDataHealthy(this.state.geoJson, newData.geoJson)) {
+                if (forceUpdate && !this.isDataHealthy(this.state.geoJson, newData.geoJson)) {
+                    throw new Error('New data is not healthy.');
+                } else {
                     const now = new Date();
                     this.storage.save(areaName, newData.geoJson, now);
     
@@ -209,8 +217,6 @@ class App extends Component {
                         dataUpdatedAt: now,
                         loading: false
                     });
-                } else {
-                    throw new Error('New data is not healthy.');
                 }
             }).catch(e => {
                 console.error(e);
@@ -220,13 +226,13 @@ class App extends Component {
             });
     }
 
-    updateData(force) {
+    updateData(forceUpdate) {
         if (this.state.area) {
-            if (force) {
-                this.getDataFromOSM();
+            if (forceUpdate) {
+                this.getDataFromOSM({forceUpdate: true});
             } else {
                 // Try to retrieve previously saved data for this area
-                this.storage.load(this.state.area, force)
+                this.storage.load(this.state.area)
                     .then(data => {
                         if (data) {
                             console.debug('Database data is fresh.');
