@@ -196,22 +196,23 @@ class App extends Component {
 
         return OSMController.getData({ area: areaName })
             .then(newData => {
+                // this.geoJsonDiff(this.state.geoJson, newData.geoJson);
+
                 if (forceUpdate && !this.isDataHealthy(this.state.geoJson, newData.geoJson)) {
                     throw new Error('New data is not healthy.');
                 } else {
                     const geoJsonWithTypes = computeTypologies(this.state.geoJson, this.state.layers);
                     const lengths = calculateLayersLengths(geoJsonWithTypes, this.state.layers);
 
-                    this.storage.save(areaName, newData.geoJson, lengths);
-    
-                    // this.geoJsonDiff(this.state.geoJson, newData.geoJson);
-    
-                    this.setState({
-                        geoJson: newData.geoJson,
-                        dataUpdatedAt: new Date(),
-                        loading: false,
-                        lengths: lengths
-                    });
+                    this.storage.save(areaName, newData.geoJson, lengths)
+                        .then(() => {
+                            this.setState({
+                                geoJson: newData.geoJson,
+                                dataUpdatedAt: new Date(),
+                                loading: false,
+                                lengths: lengths
+                            });
+                        });
                 }
             }).catch(e => {
                 console.error(e);
