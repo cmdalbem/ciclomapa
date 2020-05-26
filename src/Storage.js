@@ -52,13 +52,24 @@ class Storage {
     getAllCitiesStats() {
         return new Promise(resolve => {
             this.db.collection("stats")
-            .where("lengths.ciclovia", ">", 0)    
+            .where("lengths.ciclovia", ">=", 0)    
             .get()
                 .then((querySnapshot) => {
                     console.debug('[Firestore] Documents found:');
-                    querySnapshot.forEach((doc) => {
-                        console.debug('• ' + doc.name, ' => ', doc.lengths);
+
+                    let docs = [];
+                    querySnapshot.forEach(doc => {
+                        let d = doc.data().lengths;
+                        
+                        d.total = d['ciclovia'];
+                        d.total += d['ciclorrota'];
+                        d.total += d['ciclofaixa'];
+                        d.total += d['calcada-compartilhada'];
+                        
+                        docs[doc.id] = d;
                     });
+                    console.log(docs);
+                    console.table(docs);
         
                     resolve(querySnapshot);
             });

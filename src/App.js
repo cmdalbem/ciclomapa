@@ -188,10 +188,6 @@ class App extends Component {
     getDataFromOSM(options = {}) {
         const {areaName = this.state.area, forceUpdate} = options;
 
-        console.log('options', options);
-        console.log('areaName', areaName);
-        console.log('forceUpdate', forceUpdate);
-
         this.setState({ loading: true });
 
         return OSMController.getData({ area: areaName })

@@ -32,6 +32,10 @@ export function cleanUpOSMTags(data) {
 export function computeTypologies(data, layers) {
     const DEBUG = false;
 
+    if (!data || !data.features || data.features.length === 0) {
+        return data;
+    }
+
     data.features.forEach(feature => {
         if (DEBUG) {
             console.debug(`${feature.properties.id} (${feature.properties.name})`);
@@ -95,8 +99,12 @@ export function computeTypologies(data, layers) {
 
 export function calculateLayersLengths(geoJson, layers) {
     let lengths = {};
+    
     layers.forEach(l => {
-        const features = geoJson.features.filter(i => i.properties.type === l.name);
+        const features = geoJson && geoJson.features ? 
+            geoJson.features.filter(i => i.properties.type === l.name)
+            :
+            [];
         
         let length = 0;
         features.forEach(f => {
