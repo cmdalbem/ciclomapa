@@ -87,6 +87,7 @@ Alternatively see the GitHub documentation on [creating a pull request](https://
 
 
 ## License
-The source code is available under a [GPLv2 license](https://github.com/cmdalbem/ciclomapa/blob/master/LICENSE).
+
+The source code is available under the [GPL-3.0 License](https://github.com/cmdalbem/ciclomapa/blob/master/LICENSE.md).
 
 Data is directly imported from [OpenStreetMap®](https://www.openstreetmap.org/) and thus is open data, licensed under the [Open Data Commons Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/) by the [OpenStreetMap Foundation (OSMF)](https://osmfoundation.org/).
