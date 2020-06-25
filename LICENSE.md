@@ -630,8 +630,8 @@ attach them to the start of each source file to most effectively state
 the exclusion of warranty; and each file should have at least the
 "copyright" line and a pointer to where the full notice is found.
 
-        <one line to give the program's name and a brief idea of what it does.>
-        Copyright (C) <year>  <name of author>
+        CicloMapa - Web app of bike maps in brazilian cities.
+        Copyright (C) 2020  Cristiano Dalbem, Bernardo Serra (ITDP) and Felipe Alves (UCB)
 
         This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -652,7 +652,7 @@ mail.
 If the program does terminal interaction, make it output a short
 notice like this when it starts in an interactive mode:
 
-        <program>  Copyright (C) <year>  <name of author>
+        CicloMapa  Copyright (C) 2020  Cristiano Dalbem, Bernardo Serra (ITDP) and Felipe Alves (UCB)
         This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
         This is free software, and you are welcome to redistribute it
         under certain conditions; type `show c' for details.
