@@ -2,17 +2,17 @@ body {
     margin: 0;
     padding: 0;
 
-    font-family: 'Open Sans', 'Roboto', sans-serif;
+    font-family: 'IBM Plex Sans', sans-serif;
 
     background: #282622;
 }
 
-@font-face { 
+/* @font-face { 
     font-family: 'Aku & Kamu';
     font-style: normal;
     font-weight: normal;
     src: local('Aku & Kamu'), url('AKU&KAMU.woff') format('woff');
-}
+} */
 
 #gradient-backdrop {
     position: fixed;

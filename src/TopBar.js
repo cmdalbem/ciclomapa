@@ -86,8 +86,9 @@ class TopBar extends Component {
         
         return (
             <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
-                <div id="logo">
-                    <img src={logo} alt="CicloMapa"></img>
+                <div id="logo" className="logo">
+                    {/* <img src={logo} alt="CicloMapa"></img> */}
+                    Ciclomapa
                 </div>
 
                 <div className="city-picker">

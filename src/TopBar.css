@@ -1,13 +1,12 @@
-/* .logo {
-    font-weight: 900;
-    font-size: 21px;
+.logo {
+    font-size: 32px;
     text-transform: uppercase;
-    font-family: 'Aku & Kamu';
-    letter-spacing: 0.15em;
-    color: #b4f9d0;
-    box-shadow: 0 5px 0 #b4f9d0;
-    margin-right: -0.15em;
-} */
+    /* font-family: 'Aku & Kamu'; */
+    font-family: 'Teko', sans-serif;
+    /* letter-spacing: 0.1em; */
+    color: #B6F9D1;
+    /* box-shadow: 0 5px 0 #b4f9d0; */
+}
 
 #logo img {
     margin-top: 8px;
