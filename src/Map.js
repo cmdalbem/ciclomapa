@@ -2,64 +2,21 @@ import React, { Component } from 'react';
 
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css';
-
-import { Modal } from 'antd';
-
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
-
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
+import { EditOutlined } from '@ant-design/icons';
+import { Button } from 'antd';
+
 import { MAPBOX_ACCESS_TOKEN, IS_MOBILE, DEFAULT_ZOOM } from './constants.js'
-
-
 import AirtableDatabase from './AirtableDatabase.js'
+import CommentModal from './CommentModal.js'
 
 import './Map.css'
 
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
-
-// class MyCustomControl {
-//     onAdd(map) {
-//         this.map = map;
-//         this.container = document.createElement('div');
-//         this.container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
-        
-//         const button = document.createElement('button');
-//         button.className = 'mapboxgl-ctrl-geolocate';
-//         button.style.color = 'black';
-//         button.style.fontWeight = 'bold';
-//         button.textContent = '+';
-
-//         button.addEventListener('click', this.onClick);
-
-//         this.container.appendChild(button); 
-
-//         return this.container;
-//     }
-    
-//     onRemove() {
-//         this.container.parentNode.removeChild(this.container);
-//         this.map = undefined;
-//     }
-
-//     onClick() {
-//         var marker = new mapboxgl.Marker({
-//             draggable: true
-//         })
-//             .setLngLat([0, 0])
-//             .addTo(this.map);
-
-//         function onDragEnd() {
-//             var lngLat = marker.getLngLat();
-//             // coordinates.style.display = 'block';
-//             // coordinates.innerHTML = 'Longitude: ' + lngLat.lng + '<br />Latitude: ' + lngLat.lat;
-//         }
-
-//         marker.on('dragend', onDragEnd);
-//     }
-// }
 
 class Map extends Component {
     map;
@@ -71,17 +28,44 @@ class Map extends Component {
 
     airtableDatabase;
     comments;
-    commentPopup;
+    // commentPopup;
 
     constructor(props) {
         super(props);
 
         this.onMapMoved = this.onMapMoved.bind(this);
+
         this.newComment = this.newComment.bind(this);
         this.loadComments = this.loadComments.bind(this);
+        this.afterCommentCreate = this.afterCommentCreate.bind(this);
+        this.showCommentModal = this.showCommentModal.bind(this);
+        this.hideCommentModal = this.hideCommentModal.bind(this);
+        document.addEventListener('newComment', this.newComment);
 
         this.airtableDatabase = new AirtableDatabase();
+
+        this.state = {
+            commentModal: false
+        };
     }
+
+    showCommentModal() {
+        this.setState({
+            commentModal: true,
+        });
+    };
+
+    hideCommentModal() {
+        this.setState({
+            commentModal: false,
+        });
+        this.newCommentMarker.remove();
+    };
+
+    afterCommentCreate() {
+        this.hideCommentModal();
+        this.loadComments();
+    };
 
     showCyclewayPopup(e) {
         const coords = e.lngLat;
@@ -417,7 +401,9 @@ class Map extends Component {
     async loadComments() {
         if (this.comments) {
             this.comments.forEach(c => {
-                c.marker.remove();
+                if (c.marker) {
+                    c.marker.remove();
+                }
             })
             this.comments = [];
         }
@@ -426,23 +412,26 @@ class Map extends Component {
 
         console.debug(this.comments);
 
-        this.comments.forEach(c => {
-            if (c.fields && c.fields.latlong) {
-                const latlong = c.fields.latlong.split(',').reverse();
+        if (this.comments) {
+            this.comments.forEach(c => {
+                if (c.fields && c.fields.latlong) {
+                    const latlong = c.fields.latlong.split(',').reverse();
+    
+                    let markerEl = document.createElement('div');
+                    let icon = document.createElement('div');
+                    icon.className = 'comment-marker-icon';
+                    markerEl.appendChild(icon);
+    
+                    // let m = new mapboxgl.Marker()
+                    c.marker = new mapboxgl.Marker(markerEl)
+                        .setLngLat(latlong)
+                        // .setPopup(this.commentPopup)
+                        .setPopup(this.createCommentPopup(c))
+                        .addTo(this.map);
+                }
+            });
+        }
 
-                let markerEl = document.createElement('div');
-                let icon = document.createElement('div');
-                icon.className = 'comment-marker-icon';
-                markerEl.appendChild(icon);
-
-                // let m = new mapboxgl.Marker()
-                c.marker = new mapboxgl.Marker(markerEl)
-                    .setLngLat(latlong)
-                    // .setPopup(this.commentPopup)
-                    .setPopup(this.createCommentPopup(c))
-                    .addTo(this.map);
-            }
-        });
     }
 
     initLayers() {
@@ -624,9 +613,9 @@ class Map extends Component {
             this.selectedCycleway = null;
         });
 
-        this.commentPopup = new mapboxgl.Popup({
-            closeOnClick: false
-        });
+        // this.commentPopup = new mapboxgl.Popup({
+        //     closeOnClick: false
+        // });
 
         this.hoverPopup = new mapboxgl.Popup({
             closeButton: false,
@@ -637,50 +626,32 @@ class Map extends Component {
         this.reverseGeocode(this.props.center);
     }
 
-    newComment() {
-        let marker = new mapboxgl.Marker({
+    async newComment() {
+        this.newCommentMarker = new mapboxgl.Marker({
                 draggable: true
             })
             .setLngLat(this.map.getCenter())
             .addTo(this.map);
 
-        marker.on('dragend', () => {
-            const coords = marker.getLngLat();
-            const location = encodeURIComponent(this.props.location);
-            window.open(`
-                https://airtable.com/shrd9iVBNJEy5FMxO?prefill_latlong=${coords.lat},${coords.lng}&prefill_location=${location}`)
-
-            marker.remove();
-            
-            Modal.confirm({
-                title: 'Novo comentário',
-                content: (
-                    // <iframe className="airtable-embed airtable-dynamic-height" src={`https://airtable.com/embed/shrd9iVBNJEy5FMxO?backgroundColor=green&prefill_latlong=${marker.lat},${marker.lng}&prefill_location=Rio+de+Janeiro,+RJ`} style={{ background: 'transparent', border: '1px solid #ccc' }} />
-                    <div>
-                        <p>
-                            Você será redirecionado para a página de formulário. Quando estiver pronto, clique em OK para recarregar a página.
-                        </p>
-                    </div>
-                ),
-                onOk() {
-                    // this.loadComments();
-                    window.location.reload();
-                },
-            });
+        this.newCommentMarker.on('dragend', () => {
+            this.showCommentModal();
         });
     }
 
     render() {
         return (
             <>
-                <div className="mapboxgl-ctrl mapboxgl-ctrl-group new-comment-button">
-                    <button onClick={this.newComment}>
-                        +
-                    </button>
-                </div>
-
                 {/* Thanks https://blog.mapbox.com/mapbox-gl-js-react-764da6cc074a */}
                 <div ref={el => this.mapContainer = el}></div>
+
+                <CommentModal
+                    visible={this.state.commentModal}
+                    coords={this.newCommentMarker && this.newCommentMarker.getLngLat()}
+                    location={this.props.location}
+                    airtableDatabase={this.airtableDatabase}
+                    afterCreate={this.afterCommentCreate}
+                    onCancel={this.hideCommentModal}
+                />
             </>
         )
     }

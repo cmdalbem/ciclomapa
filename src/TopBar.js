@@ -2,9 +2,20 @@ import React, { Component } from 'react';
 
 import { TOPBAR_HEIGHT, IS_MOBILE } from './constants'
 
-import { DownloadOutlined, InfoCircleOutlined, RedoOutlined, CaretDownFilled} from '@ant-design/icons';
+import {
+    DownloadOutlined,
+    InfoCircleOutlined,
+    RedoOutlined,
+    CaretDownFilled,
+    EditOutlined,
+} from '@ant-design/icons';
 
-import { Space, Modal, Button, Popover } from 'antd';
+import {
+    Space,
+    Modal,
+    Button,
+    Popover,
+} from 'antd';
 
 import { timeSince } from './utils.js'
 
@@ -71,6 +82,10 @@ class TopBar extends Component {
                         set('hasSeenWelcomeMsg', true);
                     }
                 });
+    }
+
+    newComment() {
+        document.dispatchEvent(new Event('newComment'));
     }
 
     render() {
@@ -157,6 +172,10 @@ class TopBar extends Component {
                         onClick={this.props.downloadData}
                     >
                         <DownloadOutlined /> Dados
+                    </Button>
+
+                    <Button ghost onClick={this.newComment}>
+                        <EditOutlined /> Comentário
                     </Button>
                 </div>
             </div>

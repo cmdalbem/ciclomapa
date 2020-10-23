@@ -1,4 +1,4 @@
-const AIRTABLE_API_KEY = 'keyitXI1MaCb75MYj';
+const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = 'appcabRJEC9bAxSin';
 
 const debugStyles = {
@@ -9,6 +9,8 @@ const debugStyles = {
 
 class AirtableDatabase {
     async fetchTable(tableName, view, offset, accumulator=[]) {
+        console.debug('AIRTABLE_API_KEY', AIRTABLE_API_KEY);
+
         let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}?api_key=${AIRTABLE_API_KEY}`;
         if (view) {
             queryUrl += `&view=${view}`;
@@ -38,6 +40,22 @@ class AirtableDatabase {
         }
     }
 
+    async post(tableName, data) {
+        let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}?api_key=${AIRTABLE_API_KEY}`;
+
+        console.debug('data', data);
+
+        const response = await fetch(queryUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(res => {
+            console.log("Request complete! response:", res);
+        });
+    }
+
     async get() {
         let data;
 
@@ -54,6 +72,10 @@ class AirtableDatabase {
         };
 
         return data;
+    }
+
+    async create(fields) {
+        return await this.post('Comments', { records: [{fields}] });
     }
 }
 
