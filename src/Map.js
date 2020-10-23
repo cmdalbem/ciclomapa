@@ -6,8 +6,7 @@ import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
-import { EditOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
+import commentIcon from './img/icons/comment.png';
 
 import { MAPBOX_ACCESS_TOKEN, IS_MOBILE, DEFAULT_ZOOM } from './constants.js'
 import AirtableDatabase from './AirtableDatabase.js'
@@ -25,10 +24,11 @@ class Map extends Component {
     hoverPopup;
     selectedCycleway;
     hoveredCycleway;
+    hoveredComment;
 
     airtableDatabase;
     comments;
-    // commentPopup;
+    commentPopup;
 
     constructor(props) {
         super(props);
@@ -44,28 +44,82 @@ class Map extends Component {
 
         this.airtableDatabase = new AirtableDatabase();
 
+        this.onMouseMove = this.onMouseMove.bind(this);
+        document.addEventListener('mousemove', this.onMouseMove);
+
         this.state = {
-            commentModal: false
+            showCommentModal: false,
+            showCommentCursor: false
         };
+    }
+
+    onMouseMove(e) {
+        const x = e.clientX;
+        const y = e.clientY;
+        this.setState({ x, y });
     }
 
     showCommentModal() {
         this.setState({
-            commentModal: true,
+            showCommentModal: true,
         });
     };
 
     hideCommentModal() {
         this.setState({
-            commentModal: false,
+            showCommentModal: false,
+            showCommentCursor: false
         });
-        this.newCommentMarker.remove();
     };
 
     afterCommentCreate() {
         this.hideCommentModal();
         this.loadComments();
     };
+
+    showCommentPopup(e) {
+        const coords = e.features[0].geometry.coordinates.slice();
+        const properties = e.features[0].properties;
+
+        let html = `
+            <div style="color: gray;">
+                ${new Date(properties.createdAt).toLocaleString('pt-br')}
+            </div>
+
+            <div style="
+                margin-top: 1em;
+                font-size: 18px;">
+                ${properties.text}
+            </div>
+        `;
+
+        if (properties.tags) {
+            // Arrays and objects get serialized by Mapbox system
+            properties.tags = JSON.parse(properties.tags);
+
+            html += `
+                <div style="
+                    margin-top: 2em;
+                    font-size: 14px;
+                    font
+                ">
+            `;
+            
+            properties.tags.forEach( t => {
+                html += `
+                    <div class="pill" style="background-color: yellow">
+                        ${t}
+                    </div>
+                `;
+            })
+            
+            html += `</div>`;
+        }
+
+        this.commentPopup.setLngLat(coords)
+            .setHTML(html)
+            .addTo(this.map);
+    }
 
     showCyclewayPopup(e) {
         const coords = e.lngLat;
@@ -362,42 +416,6 @@ class Map extends Component {
         });
     }
 
-    createCommentPopup(c) {
-        let html = `
-            <div style="color: gray;">
-                ${new Date(c.fields.createdAt).toLocaleString('pt-br')}
-            </div>
-
-            <div style="
-                margin-top: 1em;
-                font-size: 18px;">
-                ${c.fields.text}
-            </div>
-        `;
-
-        if (c.fields.tags) {
-            html += `
-                <div style="
-                    margin-top: 2em;
-                    font-size: 14px;
-                    font
-                ">
-            `;
-            
-            c.fields.tags.forEach( t => {
-                html += `
-                    <div class="pill" style="background-color: yellow">
-                        ${t}
-                    </div>
-                `;
-            })
-            
-            html += `</div>`;
-        }
-
-        return new mapboxgl.Popup({ offset: 25 }).setHTML(html);
-    }
-
     async loadComments() {
         if (this.comments) {
             this.comments.forEach(c => {
@@ -409,28 +427,87 @@ class Map extends Component {
         }
 
         this.comments = await this.airtableDatabase.get();
-
         console.debug(this.comments);
 
         if (this.comments) {
-            this.comments.forEach(c => {
-                if (c.fields && c.fields.latlong) {
-                    const latlong = c.fields.latlong.split(',').reverse();
+            this.map.getSource('commentsSrc').setData({
+                'type': 'FeatureCollection',
+                'features': this.comments.map(c => {
+                    return {
+                        'type': 'Feature',
+                        'geometry': {
+                            'type': 'Point',
+                            'coordinates': c.fields.latlong.split(',').reverse()
+                        },
+                        'properties': c.fields
+                    };
+                })
+            });
+
+            this.map.removeLayer('comments');
+            this.map.addLayer({
+                'id': 'comments',
+                'type': 'symbol',
+                'source': 'commentsSrc',
+                'layout': {
+                    'icon-image': 'commentIcon',
+                    'icon-size': [
+                        "interpolate",
+                            ["exponential", 1.5],
+                            ["zoom"], 
+                            0, 0,
+                            15, 1
+                    ]
+                },
+                'paint': {
+                    'icon-opacity': [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        .8,
+                        1
+                    ]
+                }
+            });
+
+            // Interactions
+
+            this.map.on("mouseenter", 'comments', e => {
+                if (e.features.length > 0) {
+                    this.map.getCanvas().style.cursor = 'pointer';
     
-                    let markerEl = document.createElement('div');
-                    let icon = document.createElement('div');
-                    icon.className = 'comment-marker-icon';
-                    markerEl.appendChild(icon);
+                    if (this.hoveredComment) {
+                        this.map.setFeatureState({
+                            source: 'commentsSrc',
+                            id: this.hoveredComment },
+                            { hover: false });
+                    }
+                    this.hoveredComment = e.features[0].id;
+                    this.map.setFeatureState({
+                        source: 'commentsSrc',
+                        id: this.hoveredComment },
+                        { hover: true });
+                }
+            });
     
-                    // let m = new mapboxgl.Marker()
-                    c.marker = new mapboxgl.Marker(markerEl)
-                        .setLngLat(latlong)
-                        // .setPopup(this.commentPopup)
-                        .setPopup(this.createCommentPopup(c))
-                        .addTo(this.map);
+            this.map.on("mouseleave", 'comments', e => {
+                if (this.hoveredComment) {// && !this.selectedCycleway) {
+                    this.map.getCanvas().style.cursor = '';
+
+                    this.map.setFeatureState({
+                        source: 'commentsSrc',
+                        id: this.hoveredComment },
+                        { hover: false });
+                }
+                this.hoveredComment = null;
+            });
+
+            this.map.on('click', 'comments', e => {
+                if (e.features.length > 0) {
+                    this.showCommentPopup(e);
                 }
             });
         }
+
 
     }
 
@@ -445,6 +522,15 @@ class Map extends Component {
         this.map.addSource("osm", {
             "type": "geojson",
             "data": this.props.data || {
+                'type': 'FeatureCollection',
+                'features': []
+            },
+            "generateId": true
+        });
+
+        this.map.addSource("commentsSrc", {
+            "type": "geojson",
+            "data": {
                 'type': 'FeatureCollection',
                 'features': []
             },
@@ -584,8 +670,6 @@ class Map extends Component {
             container: document.querySelector('body')
         }), 'bottom-right');
 
-        // this.map.addControl(new MyCustomControl(), 'bottom-right');
-
         // Listeners
 
         this.map.on('load', () => {
@@ -594,6 +678,11 @@ class Map extends Component {
             this.loadComments();
 
             this.map.on('moveend', this.onMapMoved);
+
+            this.map.loadImage( commentIcon, (error, image) => {
+                if (error) throw error;
+                this.map.addImage('commentIcon', image);
+            });
 
             // Further chages on styles reinitilizes layers
             // this.map.on('style.load', () => {
@@ -613,9 +702,10 @@ class Map extends Component {
             this.selectedCycleway = null;
         });
 
-        // this.commentPopup = new mapboxgl.Popup({
-        //     closeOnClick: false
-        // });
+        this.commentPopup = new mapboxgl.Popup({
+            closeOnClick: false,
+            offset: 25
+        });
 
         this.hoverPopup = new mapboxgl.Popup({
             closeButton: false,
@@ -627,15 +717,12 @@ class Map extends Component {
     }
 
     async newComment() {
-        this.newCommentMarker = new mapboxgl.Marker({
-                draggable: true
-            })
-            .setLngLat(this.map.getCenter())
-            .addTo(this.map);
-
-        this.newCommentMarker.on('dragend', () => {
+        this.setState({ showCommentCursor: true });
+        // this.map.getCanvas().style.cursor = 'crosshair';
+        this.map.once('click', e => {
+            this.newCommentCoords = e.lngLat;
             this.showCommentModal();
-        });
+        })
     }
 
     render() {
@@ -644,9 +731,18 @@ class Map extends Component {
                 {/* Thanks https://blog.mapbox.com/mapbox-gl-js-react-764da6cc074a */}
                 <div ref={el => this.mapContainer = el}></div>
 
+                <div
+                    id="commentCursor"
+                    style={{
+                        display: this.state.showCommentCursor ? 'block' : 'none',
+                        transform: `translate(${this.state.x}px, ${this.state.y}px)`
+                    }}>
+                    <img src={commentIcon}/>
+                </div>
+
                 <CommentModal
-                    visible={this.state.commentModal}
-                    coords={this.newCommentMarker && this.newCommentMarker.getLngLat()}
+                    visible={this.state.showCommentModal}
+                    coords={this.newCommentCoords}
                     location={this.props.location}
                     airtableDatabase={this.airtableDatabase}
                     afterCreate={this.afterCommentCreate}

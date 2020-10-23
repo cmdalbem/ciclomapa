@@ -81,6 +81,7 @@ class CommentModal extends Component {
                 visible={this.props.visible}
                 onOk={this.handleOk}
                 onCancel={this.props.onCancel}
+                destroyOnClose={true}
             >
                 <Space direction="vertical" size="large">
                     <div>
@@ -88,7 +89,7 @@ class CommentModal extends Component {
                             Comentário
                         </Text></div>
                         <TextArea
-                            autoSize={{ minRows: 2 }}
+                            autoSize={{ minRows: 3 }}
                             style={{ width: '100%' }}
                             onChange={this.onTextChange}
                         />
