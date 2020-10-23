@@ -51,7 +51,7 @@ class Spinner extends Component {
                                     </h1>
 
                                     <h3>
-                                        Estamos acessando diretamente os dados mais atualizados do OpenStreetMaps. Isso pode levar algumas dezenas segundos dependendo do tamanho da cidade.
+                                        Estamos acessando diretamente os dados mais atualizados do OpenStreetMap. Isso pode levar algumas dezenas de segundos, a depender do tamanho da cidade.
                                     </h3>
                                 </div>
                             </div>
