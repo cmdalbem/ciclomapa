@@ -2,9 +2,11 @@ body {
     margin: 0;
     padding: 0;
 
-    font-family: 'IBM Plex Sans', sans-serif;
-
     background: #282622;
+}
+
+*, .mapboxgl-ctrl-geocoder--input {
+    font-family: 'IBM Plex Sans', sans-serif;
 }
 
 /* @font-face { 
