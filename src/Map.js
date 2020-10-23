@@ -3,6 +3,8 @@ import React, { Component } from 'react';
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css';
 
+import { Modal } from 'antd';
+
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 
@@ -10,11 +12,54 @@ import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
 import { MAPBOX_ACCESS_TOKEN, IS_MOBILE, DEFAULT_ZOOM } from './constants.js'
 
+
+import AirtableDatabase from './AirtableDatabase.js'
+
 import './Map.css'
 
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
+// class MyCustomControl {
+//     onAdd(map) {
+//         this.map = map;
+//         this.container = document.createElement('div');
+//         this.container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
+        
+//         const button = document.createElement('button');
+//         button.className = 'mapboxgl-ctrl-geolocate';
+//         button.style.color = 'black';
+//         button.style.fontWeight = 'bold';
+//         button.textContent = '+';
+
+//         button.addEventListener('click', this.onClick);
+
+//         this.container.appendChild(button); 
+
+//         return this.container;
+//     }
+    
+//     onRemove() {
+//         this.container.parentNode.removeChild(this.container);
+//         this.map = undefined;
+//     }
+
+//     onClick() {
+//         var marker = new mapboxgl.Marker({
+//             draggable: true
+//         })
+//             .setLngLat([0, 0])
+//             .addTo(this.map);
+
+//         function onDragEnd() {
+//             var lngLat = marker.getLngLat();
+//             // coordinates.style.display = 'block';
+//             // coordinates.innerHTML = 'Longitude: ' + lngLat.lng + '<br />Latitude: ' + lngLat.lat;
+//         }
+
+//         marker.on('dragend', onDragEnd);
+//     }
+// }
 
 class Map extends Component {
     map;
@@ -24,13 +69,21 @@ class Map extends Component {
     selectedCycleway;
     hoveredCycleway;
 
+    airtableDatabase;
+    comments;
+    commentPopup;
+
     constructor(props) {
         super(props);
 
         this.onMapMoved = this.onMapMoved.bind(this);
+        this.newComment = this.newComment.bind(this);
+        this.loadComments = this.loadComments.bind(this);
+
+        this.airtableDatabase = new AirtableDatabase();
     }
 
-    showPopup(e) {
+    showCyclewayPopup(e) {
         const coords = e.lngLat;
         const props = e.features[0].properties;
 
@@ -74,7 +127,7 @@ class Map extends Component {
             </div>
     `;
 
-        this.popup.setLngLat(coords)
+        this.cyclewayPopup.setLngLat(coords)
             .setHTML(html)
             .addTo(this.map);
     }
@@ -92,7 +145,7 @@ class Map extends Component {
     }
 
     hidePopup() {
-        this.popup.remove();
+        this.cyclewayPopup.remove();
     }
 
     // southern-most latitude, western-most longitude, northern-most latitude, eastern-most longitude
@@ -320,7 +373,74 @@ class Map extends Component {
                 this.selectedCycleway = e.features[0].id;
                 this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: true });
 
-                this.showPopup(e);
+                this.showCyclewayPopup(e);
+            }
+        });
+    }
+
+    createCommentPopup(c) {
+        let html = `
+            <div style="color: gray;">
+                ${new Date(c.fields.createdAt).toLocaleString('pt-br')}
+            </div>
+
+            <div style="
+                margin-top: 1em;
+                font-size: 18px;">
+                ${c.fields.text}
+            </div>
+        `;
+
+        if (c.fields.tags) {
+            html += `
+                <div style="
+                    margin-top: 2em;
+                    font-size: 14px;
+                    font
+                ">
+            `;
+            
+            c.fields.tags.forEach( t => {
+                html += `
+                    <div class="pill" style="background-color: yellow">
+                        ${t}
+                    </div>
+                `;
+            })
+            
+            html += `</div>`;
+        }
+
+        return new mapboxgl.Popup({ offset: 25 }).setHTML(html);
+    }
+
+    async loadComments() {
+        if (this.comments) {
+            this.comments.forEach(c => {
+                c.marker.remove();
+            })
+            this.comments = [];
+        }
+
+        this.comments = await this.airtableDatabase.get();
+
+        console.debug(this.comments);
+
+        this.comments.forEach(c => {
+            if (c.fields && c.fields.latlong) {
+                const latlong = c.fields.latlong.split(',').reverse();
+
+                let markerEl = document.createElement('div');
+                let icon = document.createElement('div');
+                icon.className = 'comment-marker-icon';
+                markerEl.appendChild(icon);
+
+                // let m = new mapboxgl.Marker()
+                c.marker = new mapboxgl.Marker(markerEl)
+                    .setLngLat(latlong)
+                    // .setPopup(this.commentPopup)
+                    .setPopup(this.createCommentPopup(c))
+                    .addTo(this.map);
             }
         });
     }
@@ -471,14 +591,18 @@ class Map extends Component {
         this.map.addControl(geolocate, 'bottom-right');
         
         
-        // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
+        this.map.addControl(new mapboxgl.FullscreenControl({
+            container: document.querySelector('body')
+        }), 'bottom-right');
 
+        // this.map.addControl(new MyCustomControl(), 'bottom-right');
 
         // Listeners
 
         this.map.on('load', () => {
             this.initLayers();
             this.onMapMoved();
+            this.loadComments();
 
             this.map.on('moveend', this.onMapMoved);
 
@@ -490,14 +614,18 @@ class Map extends Component {
         });
 
 
-        this.popup = new mapboxgl.Popup({
+        this.cyclewayPopup = new mapboxgl.Popup({
             closeOnClick: false
         });
-        this.popup.on('close', e => {
+        this.cyclewayPopup.on('close', e => {
             if (this.selectedCycleway) {
                 this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: false });
             }
             this.selectedCycleway = null;
+        });
+
+        this.commentPopup = new mapboxgl.Popup({
+            closeOnClick: false
         });
 
         this.hoverPopup = new mapboxgl.Popup({
@@ -509,10 +637,51 @@ class Map extends Component {
         this.reverseGeocode(this.props.center);
     }
 
+    newComment() {
+        let marker = new mapboxgl.Marker({
+                draggable: true
+            })
+            .setLngLat(this.map.getCenter())
+            .addTo(this.map);
+
+        marker.on('dragend', () => {
+            const coords = marker.getLngLat();
+            const location = encodeURIComponent(this.props.location);
+            window.open(`
+                https://airtable.com/shrd9iVBNJEy5FMxO?prefill_latlong=${coords.lat},${coords.lng}&prefill_location=${location}`)
+
+            marker.remove();
+            
+            Modal.confirm({
+                title: 'Novo comentário',
+                content: (
+                    // <iframe className="airtable-embed airtable-dynamic-height" src={`https://airtable.com/embed/shrd9iVBNJEy5FMxO?backgroundColor=green&prefill_latlong=${marker.lat},${marker.lng}&prefill_location=Rio+de+Janeiro,+RJ`} style={{ background: 'transparent', border: '1px solid #ccc' }} />
+                    <div>
+                        <p>
+                            Você será redirecionado para a página de formulário. Quando estiver pronto, clique em OK para recarregar a página.
+                        </p>
+                    </div>
+                ),
+                onOk() {
+                    // this.loadComments();
+                    window.location.reload();
+                },
+            });
+        });
+    }
+
     render() {
         return (
-            // Thanks https://blog.mapbox.com/mapbox-gl-js-react-764da6cc074a
-            <div ref={el => this.mapContainer = el}></div>
+            <>
+                <div className="mapboxgl-ctrl mapboxgl-ctrl-group new-comment-button">
+                    <button onClick={this.newComment}>
+                        +
+                    </button>
+                </div>
+
+                {/* Thanks https://blog.mapbox.com/mapbox-gl-js-react-764da6cc074a */}
+                <div ref={el => this.mapContainer = el}></div>
+            </>
         )
     }
 }

@@ -13,10 +13,13 @@ class LayersPanel extends Component {
     }
 
     render() {
+        if (!this.props.layers) {
+            return;
+        }
+
         return (
             <div className="layers-panel">
                 {
-                    this.props.layers &&
                     this.props.layers.map(l =>
                         <Popover
                             placement="left"

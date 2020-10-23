@@ -376,6 +376,7 @@ class App extends Component {
                     zoom={this.state.zoom}
                     center={this.state.center}
                     showSatellite={this.state.showSatellite}
+                    location={this.state.area}
                     updateData={this.updateData}
                     onMapMoved={this.onMapMoved}
                     updateLengths={this.updateLengths}
