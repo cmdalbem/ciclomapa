@@ -737,7 +737,7 @@ class Map extends Component {
                         display: this.state.showCommentCursor ? 'block' : 'none',
                         transform: `translate(${this.state.x}px, ${this.state.y}px)`
                     }}>
-                    <img src={commentIcon}/>
+                    <img src={commentIcon} alt=""/>
                 </div>
 
                 <CommentModal

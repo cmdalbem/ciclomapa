@@ -42,13 +42,12 @@ class CommentModal extends Component {
     }
     
     handleOk = e => {
-        const coords = this.props.coords;
-        const location = encodeURIComponent(this.props.location);
+        const { coords, location } = this.props;
 
         this.props.airtableDatabase.create({
             status: DEFAULT_STATUS,
             latlong: `${coords.lat},${coords.lng}`,
-            location: this.props.location,
+            location: location,
             text: this.state.text,
             tags: this.state.tags,
             email: this.state.email,
@@ -122,11 +121,8 @@ class CommentModal extends Component {
 
                     <div>
                         <div><Text strong>
-                            Email (opcional)
+                            Contato (opcional)
                         </Text></div>
-                        <Text type="secondary">
-                            Deixe seu contato para pegarmos mais detalhes com você ou se quiser ter um retorno quando o problema for resolvido.
-                        </Text>
                         <Input
                             placeholder="email@email.com"
                             onChange={this.onEmailChange}

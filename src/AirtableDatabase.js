@@ -45,7 +45,7 @@ class AirtableDatabase {
 
         console.debug('data', data);
 
-        const response = await fetch(queryUrl, {
+        await fetch(queryUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
