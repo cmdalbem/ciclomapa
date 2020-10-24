@@ -3,12 +3,14 @@ import React, { Component } from 'react';
 import { TOPBAR_HEIGHT, IS_MOBILE } from './constants'
 
 import {
-    DownloadOutlined,
-    InfoCircleOutlined,
-    RedoOutlined,
-    CaretDownFilled,
-    EditOutlined,
-} from '@ant-design/icons';
+    MdFileDownload as IconDownload,
+    MdInfo as IconInfo,
+    MdSync as IconUpdate,
+    MdExpandMore as IconCaret,
+    MdRateReview as IconComment,
+} from "react-icons/md";
+
+import { IconContext } from "react-icons";
 
 import {
     Space,
@@ -23,7 +25,7 @@ import { get, set } from 'idb-keyval';
 
 import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
-import logo from './img/logo_green.svg';
+// import logo from './img/logo_green.svg';
 
 import './TopBar.css'
 
@@ -100,85 +102,87 @@ class TopBar extends Component {
         }
         
         return (
-            <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
-                <div id="logo" className="logo">
-                    {/* <img src={logo} alt="CicloMapa"></img> */}
-                    Ciclomapa
-                </div>
+            <IconContext.Provider value={{ className: 'react-icons' }}>
+                <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
+                    <div id="logo" className="logo">
+                        {/* <img src={logo} alt="CicloMapa"></img> */}
+                        Ciclomapa
+                    </div>
 
-                <div className="city-picker">
-                    <Space size={4} direction="vertical" align="center">
+                    <div className="city-picker">
+                        <Space size={4} direction="vertical" align="center">
+                            <Button
+                                size={IS_MOBILE ? 'default' : 'large'}
+                                onClick={this.showCityPicker}
+                            >
+                                <h3 className="areaname">
+                                    <span className="state">
+                                        {state}
+                                    </span>
+                                    <span className="city">
+                                        {city}
+                                    </span>
+
+                                    <IconCaret style={{ fontSize: '16px', color: '#4ba96e' }} />
+                                </h3>
+                            </Button>
+
+                            {
+                                this.props.lastUpdate &&
+                                <span className="data-tooltip">
+                                    Atualizado há <b>{timeSince(this.props.lastUpdate)}</b>.
+                                    <Popover
+                                        placement="bottom"
+                                        content={(
+                                            <div style={{ maxWidth: 250 }}>
+                                                <Space size="small" direction="vertical" >
+                                                    <div>
+                                                        O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMaps em <b>{updatedAtStr}</b>.
+                                                    </div> 
+
+                                                    <Button
+                                                        size="small"
+                                                        icon={<IconUpdate />}
+                                                        ghost
+                                                        onClick={this.props.forceUpdate}
+                                                    >
+                                                        Atualizar
+                                                    </Button>
+                                                </Space>
+                                            </div>
+                                        )}
+                                        arrowPointAtCenter={true}
+                                    >
+                                        <IconInfo style={{ fontSize: '12px', marginLeft: '4px' }} />
+                                    </Popover>
+                                </span>
+
+                            }
+                        </Space>
+                    </div>
+                    
+                    <div className="nav-links">
                         <Button
-                            size={IS_MOBILE ? 'default' : 'large'}
-                            onClick={this.showCityPicker}
+                            size="large"
+                            type="link"
+                            onClick={this.info}
                         >
-                            <h3 className="areaname">
-                                <span className="state">
-                                    {state}
-                                </span>
-                                <span className="city">
-                                    {city}
-                                </span>
-
-                                <CaretDownFilled style={{ fontSize: '16px', color: '#4ba96e' }} />
-                            </h3>
+                            Sobre
                         </Button>
 
-                        {
-                            this.props.lastUpdate &&
-                            <span className="data-tooltip">
-                                Atualizado há <b>{timeSince(this.props.lastUpdate)}</b>.
-                                <Popover
-                                    placement="bottom"
-                                    content={(
-                                        <div style={{ maxWidth: 250 }}>
-                                            <Space size="small" direction="vertical" >
-                                                <div>
-                                                    O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMaps em <b>{updatedAtStr}</b>.
-                                                </div> 
+                        <Button ghost onClick={this.newComment}>
+                            <IconComment /> Comentário
+                        </Button>
 
-                                                <Button
-                                                    size="small"
-                                                    icon={<RedoOutlined />}
-                                                    ghost
-                                                    onClick={this.props.forceUpdate}
-                                                >
-                                                    Atualizar
-                                                </Button>
-                                            </Space>
-                                        </div>
-                                    )}
-                                    arrowPointAtCenter={true}
-                                >
-                                    <InfoCircleOutlined style={{ fontSize: '12px', marginLeft: '4px' }} />
-                                </Popover>
-                            </span>
-
-                        }
-                    </Space>
+                        <Button
+                            ghost
+                            onClick={this.props.downloadData}
+                        >
+                            <IconDownload /> Dados
+                        </Button>
+                    </div>
                 </div>
-                
-                <div className="nav-links">
-                    <Button
-                        size="large"
-                        type="link"
-                        onClick={this.info}
-                    >
-                        Sobre
-                    </Button>
-
-                    <Button
-                        ghost
-                        onClick={this.props.downloadData}
-                    >
-                        <DownloadOutlined /> Dados
-                    </Button>
-
-                    <Button ghost onClick={this.newComment}>
-                        <EditOutlined /> Comentário
-                    </Button>
-                </div>
-            </div>
+            </IconContext.Provider>
         );
     }
 }
