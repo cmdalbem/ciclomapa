@@ -109,7 +109,7 @@ class Map extends Component {
             
             properties.tags.forEach( t => {
                 html += `
-                    <div class="pill" style="background-color: gray">
+                    <div class="pill-inverted">
                         ${t}
                     </div>
                 `;

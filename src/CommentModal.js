@@ -6,6 +6,7 @@ import {
     Select,
     Typography,
     Space,
+    Checkbox, Row, Col
 } from 'antd';
 
 const { TextArea } = Input;
@@ -17,19 +18,25 @@ const DEFAULT_STATUS = 'Aberta';
 
 
 class CommentModal extends Component {
+    defaultState = {
+        text: '',
+        tags: [],
+        email: undefined
+    };
+
     constructor(props) {
         super(props);
 
         this.handleOk = this.handleOk.bind(this);
         this.onTextChange = this.onTextChange.bind(this);
-        this.onSelectChange = this.onSelectChange.bind(this);
+        this.onTagsChange = this.onTagsChange.bind(this);
         this.onEmailChange = this.onEmailChange.bind(this);
 
-        this.state = {
-            text: '',
-            tags: [],
-            email: undefined
-        };
+        this.state = this.defaultState;
+    }
+
+    reset() {
+        this.setState(this.defaultState);
     }
     
     handleOk = e => {
@@ -44,6 +51,7 @@ class CommentModal extends Component {
             email: this.state.email,
         }).then( () => {
             this.props.afterCreate();
+            this.reset();
         })
     };
 
@@ -59,7 +67,7 @@ class CommentModal extends Component {
         });
     };
 
-    onSelectChange(value) {
+    onTagsChange(value) {
         this.setState({
             tags: value
         })
@@ -72,7 +80,7 @@ class CommentModal extends Component {
                 onOk={this.handleOk}
                 onCancel={this.props.onCancel}
                 destroyOnClose={true}
-                width={360}
+                // width={360}
                 centered={true}
                 okButtonProps={{
                     disabled: this.state.text.length === 0 || this.state.tags.length === 0
@@ -84,12 +92,12 @@ class CommentModal extends Component {
                             Assunto
                         </Text>
 
-                        <Select
+                        {/* <Select
                             mode="multiple"
                             allowClear
                             style={{ width: '100%' }}
                             placeholder="Selecione uma ou mais tags..."
-                            onChange={this.onSelectChange}
+                            onChange={this.onTagsChange}
                         >
                             {
                                 this.props.tagsList.map(t =>
@@ -98,7 +106,22 @@ class CommentModal extends Component {
                                     </Option>
                                 )
                             }
-                        </Select>
+                        </Select> */}
+                        <Checkbox.Group style={{ width: '100%' }} onChange={this.onTagsChange}>
+                            <Row>
+                                {
+                                    this.props.tagsList.map(t =>
+                                        <Col span={12} key={t}>
+                                            <Checkbox value={t}>
+                                                <div className="pill-inverted" style={{color: 'inherit', borderColor: 'inherit'}}>
+                                                    {t}
+                                                </div>
+                                            </Checkbox>
+                                        </Col>
+                                    )
+                                }
+                            </Row>
+                        </Checkbox.Group>
                     </div>
 
                     <div>
