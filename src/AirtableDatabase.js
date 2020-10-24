@@ -1,6 +1,10 @@
 const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = 'appcabRJEC9bAxSin';
 
+const COMMENTS_TABLE_NAME = 'Comments';
+
+const TAGS_LIST_COMMENT_ID = 'recOgck7G9m4y9PVj';
+
 const debugStyles = {
     blue: 'color: lightblue;',
     gray: 'color: gray;',
@@ -56,26 +60,24 @@ class AirtableDatabase {
         });
     }
 
-    async get() {
-        let data;
+    async getComments() {
+        let comments = await this.fetchTable(COMMENTS_TABLE_NAME);
+        console.debug(comments);
+        
+        const tagsListComment = comments.filter(c => c.id === TAGS_LIST_COMMENT_ID)[0];
+        console.debug(tagsListComment);
+        const tagsList = tagsListComment.fields.tags;
 
-        // Query comments
-        data = await this.fetchTable('Comments');
-        if (data && data.length > 0) {
-            // data.forEach(record => {
-            //     this.data[record.id] = record;
-            //     this.data[record.id].videos = [];
-            // });
-            console.debug('data', data);
-        } else {
-            console.error('No data from Airtable.')
+        comments = comments.filter(c => c.fields.latlong !== undefined);
+        
+        return {
+            comments,
+            tagsList
         };
-
-        return data;
     }
 
     async create(fields) {
-        return await this.post('Comments', { records: [{fields}] });
+        return await this.post(COMMENTS_TABLE_NAME, { records: [{fields}] });
     }
 }
 

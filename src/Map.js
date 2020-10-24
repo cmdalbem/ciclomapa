@@ -49,7 +49,9 @@ class Map extends Component {
 
         this.state = {
             showCommentModal: false,
-            showCommentCursor: false
+            showCommentCursor: false,
+            tagsList: [],
+            comments: [],
         };
     }
 
@@ -107,7 +109,7 @@ class Map extends Component {
             
             properties.tags.forEach( t => {
                 html += `
-                    <div class="pill" style="background-color: yellow">
+                    <div class="pill" style="background-color: gray">
                         ${t}
                     </div>
                 `;
@@ -417,22 +419,21 @@ class Map extends Component {
     }
 
     async loadComments() {
-        if (this.comments) {
-            this.comments.forEach(c => {
+        if (this.state.comments.length > 0) {
+            this.state.comments.forEach(c => {
                 if (c.marker) {
                     c.marker.remove();
                 }
             })
-            this.comments = [];
+
+            this.map.removeLayer('comments');
         }
 
-        this.comments = await this.airtableDatabase.get();
-        console.debug(this.comments);
-
-        if (this.comments) {
+        this.setState(await this.airtableDatabase.getComments());
+        if (this.state.comments.length > 0) {
             this.map.getSource('commentsSrc').setData({
                 'type': 'FeatureCollection',
-                'features': this.comments.map(c => {
+                'features': this.state.comments.map(c => {
                     return {
                         'type': 'Feature',
                         'geometry': {
@@ -444,7 +445,6 @@ class Map extends Component {
                 })
             });
 
-            this.map.removeLayer('comments');
             this.map.addLayer({
                 'id': 'comments',
                 'type': 'symbol',
@@ -741,9 +741,10 @@ class Map extends Component {
                 </div>
 
                 <CommentModal
-                    visible={this.state.showCommentModal}
-                    coords={this.newCommentCoords}
                     location={this.props.location}
+                    visible={this.state.showCommentModal}
+                    tagsList={this.state.tagsList}
+                    coords={this.newCommentCoords}
                     airtableDatabase={this.airtableDatabase}
                     afterCreate={this.afterCommentCreate}
                     onCancel={this.hideCommentModal}

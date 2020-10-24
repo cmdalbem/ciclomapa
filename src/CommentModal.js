@@ -13,15 +13,6 @@ const { Option } = Select;
 const { Text } = Typography;
 
 
-const TAGS = [
-    'Via mapeada no lugar errado',
-    'Buraco na via',
-    'Início ou fim mal mapeados',
-    'Categoria errada',
-    'Essa via não existe',
-    'Outros'
-];
-
 const DEFAULT_STATUS = 'Aberta';
 
 
@@ -81,36 +72,27 @@ class CommentModal extends Component {
                 onOk={this.handleOk}
                 onCancel={this.props.onCancel}
                 destroyOnClose={true}
+                width={360}
+                centered={true}
+                okButtonProps={{
+                    disabled: this.state.text.length === 0 || this.state.tags.length === 0
+                }}
             >
-                <Space direction="vertical" size="large">
+                <Space direction="vertical" size="large" style={{width: '100%'}}>
                     <div>
-                        <div><Text strong>
-                            Comentário
-                        </Text></div>
-                        <TextArea
-                            autoSize={{ minRows: 3 }}
-                            style={{ width: '100%' }}
-                            onChange={this.onTextChange}
-                        />
-                    </div>
-
-                    <div>
-                        <div><Text strong>
-                            Tags
-                        </Text></div>
-                        <Text type="secondary">
-                            Selecione quantas quiser que se encaixe com o seu tipo de comentário.
+                        <Text strong>
+                            Assunto
                         </Text>
 
                         <Select
                             mode="multiple"
                             allowClear
                             style={{ width: '100%' }}
-                            placeholder="Selecione..."
+                            placeholder="Selecione uma ou mais tags..."
                             onChange={this.onSelectChange}
                         >
                             {
-                                TAGS.map(t =>
+                                this.props.tagsList.map(t =>
                                     <Option key={t}>
                                         {t}
                                     </Option>
@@ -120,9 +102,20 @@ class CommentModal extends Component {
                     </div>
 
                     <div>
-                        <div><Text strong>
+                        <Text strong>
+                            Comentário
+                        </Text>
+                        <TextArea
+                            autoSize={{ minRows: 3 }}
+                            style={{ width: '100%' }}
+                            onChange={this.onTextChange}
+                        />
+                    </div>
+
+                    <div>
+                        <Text strong type="secondary">
                             Contato (opcional)
-                        </Text></div>
+                        </Text>
                         <Input
                             placeholder="email@email.com"
                             onChange={this.onEmailChange}
