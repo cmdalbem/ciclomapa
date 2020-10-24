@@ -1,16 +1,5 @@
 import React, { Component } from 'react';
-
-import { TOPBAR_HEIGHT, IS_MOBILE } from './constants'
-
-import {
-    MdFileDownload as IconDownload,
-    MdInfo as IconInfo,
-    MdSync as IconUpdate,
-    MdExpandMore as IconCaret,
-    MdRateReview as IconComment,
-} from "react-icons/md";
-
-import { IconContext } from "react-icons";
+import { get, set } from 'idb-keyval';
 
 import {
     Space,
@@ -19,15 +8,25 @@ import {
     Popover,
 } from 'antd';
 
+import {
+    MdFileDownload as IconDownload,
+    MdInfo as IconInfo,
+    MdSync as IconUpdate,
+    MdExpandMore as IconCaret,
+    // MdRateReview as IconComment,
+} from "react-icons/md";
+import { IconContext } from "react-icons";
+
 import { timeSince } from './utils.js'
+import { TOPBAR_HEIGHT, IS_MOBILE } from './constants'
 
-import { get, set } from 'idb-keyval';
-
+// import logo from './img/logo_green.svg';
 import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
-// import logo from './img/logo_green.svg';
+import { ReactComponent as IconComment } from './img/icons/newcomment.svg';
 
 import './TopBar.css'
+
 
 class TopBar extends Component {
     info() {
@@ -102,7 +101,7 @@ class TopBar extends Component {
         }
         
         return (
-            <IconContext.Provider value={{ className: 'react-icons' }}>
+            <IconContext.Provider value={{ className: 'react-icon' }}>
                 <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
                     <div id="logo" className="logo">
                         {/* <img src={logo} alt="CicloMapa"></img> */}
@@ -171,7 +170,7 @@ class TopBar extends Component {
                         </Button>
 
                         <Button ghost onClick={this.newComment}>
-                            <IconComment /> Comentário
+                            <IconComment className="react-icon" /> Comentário
                         </Button>
 
                         <Button

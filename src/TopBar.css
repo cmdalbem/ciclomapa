@@ -84,10 +84,12 @@
     margin-left: 12px;
 }
 
-.react-icons {
+.react-icon {
     vertical-align: middle;
     margin-right: 4px;
-    /* font-size: 1.2em; */
+    font-size: 1em;
+    height: 1em;
+    width: auto;
 }
 
 
