@@ -24,11 +24,13 @@ class Storage {
     dataBuffer;
     
     constructor() {
-        firebase.initializeApp({
-            apiKey: firebaseConfig.apiKey,
-            authDomain: firebaseConfig.authDomain,
-            projectId: firebaseConfig.projectId
-        });
+        if (!firebase.apps.length) {
+            firebase.initializeApp({
+                apiKey: firebaseConfig.apiKey,
+                authDomain: firebaseConfig.authDomain,
+                projectId: firebaseConfig.projectId
+            });
+        }
 
         this.db = firebase.firestore();
     }

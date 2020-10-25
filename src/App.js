@@ -20,7 +20,7 @@ import './App.css';
 
 class App extends Component {
     geoJson;
-    storage;
+    storage = new Storage();
 
     constructor(props) {
         super(props);
@@ -48,11 +48,9 @@ class App extends Component {
             geoJson: null,
             loading: false,
             mapStyle: 'mapbox://styles/cmdalbem/ck14cy14g1vb81cp8hprnh4nx',
-            layers: this.loadLayers(prev && prev.layersStates),
+            layers: this.initLayers(prev && prev.layersStates),
             lengths: {}
         };
-
-        this.storage = new Storage();
 
         if (this.state.area) {
             this.updateData();
@@ -63,8 +61,8 @@ class App extends Component {
         });
     }
 
-    loadLayers(layersStates) {
-        let layers = OSMController.getLayers();
+    initLayers(layersStates) {
+        const layers = OSMController.getLayers();
 
         // Merge with locally saved state
         if (layersStates && Object.keys(layersStates).length > 0) {
@@ -274,7 +272,9 @@ class App extends Component {
     }
 
     downloadData() {
-        computeTypologies(this.state.geoJson, this.state.layers);
+        const layerWays = this.state.layers.filter(l => l.type == 'way');
+
+        computeTypologies(this.state.geoJson, layerWays);
         cleanUpOSMTags(this.state.geoJson);
         downloadObjectAsJson(this.state.geoJson, `ciclomapa-${this.state.area}`);
     }

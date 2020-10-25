@@ -11,11 +11,12 @@ import commentIcon from './img/icons/comment.png';
 import { MAPBOX_ACCESS_TOKEN, IS_MOBILE, DEFAULT_ZOOM } from './constants.js'
 import AirtableDatabase from './AirtableDatabase.js'
 import CommentModal from './CommentModal.js'
+import NewCommentCursor from './NewCommentCursor.js'
 
 import './Map.css'
 
-
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
+
 
 class Map extends Component {
     map;
@@ -44,9 +45,6 @@ class Map extends Component {
 
         this.airtableDatabase = new AirtableDatabase();
 
-        this.onMouseMove = this.onMouseMove.bind(this);
-        document.addEventListener('mousemove', this.onMouseMove);
-
         this.state = {
             showCommentModal: false,
             showCommentCursor: false,
@@ -55,22 +53,16 @@ class Map extends Component {
         };
     }
 
-    onMouseMove(e) {
-        const x = e.clientX;
-        const y = e.clientY;
-        this.setState({ x, y });
-    }
-
     showCommentModal() {
         this.setState({
             showCommentModal: true,
+            showCommentCursor: false
         });
     };
 
     hideCommentModal() {
         this.setState({
-            showCommentModal: false,
-            showCommentCursor: false
+            showCommentModal: false
         });
     };
 
@@ -426,7 +418,7 @@ class Map extends Component {
                 }
             })
 
-            this.map.removeLayer('comments');
+            this.map.removeLayer('comentarios');
         }
 
         this.setState(await this.airtableDatabase.getComments());
@@ -446,7 +438,7 @@ class Map extends Component {
             });
 
             this.map.addLayer({
-                'id': 'comments',
+                'id': 'comentarios',
                 'type': 'symbol',
                 'source': 'commentsSrc',
                 'layout': {
@@ -471,7 +463,7 @@ class Map extends Component {
 
             // Interactions
 
-            this.map.on("mouseenter", 'comments', e => {
+            this.map.on("mouseenter", 'comentarios', e => {
                 if (e.features.length > 0) {
                     this.map.getCanvas().style.cursor = 'pointer';
     
@@ -489,7 +481,7 @@ class Map extends Component {
                 }
             });
     
-            this.map.on("mouseleave", 'comments', e => {
+            this.map.on("mouseleave", 'comentarios', e => {
                 if (this.hoveredComment) {// && !this.selectedCycleway) {
                     this.map.getCanvas().style.cursor = '';
 
@@ -501,25 +493,23 @@ class Map extends Component {
                 this.hoveredComment = null;
             });
 
-            this.map.on('click', 'comments', e => {
+            this.map.on('click', 'comentarios', e => {
                 if (e.features.length > 0) {
                     this.showCommentPopup(e);
                 }
             });
         }
-
-
     }
 
-    initLayers() {
-        console.debug('initLayers');
+    initLayersWays(layers) {
+        const map = this.map;
 
-        this.map.setLayoutProperty(
+        map.setLayoutProperty(
             'satellite',
             'visibility',
             this.props.showSatellite ? 'visible' : 'none');
 
-        this.map.addSource("osm", {
+        map.addSource("osm", {
             "type": "geojson",
             "data": this.props.data || {
                 'type': 'FeatureCollection',
@@ -528,7 +518,7 @@ class Map extends Component {
             "generateId": true
         });
 
-        this.map.addSource("commentsSrc", {
+        map.addSource("commentsSrc", {
             "type": "geojson",
             "data": {
                 'type': 'FeatureCollection',
@@ -540,11 +530,11 @@ class Map extends Component {
         // In GeoJSON layers are from most important to least important, but we 
         //   want the most important ones to be on top.
         // Slice is used here to don't destructively reverse the original array.
-        this.props.layers.slice().reverse().forEach(l => {
+        layers.slice().reverse().forEach(l => {
             this.addDynamicLayer(l);
         }); 
 
-        // this.map.addSource('some id', {
+        // map.addSource('some id', {
         //     type: 'geojson',
         //     // data: 'http://overpass-api.de/api/interpreter?data=node[amenity=school](bbox);out;(way[amenity=school](bbox);node(w););out;'
         //     // data: 'http://overpass-api.de/api/interpreter?data=node[name=%22Im Tannenbusch%22][highway=bus_stop];out+skel;'
@@ -553,35 +543,41 @@ class Map extends Component {
     }
 
     componentDidUpdate(prevProps) {
-        if (!this.map || !this.map.getSource('osm')) {
+        const map = this.map;
+
+        if (!map || !map.getSource('osm')) {
             return;
         }
 
         if (this.props.data !== prevProps.data) {
-            this.map.getSource('osm').setData(this.props.data);
+            map.getSource('osm').setData(this.props.data);
         }
         
         if (this.props.showSatellite !== prevProps.showSatellite) {
-            this.map.setLayoutProperty(
+            map.setLayoutProperty(
                 'satellite',
                 'visibility',
                 this.props.showSatellite ? 'visible' : 'none');
         }
         
         // if (this.props.zoom !== prevProps.zoom) {
-        //     this.map.setZoom(this.props.zoom);
+        //     map.setZoom(this.props.zoom);
         // }
         
         if (this.props.center !== prevProps.center) {
-            this.map.setCenter(this.props.center);
+            map.setCenter(this.props.center);
         }
         
         // Compare only 'isActive' field of layers
-        if (this.props.layers.map(l => l.isActive).join() === prevProps.layers.map(l => l.isActive).join()) {
+        const currentActiveStatuses = this.props.layers.map(l => l.isActive).join();
+        const prevActiveStatus = prevProps.layers.map(l => l.isActive).join();
+        if (currentActiveStatuses === prevActiveStatus) {
             this.props.layers.forEach( l => {
-                this.map.setLayoutProperty(l.id, 'visibility', l.isActive ? 'visible' : 'none');
-                if (l.style.borderColor) {
-                    this.map.setLayoutProperty(l.id+'--border', 'visibility', l.isActive ? 'visible' : 'none');
+                if (map.getLayer(l.id)) {
+                    map.setLayoutProperty(l.id, 'visibility', l.isActive ? 'visible' : 'none');
+                    if (l.type === 'way' && l.style.borderColor) {
+                        map.setLayoutProperty(l.id+'--border', 'visibility', l.isActive ? 'visible' : 'none');
+                    }
                 }
             })
         }
@@ -673,9 +669,9 @@ class Map extends Component {
         // Listeners
 
         this.map.on('load', () => {
-            this.initLayers();
-            this.onMapMoved();
+            this.initLayersWays(this.props.layers.filter(l => l.type == 'way'));
             this.loadComments();
+            this.onMapMoved();
 
             this.map.on('moveend', this.onMapMoved);
 
@@ -686,7 +682,7 @@ class Map extends Component {
 
             // Further chages on styles reinitilizes layers
             // this.map.on('style.load', () => {
-            //     this.initLayers();
+            //     this.initLayersWays();
             //     this.onMapMoved();
             // });
         });
@@ -716,9 +712,8 @@ class Map extends Component {
         this.reverseGeocode(this.props.center);
     }
 
-    async newComment() {
+    newComment() {
         this.setState({ showCommentCursor: true });
-        // this.map.getCanvas().style.cursor = 'crosshair';
         this.map.once('click', e => {
             this.newCommentCoords = e.lngLat;
             this.showCommentModal();
@@ -731,14 +726,10 @@ class Map extends Component {
                 {/* Thanks https://blog.mapbox.com/mapbox-gl-js-react-764da6cc074a */}
                 <div ref={el => this.mapContainer = el}></div>
 
-                <div
-                    id="commentCursor"
-                    style={{
-                        display: this.state.showCommentCursor ? 'block' : 'none',
-                        transform: `translate(${this.state.x}px, ${this.state.y}px)`
-                    }}>
-                    <img src={commentIcon} alt=""/>
-                </div>
+                {
+                    this.state.showCommentCursor &&
+                    <NewCommentCursor/>
+                }
 
                 <CommentModal
                     location={this.props.location}

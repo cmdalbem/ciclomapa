@@ -1,13 +1,22 @@
 import React, { Component } from 'react';
+import { Popover } from 'antd';
 
-import { Switch, Popover } from 'antd';
+import {
+    MdVisibility,
+    MdVisibilityOff,
+} from "react-icons/md";
 
 import { slugify } from './utils.js'
+import iconComment from './img/icons/comment-flat.png';
 
 import './LayersPanel.css';
 
 
 class LayersPanel extends Component {
+    state = {
+        hover: false
+    }
+
     onChange(id, newVal) {
         this.props.onLayersChange(id, newVal)
     }
@@ -18,47 +27,58 @@ class LayersPanel extends Component {
         }
 
         return (
-            <div className="layers-panel">
+            <div
+                className="fixed text-white"
+                style={{bottom: 40, left: 12}}
+                onMouseEnter={() => this.setState({hover: true})}
+                onMouseLeave={() => this.setState({hover: false})}
+            >
                 {
                     this.props.layers.map(l =>
                         <Popover
-                            placement="left"
+                            placement="left" arrowPointAtCenter={true} key={l.name}
                             content={(
-                                <div style={{ maxWidth: '250px' }}>
-                                    <p>
-                                        <img style={{ width: '100%' }} src={'/' + slugify(l.name) + '.png'} alt=""></img>
-                                    </p>
-                                    <div>
-                                        {l.description}
-                                    </div>
+                                <div style={{width: 300}}>
+                                    {
+                                        l.type === 'way' &&
+                                        <img
+                                            className="w-full mb-2" alt=""
+                                            src={'/' + slugify(l.name) + '.png'}/>
+                                    }
+                                    
+                                    { l.description }
                                 </div>
                             )}
-                            arrowPointAtCenter={true}
-                            key={l.name}
                         >
                             <div
-                                className="layer-row"
+                                className="flex cursor-pointer items-center justify-between px-3 py-1 hover:bg-black hover:bg-opacity-50"
                                 onClick={this.onChange.bind(this, l.id, !l.isActive)}
                                 style={{ opacity: l.isActive ? 1 : .5 }}
                             >
-                                <div>
-                                    <span
-                                        className="layer-miniature" 
-                                        style={{
-                                            height: l.style.lineWidth * 2,
-                                            background: l.style.lineStyle === 'solid' ?
-                                                l.style.lineColor
-                                                : `repeating-linear-gradient(90deg, ${l.style.lineColor}, ${l.style.lineColor} 3px, transparent 3px, transparent 6px)`,
-                                            borderColor: l.style.borderColor,
-                                            borderStyle: l.style.borderStyle,
-                                            borderRadius: '2px',
-                                            borderWidth: l.style.borderWidth ? l.style.borderWidth/2 : '0',
-                                            borderLeft: 'none',
-                                            borderRight: 'none'
-                                    }}
-                                    ></span>
+                                <div className="flex items-center">
+                                    <span className="w-6 mr-2 inline-block flex justify-center">
+                                    {
+                                        l.type === 'way' ?
+                                            <span className='w-full'
+                                                style={{
+                                                    height: l.style.lineWidth * 2,
+                                                    background: l.style.lineStyle === 'solid' ?
+                                                        l.style.lineColor
+                                                        : `repeating-linear-gradient(90deg, ${l.style.lineColor}, ${l.style.lineColor} 3px, transparent 3px, transparent 6px)`,
+                                                    borderColor: l.style.borderColor,
+                                                    borderStyle: l.style.borderStyle,
+                                                    borderRadius: '2px',
+                                                    borderWidth: l.style.borderWidth ? l.style.borderWidth/2 : '0',
+                                                    borderLeft: 'none',
+                                                    borderRight: 'none'
+                                            }}
+                                            ></span>
+                                        : 
+                                        <img className="h-5" src={iconComment} alt=""/>
+                                    }
+                                    </span>
 
-                                    <span className="layer-name">
+                                    <span className="font-semibold">
                                         {l.name} 
                                     </span>
 
@@ -66,13 +86,19 @@ class LayersPanel extends Component {
                                         this.props.lengths
                                             && Object.keys(this.props.lengths).length > 0
                                             && this.props.lengths[l.id] > 0
-                                            && <span className="layer-length" style={{ fontWeight: 300, opacity: .5 }}>
+                                            && <span className="text-sm" style={{ fontWeight: 300, opacity: .5 }}>
                                                 {Math.round(this.props.lengths[l.id])}km
                                         </span>
                                     }
                                 </div>
 
-                                <Switch size="small" checked={l.isActive} />
+                                <div className={`ml-2 transition-opacity duration-300 ${this.state.hover ? 'opacity-100' : 'opacity-0'}`}>
+                                    {
+                                        l.isActive ?
+                                            <MdVisibility/>
+                                        :   <MdVisibilityOff/>
+                                    }
+                                </div>
                             </div>
                         </Popover>
                     )

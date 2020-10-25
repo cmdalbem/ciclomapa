@@ -23,8 +23,9 @@ class OSMController {
         const bbox = constraints.bbox;
         // const area = constraints.area.split(',')[0];
         const areaId = constraints.areaId;
+        const ways = layers.default.filter(l => !l.type || l.type === 'way');
 
-        const body = layers.default.map(l =>
+        const body = ways.map(l =>
             l.filters.map(f =>
                 'way'
                 + (typeof f[0] === 'string' ?
@@ -52,17 +53,21 @@ class OSMController {
 
     static massageLayersData() {
         layers.default.forEach(l => {
-            // Omitted values
-            l.style.lineStyle = l.style.lineStyle || 'solid';
-            l.isActive = l.isActive !== undefined ? l.isActive : true;
-
-            if (l.style.borderColor) {
-                l.style.borderStyle = l.style.borderStyle || 'solid';
-                l.style.borderWidth = l.style.borderWidth || DEFAULT_BORDER_WIDTH;
-            }
-            
             // Generate an ID based on name
             l.id = slugify(l.name);
+
+            // Omitted values
+            l.isActive = l.isActive !== undefined ? l.isActive : true;
+            l.type = l.type || 'way';
+
+            if (l.style) {
+                l.style.lineStyle = l.style.lineStyle || 'solid';
+
+                if (l.style.borderColor) {
+                    l.style.borderStyle = l.style.borderStyle || 'solid';
+                    l.style.borderWidth = l.style.borderWidth || DEFAULT_BORDER_WIDTH;
+                }
+            }
         });
 
         return layers.default;

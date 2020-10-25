@@ -1,10 +1,10 @@
 .logo {
-    font-size: 32px;
+    font-size: 28px;
     text-transform: uppercase;
     /* font-family: 'Aku & Kamu'; */
     font-family: 'Teko', sans-serif;
     /* letter-spacing: 0.1em; */
-    color: #B6F9D1;
+    color: white;
     /* box-shadow: 0 5px 0 #b4f9d0; */
 }
 
@@ -85,7 +85,7 @@
 }
 
 .react-icon {
-    vertical-align: middle;
+    display: inline-block;
     margin-right: 4px;
     font-size: 1em;
     height: 1em;

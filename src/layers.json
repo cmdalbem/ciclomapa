@@ -1,5 +1,10 @@
 [
     {
+        "name": "Comentários",
+        "description": "Comentários colaborativos escritos no CicloMapa para auxiliar mapeadores.",
+        "type": "poi"
+    },
+    {
         "name": "Ciclovia",
         "description": "Vias segregadas exclusivas para fluxo de bicicletas.",
         "filters": [

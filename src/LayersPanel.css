@@ -1,50 +1,3 @@
-.layers-panel {
-    position: fixed;
-    bottom: 40px;
-    left: 12px;
-    border-radius: 4px;
-    /* width: 250px; */
-    color: white;
-
-    /* top: 84px;
-    right: 10px; */
-    /* background: white; */
-    /* box-shadow: 0 0 10px 2px rgba(0,0,0,.1); */
-}
-
-.layer-row {
-    display: flex;
-    cursor: pointer;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-}
-
-.layer-row > div {
-    display: flex;
-    align-items: center;   
-}
-
-.layer-row:hover {
-    background: rgba(255,255,255,0.5);
-}
-
-.layer-miniature {
-    min-width: 24px;
-    margin-right: 4px;
-    display: inline-block;
-}
-
-.layer-name {
-    margin: 0 4px;
-    line-height: 1.2em;
-    font-weight: 600;
-}
-
-.layer-length {
-    font-size: 11px;
-}
-
 .ant-popover-inner-content {
     background: #333;
     color: white;
@@ -53,15 +6,6 @@
 .ant-popover-placement-right > .ant-popover-content > .ant-popover-arrow {
     border-bottom-color: #333;
     border-left-color: #333;
-}
-
-.layer-row .ant-switch {
-    /* display: none; */
-    opacity: 0;
-}
-
-.layer-row:hover .ant-switch {
-    opacity: 1;
 }
 
 
