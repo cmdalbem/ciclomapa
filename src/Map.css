@@ -85,6 +85,11 @@
 
 .mapboxgl-ctrl.mapboxgl-ctrl-attrib {
   margin: 0;
+  background: none;
+}
+
+.mapboxgl-ctrl-attrib a {
+  color: rgba(255,255,255,0.2);
 }
 
 .mapboxgl-ctrl-icon.mapboxgl-ctrl-zoom-in,

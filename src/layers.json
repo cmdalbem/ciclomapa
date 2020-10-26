@@ -1,7 +1,7 @@
 [
     {
         "name": "Comentários",
-        "description": "Comentários colaborativos escritos no CicloMapa para auxiliar mapeadores.",
+        "description": "Comentários de usuários do CicloMapa sinalizando inconsistências no mapeamento das vias.",
         "type": "poi"
     },
     {
