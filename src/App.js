@@ -186,8 +186,8 @@ class App extends Component {
         if (!oldData || !oldData.features) {
             return true;
         } else {
-            const nbrOldFeatures = oldData.features.length;
-            const nbrNewFeatures = newData.features.length;
+            const nbrOldFeatures = oldData && oldData.features.length;
+            const nbrNewFeatures = newData && newData.features.length;
     
             console.debug('nbrOldFeatures', nbrOldFeatures);
             console.debug('nbrNewFeatures', nbrNewFeatures);

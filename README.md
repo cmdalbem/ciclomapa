@@ -3,7 +3,7 @@
 
 # CicloMapa
 
-## An open platform to democratize access to bike maps of brazilian cities, combining the collaborative power of OpenStreetMaps with web technologies and easy-to-use design.
+## An open platform to democratize access to bike maps of brazilian cities, combining the collaborative power of  with web technologies and easy-to-use design.
 
 Today in Brazil we face a big challenge of not having data on the cycling infrastructure available in our cities. This makes it very hard to paint a clear picture of our reality and calculate the relevant metrics to measure the opportunities and impacts to society of improving urban mobility. The most common problems are data not being standardized, making it hard to compare between localities, data not being available publicly or sometimes it not existing at all.
 

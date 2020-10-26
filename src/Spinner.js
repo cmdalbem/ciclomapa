@@ -21,14 +21,14 @@ class Spinner extends Component {
                                 </div>
 
                                 <div className="content">
-                                    <h1>
+                                    <div className="text-6xl">
                                         Ops!
-                                    </h1>
+                                    </div>
 
                                     <Space size="large" direction="vertical">
-                                        <h3>
+                                        <div className="text-lg">
                                             O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.
-                                        </h3>
+                                        </div>
 
                                         <Button 
                                             type="primary"
@@ -46,13 +46,13 @@ class Spinner extends Component {
                                 </svg>
 
                                 <div className="content">
-                                    <h1>
+                                    <div className="text-4xl">
                                         Carregando mapa cicloviário de <b>{city}</b>.
-                                    </h1>
+                                    </div>
 
-                                    <h3>
+                                    <div className="text-lg">
                                         Estamos acessando diretamente os dados mais atualizados do OpenStreetMap. Isso pode levar algumas dezenas de segundos, a depender do tamanho da cidade.
-                                    </h3>
+                                    </div>
                                 </div>
                             </div>
 

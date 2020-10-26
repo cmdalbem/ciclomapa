@@ -138,7 +138,7 @@ class TopBar extends Component {
                                         <div style={{ maxWidth: 250 }}>
                                             <Space size="small" direction="vertical" >
                                                 <div>
-                                                    O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMaps em <b>{updatedAtStr}</b>.
+                                                    O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap em <b>{updatedAtStr}</b>.
                                                 </div> 
 
                                                 <Button
