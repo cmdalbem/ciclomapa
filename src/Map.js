@@ -669,7 +669,7 @@ class Map extends Component {
         // Listeners
 
         this.map.on('load', () => {
-            this.initLayersWays(this.props.layers.filter(l => l.type == 'way'));
+            this.initLayersWays(this.props.layers.filter(l => l.type === 'way'));
             this.loadComments();
             this.onMapMoved();
 

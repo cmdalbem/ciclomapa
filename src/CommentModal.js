@@ -3,14 +3,12 @@ import React, { Component } from 'react';
 import {
     Input,
     Modal,
-    Select,
     Typography,
     Space,
     Checkbox, Row, Col
 } from 'antd';
 
 const { TextArea } = Input;
-const { Option } = Select;
 const { Text } = Typography;
 
 

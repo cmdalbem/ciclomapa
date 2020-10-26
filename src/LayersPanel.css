@@ -1,14 +1,3 @@
-.ant-popover-inner-content {
-    background: #333;
-    color: white;
-}
-
-.ant-popover-placement-right > .ant-popover-content > .ant-popover-arrow {
-    border-bottom-color: #333;
-    border-left-color: #333;
-}
-
-
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {

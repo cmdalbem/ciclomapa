@@ -4,10 +4,12 @@
   "private": true,
   "homepage": "https://ciclomapa.org.br",
   "dependencies": {
+    "@craco/craco": "^5.7.0",
     "@mapbox/mapbox-gl-geocoder": "^4.4.0",
     "@mapbox/mapbox-sdk": "^0.6.0",
     "@turf/length": "^6.0.2",
     "antd": "^4.2.0",
+    "craco-less": "^1.17.0",
     "file-saver": "^2.0.2",
     "firebase": "^6.6.2",
     "gh-pages": "^2.0.1",
@@ -24,9 +26,9 @@
     "zipson": "^0.2.12"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
     "eject": "react-scripts eject",
     "predeploy": "yarn run build",
     "deploy": "gh-pages -d build"

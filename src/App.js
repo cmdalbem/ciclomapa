@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import { withRouter } from "react-router-dom";
 
 import { notification } from 'antd';
-import "antd/dist/antd.css";
 
 import Map from './Map.js'
 import Spinner from './Spinner.js'
@@ -16,7 +15,8 @@ import { DEFAULT_LAT, DEFAULT_LNG, DEFAULT_ZOOM, OSM_DATA_MAX_AGE_MS } from './c
 import { downloadObjectAsJson } from './utils.js'
 import { computeTypologies, cleanUpOSMTags } from './geojsonUtils.js'
 
-import './App.css';
+// import './App.css';
+import './App.less';
 
 class App extends Component {
     geoJson;
@@ -272,7 +272,7 @@ class App extends Component {
     }
 
     downloadData() {
-        const layerWays = this.state.layers.filter(l => l.type == 'way');
+        const layerWays = this.state.layers.filter(l => l.type === 'way');
 
         computeTypologies(this.state.geoJson, layerWays);
         cleanUpOSMTags(this.state.geoJson);

@@ -10,9 +10,9 @@ import {
 
 import {
     MdFileDownload as IconDownload,
-    MdInfo as IconInfo,
     MdSync as IconUpdate,
     MdExpandMore as IconCaret,
+    // MdInfo as IconInfo,
     // MdRateReview as IconComment,
 } from "react-icons/md";
 import { IconContext } from "react-icons";
@@ -20,7 +20,6 @@ import { IconContext } from "react-icons";
 import { timeSince } from './utils.js'
 import { TOPBAR_HEIGHT, IS_MOBILE } from './constants'
 
-// import logo from './img/logo_green.svg';
 import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
 import { ReactComponent as IconComment } from './img/icons/newcomment.svg';
@@ -102,10 +101,14 @@ class TopBar extends Component {
         
         return (
             <IconContext.Provider value={{ className: 'react-icon' }}>
-                <div className="topbar" style={{height: TOPBAR_HEIGHT}}>
-                    <div id="logo" className="logo">
-                        {/* <img src={logo} alt="CicloMapa"></img> */}
-                        Ciclomapa
+                <div
+                    className="w-full text-white z-10 absolute px-6 py-3 flex items-start justify-between"
+                    style={{height: TOPBAR_HEIGHT}}
+                >
+                    <div className="text-2xl uppercase text-green-300 mt-1" style={{
+                        fontFamily: 'Teko, sans-serif',
+                    }}>
+                        CicloMapa
                     </div>
 
                     <div className="city-picker">
@@ -114,53 +117,54 @@ class TopBar extends Component {
                                 size={IS_MOBILE ? 'default' : 'large'}
                                 onClick={this.showCityPicker}
                             >
-                                <h3 className="areaname">
-                                    <span className="state">
+                                <h3 className="text-lg">
+                                    <span className="mr-3">
+                                        <span className="font-bold">
+                                            {city},
+                                        </span>
+
                                         {state}
                                     </span>
-                                    <span className="city">
-                                        {city}
-                                    </span>
 
-                                    <IconCaret style={{ fontSize: '16px', color: '#4ba96e' }} />
+                                    <IconCaret className="text-green-600"/>
                                 </h3>
                             </Button>
 
                             {
                                 this.props.lastUpdate &&
-                                <span className="data-tooltip">
-                                    Atualizado há <b>{timeSince(this.props.lastUpdate)}</b>.
-                                    <Popover
-                                        placement="bottom"
-                                        content={(
-                                            <div style={{ maxWidth: 250 }}>
-                                                <Space size="small" direction="vertical" >
-                                                    <div>
-                                                        O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMaps em <b>{updatedAtStr}</b>.
-                                                    </div> 
+                                <Popover
+                                    placement="bottom"
+                                    content={(
+                                        <div style={{ maxWidth: 250 }}>
+                                            <Space size="small" direction="vertical" >
+                                                <div>
+                                                    O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMaps em <b>{updatedAtStr}</b>.
+                                                </div> 
 
-                                                    <Button
-                                                        size="small"
-                                                        icon={<IconUpdate />}
-                                                        ghost
-                                                        onClick={this.props.forceUpdate}
-                                                    >
-                                                        Atualizar
-                                                    </Button>
-                                                </Space>
-                                            </div>
-                                        )}
-                                        arrowPointAtCenter={true}
-                                    >
-                                        <IconInfo style={{ fontSize: '12px', marginLeft: '4px' }} />
-                                    </Popover>
-                                </span>
+                                                <Button
+                                                    size="small"
+                                                    icon={<IconUpdate />}
+                                                    ghost
+                                                    onClick={this.props.forceUpdate}
+                                                >
+                                                    Atualizar
+                                                </Button>
+                                            </Space>
+                                        </div>
+                                    )}
+                                    arrowPointAtCenter={true}
+                                >
+                                    <span className="font-regular cursor-default text-xs opacity-25 hover:opacity-100 transition-opacity duration-300">
+                                        Atualizado há <b>{timeSince(this.props.lastUpdate)}</b>.
+                                    </span>
+                                    {/* <IconInfo style={{ fontSize: '12px', marginLeft: '4px' }} /> */}
+                                </Popover>
 
                             }
                         </Space>
                     </div>
                     
-                    <div className="nav-links">
+                    <div className="nav-links font-white">
                         <Button
                             size="large"
                             type="link"

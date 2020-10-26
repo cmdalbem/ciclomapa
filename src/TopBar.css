@@ -1,72 +1,7 @@
-.logo {
-    font-size: 28px;
-    text-transform: uppercase;
-    /* font-family: 'Aku & Kamu'; */
-    font-family: 'Teko', sans-serif;
-    /* letter-spacing: 0.1em; */
-    color: white;
-    /* box-shadow: 0 5px 0 #b4f9d0; */
-}
-
-#logo img {
-    margin-top: 8px;
-    height: 24px;
-}
-
-.topbar h1,
-.topbar h2,
-.topbar h3 {
-    margin: 0;
-}
-
-.ant-btn-link {
-    color: white;
-}
-
-.topbar {
-    width: 100%;
-    color: white;
-    z-index: 2;
-    position: absolute;
-    
-    /* background: #424d5c; */
-    /* box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05); */
-
-    padding: 12px 24px;
-    
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-}
-
-.data-tooltip {
-    color: gray;
-    font-size: 10px;
-}
-
-.city {
-    padding-right: 6px;
-    font-weight: 600;
-    margin-right: .25em;
-}
-
-.state {
-    /* margin-right: .5em; */
-    /* opacity: 0.8; */
-    
-    /* font-weight: 600;
-    font-size: .5em;
-    text-transform: uppercase; */
-}
-
 .city-picker {
     position: fixed;
     left: 50%;
     transform: translateX(-50%);
-}
-
-.state:after {
-    content: ', ';
 }
 
 .about-modal .logos {
