@@ -4,17 +4,6 @@
     transform: translateX(-50%);
 }
 
-.about-modal .logos {
-    display: flex;
-    justify-content: space-evenly;
-    align-items: center;
-}
-
-.about-modal .logos img {
-    width: 100px;
-    height: auto;
-}
-
 .nav-links > button + button {
     margin-left: 12px;
 }
@@ -31,19 +20,10 @@
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {
-    .nav-links,
-    .data-tooltip,
-    #logo {
-        display: none;
-    }
-
     .city-picker {
         position: relative;
         transform: none;
         left: auto;
     }
 
-    .topbar {
-        padding: 12px;
-    }
 }

@@ -37,7 +37,8 @@ class LayersPanel extends Component {
                 {
                     this.props.layers.map(l =>
                         <Popover
-                            placement="left" arrowPointAtCenter={true} key={l.name}
+                            placement="left"
+                            arrowPointAtCenter={true} key={l.name}
                             content={(
                                 <div style={{width: 300}}>
                                     {
@@ -52,12 +53,12 @@ class LayersPanel extends Component {
                             )}
                         >
                             <div
-                                className="flex cursor-pointer items-center justify-between px-3 py-1 hover:bg-black hover:bg-opacity-50"
+                                className="flex cursor-pointer items-center justify-between px-3 py-0 sm:py-1 hover:bg-black hover:bg-opacity-50"
                                 onClick={this.onChange.bind(this, l.id, !l.isActive)}
                                 style={{ opacity: l.isActive ? 1 : .5 }}
                             >
                                 <div className="flex items-center">
-                                    <span className="w-6 mr-2 inline-block flex justify-center">
+                                    <span className="w-3 sm:w-6 mr-2 inline-block flex justify-center">
                                     {
                                         l.type === 'way' ?
                                             <span className='w-full'

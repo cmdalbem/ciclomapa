@@ -3,7 +3,6 @@ import { get, set } from 'idb-keyval';
 
 import {
     Space,
-    Modal,
     Button,
     Popover,
 } from 'antd';
@@ -24,52 +23,31 @@ import {
     ENABLE_COMMENTS,
 } from './constants'
 
-import itdp from './img/itdp.png';
-import ucb from './img/ucb.png';
+import AboutModal from './AboutModal.js'
+
 import { ReactComponent as IconComment } from './img/icons/newcomment.svg';
 
 import './TopBar.css'
 
 
 class TopBar extends Component {
-    info() {
-        Modal.info({
-            title: 'Sobre',
-            className: 'about-modal',
-            content: (
-                <div>
-                    <p>
-                        O <b>CicloMapa</b> é uma ferramenta que busca ampliar a visibilidade das infraestruturas cicloviárias (ou a falta delas), disponibilizando dados que auxiliem a incidência em políticas públicas para a ciclomobilidade.
-                    </p>
+    constructor(props) {
+        super(props);
 
-                    <p>
-                        Utilizando o <a href="https://www.openstreetmap.org/" title="OpenStreetMap" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>, uma plataforma colaborativa de mapeamento de dados geo-espaciais abertos, também procura engajar a comunidade em sua atualização.
-                    </p>
+        this.openAboutModal = this.openAboutModal.bind(this);
+        this.closeAboutModal = this.closeAboutModal.bind(this);
 
-                    <p>
-                        Para saber mais sobre a iniciativa e como contribuir com o mapeamento de sua cidade, acesse a <a href="https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/" title="CicloMapa | UCB - União de Ciclistas do Brasil" target="_blank" rel="noopener noreferrer">página do projeto no site da UCB</a>.
-                    </p>
+        this.state = {
+            aboutModal: false
+        };
+    }
 
-                    <p>
-                        Este é um projeto de código aberto (<i>Open Source</i>) e pode ser encontrado no <a href="https://github.com/cmdalbem/ciclomapa/" title="GitHub" target="_blank" rel="noopener noreferrer">GitHub</a>.
-                    </p>
+    openAboutModal() {
+        this.setState({ aboutModal: true });
+    }
 
-                    <div>
-                        Realização:
-
-                        <div className="logos">
-                            <a href="https://itdpbrasil.org/" target="_BLANK" rel="noopener noreferrer">
-                                <img src={itdp} alt="Logo do ITDP"></img>
-                            </a>
-                            <a href="https://www.uniaodeciclistas.org.br/" target="_BLANK" rel="noopener noreferrer">
-                                <img src={ucb} alt="Logo da UCB"></img>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            ),
-            onOk() { },
-        });
+    closeAboutModal() {
+        this.setState({ aboutModal: false });
     }
 
     showCityPicker() {
@@ -82,7 +60,7 @@ class TopBar extends Component {
         get('hasSeenWelcomeMsg')
                 .then(data => {
                     if (!data) {
-                        this.info();
+                        this.openAboutModal();
                         set('hasSeenWelcomeMsg', true);
                     }
                 });
@@ -110,7 +88,7 @@ class TopBar extends Component {
                     className="w-full text-white z-10 absolute px-6 py-3 flex items-start justify-between"
                     style={{height: TOPBAR_HEIGHT}}
                 >
-                    <div className="text-2xl uppercase text-green-300 mt-1" style={{
+                    <div className="text-2xl uppercase text-green-300 mt-1 hidden sm:block" style={{
                         fontFamily: 'Teko, sans-serif',
                     }}>
                         CicloMapa
@@ -138,6 +116,7 @@ class TopBar extends Component {
                             {
                                 this.props.lastUpdate &&
                                 <Popover
+                                    className="hidden sm:block"
                                     placement="bottom"
                                     content={(
                                         <div style={{ maxWidth: 250 }}>
@@ -169,11 +148,11 @@ class TopBar extends Component {
                         </Space>
                     </div>
                     
-                    <div className="nav-links font-white">
+                    <div className="nav-links font-white hidden sm:block">
                         <Button
                             size="large"
                             type="link"
-                            onClick={this.info}
+                            onClick={this.openAboutModal}
                         >
                             Sobre
                         </Button>
@@ -193,6 +172,11 @@ class TopBar extends Component {
                         </Button>
                     </div>
                 </div>
+
+                <AboutModal
+                    visible={this.state.aboutModal}
+                    onClose={this.closeAboutModal}
+                />
             </IconContext.Provider>
         );
     }
