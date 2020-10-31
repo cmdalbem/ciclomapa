@@ -283,10 +283,6 @@ class Map extends Component {
                 "source": "osm",
                 "name": l.name,
                 "description": l.description,
-                "layout": {
-                    "line-join": "round",
-                    "line-cap": "round"
-                },
                 "paint": {
                     "line-color": l.style.borderColor,
                     "line-width": [
@@ -300,7 +296,7 @@ class Map extends Component {
                                 l.style.lineWidth*3
                             ]
                     ],
-                    ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [.2, 2.5]})
+                    ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
                 "filter": filters,
             }, 'road-label-small');
@@ -312,10 +308,6 @@ class Map extends Component {
                 "source": "osm",
                 "name": l.name,
                 "description": l.description,
-                "layout": {
-                    "line-join": "round",
-                    "line-cap": "round"
-                },
                 "paint": {
                     "line-color": l.style.lineColor,
                     "line-width": [
@@ -329,7 +321,7 @@ class Map extends Component {
                                 (l.style.lineWidth - l.style.borderWidth)*3
                             ]
                     ],
-                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [.2, 2.5]})
+                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
                 "filter": filters,
             }, 'road-label-small');
@@ -340,10 +332,7 @@ class Map extends Component {
                 "source": "osm",
                 "name": l.name,
                 "description": l.description,
-                "layout": {
-                    "line-join": "round",
-                    "line-cap": "round"
-                },
+                "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
                 "paint": {
                     "line-color": l.style.lineColor,
                     "line-width": [
@@ -357,7 +346,7 @@ class Map extends Component {
                                 l.style.lineWidth*3
                             ]
                     ],
-                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [.2, 2.5]})
+                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
                 },
                 "filter": filters,
             }, 'road-label-small');

@@ -28,6 +28,7 @@ class LayersPanel extends Component {
 
         return (
             <div
+                id="layersPanel"
                 className="fixed text-white"
                 style={{bottom: 40, left: 12}}
                 onMouseEnter={() => this.setState({hover: true})}

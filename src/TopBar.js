@@ -102,6 +102,7 @@ class TopBar extends Component {
         return (
             <IconContext.Provider value={{ className: 'react-icon' }}>
                 <div
+                    id="topbar"
                     className="w-full text-white z-10 absolute px-6 py-3 flex items-start justify-between"
                     style={{height: TOPBAR_HEIGHT}}
                 >

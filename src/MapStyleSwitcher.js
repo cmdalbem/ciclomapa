@@ -36,7 +36,7 @@ class MapStyleSwitcher extends Component {
 
     render() {
         return (
-            <div className="switcher-bar">
+            <div id="mapSwitcher" className="switcher-bar">
                 {
                     this.options.map( (option, i) =>
                         <div
