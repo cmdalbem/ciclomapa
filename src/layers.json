@@ -1,10 +1,5 @@
 [
     {
-        "name": "Comentários",
-        "description": "Comentários de usuários do CicloMapa sinalizando inconsistências no mapeamento das vias.",
-        "type": "poi"
-    },
-    {
         "name": "Ciclovia",
         "description": "Vias segregadas exclusivas para fluxo de bicicletas.",
         "filters": [

@@ -8,7 +8,13 @@ import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
 import commentIcon from './img/icons/comment.png';
 
-import { MAPBOX_ACCESS_TOKEN, IS_MOBILE, DEFAULT_ZOOM } from './constants.js'
+import {
+    MAPBOX_ACCESS_TOKEN,
+    IS_MOBILE,
+    DEFAULT_ZOOM,
+    ENABLE_COMMENTS,
+} from './constants.js'
+
 import AirtableDatabase from './AirtableDatabase.js'
 import CommentModal from './CommentModal.js'
 import NewCommentCursor from './NewCommentCursor.js'
@@ -43,7 +49,9 @@ class Map extends Component {
         this.hideCommentModal = this.hideCommentModal.bind(this);
         document.addEventListener('newComment', this.newComment);
 
-        this.airtableDatabase = new AirtableDatabase();
+        if (ENABLE_COMMENTS) {
+            this.airtableDatabase = new AirtableDatabase();
+        }
 
         this.state = {
             showCommentModal: false,
@@ -659,7 +667,11 @@ class Map extends Component {
 
         this.map.on('load', () => {
             this.initLayersWays(this.props.layers.filter(l => l.type === 'way'));
-            this.loadComments();
+            
+            if (ENABLE_COMMENTS) {
+                this.loadComments();
+            }
+
             this.onMapMoved();
 
             this.map.on('moveend', this.onMapMoved);
@@ -716,19 +728,23 @@ class Map extends Component {
                 <div ref={el => this.mapContainer = el}></div>
 
                 {
+                    ENABLE_COMMENTS &&
                     this.state.showCommentCursor &&
                     <NewCommentCursor/>
                 }
 
-                <CommentModal
-                    location={this.props.location}
-                    visible={this.state.showCommentModal}
-                    tagsList={this.state.tagsList}
-                    coords={this.newCommentCoords}
-                    airtableDatabase={this.airtableDatabase}
-                    afterCreate={this.afterCommentCreate}
-                    onCancel={this.hideCommentModal}
-                />
+                {
+                    ENABLE_COMMENTS &&
+                    <CommentModal
+                        location={this.props.location}
+                        visible={this.state.showCommentModal}
+                        tagsList={this.state.tagsList}
+                        coords={this.newCommentCoords}
+                        airtableDatabase={this.airtableDatabase}
+                        afterCreate={this.afterCommentCreate}
+                        onCancel={this.hideCommentModal}
+                    />
+                }
             </>
         )
     }

@@ -18,3 +18,5 @@ export const TOPBAR_HEIGHT = 64;
 export const MOBILE_MAX_WIDTH = '430px';
 export const DESKTOP_MIN_WIDTH = '430px';
 export const IS_MOBILE = window.matchMedia && window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH})`).matches;
+
+export const ENABLE_COMMENTS = false;

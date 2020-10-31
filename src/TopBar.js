@@ -18,7 +18,11 @@ import {
 import { IconContext } from "react-icons";
 
 import { timeSince } from './utils.js'
-import { TOPBAR_HEIGHT, IS_MOBILE } from './constants'
+import {
+    TOPBAR_HEIGHT,
+    IS_MOBILE,
+    ENABLE_COMMENTS,
+} from './constants'
 
 import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
@@ -174,9 +178,12 @@ class TopBar extends Component {
                             Sobre
                         </Button>
 
-                        <Button ghost onClick={this.newComment}>
-                            <IconComment className="react-icon" /> Comentário
-                        </Button>
+                        {
+                            ENABLE_COMMENTS &&
+                            <Button ghost onClick={this.newComment}>
+                                <IconComment className="react-icon" /> Comentário
+                            </Button>
+                        }
 
                         <Button
                             ghost
