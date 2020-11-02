@@ -35,8 +35,8 @@ class AboutModal extends Component {
                     </p>
 
                     <div className="mt-16">
-                        <div className="flex items-start justify-between flex-col sm:flex-row">
-                            <div className="w-8/12 flex h-10">
+                        <div className="flex items-start justify-between">
+                            <div className="w-8/12 flex h-10 flex-col sm:flex-row">
                                 <a
                                     className="h-full mr-4"
                                     href="https://www.uniaodeciclistas.org.br/" 
