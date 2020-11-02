@@ -13,8 +13,9 @@
         ],
         "style": {
             "lineColor": "#65df97",
-            "lineWidth": 6,
+            "lineWidth": 8,
             "borderColor": "#4ba96e",
+            "borderWidth": 4,
             "borderStyle": "solid"
         }
     },
@@ -32,7 +33,7 @@
         ],
         "style": {
             "lineColor": "#b4fad0",
-            "lineWidth": 5
+            "lineWidth": 6
         }
     },
     {

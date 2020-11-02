@@ -280,6 +280,8 @@ class Map extends Component {
     addDynamicLayer(l) {
         const filters = this.getMapboxFilterForLayer(l);
 
+        const dashedLineStyle = { 'line-dasharray': [1, 1] };
+
         // Check if layer has a border color set. If that's the case the logic is a
         //  little different and we'll need 2 layers, one for the line itself and 
         //  another for the line underneath which creates the illusion of a border.
@@ -291,6 +293,7 @@ class Map extends Component {
                 "source": "osm",
                 "name": l.name,
                 "description": l.description,
+                "filter": filters,
                 "paint": {
                     "line-color": l.style.borderColor,
                     "line-width": [
@@ -304,9 +307,9 @@ class Map extends Component {
                                 l.style.lineWidth*3
                             ]
                     ],
-                    ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
+                    ...(l.style.borderStyle === 'dashed' && dashedLineStyle)
                 },
-                "filter": filters,
+                "layout": (l.style.borderStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
             }, 'road-label-small');
 
             // Line
@@ -316,6 +319,7 @@ class Map extends Component {
                 "source": "osm",
                 "name": l.name,
                 "description": l.description,
+                "filter": filters,
                 "paint": {
                     "line-color": l.style.lineColor,
                     "line-width": [
@@ -329,9 +333,9 @@ class Map extends Component {
                                 (l.style.lineWidth - l.style.borderWidth)*3
                             ]
                     ],
-                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
+                    ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
-                "filter": filters,
+                "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
             }, 'road-label-small');
         } else {
             this.map.addLayer({
@@ -340,7 +344,7 @@ class Map extends Component {
                 "source": "osm",
                 "name": l.name,
                 "description": l.description,
-                "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
+                "filter": filters,
                 "paint": {
                     "line-color": l.style.lineColor,
                     "line-width": [
@@ -354,9 +358,9 @@ class Map extends Component {
                                 l.style.lineWidth*3
                             ]
                     ],
-                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [1, 0.6]})
+                    ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
-                "filter": filters,
+                "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
             }, 'road-label-small');
         }
 
