@@ -77,6 +77,8 @@ class TopBar extends Component {
             // country = parts[2];
         let updatedAtStr;
 
+        const isProd = window.location.hostname === 'ciclomapa.org.br';
+
         if (this.props.lastUpdate) {
             updatedAtStr = this.props.lastUpdate.toLocaleString('pt-BR');
         }
@@ -85,92 +87,102 @@ class TopBar extends Component {
             <IconContext.Provider value={{ className: 'react-icon' }}>
                 <div
                     id="topbar"
-                    className="w-full text-white z-10 absolute px-6 py-3 flex items-start justify-between"
+                    className="w-full z-10 absolute flex flex-col"
                     style={{height: TOPBAR_HEIGHT}}
                 >
-                    <div className="text-2xl uppercase text-green-300 mt-1 hidden sm:block" style={{
-                        fontFamily: 'Teko, sans-serif',
-                    }}>
-                        CicloMapa
-                    </div>
+                    {
+                        !isProd &&
+                        <div className="flex w-full bg-yellow-400 text-black items-center justify-center text-center text-xs mb-2 py-1">
+                            Você está em um <b className="ml-1">ambiente de teste</b>. Pode futricar à vontade! ;)
+                        </div>
+                    }
 
-                    <div className="city-picker">
-                        <Space size={4} direction="vertical" align="center">
-                            <Button
-                                size={IS_MOBILE ? 'default' : 'large'}
-                                onClick={this.showCityPicker}
-                            >
-                                <h3 className="text-lg">
-                                    <span className="mr-3">
-                                        <span className="font-bold">
-                                            {city},
+                    <div className="flex items-start justify-between px-6 py-3 text-white">
+                        <div className="text-2xl uppercase text-green-300 mt-1 hidden sm:block" style={{
+                            fontFamily: 'Teko, sans-serif',
+                        }}>
+                            CicloMapa
+                        </div>
+
+                        <div className="city-picker">
+                            <Space size={4} direction="vertical" align="center">
+                                <Button
+                                    size={IS_MOBILE ? 'default' : 'large'}
+                                    onClick={this.showCityPicker}
+                                >
+                                    <h3 className="text-lg">
+                                        <span className="mr-3">
+                                            <span className="font-bold">
+                                                {city},
+                                            </span>
+
+                                            {state}
                                         </span>
 
-                                        {state}
-                                    </span>
+                                        <IconCaret className="text-green-600"/>
+                                    </h3>
+                                </Button>
 
-                                    <IconCaret className="text-green-600"/>
-                                </h3>
+                                {
+                                    this.props.lastUpdate &&
+                                    <Popover
+                                        className="hidden sm:block"
+                                        placement="bottom"
+                                        content={(
+                                            <div style={{ maxWidth: 250 }}>
+                                                <Space size="small" direction="vertical" >
+                                                    <div>
+                                                        O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap em <b>{updatedAtStr}</b>.
+                                                    </div> 
+
+                                                    <Button
+                                                        size="small"
+                                                        icon={<IconUpdate />}
+                                                        ghost
+                                                        onClick={this.props.forceUpdate}
+                                                    >
+                                                        Atualizar
+                                                    </Button>
+                                                </Space>
+                                            </div>
+                                        )}
+                                        arrowPointAtCenter={true}
+                                    >
+                                        <span className="font-regular cursor-default text-xs opacity-25 hover:opacity-100 transition-opacity duration-300">
+                                            Atualizado há <b>{timeSince(this.props.lastUpdate)}</b>.
+                                        </span>
+                                        {/* <IconInfo style={{ fontSize: '12px', marginLeft: '4px' }} /> */}
+                                    </Popover>
+
+                                }
+                            </Space>
+                        </div>
+                        
+                        <div className="nav-links font-white hidden sm:block">
+                            <Button
+                                size="large"
+                                type="link"
+                                onClick={this.openAboutModal}
+                            >
+                                Sobre
                             </Button>
 
                             {
-                                this.props.lastUpdate &&
-                                <Popover
-                                    className="hidden sm:block"
-                                    placement="bottom"
-                                    content={(
-                                        <div style={{ maxWidth: 250 }}>
-                                            <Space size="small" direction="vertical" >
-                                                <div>
-                                                    O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap em <b>{updatedAtStr}</b>.
-                                                </div> 
-
-                                                <Button
-                                                    size="small"
-                                                    icon={<IconUpdate />}
-                                                    ghost
-                                                    onClick={this.props.forceUpdate}
-                                                >
-                                                    Atualizar
-                                                </Button>
-                                            </Space>
-                                        </div>
-                                    )}
-                                    arrowPointAtCenter={true}
-                                >
-                                    <span className="font-regular cursor-default text-xs opacity-25 hover:opacity-100 transition-opacity duration-300">
-                                        Atualizado há <b>{timeSince(this.props.lastUpdate)}</b>.
-                                    </span>
-                                    {/* <IconInfo style={{ fontSize: '12px', marginLeft: '4px' }} /> */}
-                                </Popover>
-
+                                ENABLE_COMMENTS &&
+                                <Button ghost onClick={this.newComment}>
+                                    <IconComment className="react-icon" /> Comentário
+                                </Button>
                             }
-                        </Space>
-                    </div>
-                    
-                    <div className="nav-links font-white hidden sm:block">
-                        <Button
-                            size="large"
-                            type="link"
-                            onClick={this.openAboutModal}
-                        >
-                            Sobre
-                        </Button>
 
-                        {
-                            ENABLE_COMMENTS &&
-                            <Button ghost onClick={this.newComment}>
-                                <IconComment className="react-icon" /> Comentário
+                            <Button
+                                ghost
+                                onClick={this.props.downloadData}
+                            >
+                                <IconDownload /> Dados
                             </Button>
-                        }
-
-                        <Button
-                            ghost
-                            onClick={this.props.downloadData}
-                        >
-                            <IconDownload /> Dados
-                        </Button>
+                        </div>
                     </div>
+
                 </div>
 
                 <AboutModal
