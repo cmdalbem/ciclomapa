@@ -28,7 +28,6 @@ class Map extends Component {
     map;
     popup;
     searchBar;
-    hoverPopup;
     selectedCycleway;
     hoveredCycleway;
     hoveredComment;
@@ -109,7 +108,7 @@ class Map extends Component {
             
             properties.tags.forEach( t => {
                 html += `
-                    <div class="pill-inverted">
+                    <div class="inline-block py-1 px-3 rounded-full border mt-2 text-xs">
                         ${t}
                     </div>
                 `;
@@ -125,62 +124,58 @@ class Map extends Component {
 
     showCyclewayPopup(e) {
         const coords = e.lngLat;
-        const props = e.features[0].properties;
+        const properties = e.features[0].properties;
+        
+        const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
 
-        const layer = this.props.layers.find(l =>
+        const thisLayer = this.props.layers.find(l =>
             l.id === e.features[0].layer.id.split('--')[0]
         );
 
-        let html = '';
+        let html = `
+            <div class="text-2xl leading-tight mt-3 mb-5">
+                ${properties.name ?
+                    properties.name :
+                    '<span class="italic opacity-25">Via sem nome</span>'}
+            </div>
 
-        html += `
-            <h2 style="margin-top: 1em; font-size: 22px;">
-                ${props.name ? props.name : '<i style="color: gray;">Sem nome</i>'}
-            </h2>`;
+            <div
+                class="inline-block py-1 px-3 rounded-full text-black"
+                style="background-color: ${thisLayer.style.lineColor}"
+            >
+                ${thisLayer.name}
+            </div>
 
-        html += `
-            <div style="font-size: 14px">
-                <div class="pill" style="background-color: ${layer.style.lineColor}">
-                    ${layer.name}
+            <div class="mt-10">
+                <div class="opacity-50 mb-2">
+                    Acha que este dado pode ser melhorado?
                 </div>
-            </div>`;
+                
+                <a class="border border-opacity-25 border-white px-2 py-1 rounded-sm mr-2"
+                    target="_BLANK" rel="noopener"
+                    href="${osmUrl}"
+                >
+                    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" class="react-icon" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>    
+                    Editar no OSM
+                </a>
 
-        // html += `<h3>Tipo: ${layer.name}</h3>`;
-        // html += `<p>${layer.description}</p>`;
+                <a  href="#"
+                    class="border border-opacity-25 border-white px-2 py-1 rounded-sm"
+                    onClick="document.dispatchEvent(new Event('newComment'));"
+                >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="react-icon"><path fill-rule="evenodd" clip-rule="evenodd" d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H8L3 22V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15ZM13 14V11H16V9H13V6H11V9H8V11H11V14H13Z"></path></svg>
+                    Comentar
+                </a>
+            </div>
+        `;
 
         // const prettyProps = JSON.stringify(props, null, 2)
         //     .replace(/(?:\r\n|\r|\n)/g, '<br/>')
         //     .replace(/"|,|\{|\}/g, '');
         // html += prettyProps;
 
-        html += `
-            <div class="footer">
-                Acha que este dado pode ser melhorado?
-                <br>
-                <a
-                    target="_BLANK"
-                    rel="noopener"
-                    href="https://www.openstreetmap.org/${props.id}"
-                >
-                    Editar no OSM →
-                </a>
-            </div>
-    `;
-
         this.cyclewayPopup.setLngLat(coords)
             .setHTML(html)
-            .addTo(this.map);
-    }
-
-    showHoverPopup(e) {
-        const coords = e.lngLat;
-
-        const layer = this.props.layers.find(l =>
-            l.id === e.features[0].layer.id.split('--')[0]
-        );
-
-        this.hoverPopup.setLngLat(coords)
-            .setHTML(`<h3>${layer.name}<h3>`)
             .addTo(this.map);
     }
 
@@ -382,8 +377,6 @@ class Map extends Component {
                 }
                 this.hoveredCycleway = e.features[0].id;
                 this.map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: true });
-
-                // this.showHoverPopup(e);
             }
         });
 
@@ -534,13 +527,6 @@ class Map extends Component {
         layers.slice().reverse().forEach(l => {
             this.addDynamicLayer(l);
         }); 
-
-        // map.addSource('some id', {
-        //     type: 'geojson',
-        //     // data: 'http://overpass-api.de/api/interpreter?data=node[amenity=school](bbox);out;(way[amenity=school](bbox);node(w););out;'
-        //     // data: 'http://overpass-api.de/api/interpreter?data=node[name=%22Im Tannenbusch%22][highway=bus_stop];out+skel;'
-        //     data: 'https://firebasestorage.googleapis.com/v0/b/ciclomapa-app.appspot.com/o/ciclomapa-Nitero%CC%81i%2C%20Rio%20De%20Janeiro%2C%20Brazil.json?alt=media&token=79733a19-009d-46f1-af7b-e55bb3dd9bb5'
-        // });
     }
 
     componentDidUpdate(prevProps) {
@@ -708,11 +694,6 @@ class Map extends Component {
             offset: 25
         });
 
-        this.hoverPopup = new mapboxgl.Popup({
-            closeButton: false,
-            className: 'hover-popup'
-        });
-        
         // Initialize map data center
         this.reverseGeocode(this.props.center);
     }

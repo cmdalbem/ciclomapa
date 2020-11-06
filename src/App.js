@@ -366,6 +366,9 @@ class App extends Component {
                 <TopBar
                     title={this.state.area}
                     lastUpdate={this.state.dataUpdatedAt}
+                    lat={this.state.lat}
+                    lng={this.state.lng}
+                    z={this.state.zoom}
                     downloadData={this.downloadData}
                     // isDownloadUnavailable={this.state.isDownloadUnavailable}
                     onMapMoved={this.onMapMoved}
