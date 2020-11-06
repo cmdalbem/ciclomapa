@@ -5,14 +5,15 @@ import {
     Space,
     Button,
     Popover,
+    Menu,
+    Dropdown,
 } from 'antd';
 
 import {
     MdFileDownload as IconDownload,
     MdSync as IconUpdate,
     MdExpandMore as IconCaret,
-    // MdInfo as IconInfo,
-    // MdRateReview as IconComment,
+    MdModeEdit as IconEdit,
 } from "react-icons/md";
 import { IconContext } from "react-icons";
 
@@ -70,19 +71,48 @@ class TopBar extends Component {
         document.dispatchEvent(new Event('newComment'));
     }
 
+    handleMenuClick(e) {
+        // message.info('Click on menu item.');
+        console.log('click', e);
+      }
+
     render() {
-        const parts = this.props.title.split(',');
+        const isProd = window.location.hostname === 'ciclomapa.org.br';
+
+        let {
+            title,
+            lastUpdate,
+            forceUpdate,
+            downloadData,
+            lat,
+            lng,
+            z,
+        } = this.props;
+        
+        const parts = title.split(',');
         const city = parts[0], 
             state = parts[1];
             // country = parts[2];
         let updatedAtStr;
 
-        const isProd = window.location.hostname === 'ciclomapa.org.br';
-
-        if (this.props.lastUpdate) {
-            updatedAtStr = this.props.lastUpdate.toLocaleString('pt-BR');
+        if (lastUpdate) {
+            updatedAtStr = lastUpdate.toLocaleString('pt-BR');
         }
-        
+
+        // Compensate different zoom levels from Mapbox to OSM Editor
+        z = Math.ceil(z) + 1;
+
+        const menu = (
+            <Menu onClick={this.handleMenuClick}>
+                <Menu.Item key="1" icon={<IconDownload />}>
+                    Download
+              </Menu.Item>
+                <Menu.Item key="2" icon={<IconEdit />}>
+                    Edit
+              </Menu.Item>
+            </Menu>
+        );
+
         return (
             <IconContext.Provider value={{ className: 'react-icon' }}>
                 <div
@@ -124,7 +154,7 @@ class TopBar extends Component {
                                 </Button>
 
                                 {
-                                    this.props.lastUpdate &&
+                                    lastUpdate &&
                                     <Popover
                                         className="hidden sm:block"
                                         placement="bottom"
@@ -139,7 +169,7 @@ class TopBar extends Component {
                                                         size="small"
                                                         icon={<IconUpdate />}
                                                         ghost
-                                                        onClick={this.props.forceUpdate}
+                                                        onClick={forceUpdate}
                                                     >
                                                         Atualizar
                                                     </Button>
@@ -149,7 +179,7 @@ class TopBar extends Component {
                                         arrowPointAtCenter={true}
                                     >
                                         <span className="font-regular cursor-default text-xs opacity-25 hover:opacity-100 transition-opacity duration-300">
-                                            Atualizado há <b>{timeSince(this.props.lastUpdate)}</b>.
+                                            Atualizado há <b>{timeSince(lastUpdate)}</b>.
                                         </span>
                                         {/* <IconInfo style={{ fontSize: '12px', marginLeft: '4px' }} /> */}
                                     </Popover>
@@ -170,16 +200,32 @@ class TopBar extends Component {
                             {
                                 ENABLE_COMMENTS &&
                                 <Button ghost onClick={this.newComment}>
-                                    <IconComment className="react-icon" /> Comentário
+                                    <IconComment className="react-icon" /> Comentar
                                 </Button>
                             }
 
+                            <Button ghost > 
+                                <a target="_BLANK" rel="noopener noreferrer"
+                                    href={`https://www.openstreetmap.org/edit#map=${z}/${lat}/${lng}`}
+                                >
+                                    <IconEdit /> Editar
+                                </a>
+                            </Button>
+
                             <Button
                                 ghost
-                                onClick={this.props.downloadData}
+                                onClick={downloadData}
                             >
                                 <IconDownload /> Dados
                             </Button>
+
+                            {/* <Dropdown overlay={menu}>
+                                <Button ghost>
+                                    <span className="mr-2"> Dados </span>
+                                    <IconCaret className="text-green-600"/>
+                                </Button>
+                            </Dropdown> */}
+                            
                         </div>
                     </div>
 
