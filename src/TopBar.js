@@ -17,7 +17,10 @@ import {
 } from "react-icons/md";
 import { IconContext } from "react-icons";
 
-import { timeSince } from './utils.js'
+import {
+    timeSince
+} from './utils.js'
+
 import {
     TOPBAR_HEIGHT,
     IS_MOBILE,
@@ -37,6 +40,7 @@ class TopBar extends Component {
 
         this.openAboutModal = this.openAboutModal.bind(this);
         this.closeAboutModal = this.closeAboutModal.bind(this);
+        this.handleMenuClick = this.handleMenuClick.bind(this);
 
         this.state = {
             aboutModal: false
@@ -72,9 +76,19 @@ class TopBar extends Component {
     }
 
     handleMenuClick(e) {
-        // message.info('Click on menu item.');
-        console.log('click', e);
-      }
+        if (e.key === 'comment') {
+            this.newComment();
+        }
+    }
+
+    getOsmUrl() {
+        let { lat, lng, z } = this.props;
+
+        // Compensate different zoom levels from Mapbox to OSM Editor
+        z = Math.ceil(z) + 1;
+
+        return `https://www.openstreetmap.org/edit#map=${z}/${lat}/${lng}`;
+    }
 
     render() {
         const isProd = window.location.hostname === 'ciclomapa.org.br';
@@ -83,10 +97,7 @@ class TopBar extends Component {
             title,
             lastUpdate,
             forceUpdate,
-            downloadData,
-            lat,
-            lng,
-            z,
+            downloadData
         } = this.props;
         
         const parts = title.split(',');
@@ -99,19 +110,25 @@ class TopBar extends Component {
             updatedAtStr = lastUpdate.toLocaleString('pt-BR');
         }
 
-        // Compensate different zoom levels from Mapbox to OSM Editor
-        z = Math.ceil(z) + 1;
-
-        const menu = (
+        const collaborateMenu = (
             <Menu onClick={this.handleMenuClick}>
-                <Menu.Item key="1" icon={<IconDownload />}>
-                    Download
-              </Menu.Item>
-                <Menu.Item key="2" icon={<IconEdit />}>
-                    Edit
-              </Menu.Item>
+                {
+                    ENABLE_COMMENTS &&
+                    <Menu.Item key="comment" icon={<IconComment className="react-icon" />}>
+                        Comentar
+                    </Menu.Item>
+                }
+                <Menu.Item key="edit" icon={<IconEdit />}>
+                    <a
+                        className="inline-block w-full hover:text-white"
+                        target="_BLANK" rel="noopener noreferrer"
+                        href={this.getOsmUrl()}
+                    >
+                        Editar no OSM
+                    </a>
+                </Menu.Item>
             </Menu>
-        );
+        )
 
         return (
             <IconContext.Provider value={{ className: 'react-icon' }}>
@@ -197,21 +214,6 @@ class TopBar extends Component {
                                 Sobre
                             </Button>
 
-                            {
-                                ENABLE_COMMENTS &&
-                                <Button ghost onClick={this.newComment}>
-                                    <IconComment className="react-icon" /> Comentar
-                                </Button>
-                            }
-
-                            <Button ghost > 
-                                <a target="_BLANK" rel="noopener noreferrer"
-                                    href={`https://www.openstreetmap.org/edit#map=${z}/${lat}/${lng}`}
-                                >
-                                    <IconEdit /> Editar
-                                </a>
-                            </Button>
-
                             <Button
                                 ghost
                                 onClick={downloadData}
@@ -219,13 +221,13 @@ class TopBar extends Component {
                                 <IconDownload /> Dados
                             </Button>
 
-                            {/* <Dropdown overlay={menu}>
+                            <Dropdown overlay={collaborateMenu}>
                                 <Button ghost>
-                                    <span className="mr-2"> Dados </span>
-                                    <IconCaret className="text-green-600"/>
+                                    <span className="mr-2"> Colaborar </span>
+                                    <IconCaret className="text-green-600" />
                                 </Button>
-                            </Dropdown> */}
-                            
+                            </Dropdown>
+
                         </div>
                     </div>
 
