@@ -132,40 +132,44 @@ class Map extends Component {
             l.id === e.features[0].layer.id.split('--')[0]
         );
 
+        const bgClass = thisLayer.id;
+
         let html = `
-            <div class="text-2xl leading-tight mt-3 mb-5">
-                ${properties.name ?
-                    properties.name :
-                    '<span class="italic opacity-25">Via sem nome</span>'}
-            </div>
-
-            <div
-                class="inline-block py-1 px-3 rounded-full text-black"
-                style="background-color: ${thisLayer.style.lineColor}"
-            >
-                ${thisLayer.name}
-            </div>
-
-            <div class="mt-10">
-                <div class="opacity-50 mb-2">
-                    Acha que este dado pode ser melhorado?
+            <div class="text-black">
+                <div class="text-2xl leading-tight mt-3 mb-5">
+                    ${properties.name ?
+                        properties.name :
+                        '<span class="italic opacity-50">Via sem nome</span>'}
                 </div>
-                
-                <a class="border border-opacity-25 border-white px-2 py-1 rounded-sm mr-2"
-                    target="_BLANK" rel="noopener"
-                    href="${osmUrl}"
-                >
-                    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" class="react-icon" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>    
-                    Editar no OSM
-                </a>
 
-                <a  href="#"
-                    class="border border-opacity-25 border-white px-2 py-1 rounded-sm"
-                    onClick="document.dispatchEvent(new Event('newComment'));"
+                <div
+                    class="inline-block py-1 px-3 rounded-full bg-black"
+                    style="color: ${thisLayer.style.lineColor}"
                 >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="react-icon"><path fill-rule="evenodd" clip-rule="evenodd" d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H8L3 22V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15ZM13 14V11H16V9H13V6H11V9H8V11H11V14H13Z"></path></svg>
-                    Comentar
-                </a>
+                    ${thisLayer.name}
+                </div>
+
+                <div class="mt-10">
+                    <div class="opacity-50 mb-2">
+                        Acha que este dado pode ser melhorado?
+                    </div>
+                    
+                    <a class="text-black border border-opacity-25 border-black px-2 py-1 rounded-sm mr-2"
+                        target="_BLANK" rel="noopener"
+                        href="${osmUrl}"
+                    >
+                        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" class="react-icon" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>    
+                        Editar no OSM
+                    </a>
+
+                    <a  href="#"
+                        class="text-black border border-opacity-25 border-black px-2 py-1 rounded-sm"
+                        onClick="document.dispatchEvent(new Event('newComment'));"
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="react-icon"><path fill-rule="evenodd" clip-rule="evenodd" d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H8L3 22V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15ZM13 14V11H16V9H13V6H11V9H8V11H11V14H13Z"></path></svg>
+                        Comentar
+                    </a>
+                </div>
             </div>
         `;
 
@@ -174,9 +178,11 @@ class Map extends Component {
         //     .replace(/"|,|\{|\}/g, '');
         // html += prettyProps;
 
-        this.cyclewayPopup.setLngLat(coords)
+        this.cyclewayPopup
+            .setLngLat(coords)
             .setHTML(html)
             .addTo(this.map);
+        this.cyclewayPopup.addClassName(bgClass); 
     }
 
     hidePopup() {
