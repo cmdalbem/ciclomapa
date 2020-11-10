@@ -13,7 +13,10 @@ const debugStyles = {
 
 class AirtableDatabase {
     async fetchTable(tableName, view, offset, accumulator=[]) {
-        console.debug('AIRTABLE_API_KEY', AIRTABLE_API_KEY);
+        if (!AIRTABLE_API_KEY) {
+            console.error('No AIRTABLE_API_KEY!');
+            return;
+        }
 
         let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}?api_key=${AIRTABLE_API_KEY}`;
         if (view) {
@@ -61,19 +64,20 @@ class AirtableDatabase {
     }
 
     async getComments() {
-        let comments = await this.fetchTable(COMMENTS_TABLE_NAME);
-        console.debug(comments);
+        let comments = await this.fetchTable(COMMENTS_TABLE_NAME);        
         
-        const tagsListComment = comments.filter(c => c.id === TAGS_LIST_COMMENT_ID)[0];
-        console.debug(tagsListComment);
-        const tagsList = tagsListComment.fields.tags;
-
-        comments = comments.filter(c => c.fields.latlong !== undefined);
-        
-        return {
-            comments,
-            tagsList
-        };
+        if (comments) {
+            const tagsListComment = comments.filter(c => c.id === TAGS_LIST_COMMENT_ID)[0];
+            console.debug(tagsListComment);
+            const tagsList = tagsListComment.fields.tags;
+    
+            comments = comments.filter(c => c.fields.latlong !== undefined);
+            
+            return {
+                comments,
+                tagsList
+            };
+        }
     }
 
     async create(fields) {
