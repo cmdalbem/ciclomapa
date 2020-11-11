@@ -31,7 +31,7 @@ class AboutModal extends Component {
                     </p>
 
                     <p>
-                        Utilizando o <a className="underline" href="https://www.openstreetmap.org/" title="OpenStreetMap" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>, uma plataforma colaborativa de mapeamento de dados geo-espaciais abertos, também procura engajar a comunidade em sua atualização e na importância de dados abertos.
+                        Utilizando o <a className="underline" href="https://www.openstreetmap.org/" title="OpenStreetMap" target="_blank" rel="noopener noreferrer">OpenStreetMap (OSM)</a>, uma plataforma colaborativa de mapeamento de dados geo-espaciais abertos, também procura engajar a comunidade em sua atualização e na importância de dados abertos.
                     </p>
 
                     <div className="mt-16">

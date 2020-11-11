@@ -28,6 +28,7 @@ import {
 } from './constants'
 
 import AboutModal from './AboutModal.js'
+import EditModal from './EditModal.js'
 
 import { ReactComponent as IconComment } from './img/icons/newcomment.svg';
 
@@ -40,10 +41,18 @@ class TopBar extends Component {
 
         this.openAboutModal = this.openAboutModal.bind(this);
         this.closeAboutModal = this.closeAboutModal.bind(this);
+        
+        this.openEditModal = this.openEditModal.bind(this);
+        this.closeEditModal = this.closeEditModal.bind(this);
+        this.onEditModalCheckboxChange = this.onEditModalCheckboxChange.bind(this);
+        
         this.handleMenuClick = this.handleMenuClick.bind(this);
+        this.getOsmUrl = this.getOsmUrl.bind(this);
 
         this.state = {
-            aboutModal: false
+            aboutModal: false,
+            editModal: false,
+            hasDismissedEditModal: false
         };
     }
 
@@ -53,6 +62,20 @@ class TopBar extends Component {
 
     closeAboutModal() {
         this.setState({ aboutModal: false });
+    }
+
+    openEditModal() {
+        this.setState({ editModal: true });
+    }
+
+    closeEditModal() {
+        this.setState({ editModal: false });
+    }
+
+    onEditModalCheckboxChange(e) {
+        this.setState({
+            hasDismissedEditModal: e.target.checked
+        });
     }
 
     showCityPicker() {
@@ -79,6 +102,10 @@ class TopBar extends Component {
         if (e.key === 'comment') {
             this.newComment();
         }
+        
+        if (!this.state.hasDismissedEditModal && e.key === 'edit') {
+            this.openEditModal();
+        }
     }
 
     getOsmUrl() {
@@ -99,7 +126,7 @@ class TopBar extends Component {
             forceUpdate,
             downloadData
         } = this.props;
-        
+
         const parts = title.split(',');
         const city = parts[0], 
             state = parts[1];
@@ -119,13 +146,18 @@ class TopBar extends Component {
                     </Menu.Item>
                 }
                 <Menu.Item key="edit" icon={<IconEdit />}>
-                    <a
-                        className="inline-block w-full hover:text-white"
-                        target="_BLANK" rel="noopener noreferrer"
-                        href={this.getOsmUrl()}
-                    >
-                        Editar no OSM
-                    </a>
+                    {
+                        this.state.hasDismissedEditModal ?
+                            <a
+                                className="inline-block w-full hover:text-white"
+                                target="_BLANK" rel="noopener noreferrer"
+                                href={this.getOsmUrl()}
+                            >
+                                Editar no OSM
+                            </a>
+                            :
+                            "Editar no OSM"
+                    }
                 </Menu.Item>
             </Menu>
         )
@@ -236,6 +268,13 @@ class TopBar extends Component {
                 <AboutModal
                     visible={this.state.aboutModal}
                     onClose={this.closeAboutModal}
+                />
+
+                <EditModal
+                    visible={this.state.editModal}
+                    getOsmUrl={this.getOsmUrl}
+                    onClose={this.closeEditModal}
+                    onCheckboxChange={this.onEditModalCheckboxChange}
                 />
             </IconContext.Provider>
         );
