@@ -59,7 +59,7 @@ class AboutModal extends Component {
                                     Tutoriais
                                 </a>
 
-                                <a className="underline" mailto="contato@ciclomapa.com.br">
+                                <a className="underline" href="mailto:contato@ciclomapa.com.br" target="_blank" rel="noopener noreferrer">
                                     Contato
                                 </a>
                                 
