@@ -15,7 +15,7 @@ class EditModal extends Component {
     render() {
         return (
             <Modal
-                title="Editar dados"
+                title="Editar no OSM"
                 visible={this.props.visible}
                 onCancel={this.props.onClose}
                 showCancel={false}
@@ -46,8 +46,8 @@ class EditModal extends Component {
                     <p>
                         Obrigado por contribuir para melhorar os mapas cicloviários das cidades brasileiras!
                     </p>
-                    <p>
-                        O CicloMapa usa dados do OpenStreetMap (OSM), o maior banco de dados abertos de mapas do mundo. Sua interface de edição e nomenclatures podem parecer um pouco amendotradoras na primeira vez, e para te ajudar preparamos uma série de <a className="underline" href="https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/" title="CicloMapa | UCB - União de Ciclistas do Brasil" target="_blank" rel="noopener noreferrer">tutoriais</a>. Se mesmo assim tiver dúvidas, não hesite em nos <a className="underline" mailto="contato@ciclomapa.com.br">contactar</a>!
+                    <p className="mb-8">
+                        O CicloMapa é integrado ao OpenStreetMap (OSM), o maior banco de dados abertos de mapas do mundo, cuja interface de edição pode parecer intimidadora na primeira vez. Para te ajudar preparamos uma <a className="underline" href="https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/" title="CicloMapa | UCB - União de Ciclistas do Brasil" target="_blank" rel="noopener noreferrer">série de tutoriais</a>. Se mesmo assim tiver dúvidas <a className="underline" mailto="contato@ciclomapa.com.br">entre em contato</a>.
                     </p>
 
                     <Checkbox onChange={this.props.onCheckboxChange}>
