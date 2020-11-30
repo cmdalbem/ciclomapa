@@ -108,7 +108,7 @@ class Map extends Component {
             
             properties.tags.forEach( t => {
                 html += `
-                    <div class="inline-block py-1 px-3 rounded-full border mt-2 text-xs">
+                    <div class="inline-block py-1 px-3 rounded-full border-gray-700 border mt-2 text-xs">
                         ${t}
                     </div>
                 `;

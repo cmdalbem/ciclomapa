@@ -111,10 +111,7 @@ class CommentModal extends Component {
                                     this.props.tagsList.map(t =>
                                         <Col span={12} key={t}>
                                             <Checkbox value={t}>
-                                                <div
-                                                    className="inline-block py-1 px-3 rounded-full border mt-2 text-xs"
-                                                    style={{color: 'inherit', borderColor: 'inherit'}}
-                                                >
+                                                <div className="inline-block py-1 px-3 rounded-full border mt-2 text-xs border-gray-700" >
                                                     {t}
                                                 </div>
                                             </Checkbox>
