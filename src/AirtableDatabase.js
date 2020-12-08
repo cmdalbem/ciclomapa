@@ -3,7 +3,7 @@ const AIRTABLE_BASE_ID = process.env.REACT_APP_AIRTABLE_BASE_ID;
 
 const COMMENTS_TABLE_NAME = 'Comments';
 
-const TAGS_LIST_COMMENT_ID = 'recOgck7G9m4y9PVj';
+const TAGS_LIST_COMMENT_ID = 44;
 
 const debugStyles = {
     blue: 'color: lightblue;',
@@ -67,16 +67,17 @@ class AirtableDatabase {
         let comments = await this.fetchTable(COMMENTS_TABLE_NAME);        
         
         if (comments) {
-            const tagsListComment = comments.filter(c => c.id === TAGS_LIST_COMMENT_ID)[0];
-            console.debug(tagsListComment);
-            const tagsList = tagsListComment.fields.tags;
-    
-            comments = comments.filter(c => c.fields.latlong !== undefined);
-            
-            return {
-                comments,
-                tagsList
-            };
+            const tagsListComment = comments.filter(c => c.fields.id === TAGS_LIST_COMMENT_ID)[0];
+            if (tagsListComment) {
+                const tagsList = tagsListComment.fields.tags;
+                comments = comments.filter(c => c.fields.latlong !== undefined);
+                return {
+                    comments,
+                    tagsList
+                }
+            } else {
+                console.error('getComments(): Error retrieving tags list');
+            }
         }
     }
 
