@@ -1,5 +1,5 @@
 const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY;
-const AIRTABLE_BASE_ID = 'appcabRJEC9bAxSin';
+const AIRTABLE_BASE_ID = process.env.REACT_APP_AIRTABLE_BASE_ID;
 
 const COMMENTS_TABLE_NAME = 'Comments';
 
