@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
 
+import { notification } from 'antd';
+
 import {
     Input,
     Modal,
@@ -48,6 +50,10 @@ class CommentModal extends Component {
             tags: this.state.tags,
             email: this.state.email,
         }).then( () => {
+            notification.success({
+                message: 'Novo comentário criado.'
+            });
+
             this.props.afterCreate();
             this.reset();
         })
