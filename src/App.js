@@ -18,7 +18,9 @@ import {
     DEFAULT_LNG,
     DEFAULT_ZOOM,
     OSM_DATA_MAX_AGE_MS,
-    DEFAULT_MAPBOX_STYLE
+    DEFAULT_MAPBOX_STYLE,
+    SAVE_TO_FIREBASE,
+    DISABLE_DATA_HEALTY_TEST
 } from './constants.js'
 
 // import './App.css';
@@ -27,6 +29,7 @@ import './App.less';
 class App extends Component {
     geoJson;
     storage = new Storage();
+    osmController = OSMController;
 
     constructor(props) {
         super(props);
@@ -183,6 +186,10 @@ class App extends Component {
         console.debug('oldData', oldData);
         console.debug('newData', newData);
 
+        if (DISABLE_DATA_HEALTY_TEST) {
+            return true;
+        }
+
         if (!oldData || !oldData.features) {
             return true;
         } else {
@@ -212,7 +219,10 @@ class App extends Component {
                     throw new Error('New data is not healthy.');
                 } else {
                     const now = new Date();
-                    this.storage.save(areaName, newData.geoJson, now);
+                    
+                    if (SAVE_TO_FIREBASE) {
+                        this.storage.save(areaName, newData.geoJson, now);
+                    }
     
                     // this.geoJsonDiff(this.state.geoJson, newData.geoJson);
     
