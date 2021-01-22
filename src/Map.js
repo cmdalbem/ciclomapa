@@ -6,8 +6,6 @@ import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
-import commentIcon from './img/icons/comment.png';
-
 import {
     MAPBOX_ACCESS_TOKEN,
     IS_MOBILE,
@@ -21,6 +19,18 @@ import NewCommentCursor from './NewCommentCursor.js'
 
 import './Map.css'
 
+import commentIcon from './img/icons/poi-comment.png';
+import bikeparkingIcon from './img/icons/poi-bikeparking.png';
+import bikeshopIcon from './img/icons/poi-bikeshop.png';
+import bikerentalIcon from './img/icons/poi-bikerental.png';
+
+const iconsMap = {
+    "poi-comment": commentIcon,
+    "poi-bikeparking": bikeparkingIcon,
+    "poi-bikeshop": bikeshopIcon,
+    "poi-rental": bikerentalIcon
+}
+
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
 
@@ -31,10 +41,12 @@ class Map extends Component {
     selectedCycleway;
     hoveredCycleway;
     hoveredComment;
+    hoveredPOI;
 
     airtableDatabase;
     comments;
     commentPopup;
+    poiPopup;
 
     constructor(props) {
         super(props);
@@ -42,7 +54,7 @@ class Map extends Component {
         this.onMapMoved = this.onMapMoved.bind(this);
 
         this.newComment = this.newComment.bind(this);
-        this.loadComments = this.loadComments.bind(this);
+        this.addCommentsLayers = this.addCommentsLayers.bind(this);
         this.afterCommentCreate = this.afterCommentCreate.bind(this);
         this.showCommentModal = this.showCommentModal.bind(this);
         this.hideCommentModal = this.hideCommentModal.bind(this);
@@ -75,7 +87,7 @@ class Map extends Component {
 
     afterCommentCreate() {
         this.hideCommentModal();
-        this.loadComments();
+        this.addCommentsLayers();
     };
 
     showCommentPopup(e) {
@@ -118,6 +130,56 @@ class Map extends Component {
         }
 
         this.commentPopup.setLngLat(coords)
+            .setHTML(html)
+            .addTo(this.map);
+    }
+
+    showPOIPopup(e, icon) {
+        // const coords = e.features[0].geometry.coordinates.slice();
+        const coords = e.lngLat;
+        const properties = e.features[0].properties;
+
+        console.debug(e);
+        console.debug(properties);
+
+        let html = `
+            <div class="text-2xl leading-tight mt-3 mb-5">
+                <img class="react-icon" src="${iconsMap[icon]}" alt=""/> ${properties.name ? properties.name : ''}
+            </div>
+
+            <div class="mt-2 text-base">
+                ${
+                    JSON.stringify(properties, null, 2)
+                    .replace(/(?:\r\n|\r|\n)/g, '<br/>')
+                    .replace(/"|,|\{|\}/g, '')
+                }
+            </div>
+        `;
+
+        // if (properties.tags) {
+        //     // Arrays and objects get serialized by Mapbox system
+        //     properties.tags = JSON.parse(properties.tags);
+
+        //     html += `
+        //         <div style="
+        //             margin-top: 2em;
+        //             font-size: 14px;
+        //             font
+        //         ">
+        //     `;
+            
+        //     properties.tags.forEach( t => {
+        //         html += `
+        //             <div class="inline-block py-1 px-3 rounded-full border-gray-700 border mt-2 text-xs">
+        //                 ${t}
+        //             </div>
+        //         `;
+        //     })
+            
+        //     html += `</div>`;
+        // }
+
+        this.poiPopup.setLngLat(coords)
             .setHTML(html)
             .addTo(this.map);
     }
@@ -262,7 +324,7 @@ class Map extends Component {
         // console.debug('onMapMoved');
     }
 
-    getMapboxFilterForLayer(l) {
+    convertFilterToMapboxFilter(l) {
         return [
             "any",
             ...l.filters.map(f =>
@@ -278,8 +340,77 @@ class Map extends Component {
         ];
     }
 
-    addDynamicLayer(l) {
-        const filters = this.getMapboxFilterForLayer(l);
+    addLayerPoi(l) {
+        const filters = this.convertFilterToMapboxFilter(l);
+
+        this.map.addLayer({
+            'id': l.id,
+            'type': 'symbol',
+            'source': 'osm',
+            "filter": filters,
+            "name": l.name,
+            "description": l.description,
+            'layout': {
+                'icon-image': l.icon,
+                'icon-size': [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"], 
+                        0, 0.8,
+                        15, 1
+                ]
+            },
+            'paint': {
+                'icon-opacity': [
+                    'case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                    .8,
+                    1
+                ]
+            }
+        });
+
+        // Interactions
+
+        this.map.on("mouseenter", l.id, e => {
+            if (e.features.length > 0) {
+                this.map.getCanvas().style.cursor = 'pointer';
+
+                if (this.hoveredPOI) {
+                    this.map.setFeatureState({
+                        source: 'osm',
+                        id: this.hoveredPOI },
+                        { hover: false });
+                }
+                this.hoveredPOI = e.features[0].id;
+                this.map.setFeatureState({
+                    source: 'osm',
+                    id: this.hoveredPOI },
+                    { hover: true });
+            }
+        });
+
+        this.map.on("mouseleave", l.id, e => {
+            if (this.hoveredPOI) {
+                this.map.getCanvas().style.cursor = '';
+
+                this.map.setFeatureState({
+                    source: 'osm',
+                    id: this.hoveredPOI },
+                    { hover: false });
+            }
+            this.hoveredPOI = null;
+        });
+
+        this.map.on('click', l.id, e => {
+            if (e.features.length > 0) {
+                this.showPOIPopup(e, l.icon);
+            }
+        });
+    }
+
+    addLayerWay(l) {
+        const filters = this.convertFilterToMapboxFilter(l);
 
         const dashedLineStyle = { 'line-dasharray': [1, 1] };
 
@@ -410,7 +541,7 @@ class Map extends Component {
         });
     }
 
-    async loadComments() {
+    async addCommentsLayers() {
         if (this.state.comments.length > 0) {
             this.state.comments.forEach(c => {
                 if (c.marker) {
@@ -502,7 +633,7 @@ class Map extends Component {
         }
     }
 
-    initLayersWays(layers) {
+    initGeojsonLayers(layers) {
         const map = this.map;
 
         map.setLayoutProperty(
@@ -532,7 +663,11 @@ class Map extends Component {
         //   want the most important ones to be on top.
         // Slice is used here to don't destructively reverse the original array.
         layers.slice().reverse().forEach(l => {
-            this.addDynamicLayer(l);
+            if (!l.type || l.type==='way') {
+                this.addLayerWay(l);
+            } else if (l.type === 'poi' && l.filters) {
+                this.addLayerPoi(l);
+            }
         }); 
     }
 
@@ -663,26 +798,22 @@ class Map extends Component {
         // Listeners
 
         this.map.on('load', () => {
-            this.initLayersWays(this.props.layers.filter(l => l.type === 'way'));
+            this.initGeojsonLayers(this.props.layers);
             
             if (ENABLE_COMMENTS) {
-                this.loadComments();
+                this.addCommentsLayers();
             }
 
             this.onMapMoved();
 
             this.map.on('moveend', this.onMapMoved);
 
-            this.map.loadImage( commentIcon, (error, image) => {
-                if (error) throw error;
-                this.map.addImage('commentIcon', image);
+            Object.keys(iconsMap).forEach(key => {
+                this.map.loadImage( iconsMap[key], (error, image) => {
+                    if (error) throw error;
+                    this.map.addImage(key, image);
+                });
             });
-
-            // Further chages on styles reinitilizes layers
-            // this.map.on('style.load', () => {
-            //     this.initLayersWays();
-            //     this.onMapMoved();
-            // });
         });
 
 
@@ -698,6 +829,10 @@ class Map extends Component {
 
         this.commentPopup = new mapboxgl.Popup({
             closeOnClick: false,
+            offset: 25
+        });
+
+        this.poiPopup = new mapboxgl.Popup({
             offset: 25
         });
 

@@ -7,10 +7,20 @@ import {
 } from "react-icons/md";
 
 import { slugify } from './utils.js'
-import iconComment from './img/icons/comment-flat.png';
 
 import './LayersPanel.css';
 
+import commentIcon from './img/icons/poi-comment-flat.png';
+import bikeparkingIcon from './img/icons/poi-bikeparking.png';
+import bikeshopIcon from './img/icons/poi-bikeshop.png';
+import bikerentalIcon from './img/icons/poi-bikerental.png';
+
+const iconsMap = {
+    "poi-comment": commentIcon,
+    "poi-bikeparking": bikeparkingIcon,
+    "poi-bikeshop": bikeshopIcon,
+    "poi-rental": bikerentalIcon
+}
 
 class LayersPanel extends Component {
     state = {
@@ -76,7 +86,7 @@ class LayersPanel extends Component {
                                             }}
                                             ></span>
                                         : 
-                                        <img className="h-5" src={iconComment} alt=""/>
+                                        <img className="h-5" src={iconsMap[l.icon]} alt=""/>
                                     }
                                     </span>
 

@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 
-import commentIcon from './img/icons/comment.png';
+import commentIcon from './img/icons/poi-comment.png';
 
 
 class NewCommentCursor extends Component {

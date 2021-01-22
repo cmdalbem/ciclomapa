@@ -21,13 +21,13 @@ const servers = [
 class OSMController {
     static getQuery(constraints) {
         const bbox = constraints.bbox;
-        // const area = constraints.area.split(',')[0];
         const areaId = constraints.areaId;
-        const ways = layers.default.filter(l => !l.type || l.type === 'way');
+        const ways = layers.default.filter(l => l.filters);
+        // const ways = layers.default.filter(l => l.filters && l.type==='poi');
 
         const body = ways.map(l =>
             l.filters.map(f =>
-                'way'
+                (l.type === 'poi' ? 'node' : 'way')
                 + (typeof f[0] === 'string' ?
                     `["${f[0]}"="${f[1]}"]`
                     :
