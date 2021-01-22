@@ -2,7 +2,35 @@
     {
         "name": "Comentários",
         "description": "Comentários de usuários do CicloMapa sinalizando inconsistências no mapeamento das vias.",
-        "type": "poi"
+        "type": "poi",
+        "icon": "poi-comment"
+    },
+    {
+        "name": "Bicicletários",
+        "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos.",
+        "filters": [
+            ["amenity", "bicycle_parking"]
+        ],
+        "type": "poi",
+        "icon": "poi-bikeparking"
+    },
+    {
+        "name": "Lojas & oficinas",
+        "description": "Lojas que vendam equipamentos e bicicletas e oficinas especializadas.",
+        "filters": [
+            ["shop", "bicycle"]
+        ],
+        "type": "poi",
+        "icon": "poi-bikeshop"
+    },
+    {
+        "name": "Aluguel",
+        "description": "Estações de bike sharing e outros serviços de aluguel de bicicletas.",
+        "filters": [
+            ["amenity", "bicycle_rental"]
+        ],
+        "type": "poi",
+        "icon": "poi-rental"
     },
     {
         "name": "Ciclovia",

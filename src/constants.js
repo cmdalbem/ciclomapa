@@ -19,4 +19,8 @@ export const MOBILE_MAX_WIDTH = '430px';
 export const DESKTOP_MIN_WIDTH = '430px';
 export const IS_MOBILE = window.matchMedia && window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH})`).matches;
 
+// Mostly to debug and local development
 export const ENABLE_COMMENTS = true;
+
+export const SAVE_TO_FIREBASE = false;
+export const DISABLE_DATA_HEALTY_TEST = true;
