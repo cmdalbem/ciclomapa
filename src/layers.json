@@ -6,15 +6,6 @@
         "icon": "poi-comment"
     },
     {
-        "name": "Bicicletários",
-        "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos.",
-        "filters": [
-            ["amenity", "bicycle_parking"]
-        ],
-        "type": "poi",
-        "icon": "poi-bikeparking"
-    },
-    {
         "name": "Oficinas & lojas",
         "description": "Oficinas especializadas e lojas que vendem bicicletas e equipamentos.",
         "filters": [
@@ -31,6 +22,15 @@
         ], 
         "type": "poi",
         "icon": "poi-rental"
+    },
+    {
+        "name": "Bicicletários",
+        "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos.",
+        "filters": [
+            ["amenity", "bicycle_parking"]
+        ],
+        "type": "poi",
+        "icon": "poi-bikeparking"
     },
     {
         "name": "Ciclovia",
