@@ -15,8 +15,8 @@
         "icon": "poi-bikeparking"
     },
     {
-        "name": "Lojas & oficinas",
-        "description": "Lojas que vendam equipamentos e bicicletas e oficinas especializadas.",
+        "name": "Oficinas & lojas",
+        "description": "Oficinas especializadas e lojas que vendem bicicletas e equipamentos.",
         "filters": [
             ["shop", "bicycle"]
         ],
@@ -24,11 +24,11 @@
         "icon": "poi-bikeshop"
     },
     {
-        "name": "Aluguel",
-        "description": "Estações de bike sharing e outros serviços de aluguel de bicicletas.",
+        "name": "Bicicletas compartilhadas",
+        "description": "Estações de compartilhamento de bicicletas (bike sharing).",
         "filters": [
             ["amenity", "bicycle_rental"]
-        ],
+        ], 
         "type": "poi",
         "icon": "poi-rental"
     },
@@ -101,7 +101,7 @@
             ["cycleway:right", "sidepath"]
         ],
         "style": {
-            "lineColor": "#FF8A00",
+            "lineColor": "#FFA500",
             "lineWidth": 3
         }
     },
@@ -115,7 +115,7 @@
             [["highway","living_street"],["bicycle","yes"]]
         ],
         "style": {
-            "lineColor": "orange",
+            "lineColor": "#FF8A00",
             "lineWidth": 2,
             "lineStyle": "dashed"
         }
