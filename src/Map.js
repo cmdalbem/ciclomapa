@@ -445,11 +445,12 @@ class Map extends Component {
                     'icon-image': 'commentIcon',
                     'icon-size': [
                         "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"], 
-                            0, 0,
-                            15, 1
-                    ]
+                        ["exponential", 1.5],
+                        ["zoom"], 
+                        0, 0,
+                        15, 1
+                    ],
+                    "icon-allow-overlap": true
                 },
                 'paint': {
                     'icon-opacity': [
