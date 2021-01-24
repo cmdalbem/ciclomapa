@@ -24,7 +24,7 @@ const iconsMap = {
 
 class LayersPanel extends Component {
     state = {
-        hover: false
+        hover: false 
     }
 
     onChange(id, newVal) {

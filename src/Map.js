@@ -359,8 +359,14 @@ class Map extends Component {
             "name": l.name,
             "description": l.description,
             'layout': {
-                "icon-allow-overlap": true,
-                // 'icon-image': l.icon,
+                "icon-padding": 0,
+                "icon-allow-overlap": [
+                    'step',
+                    ['zoom'],
+                    false,
+                    14,
+                    true
+                ],
                 'icon-image': [
                     'step',
                     ['zoom'],
@@ -372,7 +378,7 @@ class Map extends Component {
                     "interpolate",
                         ["exponential", 1.5],
                         ["zoom"], 
-                        10, 0.2,
+                        10, 0.5,
                         14, 1
                 ],
             },
@@ -448,7 +454,7 @@ class Map extends Component {
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"], 
-                            10, 2,
+                            10, Math.max(1, l.style.lineWidth/4),
                             18, [ 'case',
                                 ['boolean', ['feature-state', 'hover'], false],
                                 l.style.lineWidth*6,
@@ -474,7 +480,7 @@ class Map extends Component {
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"],
-                            10, 2,
+                            10, Math.max(1, (l.style.lineWidth - l.style).borderWidth)/4,
                             18, [ 'case',
                                 ['boolean', ['feature-state', 'hover'], false],
                                 (l.style.lineWidth - l.style.borderWidth)*6,
@@ -499,7 +505,7 @@ class Map extends Component {
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"],
-                            10, 2,
+                            10, Math.max(1, l.style.lineWidth/4),
                             18, [ 'case',
                                 ['boolean', ['feature-state', 'hover'], false],
                                 l.style.lineWidth*6,
