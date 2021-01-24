@@ -356,8 +356,8 @@ class Map extends Component {
                     "interpolate",
                         ["exponential", 1.5],
                         ["zoom"], 
-                        0, 0.8,
-                        15, 1
+                        10, 0.2,
+                        14, 1
                 ]
             },
             'paint': {
