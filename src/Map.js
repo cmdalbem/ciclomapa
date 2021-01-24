@@ -19,16 +19,24 @@ import NewCommentCursor from './NewCommentCursor.js'
 
 import './Map.css'
 
+// @todo: improve this please
 import commentIcon from './img/icons/poi-comment.png';
+
 import bikeparkingIcon from './img/icons/poi-bikeparking.png';
+import bikeparkingIconMini from './img/icons/poi-bikeparking-mini.png';
 import bikeshopIcon from './img/icons/poi-bikeshop.png';
+import bikeshopIconMini from './img/icons/poi-bikeshop-mini.png';
 import bikerentalIcon from './img/icons/poi-bikerental.png';
+import bikerentalIconMini from './img/icons/poi-bikerental-mini.png';
 
 const iconsMap = {
     "poi-comment": commentIcon,
     "poi-bikeparking": bikeparkingIcon,
+    "poi-bikeparking-mini": bikeparkingIconMini,
     "poi-bikeshop": bikeshopIcon,
-    "poi-rental": bikerentalIcon
+    "poi-bikeshop-mini": bikeshopIconMini,
+    "poi-rental": bikerentalIcon,
+    "poi-rental-mini": bikerentalIconMini,
 }
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
@@ -351,14 +359,22 @@ class Map extends Component {
             "name": l.name,
             "description": l.description,
             'layout': {
-                'icon-image': l.icon,
+                "icon-allow-overlap": true,
+                // 'icon-image': l.icon,
+                'icon-image': [
+                    'step',
+                    ['zoom'],
+                    `${l.icon}-mini`,
+                    14,
+                    l.icon
+                ],
                 'icon-size': [
                     "interpolate",
                         ["exponential", 1.5],
                         ["zoom"], 
                         10, 0.2,
                         14, 1
-                ]
+                ],
             },
             'paint': {
                 'icon-opacity': [
@@ -816,7 +832,9 @@ class Map extends Component {
             });
         });
 
-
+        // "closeOnClick: false" enables chaining clicks continually
+        //   from POI to POI, otherwise clicking on another POI would
+        //   just close the popup from the previous one.
         this.cyclewayPopup = new mapboxgl.Popup({
             closeOnClick: false
         });
@@ -833,6 +851,7 @@ class Map extends Component {
         });
 
         this.poiPopup = new mapboxgl.Popup({
+            closeOnClick: false,
             offset: 25
         });
 
