@@ -139,6 +139,10 @@ body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
   border-top-color: #333;
 }
 
+.mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
+  border-bottom-color: #333;
+}
+
 .ciclovia .mapboxgl-popup-content { background: #69DC98; }
 .ciclovia .mapboxgl-popup-tip { border-top-color: #69DC98; }
 .ciclovia .mapboxgl-popup-close-button { color: black; }
