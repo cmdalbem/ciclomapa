@@ -142,17 +142,18 @@ class Map extends Component {
             .addTo(this.map);
     }
 
-    showPOIPopup(e, icon) {
+    showPOIPopup(e, iconSrc) {
         // const coords = e.features[0].geometry.coordinates.slice();
         const coords = e.lngLat;
         const properties = e.features[0].properties;
+        const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
 
         console.debug(e);
         console.debug(properties);
 
         let html = `
             <div class="text-2xl leading-tight mt-3 mb-5">
-                <img class="react-icon" src="${iconsMap[icon]}" alt=""/> ${properties.name ? properties.name : ''}
+                <img class="react-icon" src="${iconSrc}" alt=""/> ${properties.name ? properties.name : ''}
             </div>
 
             <div class="mt-2 text-base">
@@ -162,34 +163,39 @@ class Map extends Component {
                     .replace(/"|,|\{|\}/g, '')
                 }
             </div>
+
+            ${this.getPopupFooter(osmUrl, 'white')}
         `;
-
-        // if (properties.tags) {
-        //     // Arrays and objects get serialized by Mapbox system
-        //     properties.tags = JSON.parse(properties.tags);
-
-        //     html += `
-        //         <div style="
-        //             margin-top: 2em;
-        //             font-size: 14px;
-        //             font
-        //         ">
-        //     `;
-            
-        //     properties.tags.forEach( t => {
-        //         html += `
-        //             <div class="inline-block py-1 px-3 rounded-full border-gray-700 border mt-2 text-xs">
-        //                 ${t}
-        //             </div>
-        //         `;
-        //     })
-            
-        //     html += `</div>`;
-        // }
 
         this.poiPopup.setLngLat(coords)
             .setHTML(html)
             .addTo(this.map);
+    }
+
+    getPopupFooter(osmUrl, color='black') {
+        return `
+            <div class="mt-10">
+                <div class="opacity-50 mb-2">
+                    Acha que este dado pode ser melhorado?
+                </div>
+                
+                <a class="text-${color} border border-opacity-25 border-${color} px-2 py-1 rounded-sm mr-2"
+                    target="_BLANK" rel="noopener"
+                    href="${osmUrl}"
+                >
+                    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" class="react-icon" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>    
+                    Editar no OSM
+                </a>
+
+                <a  href="#"
+                    class="text-${color} border border-opacity-25 border-${color} px-2 py-1 rounded-sm"
+                    onClick="document.dispatchEvent(new Event('newComment'));"
+                >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="react-icon"><path fill-rule="evenodd" clip-rule="evenodd" d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H8L3 22V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15ZM13 14V11H16V9H13V6H11V9H8V11H11V14H13Z"></path></svg>
+                    Comentar
+                </a>
+            </div>
+        `;
     }
 
     showCyclewayPopup(e) {
@@ -219,27 +225,7 @@ class Map extends Component {
                     ${thisLayer.name}
                 </div>
 
-                <div class="mt-10">
-                    <div class="opacity-50 mb-2">
-                        Acha que este dado pode ser melhorado?
-                    </div>
-                    
-                    <a class="text-black border border-opacity-25 border-black px-2 py-1 rounded-sm mr-2"
-                        target="_BLANK" rel="noopener"
-                        href="${osmUrl}"
-                    >
-                        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" class="react-icon" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>    
-                        Editar no OSM
-                    </a>
-
-                    <a  href="#"
-                        class="text-black border border-opacity-25 border-black px-2 py-1 rounded-sm"
-                        onClick="document.dispatchEvent(new Event('newComment'));"
-                    >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="react-icon"><path fill-rule="evenodd" clip-rule="evenodd" d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H8L3 22V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15ZM13 14V11H16V9H13V6H11V9H8V11H11V14H13Z"></path></svg>
-                        Comentar
-                    </a>
-                </div>
+                ${this.getPopupFooter(osmUrl)}
             </div>
         `;
 
@@ -426,7 +412,7 @@ class Map extends Component {
 
         this.map.on('click', l.id, e => {
             if (e.features.length > 0) {
-                this.showPOIPopup(e, l.icon);
+                this.showPOIPopup(e, iconsMap[l.icon]);
             }
         });
     }
