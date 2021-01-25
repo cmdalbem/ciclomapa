@@ -148,6 +148,55 @@ class Map extends Component {
         const properties = e.features[0].properties;
         const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
 
+        const translations = {
+            // Bicicletarios
+            name: '',
+            operator: '',
+            covered: 'Coberto',
+            access: 'Acesso',
+            capacity: 'Capacidade',
+            fee: 'Custo',
+            bicycle_parking: '',
+            cyclestreets_id: '',
+            maxstay: '',
+            surveillance: 'Vigilado',
+            supervised: 'Supervisionado',
+            lit: 'Iluminado',
+            website: 'Site',
+            opening_hours: 'Horários de funcionamento',
+            bicycle_parking: 'Tipo',
+            email: 'Email',
+
+            // Bike sharing
+            ref: 'Referência',
+            network: 'Rede',
+            operator: '',
+            description: 'Descrição',
+            'payment:credit_cards': '',
+
+            // Lojas & oficinas
+            repair: '',
+            second_hand: '',
+            wheelchair: '',
+            phone: 'Telefone',
+            start_date: 'Desde',
+            'service:bicycle:retail': 'Serviço de vendas',
+            'service:bicycle:repair': 'Serviço de conserto',
+            'service:bicycle:rental': 'Serviço de aluguel',
+            'service:bicycle:pump': 'Serviço de bomba',
+            'service:bicycle:diy': 'Serviço de DIY',
+            'service:bicycle:cleaning': 'Serviço de limpeza',
+            'service:bicycle:second_hand': 'Serviço de revenda',
+            'service:bicycle:charging': 'Serviço de carregamento',
+
+            // Generic
+            yes: 'Sim',
+            no: 'Não',
+            free: 'Grátis',
+            fee: 'Pago',
+            only: 'Somente isso',
+        }
+
         console.debug(e);
         console.debug(properties);
 
@@ -156,12 +205,48 @@ class Map extends Component {
                 <img class="react-icon" src="${iconSrc}" alt=""/> ${properties.name ? properties.name : ''}
             </div>
 
-            <div class="mt-2 text-base">
-                ${
-                    JSON.stringify(properties, null, 2)
-                    .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-                    .replace(/"|,|\{|\}/g, '')
-                }
+            <div class="mt-2 text-sm">
+                ${Object.keys(properties).map(key => {
+                    const name = translations[key];
+                    const untranslatedValue = properties[key];
+                    const value = translations[untranslatedValue];
+
+                    switch(key) {
+                        case 'id': 
+                        case 'amenity': 
+                        case 'source':
+                        case 'name':
+                        case 'operator':
+                        case 'shop':
+                        case 'alt_name':
+                        case 'addr:housenumber':
+                        case 'addr:street':
+                        case 'addr:postcode':
+                        case 'addr:unit':
+                        case 'addr:city':
+                        case 'addr:suburb':
+                        case 'internet_access':
+                        case 'internet_access:key':
+                        case 'internet_access:ssid':
+                            return;
+                        
+                        default: 
+                            return [
+                                `${name || key}`,
+                                `${value || untranslatedValue}`
+                            ];
+                    }
+                })
+                .map(i => i ? `
+                    <div class="mt-2">
+                        <div class="text-xs font-bold tracking-wider uppercase text-gray-600">
+                            ${i[0]}
+                        </div>
+                        <div>
+                            ${i[1]}
+                        </div>
+                    </div>` : '')
+                .join('')}
             </div>
 
             ${this.getPopupFooter(osmUrl, 'white')}
