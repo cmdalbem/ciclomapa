@@ -19,25 +19,41 @@ const servers = [
 ];
 
 class OSMController {
+    // getQuery() converts our CicloMapa layers filter syntax to the OSM Overpass query syntax
+    // Example:
+    //      "filters": [
+    //          [["highway","track"],["bicycle","designated"]],
+    //          [["highway","track"],["bicycle","yes"]],
+    //          [["highway","path"],["bicycle","designated"]],
+    //          [["highway","path"],["bicycle","yes"]]
+    //      ],
+    //
+    //  ...becomes:
+    // 
+    //      way["highway"="track"]["bicycle"="designated"](area.a);
+    //      way["highway"="track"]["bicycle"="yes"](area.a);
+    //      way["highway"="path"]["bicycle"="designated"](area.a);
+    //      way["highway"="path"]["bicycle"="yes"](area.a);
     static getQuery(constraints) {
         const bbox = constraints.bbox;
         const areaId = constraints.areaId;
-        const ways = layers.default.filter(l => l.filters);
-        // const ways = layers.default.filter(l => l.filters && l.type==='poi');
+        const filteredLayers = layers.default.filter(l => l.filters);
 
-        const body = ways.map(l =>
-            l.filters.map(f =>
-                (l.type === 'poi' ? 'node' : 'way')
-                + (typeof f[0] === 'string' ?
-                    `["${f[0]}"="${f[1]}"]`
-                    :
-                    f.map(f_inner =>
-                        `["${f_inner[0]}"="${f_inner[1]}"]`
-                    ).join(""))
-                 + (bbox ? 
-                    `(${bbox});\n`
-                    :
-                    `(area.a);\n`)
+        const body = filteredLayers.map(l =>
+            (l.type === 'poi' ? ['node', 'way'] : ['way']).map( element =>
+                l.filters.map(f =>
+                    element
+                    + (typeof f[0] === 'string' ?
+                        `["${f[0]}"="${f[1]}"]`
+                        :
+                        f.map(f_inner =>
+                            `["${f_inner[0]}"="${f_inner[1]}"]`
+                        ).join(""))
+                    + (bbox ? 
+                        `(${bbox});\n`
+                        :
+                        `(area.a);\n`)
+                ).join("")
             ).join("")
         ).join("");
 
