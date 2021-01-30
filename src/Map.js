@@ -23,19 +23,25 @@ import './Map.css'
 import commentIcon from './img/icons/poi-comment.png';
 
 import bikeparkingIcon from './img/icons/poi-bikeparking.png';
+import bikeparkingIcon2x from './img/icons/poi-bikeparking@2x.png';
 import bikeparkingIconMini from './img/icons/poi-bikeparking-mini.png';
 import bikeshopIcon from './img/icons/poi-bikeshop.png';
+import bikeshopIcon2x from './img/icons/poi-bikeshop@2x.png';
 import bikeshopIconMini from './img/icons/poi-bikeshop-mini.png';
 import bikerentalIcon from './img/icons/poi-bikerental.png';
+import bikerentalIcon2x from './img/icons/poi-bikerental@2x.png';
 import bikerentalIconMini from './img/icons/poi-bikerental-mini.png';
 
 const iconsMap = {
     "poi-comment": commentIcon,
     "poi-bikeparking": bikeparkingIcon,
+    "poi-bikeparking-2x": bikeparkingIcon2x,
     "poi-bikeparking-mini": bikeparkingIconMini,
     "poi-bikeshop": bikeshopIcon,
+    "poi-bikeshop-2x": bikeshopIcon2x,
     "poi-bikeshop-mini": bikeshopIconMini,
     "poi-rental": bikerentalIcon,
+    "poi-rental-2x": bikerentalIcon2x,
     "poi-rental-mini": bikerentalIconMini,
 }
 
@@ -202,7 +208,7 @@ class Map extends Component {
 
         let html = `
             <div class="text-2xl leading-tight mt-3 mb-5">
-                <img class="react-icon" src="${iconSrc}" alt=""/> ${properties.name ? properties.name : ''}
+                <img src="${iconSrc}" class="inline-block" alt=""/> ${properties.name ? properties.name : ''}
             </div>
 
             <div class="mt-2 text-sm">
@@ -497,7 +503,7 @@ class Map extends Component {
 
         this.map.on('click', l.id, e => {
             if (e.features.length > 0) {
-                this.showPOIPopup(e, iconsMap[l.icon]);
+                this.showPOIPopup(e, iconsMap[l.icon+'-2x']);
             }
         });
     }
