@@ -7,8 +7,10 @@
     right: 0;
     left: 0;
     /* background: rgba(255,255,255,0.8); */
-    background: rgba(37,32,29,0.8);
-    z-index: 2;
+    /* background: rgba(37,32,29,0.9); */
+    background: #211F1C;
+    opacity: .9;
+    z-index: 1;
 }
 
 #closeBtn {
