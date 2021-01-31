@@ -22,13 +22,6 @@
   background-image: url(data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9JzMwMHB4JyB3aWR0aD0nMzAwcHgnICBmaWxsPSIjMDAwMDAwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeD0iMHB4IiB5PSIwcHgiPjx0aXRsZT5kb3dubG9hZF8xPC90aXRsZT48cGF0aCBkPSJNMTIsMTZhMSwxLDAsMCwxLS43MS0uMjlsLTQtNGExLDEsMCwwLDEsMS40MS0xLjQxTDEyLDEzLjU5bDMuMjktMy4yOWExLDEsMCwwLDEsMS40MSwxLjQxbC00LDRBMSwxLDAsMCwxLDEyLDE2WiI+PC9wYXRoPjxwYXRoIGQ9Ik0xMiwxNmExLDEsMCwwLDEtMS0xVjVhMSwxLDAsMCwxLDIsMFYxNUExLDEsMCwwLDEsMTIsMTZaIj48L3BhdGg+PHBhdGggZD0iTTE5LDIwSDVhMSwxLDAsMCwxLTEtMVYxNWExLDEsMCwwLDEsMiwwdjNIMThWMTVhMSwxLDAsMCwxLDIsMHY0QTEsMSwwLDAsMSwxOSwyMFoiPjwvcGF0aD48L3N2Zz4=);
 }
 
-.mapboxgl-popup-close-button {
-  font-size: 18px;
-  width: 32px;
-  height: 32px;
-  color: white;
-}
-
 .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group,
 .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder--input {
   /* background: #595959; */
@@ -63,12 +56,6 @@
 .mapboxgl-ctrl-icon.mapboxgl-ctrl-zoom-out,
 .mapboxgl-ctrl-icon.mapboxgl-ctrl-geolocate::before {
   filter: invert(1);
-}
-
-.mapboxgl-popup-content {
-  padding: 24px 16px;
-  min-width: 300px;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
 }
 
 .mapboxgl-ctrl-bottom-right {
@@ -128,48 +115,6 @@ body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
 .mapboxgl-ctrl-logo {
   opacity: .2;
 }
-
-.mapboxgl-popup-content {
-    background: #333;
-    color: white;
-
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
-}
-.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
-  border-top-color: #333;
-}
-
-.mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
-  border-bottom-color: #333;
-}
-
-.ciclovia .mapboxgl-popup-content { background: #69DC98; }
-.ciclovia .mapboxgl-popup-tip { border-top-color: #69DC98; }
-.ciclovia .mapboxgl-popup-close-button { color: black; }
-
-.ciclofaixa .mapboxgl-popup-content { background: #B6F9D1; }
-.ciclofaixa .mapboxgl-popup-tip { border-top-color: #B6F9D1; }
-.ciclofaixa .mapboxgl-popup-close-button { color: black; }
-
-.ciclorrota .mapboxgl-popup-content { background: #F7C9B0; }
-.ciclorrota .mapboxgl-popup-tip { border-top-color: #F7C9B0; }
-.ciclorrota .mapboxgl-popup-close-button { color: black; }
-
-.calcada-compartilhada .mapboxgl-popup-content { background: #FF8A00; }
-.calcada-compartilhada .mapboxgl-popup-tip { border-top-color: #FF8A00; }
-.calcada-compartilhada .mapboxgl-popup-close-button { color: black; }
-
-.baixa-velocidade .mapboxgl-popup-content { background: #FF8A00; }
-.baixa-velocidade .mapboxgl-popup-tip { border-top-color: #FF8A00; }
-.baixa-velocidade .mapboxgl-popup-close-button { color: black; }
-
-.trilha .mapboxgl-popup-content { background: #996633; }
-.trilha .mapboxgl-popup-tip { border-top-color: #996633; }
-.trilha .mapboxgl-popup-close-button { color: black; }
-
-.proibido .mapboxgl-popup-content { background: #F56565; }
-.proibido .mapboxgl-popup-tip { border-top-color: #F56565; }
-.proibido .mapboxgl-popup-close-button { color: black; }
 
 
 /* Mobile */
