@@ -14,6 +14,7 @@ import {
     MdSync as IconUpdate,
     MdExpandMore as IconCaret,
     MdModeEdit as IconEdit,
+    MdInfo as IconInfo,
 } from "react-icons/md";
 import { IconContext } from "react-icons";
 
@@ -166,8 +167,8 @@ class TopBar extends Component {
             <IconContext.Provider value={{ className: 'react-icon' }}>
                 <div
                     id="topbar"
-                    className="w-full z-10 absolute flex flex-col"
-                    style={{height: TOPBAR_HEIGHT}}
+                    className="w-full absolute flex flex-col"
+                    style={{height: TOPBAR_HEIGHT, zIndex: 1}}
                 >
                     {
                         !isProd &&
@@ -177,14 +178,14 @@ class TopBar extends Component {
                     }
 
                     <div className="flex items-start justify-between px-6 py-3 text-white">
-                        <div className="text-2xl uppercase text-green-300 mt-1 hidden sm:block" style={{
+                        <div className="text-2xl uppercase text-green-300 hidden sm:block" style={{
                             fontFamily: 'Teko, sans-serif',
                         }}>
                             CicloMapa
                         </div>
 
-                        <div className="city-picker">
-                            <Space size={4} direction="vertical" align="center">
+                        <div className="city-picker sm:text-center">
+                            <div className="mb-1 sm:mb-1">
                                 <Button
                                     size={IS_MOBILE ? 'default' : 'large'}
                                     onClick={this.showCityPicker}
@@ -201,12 +202,15 @@ class TopBar extends Component {
                                         <IconCaret className="text-green-600"/>
                                     </h3>
                                 </Button>
+                            </div>
 
+                            <div>
                                 {
                                     lastUpdate &&
                                     <Popover
-                                        className="hidden sm:block"
+                                        trigger={IS_MOBILE ? 'click' : 'hover'}
                                         placement="bottom"
+                                        arrowPointAtCenter={true}
                                         content={(
                                             <div style={{ maxWidth: 250 }}>
                                                 <Space size="small" direction="vertical" >
@@ -217,6 +221,7 @@ class TopBar extends Component {
                                                     <Button
                                                         size="small"
                                                         icon={<IconUpdate />}
+                                                        block
                                                         ghost
                                                         onClick={forceUpdate}
                                                     >
@@ -225,21 +230,18 @@ class TopBar extends Component {
                                                 </Space>
                                             </div>
                                         )}
-                                        arrowPointAtCenter={true}
                                     >
                                         <span className="font-regular cursor-default text-xs opacity-25 hover:opacity-100 transition-opacity duration-300">
-                                            Atualizado há <b>{timeSince(lastUpdate)}</b>.
+                                            Atualizado há <b>{timeSince(lastUpdate)}</b> <IconInfo/>
                                         </span>
-                                        {/* <IconInfo style={{ fontSize: '12px', marginLeft: '4px' }} /> */}
                                     </Popover>
 
                                 }
-                            </Space>
+                            </div>
                         </div>
                         
                         <div className="nav-links font-white hidden sm:block">
                             <Button
-                                size="large"
                                 type="link"
                                 onClick={this.openAboutModal}
                             >
