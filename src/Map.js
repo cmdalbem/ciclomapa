@@ -239,7 +239,7 @@ class Map extends Component {
 
         // Interactions
 
-        this.map.on("mouseenter", l.id, e => {
+        this.map.on('mouseenter', l.id, e => {
             if (e.features.length > 0) {
                 this.map.getCanvas().style.cursor = 'pointer';
 
@@ -255,9 +255,10 @@ class Map extends Component {
                     id: this.hoveredPOI },
                     { hover: true });
             }
+            e.originalEvent.preventDefault();
         });
 
-        this.map.on("mouseleave", l.id, e => {
+        this.map.on('mouseleave', l.id, e => {
             if (this.hoveredPOI) {
                 this.map.getCanvas().style.cursor = '';
 
@@ -270,9 +271,10 @@ class Map extends Component {
         });
 
         this.map.on('click', l.id, e => {
-            if (e.features.length > 0) {
+            if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
                 this.popups.showPOIPopup(e, iconsMap[l.icon+'-2x']);
             }
+            e.originalEvent.preventDefault();
         });
     }
 
@@ -370,7 +372,7 @@ class Map extends Component {
             l.id + '--border'
             : l.id;
 
-        this.map.on("mouseenter", interactiveId, e => {
+        this.map.on('mouseenter', interactiveId, e => {
             if (e.features.length > 0) {
                 // Cursor
                 this.map.getCanvas().style.cursor = 'pointer';
@@ -384,7 +386,7 @@ class Map extends Component {
             }
         });
 
-        this.map.on("mouseleave", interactiveId, e => {
+        this.map.on('mouseleave', interactiveId, e => {
             // Hover style
             if (this.hoveredCycleway && !this.selectedCycleway) {
                 this.map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
@@ -395,19 +397,20 @@ class Map extends Component {
             this.hoveredCycleway = null;
         });
 
-        this.map.on("click", interactiveId, e => {
-            if (e.features.length > 0) {
-                if (this.selectedCycleway) {
-                    this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: false });
-                }
-                this.selectedCycleway = e.features[0].id;
-                this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: true });
+        this.map.on('click', interactiveId, e => {
+            if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
+                // if (this.selectedCycleway) {
+                //     this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: false });
+                // }
+                // this.selectedCycleway = e.features[0].id;
+                // this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: true });
 
                 const layer = this.props.layers.find(l =>
                     l.id === e.features[0].layer.id.split('--')[0]
                 );
                 this.popups.showCyclewayPopup(e, layer);
             }
+            e.originalEvent.preventDefault();
         });
     }
 
@@ -465,7 +468,7 @@ class Map extends Component {
 
             // Interactions
 
-            this.map.on("mouseenter", 'comentarios', e => {
+            this.map.on('mouseenter', 'comentarios', e => {
                 if (e.features.length > 0) {
                     this.map.getCanvas().style.cursor = 'pointer';
     
@@ -483,7 +486,7 @@ class Map extends Component {
                 }
             });
     
-            this.map.on("mouseleave", 'comentarios', e => {
+            this.map.on('mouseleave', 'comentarios', e => {
                 if (this.hoveredComment) {// && !this.selectedCycleway) {
                     this.map.getCanvas().style.cursor = '';
 
@@ -496,9 +499,10 @@ class Map extends Component {
             });
 
             this.map.on('click', 'comentarios', e => {
-                if (e.features.length > 0) {
+                if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
                     this.popups.showCommentPopup(e);
                 }
+                e.originalEvent.preventDefault();
             });
         }
     }
@@ -529,8 +533,8 @@ class Map extends Component {
             "generateId": true
         });
 
-        // In GeoJSON layers are from most important to least important, but we 
-        //   want the most important ones to be on top.
+        // layers.json is ordered from most to least important, but we 
+        //   want the most important ones to be on top so we add in reverse.
         // Slice is used here to don't destructively reverse the original array.
         layers.slice().reverse().forEach(l => {
             if (!l.type || l.type==='way') {
