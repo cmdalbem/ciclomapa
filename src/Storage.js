@@ -6,8 +6,14 @@ import { slugify, sizeOf } from './utils.js'
 import { gzipCompress } from './geojsonUtils.js'
 import { stringify, parse } from 'zipson';
 
+import {
+    IS_PROD,
+    DISABLE_LOCAL_STORAGE
+} from './constants.js'
 
-const DISABLE_LOCAL_STORAGE = true;
+
+const DEFAULT_CITIES_COLLECTION = IS_PROD ? 'cities' : 'cities-dev';
+
 
 const firebaseConfig = {
     apiKey: "AIzaSyDUbMY3UuyJ9vVVBblhUR9L1B3TV6a3eRU",
@@ -37,7 +43,7 @@ class Storage {
 
     getAllCitiesDocs() {
         return new Promise(resolve => {
-            this.db.collection("cities").get().then((querySnapshot) => {
+            this.db.collection(DEFAULT_CITIES_COLLECTION).get().then((querySnapshot) => {
                 console.debug('[Firestore] Documents found:');
                 querySnapshot.forEach((doc) => {
                     console.debug('• ' + doc.id, ' => ', doc.data());
@@ -70,7 +76,7 @@ class Storage {
             slug += part;
         }
 
-        return this.db.collection('cities').doc(slug).set({
+        return this.db.collection(DEFAULT_CITIES_COLLECTION).doc(slug).set({
             name: name,
             geoJson: jsonStr,
             updatedAt: updatedAt,
@@ -125,7 +131,7 @@ class Storage {
     }
 
     getDataFromDB(slug, resolve, reject) {
-        this.db.collection("cities").doc(slug).get().then(doc => {
+        this.db.collection(DEFAULT_CITIES_COLLECTION).doc(slug).get().then(doc => {
             if (doc.exists) {
                 let data = doc.data();
 
