@@ -1,6 +1,7 @@
 import mapboxgl from 'mapbox-gl'
 
 import './MapPopups.css'
+import { osmi18n as i18n } from './osmi18n.js'
 
 
 class MapPopups {
@@ -39,11 +40,11 @@ class MapPopups {
 
     getFooter(osmUrl, color='black') {
         return `
-            <div class="-ml-4 -mr-4 border border-b-0 border-${color} border-opacity-25 mt-10">
-            </div>
+            <!-- <div class="-ml-4 -mr-4 border border-b-0 border-${color} border-opacity-25 mt-10">
+            </div> -->
             
-            <div class="-mb-2 mt-2">
-                <div class="opacity-50 mb-2">
+            <div class="-mb-2 mt-10">
+                <div class="opacity-25 mb-2 italic">
                     Acha que este dado pode ser melhorado?
                 </div>
                 
@@ -52,7 +53,7 @@ class MapPopups {
                     href="${osmUrl}"
                 >
                     <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" class="react-icon" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>    
-                    Editar no OSM
+                    Editar
                 </a>
 
                 <a  href="#"
@@ -116,65 +117,19 @@ class MapPopups {
         const properties = e.features[0].properties;
         const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
 
-        const translations = {
-            // Bicicletarios
-            name: '',
-            operator: '',
-            covered: 'Coberto',
-            access: 'Acesso',
-            capacity: 'Capacidade',
-            cyclestreets_id: '',
-            maxstay: '',
-            surveillance: 'Vigilado',
-            supervised: 'Supervisionado',
-            lit: 'Iluminado',
-            website: 'Site',
-            opening_hours: 'Horários de funcionamento',
-            bicycle_parking: 'Tipo',
-            email: 'Email',
-
-            // Bike sharing
-            ref: 'Referência',
-            network: 'Rede',
-            description: 'Descrição',
-            'payment:credit_cards': '',
-
-            // Lojas & oficinas
-            repair: '',
-            second_hand: '',
-            wheelchair: '',
-            phone: 'Telefone',
-            start_date: 'Desde',
-            'service:bicycle:retail': 'Serviço de vendas',
-            'service:bicycle:repair': 'Serviço de conserto',
-            'service:bicycle:rental': 'Serviço de aluguel',
-            'service:bicycle:pump': 'Serviço de bomba',
-            'service:bicycle:diy': 'Serviço de DIY',
-            'service:bicycle:cleaning': 'Serviço de limpeza',
-            'service:bicycle:second_hand': 'Serviço de revenda',
-            'service:bicycle:charging': 'Serviço de carregamento',
-
-            // Generic
-            yes: 'Sim',
-            no: 'Não',
-            free: 'Grátis',
-            fee: 'Pago',
-            only: 'Somente isso',
-        }
-
         // console.debug(e);
         // console.debug(properties);
 
         let html = `
             <div class="text-2xl leading-tight mt-3 mb-5">
-                <img src="${iconSrc}" class="inline-block" alt=""/> ${properties.name ? properties.name : ''}
+                <img src="${iconSrc}" class="inline-block align-bottom" alt=""/> ${properties.name ? properties.name : '<span class="italic opacity-50">Sem nome</span>'}
             </div>
 
-            <div class="mt-2 text-sm">
+            <div class="mt-2 text-sm grid grid-cols-2 gap-2">
                 ${Object.keys(properties).map(key => {
-                    const name = translations[key];
+                    const name = i18n[key];
                     const untranslatedValue = properties[key];
-                    const value = translations[untranslatedValue];
+                    const value = i18n[untranslatedValue];
 
                     switch(key) {
                         case 'id': 
@@ -184,16 +139,32 @@ class MapPopups {
                         case 'operator':
                         case 'shop':
                         case 'alt_name':
+                        case 'building':
                         case 'addr:housenumber':
+                        case 'addr:door':
                         case 'addr:street':
                         case 'addr:postcode':
                         case 'addr:unit':
                         case 'addr:city':
+                        case 'addr:country':
                         case 'addr:suburb':
+                        case 'ADDR:ROOM':
                         case 'internet_access':
                         case 'internet_access:key':
                         case 'internet_access:ssid':
+                        case 'PT:BICYCLE_PARKING':
+                        case 'SURVEY:DATE':
                             return '';
+                        
+                        case 'website':
+                        case 'email':
+                        case 'facebook':
+                            return [
+                                `${name || key}`,
+                                `<a target="_BLANK" rel="noopener"
+                                    class="underline" href=${untranslatedValue}>
+                                    Link</a>`
+                            ];
                         
                         default: 
                             return [
@@ -204,7 +175,7 @@ class MapPopups {
                 })
                 .map(i => i ? `
                     <div class="mt-2">
-                        <div class="text-xs font-bold tracking-wider uppercase text-gray-600">
+                        <div class="text-xs font-bold tracking-widest uppercase opacity-50">
                             ${i[0]}
                         </div>
                         <div>
