@@ -127,48 +127,27 @@ class MapPopups {
 
             <div class="mt-2 text-sm grid grid-cols-2 gap-2">
                 ${Object.keys(properties).map(key => {
-                    const name = i18n[key];
+                    const translatedName = i18n[key];
                     const untranslatedValue = properties[key];
                     const value = i18n[untranslatedValue];
 
                     switch(key) {
-                        case 'id': 
-                        case 'amenity': 
-                        case 'source':
-                        case 'name':
-                        case 'operator':
-                        case 'shop':
-                        case 'alt_name':
-                        case 'building':
-                        case 'addr:housenumber':
-                        case 'addr:door':
-                        case 'addr:street':
-                        case 'addr:postcode':
-                        case 'addr:unit':
-                        case 'addr:city':
-                        case 'addr:country':
-                        case 'addr:suburb':
-                        case 'ADDR:ROOM':
-                        case 'internet_access':
-                        case 'internet_access:key':
-                        case 'internet_access:ssid':
-                        case 'PT:BICYCLE_PARKING':
-                        case 'SURVEY:DATE':
-                            return '';
-                        
                         case 'website':
                         case 'email':
                         case 'facebook':
                             return [
-                                `${name || key}`,
+                                `${translatedName || key}`,
                                 `<a target="_BLANK" rel="noopener"
                                     class="underline" href=${untranslatedValue}>
                                     Link</a>`
                             ];
                         
                         default: 
-                            return [
-                                `${name || key}`,
+                            if (translatedName === null) {
+                                console.debug('Ignored POI tag:', key, untranslatedValue);
+                                return '';
+                            } else return [
+                                `${translatedName || key}`,
                                 `${value || untranslatedValue}`
                             ];
                     }
