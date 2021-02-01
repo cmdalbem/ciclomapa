@@ -1,5 +1,5 @@
 export const osmi18n = {
-    // Bicicletarios
+    // Bike parking
     name: '',
     operator: '',
     covered: 'Coberto',
@@ -26,7 +26,7 @@ export const osmi18n = {
     shed: '',
     bollard: '',
     lockers: '',
-    building: '',
+    building: 'Prédio',
     informal: '',
     streetpod: '',
     tree: '',
@@ -35,14 +35,13 @@ export const osmi18n = {
     floor: '',
     handlebar_holder: '',
 
-
-    // Bike sharing
+    // Bike sharing & rental
     ref: 'Referência',
     network: 'Rede',
     description: 'Descrição',
     'payment:credit_cards': 'Pagamento por cartão',
 
-    // Lojas & oficinas
+    // Bike shops
     repair: '',
     second_hand: '',
     wheelchair: '',
@@ -57,8 +56,10 @@ export const osmi18n = {
     'service:bicycle:cleaning': 'Serviço de limpeza',
     'service:bicycle:second_hand': 'Serviço de revenda',
     'service:bicycle:charging': 'Serviço de carregamento',
-    'SERVICE:BICYCLE:PARTS': 'Venda de peças',
-    'SERVICE:BICYCLE:TOOLS': 'Ferramentas disponíveis',
+    'service:bicycle:parts': 'Venda de peças',
+    'service:bicycle:tools': 'Ferramentas disponíveis',
+
+    //////////////////////////
 
     // Generic
     yes: 'Sim',
@@ -70,4 +71,31 @@ export const osmi18n = {
     private: 'Privado',
     permissive: 'Permissivo',
     customers: 'Apenas clientes',
+
+    //////////////////////////
+
+    // Ignored tags
+    'id':  null,
+    'amenity':  null,
+    'name': null,
+    'name:pt': null,
+    'source': null,
+    'operator': null,
+    'shop': null,
+    'alt_name': null,
+    'building': null,
+    'addr:housenumber': null,
+    'addr:door': null,
+    'addr:street': null,
+    'addr:postcode': null,
+    'addr:unit': null,
+    'addr:city': null,
+    'addr:country': null,
+    'addr:suburb': null,
+    'addr:room': null,
+    'internet_access': null,
+    'internet_access:key': null,
+    'internet_access:ssid': null,
+    'pt:bicycle_parking': null,
+    'survey:date': null,
 }
