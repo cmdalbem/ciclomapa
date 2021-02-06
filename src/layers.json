@@ -7,7 +7,7 @@
     },
     {
         "name": "Oficinas & lojas",
-        "description": "Oficinas especializadas e lojas que vendem bicicletas e equipamentos.",
+        "description": "Oficinas e lojas especializadas em bicicletas e equipamentos.",
         "filters": [
             ["shop", "bicycle"]
         ],
