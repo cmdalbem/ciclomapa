@@ -231,7 +231,7 @@ class TopBar extends Component {
                                         )}
                                     >
                                         <span className="font-regular cursor-default text-xs opacity-25 hover:opacity-100 transition-opacity duration-300">
-                                            Atualizado há <b>{timeSince(lastUpdate)}</b> <IconInfo/>
+                                            Atualizado com OSM há <b>{timeSince(lastUpdate)}</b> <IconInfo/>
                                         </span>
                                     </Popover>
 
