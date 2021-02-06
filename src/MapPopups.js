@@ -135,16 +135,20 @@ class MapPopups {
                         case 'website':
                         case 'email':
                         case 'facebook':
+                            // Sometimes people will not put the http part of the link on OSM,
+                            // making the browser think the link is a subpage of CicloMapa and
+                            // adding our domain to the beggining of it.
+                            let link = untranslatedValue.includes('http') ? untranslatedValue : 'http://' + untranslatedValue;
                             return [
                                 `${translatedName || key}`,
                                 `<a target="_BLANK" rel="noopener"
-                                    class="underline" href=${untranslatedValue}>
+                                    class="underline" href=${link}>
                                     Link</a>`
                             ];
                         
                         default: 
                             if (translatedName === null) {
-                                console.debug('Ignored POI tag:', key, untranslatedValue);
+                                // console.debug('Ignored POI tag:', key, untranslatedValue);
                                 return '';
                             } else return [
                                 `${translatedName || key}`,
