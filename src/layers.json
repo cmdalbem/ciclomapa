@@ -34,7 +34,7 @@
     },
     {
         "name": "Ciclovia",
-        "description": "Vias segregadas exclusivas para fluxo de bicicletas.",
+        "description": "Vias exclusivas para bicicletas separadas fisicamente por meio fio, muretas ou outros tipos de segregação fixa.",
         "filters": [
             ["highway", "cycleway"],
             ["cycleway", "track"],
@@ -54,7 +54,7 @@
     },
     {
         "name": "Ciclofaixa",
-        "description": "Vias sem segregação física destinadas exclusivamente à circulação de bicicletas delineadas por elementos delimitadores.",
+        "description": "Vias exclusivas para bicicletas porém sem segregação física, apenas demarcada por faixa pintada no chão ou outra sinalização",
         "filters": [
             ["cycleway", "lane"],
             ["cycleway:left", "lane"],
@@ -71,7 +71,7 @@
     },
     {
         "name": "Ciclorrota",
-        "description": "Vias com sinalização para o tráfego compartilhado com véiculos motorizados, com preferência para bicicletas.",
+        "description": "Vias compartilhadas com veículos motorizados com sinalização especial indica a preferência das bicicletas.",
         "filters": [
             ["cycleway", "buffered_lane"],
             ["cycleway:left", "buffered_lane"],
