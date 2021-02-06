@@ -26,6 +26,7 @@ import {
     TOPBAR_HEIGHT,
     IS_MOBILE,
     ENABLE_COMMENTS,
+    IS_PROD
 } from './constants'
 
 import AboutModal from './AboutModal.js'
@@ -119,8 +120,6 @@ class TopBar extends Component {
     }
 
     render() {
-        const isProd = window.location.hostname === 'ciclomapa.org.br';
-
         let {
             title,
             lastUpdate,
@@ -171,7 +170,7 @@ class TopBar extends Component {
                     style={{height: TOPBAR_HEIGHT, zIndex: 1}}
                 >
                     {
-                        !isProd &&
+                        !IS_PROD &&
                         <div className="flex w-full bg-yellow-400 text-black items-center justify-center text-center text-xs mb-2 py-1">
                             Você está em um <b className="ml-1">ambiente de teste</b>. Pode futricar à vontade! ;)
                         </div>
@@ -187,7 +186,7 @@ class TopBar extends Component {
                         <div className="city-picker sm:text-center">
                             <div className="mb-1 sm:mb-1">
                                 <Button
-                                    size={IS_MOBILE ? 'default' : 'large'}
+                                    size='large'
                                     onClick={this.showCityPicker}
                                 >
                                     <h3 className="text-lg">
@@ -206,7 +205,7 @@ class TopBar extends Component {
 
                             <div>
                                 {
-                                    lastUpdate &&
+                                    lastUpdate && !IS_MOBILE &&
                                     <Popover
                                         trigger={IS_MOBILE ? 'click' : 'hover'}
                                         placement="bottom"
