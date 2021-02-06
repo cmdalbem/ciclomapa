@@ -6,6 +6,8 @@ import { slugify, sizeOf } from './utils.js'
 import { gzipCompress } from './geojsonUtils.js'
 import { stringify, parse } from 'zipson';
 
+import { osmi18n } from './osmi18n.js'
+
 import {
     IS_PROD,
     DISABLE_LOCAL_STORAGE
@@ -130,6 +132,36 @@ class Storage {
         }
     }
 
+    printPOIsStats(data) {
+        let tagsCount = {};
+        let valuesCount = {};
+        
+        data.geoJson.features.forEach(f => {
+            // Only POIs
+            if (f.properties.shop || f.properties.amenity) {
+                for (let k in f.properties) {
+                    const name = k;
+                    tagsCount[name] = tagsCount[name] === undefined ? 1 : tagsCount[name]+1;
+
+                    const value = f.properties[k];
+                    valuesCount[value] = valuesCount[value] === undefined ? 1 : valuesCount[value]+1;
+                }
+            }
+        });
+
+        let tagsTable = [];
+        for(let t in tagsCount) {
+            const t2 = osmi18n[t];
+            tagsTable.push({
+                name: t,
+                i18n: t2,
+                count: tagsCount[t]
+            });
+        }
+
+        console.table(tagsTable);
+    }
+
     getDataFromDB(slug, resolve, reject) {
         this.db.collection(DEFAULT_CITIES_COLLECTION).doc(slug).get().then(doc => {
             if (doc.exists) {
@@ -155,6 +187,8 @@ class Storage {
                     data.geoJson = JSON.parse(data.geoJson);
                 }
                 data.updatedAt = data.updatedAt.toDate();
+
+                this.printPOIsStats(data);
 
                 resolve(data);
             } else {
