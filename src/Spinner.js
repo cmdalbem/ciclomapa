@@ -20,9 +20,9 @@ class Spinner extends Component {
                                     <span role="img" aria-label="Emoji triste">😓</span>
                                 </div>
 
-                                <div className="content">
+                                <div>
                                     <div className="text-6xl">
-                                        Ops!
+                                        Ops
                                     </div>
 
                                     <Space size="large" direction="vertical">
@@ -45,8 +45,8 @@ class Spinner extends Component {
                                     />
                                 </svg>
 
-                                <div className="content">
-                                    <div className="text-4xl">
+                                <div>
+                                    <div className="text-4xl mb2">
                                         Carregando mapa cicloviário de <b>{city}</b>.
                                     </div>
 

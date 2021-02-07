@@ -20,7 +20,7 @@ class AboutModal extends Component {
                 maskClosable={true}
             >
                 <div className="text-base">
-                    <div className="text-6xl uppercase text-green-300 mt-1" style={{
+                    <div className="text-6xl uppercase text-green-200 mt-1" style={{
                         fontFamily: 'Teko, sans-serif',
                     }}>
                         CicloMapa

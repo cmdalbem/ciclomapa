@@ -65,6 +65,7 @@ export const osmi18n = {
     'service:bicycle:cleaning': 'Limpeza',
     'service:bicycle:second_hand': 'Revenda',
     'service:bicycle:charging': 'Carregamento',
+    'service:bicycle:retail': 'Venda de bikes',
     'service:bicycle:parts': 'Venda de peças',
     'service:bicycle:tools': 'Ferramentas disponíveis',
 
