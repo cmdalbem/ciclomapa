@@ -171,13 +171,13 @@ class TopBar extends Component {
                 >
                     {
                         !IS_PROD &&
-                        <div className="flex w-full bg-yellow-400 text-black items-center justify-center text-center text-xs mb-2 py-1">
+                        <div className="flex w-full bg-yellow-300 text-black items-center justify-center text-center text-xs mb-2 py-1">
                             Você está em um <b className="ml-1">ambiente de teste</b>. Pode futricar à vontade! ;)
                         </div>
                     }
 
                     <div className="flex items-start justify-between px-6 py-3 text-white">
-                        <div className="text-2xl uppercase text-green-300 hidden sm:block" style={{
+                        <div className="text-2xl uppercase text-green-200 hidden sm:block" style={{
                             fontFamily: 'Teko, sans-serif',
                         }}>
                             CicloMapa
@@ -198,7 +198,7 @@ class TopBar extends Component {
                                             {state}
                                         </span>
 
-                                        <IconCaret className="text-green-600"/>
+                                        <IconCaret className="text-green-300"/>
                                     </h3>
                                 </Button>
                             </div>
@@ -257,7 +257,7 @@ class TopBar extends Component {
                             <Dropdown overlay={collaborateMenu}>
                                 <Button ghost>
                                     <span className="mr-2"> Colaborar </span>
-                                    <IconCaret className="text-green-600" />
+                                    <IconCaret className="text-green-300" />
                                 </Button>
                             </Dropdown>
 
