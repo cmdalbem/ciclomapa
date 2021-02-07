@@ -1,4 +1,22 @@
-// Tokens
+// OSM & Overpass
+
+export const OVERPASS_SERVERS = [
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass-api.de/api/interpreter',
+    'http://overpass.openstreetmap.fr/api/interpreter',
+    'http://overpass.osm.ch/api/interpreter',
+    'https://overpass.nchc.org.tw'
+];
+
+export const AREA_ID_OVERRIDES = {
+    'Vitória, Espirito Santo, Brazil': 3601825817,
+    'Brasília, Distrito Federal, Brazil': 3602662005,
+    'Brasília, Federal District, Brazil': 3602662005,
+    'København, Capital RegionDenmark, Denmark': 13707878,
+};
+
+
+// Mapbox
 
 export const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoiY21kYWxiZW0iLCJhIjoiY2pnbXhjZnplMDJ6MjMzbnk0OGthZGE1ayJ9.n1flNO8ndRYKQcR9wNIT9w';
 export const DEFAULT_MAPBOX_STYLE = 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm';
