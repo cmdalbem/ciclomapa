@@ -156,14 +156,28 @@ class Storage {
         let tagsTable = [];
         for(let t in tagsCount) {
             const t2 = osmi18n[t];
-            tagsTable.push({
-                name: t,
-                i18n: t2,
-                count: tagsCount[t]
-            });
+            if (tagsCount[t] > 1) {
+                tagsTable.push({
+                    name: t,
+                    i18n: t2,
+                    count: tagsCount[t]
+                });
+            }
         }
-
         console.table(tagsTable);
+
+        let valuesTable = [];
+        for(let t in valuesCount) {
+            const t2 = osmi18n[t];
+            if (valuesCount[t] > 1) {
+                valuesTable.push({
+                    name: t,
+                    i18n: t2,
+                    count: valuesCount[t]
+                });
+            }
+        }
+        console.table(valuesTable);
     }
 
     getDataFromDB(slug, resolve, reject) {
