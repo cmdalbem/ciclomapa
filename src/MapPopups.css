@@ -1,3 +1,18 @@
+@keyframes popupFadeIn {
+  0%   {
+    transform: translateY(4px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0x);
+    opacity: 1;
+  }
+}
+
+.mapboxgl-popup > div {
+  animation: popupFadeIn 300ms ease-out;
+}
+
 .mapboxgl-popup-content {
     padding: 24px 16px;
     min-width: 360px;
@@ -14,41 +29,49 @@
   .mapboxgl-popup-content {
     background: #333;
     color: white;
-  
+
     box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
   }
+  
   .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
-  border-top-color: #333;
+    border-top-color: #333;
   }
   
   .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
-  border-bottom-color: #333;
+    border-bottom-color: #333;
   }
   
-  .ciclovia .mapboxgl-popup-content { background: #69DC98; }
-  .ciclovia .mapboxgl-popup-tip { border-top-color: #69DC98; }
+  .ciclovia .mapboxgl-popup-content { background: #10B981; }
+  .ciclovia .mapboxgl-popup-tip { border-top-color: #10B981; }
+  .ciclovia .mapboxgl-popup-tip { border-bottom-color: #10B981; }
   .ciclovia .mapboxgl-popup-close-button { color: black; }
   
-  .ciclofaixa .mapboxgl-popup-content { background: #B6F9D1; }
-  .ciclofaixa .mapboxgl-popup-tip { border-top-color: #B6F9D1; }
+  .ciclofaixa .mapboxgl-popup-content { background: #b4fad0; }
+  .ciclofaixa .mapboxgl-popup-tip { border-top-color: #b4fad0; }
+  .ciclofaixa .mapboxgl-popup-tip { border-bottom-color: #b4fad0; }
   .ciclofaixa .mapboxgl-popup-close-button { color: black; }
   
   .ciclorrota .mapboxgl-popup-content { background: #F7C9B0; }
   .ciclorrota .mapboxgl-popup-tip { border-top-color: #F7C9B0; }
+  .ciclorrota .mapboxgl-popup-tip { border-bottom-color: #F7C9B0; }
   .ciclorrota .mapboxgl-popup-close-button { color: black; }
   
   .calcada-compartilhada .mapboxgl-popup-content { background: #FF8A00; }
   .calcada-compartilhada .mapboxgl-popup-tip { border-top-color: #FF8A00; }
+  .calcada-compartilhada .mapboxgl-popup-tip { border-bottom-color: #FF8A00; }
   .calcada-compartilhada .mapboxgl-popup-close-button { color: black; }
   
   .baixa-velocidade .mapboxgl-popup-content { background: #FF8A00; }
   .baixa-velocidade .mapboxgl-popup-tip { border-top-color: #FF8A00; }
+  .baixa-velocidade .mapboxgl-popup-tip { border-bottom-color: #FF8A00; }
   .baixa-velocidade .mapboxgl-popup-close-button { color: black; }
   
   .trilha .mapboxgl-popup-content { background: #996633; }
   .trilha .mapboxgl-popup-tip { border-top-color: #996633; }
+  .trilha .mapboxgl-popup-tip { border-bottom-color: #996633; }
   .trilha .mapboxgl-popup-close-button { color: black; }
   
   .proibido .mapboxgl-popup-content { background: #F56565; }
   .proibido .mapboxgl-popup-tip { border-top-color: #F56565; }
+  .proibido .mapboxgl-popup-tip { border-bottom-color: #F56565; }
   .proibido .mapboxgl-popup-close-button { color: black; }
