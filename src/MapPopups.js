@@ -121,8 +121,8 @@ class MapPopups {
         // console.debug(properties);
 
         let html = `
-            <div class="text-2xl leading-tight mt-3 mb-5">
-                <img src="${iconSrc}" class="inline-block align-bottom" alt=""/> ${properties.name ? properties.name : '<span class="italic opacity-50">Sem nome</span>'}
+            <div class="text-2xl mt-3 mb-5">
+                <img src="${iconSrc}" class="inline-block align-bottom mr-1" alt=""/> ${properties.name ? properties.name : '<span class="italic opacity-50">Sem nome</span>'}
             </div>
 
             <div class="mt-2 text-sm grid grid-cols-2 gap-2">
@@ -186,7 +186,7 @@ class MapPopups {
 
         let html = `
             <div class="text-black">
-                <div class="text-2xl leading-tight mt-3 mb-5">
+                <div class="text-2xl mt-3 mb-5">
                     ${properties.name ?
                         properties.name :
                         '<span class="italic opacity-50">Via sem nome</span>'}
