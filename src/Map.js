@@ -12,6 +12,9 @@ import {
     DEFAULT_ZOOM,
     ENABLE_COMMENTS,
     IS_PROD,
+    DEFAULT_LINE_WIDTH_MULTIPLIER,
+    LINE_WIDTH_MULTIPLIER_HOVER,
+    POI_ZOOM_THRESHOLD,
 } from './constants.js'
 
 import AirtableDatabase from './AirtableDatabase.js'
@@ -205,19 +208,30 @@ class Map extends Component {
             "name": l.name,
             "description": l.description,
             'layout': {
+                'text-field': [ 'step', ['zoom'], '', POI_ZOOM_THRESHOLD, ['get', 'name'], ],
+                'text-font': ['IBM Plex Sans Bold'],
+                "text-offset": [0, 1.5],
+                'text-size': [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"], 
+                        10, 10,
+                        18, 14
+                ],
+                'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
                 "icon-padding": 0,
                 "icon-allow-overlap": [
                     'step',
                     ['zoom'],
                     false,
-                    14,
+                    POI_ZOOM_THRESHOLD,
                     true
                 ],
                 'icon-image': [
                     'step',
                     ['zoom'],
                     `${l.icon}-mini`,
-                    14,
+                    POI_ZOOM_THRESHOLD,
                     l.icon
                 ],
                 'icon-size': [
@@ -225,10 +239,13 @@ class Map extends Component {
                         ["exponential", 1.5],
                         ["zoom"], 
                         10, 0.5,
-                        14, 1
+                        POI_ZOOM_THRESHOLD, 1
                 ],
             },
             'paint': {
+                'text-color': l.style.textColor || 'white',
+                'text-halo-width': 1,
+                'text-halo-color': '#1c1a17',
                 'icon-opacity': [
                     'case',
                     ['boolean', ['feature-state', 'hover'], false],
@@ -284,6 +301,18 @@ class Map extends Component {
 
         const dashedLineStyle = { 'line-dasharray': [1, 1] };
 
+        this.map.addLayer({
+            "id": l.id + '--interactive',
+            "type": "line",
+            "source": "osm",
+            "filter": filters,
+            "paint": {
+                "line-opacity": 0,
+                "line-color": 'yellow',
+                "line-width": 24
+            },
+        }, 'road-label-small');
+
         // Check if layer has a border color set. If that's the case the logic is a
         //  little different and we'll need 2 layers, one for the line itself and 
         //  another for the line underneath which creates the illusion of a border.
@@ -305,8 +334,8 @@ class Map extends Component {
                             10, l.style.lineWidth/4,
                             18, [ 'case',
                                 ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth*6,
-                                l.style.lineWidth*3
+                                l.style.lineWidth*DEFAULT_LINE_WIDTH_MULTIPLIER*LINE_WIDTH_MULTIPLIER_HOVER,
+                                l.style.lineWidth*DEFAULT_LINE_WIDTH_MULTIPLIER
                             ]
                     ],
                     ...(l.style.borderStyle === 'dashed' && dashedLineStyle)
@@ -328,11 +357,15 @@ class Map extends Component {
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"],
-                            10, Math.max(1, (l.style.lineWidth - l.style.borderWidth)/4),
+                            10, [ 'case',
+                                ['boolean', ['feature-state', 'hover'], false],
+                                l.style.lineWidth - l.style.borderWidth,
+                                Math.max(1, (l.style.lineWidth - l.style.borderWidth)/4),
+                            ],
                             18, [ 'case',
                                 ['boolean', ['feature-state', 'hover'], false],
-                                (l.style.lineWidth - l.style.borderWidth)*6,
-                                (l.style.lineWidth - l.style.borderWidth)*3
+                                (l.style.lineWidth - l.style.borderWidth)*DEFAULT_LINE_WIDTH_MULTIPLIER*LINE_WIDTH_MULTIPLIER_HOVER,
+                                (l.style.lineWidth - l.style.borderWidth)*DEFAULT_LINE_WIDTH_MULTIPLIER
                             ]
                     ],
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
@@ -353,11 +386,15 @@ class Map extends Component {
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"],
-                            10, Math.max(1, l.style.lineWidth/4),
+                            10, [ 'case',
+                                ['boolean', ['feature-state', 'hover'], false],
+                                l.style.lineWidth * 1.5,
+                                Math.max(1, l.style.lineWidth/4)
+                            ],
                             18, [ 'case',
                                 ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth*6,
-                                l.style.lineWidth*3
+                                l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER * LINE_WIDTH_MULTIPLIER_HOVER,
+                                l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
                             ]
                     ],
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
@@ -366,39 +403,9 @@ class Map extends Component {
             }, 'road-label-small');
         }
 
-        
-        // Interactions
-
-        const interactiveId = l.style.borderColor ? 
-            l.id + '--border'
-            : l.id;
-
-        this.map.on('mouseenter', interactiveId, e => {
-            if (e.features.length > 0) {
-                // Cursor
-                this.map.getCanvas().style.cursor = 'pointer';
-
-                // Hover style
-                if (this.hoveredCycleway) {
-                    this.map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
-                }
-                this.hoveredCycleway = e.features[0].id;
-                this.map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: true });
-            }
-        });
-
-        this.map.on('mouseleave', interactiveId, e => {
-            // Hover style
-            if (this.hoveredCycleway && !this.selectedCycleway) {
-                this.map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
-
-                // Cursor cursor
-                this.map.getCanvas().style.cursor = '';
-            }
-            this.hoveredCycleway = null;
-        });
-
-        this.map.on('click', interactiveId, e => {
+        // Click interaction
+        // Hover interaction is handled globally with map.on('mousemove')
+        this.map.on('click', l.id + '--interactive', e => {
             if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
                 // if (this.selectedCycleway) {
                 //     this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: false });
@@ -543,7 +550,34 @@ class Map extends Component {
             } else if (l.type === 'poi' && l.filters) {
                 this.addLayerPoi(l);
             }
-        }); 
+        });
+
+        map.on('mousemove', function(e) {
+            const features = map.queryRenderedFeatures(e.point, {
+              layers: layers.filter(l => l.type === 'way').map(l => l.id+'--interactive')
+            });
+
+            if (features.length > 0) {
+                // console.debug(features);
+                map.getCanvas().style.cursor = 'pointer';
+    
+                // Hover style
+                if (this.hoveredCycleway) {
+                    map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
+                }
+                this.hoveredCycleway = features[0].id;
+                map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: true });
+            } else {
+                // Hover style
+                if (this.hoveredCycleway && !this.selectedCycleway) {
+                    map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
+    
+                    // Cursor cursor
+                    map.getCanvas().style.cursor = '';
+                }
+                this.hoveredCycleway = null;
+            }
+        });
     }
 
     componentDidUpdate(prevProps) {
@@ -578,9 +612,13 @@ class Map extends Component {
         if (currentActiveStatuses === prevActiveStatus) {
             this.props.layers.forEach( l => {
                 if (map.getLayer(l.id)) {
-                    map.setLayoutProperty(l.id, 'visibility', l.isActive ? 'visible' : 'none');
-                    if (l.type === 'way' && l.style.borderColor) {
-                        map.setLayoutProperty(l.id+'--border', 'visibility', l.isActive ? 'visible' : 'none');
+                    const status = l.isActive ? 'visible' : 'none';
+                    map.setLayoutProperty(l.id, 'visibility', status);
+                    if (l.type === 'way') {
+                        map.setLayoutProperty(l.id+'--interactive', 'visibility', status);
+                        if (l.style.borderColor) {
+                            map.setLayoutProperty(l.id+'--border', 'visibility', status);
+                        }
                     }
                 }
             })
