@@ -27,6 +27,8 @@ export const DEFAULT_MAPBOX_STYLE = 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl
 // Layers
 
 export const DEFAULT_BORDER_WIDTH = 3;
+export const DEFAULT_LINE_WIDTH_MULTIPLIER = 2;
+export const LINE_WIDTH_MULTIPLIER_HOVER = 3;
 
 
 // Map
@@ -35,6 +37,7 @@ export const DEFAULT_AREA = 'Fortaleza, Ceará, Brazil';
 export const DEFAULT_LNG = -38.5225359;
 export const DEFAULT_LAT = -3.7719909;
 export const DEFAULT_ZOOM = 10.9;
+export const POI_ZOOM_THRESHOLD = 14;
 
 
 // Layout

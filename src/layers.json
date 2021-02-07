@@ -12,7 +12,10 @@
             ["shop", "bicycle"]
         ],
         "type": "poi",
-        "icon": "poi-bikeshop"
+        "icon": "poi-bikeshop",
+        "style": {
+            "textColor": "#33B6FF"
+        }
     },
     {
         "name": "Bicicletas compartilhadas",
@@ -21,7 +24,10 @@
             ["amenity", "bicycle_rental"]
         ], 
         "type": "poi",
-        "icon": "poi-rental"
+        "icon": "poi-rental",
+        "style": {
+            "textColor": "#FF8933"
+        }
     },
     {
         "name": "Bicicletários",
@@ -30,7 +36,10 @@
             ["amenity", "bicycle_parking"]
         ],
         "type": "poi",
-        "icon": "poi-bikeparking"
+        "icon": "poi-bikeparking",
+        "style": {
+            "textColor": "#4DB269"
+        }
     },
     {
         "name": "Ciclovia",
