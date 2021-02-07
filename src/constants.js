@@ -12,7 +12,9 @@ export const AREA_ID_OVERRIDES = {
     'Vitória, Espirito Santo, Brazil': 3601825817,
     'Brasília, Distrito Federal, Brazil': 3602662005,
     'Brasília, Federal District, Brazil': 3602662005,
-    'København, Capital RegionDenmark, Denmark': 13707878,
+    'København, Capital RegionDenmark, Denmark': 3613707878,
+    'Comuna 01, Buenos Aires, Argentina': 3601224652,
+    'Stockholm, Stockholm, Sweden': 3600398021,
 };
 
 
