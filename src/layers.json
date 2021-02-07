@@ -45,9 +45,9 @@
             ["cycleway:right", "opposite_track"]
         ],
         "style": {
-            "lineColor": "#65df97",
+            "lineColor": "#059669",
             "lineWidth": 8,
-            "borderColor": "#4ba96e",
+            "borderColor": "#10B981",
             "borderWidth": 4,
             "borderStyle": "solid"
         }
@@ -86,7 +86,7 @@
         ],
         "style": {
             "lineColor": "#f8c9ae",
-            "lineWidth": 4
+            "lineWidth": 3
         }
     },
     {
