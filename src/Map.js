@@ -11,6 +11,7 @@ import {
     IS_MOBILE,
     DEFAULT_ZOOM,
     ENABLE_COMMENTS,
+    IS_PROD,
 } from './constants.js'
 
 import AirtableDatabase from './AirtableDatabase.js'
@@ -607,7 +608,7 @@ class Map extends Component {
                 mapboxgl: mapboxgl,
                 language: 'pt-br',
                 placeholder: 'Buscar endereços, estabelecimentos, ...',
-                countries: 'br',
+                countries: IS_PROD ? 'br' : '',
                 // collapsed: IS_MOBILE
             });
             this.map.addControl(this.searchBar, 'bottom-right');
@@ -617,8 +618,8 @@ class Map extends Component {
             accessToken: mapboxgl.accessToken,
             mapboxgl: mapboxgl,
             language: 'pt-br',
-            placeholder: 'Buscar cidades brasileiras',
-            countries: 'br',
+            placeholder: `Buscar cidades ${IS_PROD ? 'brasileiras' : 'no mundo'}`,
+            countries: IS_PROD ? 'br' : '',
             types: 'place',
             marker: false,
             clearOnBlur: true,
