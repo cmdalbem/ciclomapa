@@ -5,18 +5,14 @@ import $ from 'jquery'
 
 import { notification } from 'antd';
 
-import { DEFAULT_BORDER_WIDTH } from './constants.js'
+import {
+    DEFAULT_BORDER_WIDTH,
+    OVERPASS_SERVERS,
+    AREA_ID_OVERRIDES,
+} from './constants.js'
 import { slugify } from './utils.js'
 
 import * as layers from './layers.json';
-
-const servers = [
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://overpass-api.de/api/interpreter',
-    'http://overpass.openstreetmap.fr/api/interpreter',
-    'http://overpass.osm.ch/api/interpreter',
-    'https://overpass.nchc.org.tw'
-];
 
 class OSMController {
     // getQuery() converts our CicloMapa layers filter syntax to the OSM Overpass query syntax
@@ -93,48 +89,70 @@ class OSMController {
         return this.massageLayersData();
     }
 
+    static getAreaId(areaName) {
+        return new Promise((resolve, reject) => {
+            const overriden = AREA_ID_OVERRIDES[areaName];
+            if (overriden) {
+                resolve(overriden);
+            } else {
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURI(areaName)}`)
+                    .then( response => response.json() )
+                    .then( nominatimData => {
+                        console.debug('nominatimData', nominatimData);
+
+                        if (nominatimData.length > 0) {
+                            // Get most relevant result from Nomatim and do this crazy operation to get the final area id
+                            // Source: https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL#By_area_.28area.29
+                            let areaId = 3600000000 + nominatimData[0].osm_id;
+                            
+                            resolve(areaId);
+                        } else {
+                            reject();
+                        }
+                        
+                    })
+                    .catch(e => {
+                        console.error("Deu erro! Saca só:", e);
+                        notification['error']({
+                            message: 'Erro',
+                            description: 'Ops, erro na API do Nominatim. Abra o console para ver mais detalhes.',
+                        });
+    
+                        reject();
+                    });
+            }
+        });
+    }
+
     static getData(constraints) {
         return new Promise((resolve, reject) => {
             let geoJson;
-
-            $.getJSON(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURI(constraints.area)}`,
-                nominatimData => {
-                    console.debug('nominatimData', nominatimData);
-
-                    // Source: https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL#By_area_.28area.29
-                    let areaId
-                    if (constraints.area === 'Vitória, Espirito Santo, Brazil') {
-                        areaId = 3601825817;
-                    } else if (constraints.area === 'Brasília, Distrito Federal, Brazil' || constraints.area === 'Brasília, Federal District, Brazil') {
-                        areaId = 3602662005;
-                    } else {
-                        areaId = 3600000000 + nominatimData[0].osm_id;
-                    }
-
-                    const query = OSMController.getQuery({ areaId: areaId});
+            
+            this.getAreaId(constraints.area)
+                .then(areaId => {
+                    const query = OSMController.getQuery({areaId});
                     console.debug('generated query: ', query);
-
+        
                     const encodedQuery = encodeURI(query);
-
+        
                     let requests = [];
-                    for (let i = 0; i < servers.length; i++) {
-                        const endpoint = servers[i] + '?data=' + encodedQuery;
+                    for (let i = 0; i < OVERPASS_SERVERS.length; i++) {
+                        const endpoint = OVERPASS_SERVERS[i] + '?data=' + encodedQuery;
                         
-                        console.debug(i + ' OSM server: ' + servers[i]);
-
+                        console.debug(`[SERVER #${i}] ${OVERPASS_SERVERS[i]}`);
+        
                         requests[i] = $.getJSON(
                             endpoint,
                             data => {
                                 if (data.elements.length > 0) {
-                                    console.debug('SUCCESS! @ ' + i);
+                                    console.debug(`[SERVER #${i}] Success!`);
                                     for (let r = 0; r < requests.length; r++) {
                                         if (r !== i) {
-                                            console.debug('Aborting ' + r);
+                                            console.debug(`[SERVER #${r}] Aborting`);
                                             requests[r].abort();
                                         }
                                     }
-    
+        
                                     console.debug('osm data: ', data);
                                     geoJson = osmtogeojson(data, { flatProperties: true });
                                     console.debug('converted to geoJSON: ', geoJson);
@@ -143,8 +161,8 @@ class OSMController {
                                         geoJson: geoJson
                                     });
                                 } else {
-                                    console.debug(`Server ${i} returned an empty result.`);
-
+                                    console.debug(`[SERVER #${i}] Empty result`);
+        
                                     // Check if I'm the last one
                                     let isLastRemainingRequest = true;
                                     for (let r = 0; r < requests.length; r++) {
@@ -155,24 +173,19 @@ class OSMController {
                                         }
                                     }
                                     if (isLastRemainingRequest) {
-                                        console.debug('I was the last one, so probably the result is empty.');
+                                        console.debug(`[SERVER #${i}] I was the last one, so probably the result is empty.`);
                                         resolve({ geoJson: null });
                                     }
                                 }
                             }).fail(e => {
                                 if (e.statusText !== 'abort') {
-                                    console.error(`Servidor ${i} deu erro:`, e);
+                                    console.error(`[SERVER #${i}] Error:`, e);
                                 }
                             });
                     }
-                }).fail(e => {
-                    console.error("Deu erro! Saca só:", e);
-                    notification['error']({
-                        message: 'Erro',
-                        description:
-                            'Ops, erro na API do Nominatim. Abra o console para ver mais detalhes.',
-                    });
-
+                })
+                .catch(e => {
+                    console.error(e);
                     reject();
                 });
         });
