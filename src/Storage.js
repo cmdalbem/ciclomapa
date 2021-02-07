@@ -132,11 +132,15 @@ class Storage {
         }
     }
 
-    printPOIsStats(data) {
+    printPOIsStats(geoJson) {
+        if (!geoJson) {
+            return;
+        }
+        
         let tagsCount = {};
         let valuesCount = {};
         
-        data.geoJson.features.forEach(f => {
+        geoJson.features.forEach(f => {
             // Only POIs
             if (f.properties.shop || f.properties.amenity) {
                 for (let k in f.properties) {
@@ -188,7 +192,7 @@ class Storage {
                 }
                 data.updatedAt = data.updatedAt.toDate();
 
-                this.printPOIsStats(data);
+                this.printPOIsStats(data.geoJson);
 
                 resolve(data);
             } else {
