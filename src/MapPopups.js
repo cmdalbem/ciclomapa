@@ -45,7 +45,7 @@ class MapPopups {
             
             <div class="-mb-2 mt-10">
                 <div class="opacity-25 mb-2 italic">
-                    Acha que este dado pode ser melhorado?
+                    Acha que estes dados podem ser melhorados?
                 </div>
                 
                 <a class="text-${color} border border-opacity-25 border-${color} px-2 py-1 rounded-sm mr-2"
