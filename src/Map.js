@@ -246,8 +246,12 @@ class Map extends Component {
                 'text-color': l.style.textColor || 'white',
                 'text-halo-width': 1,
                 'text-halo-color': '#1c1a17',
-                'icon-opacity': [
-                    'case',
+                'text-opacity': ['case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                    .8,
+                    1
+                ],
+                'icon-opacity': ['case',
                     ['boolean', ['feature-state', 'hover'], false],
                     .8,
                     1
