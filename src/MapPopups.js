@@ -137,7 +137,7 @@ class MapPopups {
                 ${Object.keys(properties).map(key => {
                     const translatedName = i18n[key];
                     const untranslatedValue = properties[key];
-                    const value = i18n[untranslatedValue];
+                    const translatedValue = i18n[untranslatedValue];
 
                     switch(key) {
                         case 'website':
@@ -148,20 +148,22 @@ class MapPopups {
                             // adding our domain to the beggining of it.
                             let link = untranslatedValue.includes('http') ? untranslatedValue : 'http://' + untranslatedValue;
                             return [
-                                `${translatedName || key}`,
+                                translatedName,
                                 `<a target="_BLANK" rel="noopener"
                                     class="underline" href=${link}>
                                     Link</a>`
                             ];
                         
                         default: 
-                            if (translatedName === null) {
-                                // console.debug('Ignored POI tag:', key, untranslatedValue);
+                            if (translatedName) {
+                                return [
+                                    translatedName,
+                                    translatedValue || untranslatedValue
+                                ];
+                            } else {
+                                console.debug('Ignored OSM tag:', key, untranslatedValue);
                                 return '';
-                            } else return [
-                                `${translatedName || key}`,
-                                `${value || untranslatedValue}`
-                            ];
+                            };
                     }
                 })
                 .map(i => i ? `
