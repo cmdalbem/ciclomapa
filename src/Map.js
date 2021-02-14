@@ -262,7 +262,7 @@ class Map extends Component {
         // Interactions
 
         this.map.on('mouseenter', l.id, e => {
-            if (e.features.length > 0) {
+            if (e.features.length > 0 && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
                 this.map.getCanvas().style.cursor = 'pointer';
 
                 if (this.hoveredPOI) {
@@ -281,7 +281,7 @@ class Map extends Component {
         });
 
         this.map.on('mouseleave', l.id, e => {
-            if (this.hoveredPOI) {
+            if (this.hoveredPOI && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
                 this.map.getCanvas().style.cursor = '';
 
                 this.map.setFeatureState({
@@ -293,7 +293,7 @@ class Map extends Component {
         });
 
         this.map.on('click', l.id, e => {
-            if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
+            if (e.features.length > 0 && !e.originalEvent.defaultPrevented && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
                 this.popups.showPOIPopup(e, iconsMap[l.icon+'-2x']);
             }
             e.originalEvent.preventDefault();
