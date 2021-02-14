@@ -54,7 +54,8 @@ export const osmi18n = {
     repair: 'Reparos',
     second_hand: 'Revenda',
     phone: 'Telefone',
-    'phone:2': 'Telefone',
+    'phone:2': 'Telefone 2',
+    'phone:3': 'Telefone 3',
     level: 'Andar',
     start_date: 'Desde',
     'service:bicycle:chaintool': 'Chave de corrente',
@@ -91,6 +92,11 @@ export const osmi18n = {
     designated: '',
     permissive: 'Permissivo',
     customers: 'Clientes',
+    'addr:street': 'Rua',
+    'addr:housenumber': 'Número',
+    
+    // Custom internal tags (not from OSM!)
+    'ciclomapa:address': 'Endereço',
 
     //////////////////////////
 
@@ -104,9 +110,7 @@ export const osmi18n = {
     'alt_name': null,
     'building': null,
     'addr:housename': null,
-    'addr:housenumber': null,
     'addr:door': null,
-    'addr:street': null,
     'addr:postcode': null,
     'addr:unit': null,
     'addr:city': null,
