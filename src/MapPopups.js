@@ -117,8 +117,16 @@ class MapPopups {
         const properties = e.features[0].properties;
         const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
 
-        // console.debug(e);
-        // console.debug(properties);
+        console.debug(properties);
+
+        // Special address collapse case
+        const addrStreet = properties['addr:street'];
+        const addrNbr = properties['addr:housenumber'];
+        if (addrStreet && addrNbr) {
+            properties['ciclomapa:address'] = `${addrStreet}, ${addrNbr}`;
+            delete properties['addr:street'];
+            delete properties['addr:housenumber'];
+        }
 
         let html = `
             <div class="text-2xl mt-3 mb-5">
