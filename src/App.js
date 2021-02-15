@@ -35,7 +35,7 @@ class App extends Component {
         super(props);
 
         this.updateData = this.updateData.bind(this);
-        // this.onMapStyleChange = this.onMapStyleChange.bind(this);
+        this.onMapStyleChange = this.onMapStyleChange.bind(this);
         this.onMapShowSatelliteChanged = this.onMapShowSatelliteChanged.bind(this);
         this.onMapMoved = this.onMapMoved.bind(this);
         this.onLayersChange = this.onLayersChange.bind(this);
@@ -271,9 +271,9 @@ class App extends Component {
         }
     }
 
-    // onMapStyleChange(newMapStyle) {
-    //     this.setState({ mapStyle: newMapStyle});
-    // }
+    onMapStyleChange(newMapStyle) {
+        this.setState({ mapStyle: newMapStyle});
+    }
 
     onMapShowSatelliteChanged(showSatellite) {
         this.setState({ showSatellite: showSatellite });
@@ -405,6 +405,7 @@ class App extends Component {
 
                 <MapStyleSwitcher 
                     showSatellite={this.state.showSatellite}
+                    onMapStyleChange={this.onMapStyleChange}
                     onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
                 />
  

@@ -302,8 +302,11 @@ class Map extends Component {
 
     addLayerWay(l) {
         const filters = this.convertFilterToMapboxFilter(l);
+        const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
 
         const dashedLineStyle = { 'line-dasharray': [1, 1] };
+
+        
 
         this.map.addLayer({
             "id": l.id + '--interactive',
@@ -315,7 +318,7 @@ class Map extends Component {
                 "line-color": 'yellow',
                 "line-width": 24
             },
-        }, 'road-label-small');
+        }, layerUnderneathName);
 
         // Check if layer has a border color set. If that's the case the logic is a
         //  little different and we'll need 2 layers, one for the line itself and 
@@ -345,7 +348,7 @@ class Map extends Component {
                     ...(l.style.borderStyle === 'dashed' && dashedLineStyle)
                 },
                 "layout": (l.style.borderStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
-            }, 'road-label-small');
+            }, layerUnderneathName);
 
             // Line
             this.map.addLayer({
@@ -375,7 +378,7 @@ class Map extends Component {
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
                 "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
-            }, 'road-label-small');
+            }, layerUnderneathName);
         } else {
             this.map.addLayer({
                 "id": l.id,
@@ -404,7 +407,7 @@ class Map extends Component {
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
                 "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
-            }, 'road-label-small');
+            }, layerUnderneathName);
         }
 
         // Click interaction
@@ -522,77 +525,90 @@ class Map extends Component {
     initGeojsonLayers(layers) {
         const map = this.map;
 
-        map.setLayoutProperty(
-            'satellite',
-            'visibility',
-            this.props.showSatellite ? 'visible' : 'none');
+        if (map.getLayer('satellite')) {
+            map.setLayoutProperty(
+                'satellite',
+                'visibility',
+                this.props.showSatellite ? 'visible' : 'none');
+        }
 
-        map.addSource("osm", {
-            "type": "geojson",
-            "data": this.props.data || {
-                'type': 'FeatureCollection',
-                'features': []
-            },
-            "generateId": true
-        });
-
-        map.addSource("commentsSrc", {
-            "type": "geojson",
-            "data": {
-                'type': 'FeatureCollection',
-                'features': []
-            },
-            "generateId": true
-        });
-
-        // layers.json is ordered from most to least important, but we 
-        //   want the most important ones to be on top so we add in reverse.
-        // Slice is used here to don't destructively reverse the original array.
-        layers.slice().reverse().forEach(l => {
-            if (!l.type || l.type==='way') {
-                this.addLayerWay(l);
-            } else if (l.type === 'poi' && l.filters) {
-                this.addLayerPoi(l);
-            }
-        });
-
-        map.on('mousemove', function(e) {
-            const features = map.queryRenderedFeatures(e.point, {
-              layers: layers.filter(l => l.type === 'way').map(l => l.id+'--interactive')
+        if (!map.getLayer('OSM')) {
+            map.addSource("osm", {
+                "type": "geojson",
+                "data": this.props.data || {
+                    'type': 'FeatureCollection',
+                    'features': []
+                },
+                "generateId": true
             });
+    
+            map.addSource("commentsSrc", {
+                "type": "geojson",
+                "data": {
+                    'type': 'FeatureCollection',
+                    'features': []
+                },
+                "generateId": true
+            });
+    
+            // layers.json is ordered from most to least important, but we 
+            //   want the most important ones to be on top so we add in reverse.
+            // Slice is used here to don't destructively reverse the original array.
+            layers.slice().reverse().forEach(l => {
+                if (!l.type || l.type==='way') {
+                    this.addLayerWay(l);
+                } else if (l.type === 'poi' && l.filters) {
+                    this.addLayerPoi(l);
+                }
+            });
+    
+            map.on('mousemove', function(e) {
+                const features = map.queryRenderedFeatures(e.point, {
+                  layers: layers.filter(l => l.type === 'way').map(l => l.id+'--interactive')
+                });
+    
+                if (features.length > 0) {
+                    // console.debug(features);
+                    map.getCanvas().style.cursor = 'pointer';
+        
+                    // Hover style
+                    if (this.hoveredCycleway) {
+                        map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
+                    }
+                    this.hoveredCycleway = features[0].id;
+                    map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: true });
+                } else {
+                    // Hover style
+                    if (this.hoveredCycleway && !this.selectedCycleway) {
+                        map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
+        
+                        // Cursor cursor
+                        map.getCanvas().style.cursor = '';
+                    }
+                    this.hoveredCycleway = null;
+                }
+            });
+        } else {
+            console.warn('Map layers already initialized.');
+        }
 
-            if (features.length > 0) {
-                // console.debug(features);
-                map.getCanvas().style.cursor = 'pointer';
-    
-                // Hover style
-                if (this.hoveredCycleway) {
-                    map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
-                }
-                this.hoveredCycleway = features[0].id;
-                map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: true });
-            } else {
-                // Hover style
-                if (this.hoveredCycleway && !this.selectedCycleway) {
-                    map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
-    
-                    // Cursor cursor
-                    map.getCanvas().style.cursor = '';
-                }
-                this.hoveredCycleway = null;
-            }
-        });
     }
 
     componentDidUpdate(prevProps) {
         const map = this.map;
 
-        if (!map || !map.getSource('osm')) {
+        if (!map) {
             return;
         }
 
         if (this.props.data !== prevProps.data) {
             map.getSource('osm').setData(this.props.data);
+        }
+
+        if (this.props.style !== prevProps.style) {
+            console.debug('new style', this.props.style);
+            map.setStyle(this.props.style);
+            // this.initLayers();
         }
         
         if (this.props.showSatellite !== prevProps.showSatellite) {
@@ -715,32 +731,36 @@ class Map extends Component {
             container: document.querySelector('body')
         }), 'bottom-right');
 
+        Object.keys(iconsMap).forEach(key => {
+            this.map.loadImage( iconsMap[key], (error, image) => {
+                if (error) throw error;
+                this.map.addImage(key, image);
+            });
+        });
         
         // Listeners
 
-        this.map.on('load', () => {
-            this.initGeojsonLayers(this.props.layers);
-            
-            if (ENABLE_COMMENTS) {
-                this.addCommentsLayers();
-            }
-
-            this.onMapMoved();
-
-            this.map.on('moveend', this.onMapMoved);
-
-            Object.keys(iconsMap).forEach(key => {
-                this.map.loadImage( iconsMap[key], (error, image) => {
-                    if (error) throw error;
-                    this.map.addImage(key, image);
-                });
-            });
+        this.map.on('style.load', () => {
+            console.debug('style.load');
+            this.initLayers();
         });
 
         
         // Initialize map data center
         
         this.reverseGeocode(this.props.center);
+    }
+
+    initLayers() {
+        this.initGeojsonLayers(this.props.layers);
+            
+        if (ENABLE_COMMENTS) {
+            this.addCommentsLayers();
+        }
+
+        this.onMapMoved();
+
+        this.map.on('moveend', this.onMapMoved);
     }
 
     newComment() {
