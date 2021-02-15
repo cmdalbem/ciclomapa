@@ -3,11 +3,8 @@
 @media (min-width: 320px) and (max-width: 480px) {
     .layers-panel {
         left: 0;
-    }
-    
-    .layer-row {
-        font-size: 12px;
-        padding: 2px 8px;
+        font-size: 8px !important;
+        display: none;
     }
     
     .layer-name {
