@@ -1,5 +1,35 @@
 [
     {
+        "name": "Duplicadas - lado A",
+        "isActive": false,
+        "description": "Vias automaticamente detectadas como sendo duplicadas - EM TESTE!",
+        "filters": [
+            ["ciclomapa:side", "a"]
+        ],
+        "style": {
+            "lineColor": "white",
+            "lineWidth": 8,
+            "borderColor": "#4ba96e",
+            "borderStyle": "solid",
+            "lineStyle": "dashed"
+        }
+    },
+    {
+        "name": "Duplicadas - lado B",
+        "isActive": false,
+        "description": "Vias automaticamente detectadas como sendo duplicadas - EM TESTE!",
+        "filters": [
+            ["ciclomapa:side", "b"]
+        ],
+        "style": {
+            "lineColor": "white",
+            "lineWidth": 8,
+            "borderColor": "red",
+            "borderStyle": "solid",
+            "lineStyle": "dashed"
+        }
+    },
+    {
         "name": "Ciclovia",
         "description": "Vias segregadas exclusivas para fluxo de bicicletas.",
         "filters": [

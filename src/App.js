@@ -228,10 +228,15 @@ class App extends Component {
                     .then(data => {
                         if (data) {
                             console.debug('Database data is fresh.');
+
+                            // @TEMP: Force to always recalculate lengths
+                            const geoJsonWithTypes = computeTypologies(data.geoJson, this.state.layers);
+                            const lengths = calculateLayersLengths(geoJsonWithTypes, this.state.layers);
+
                             this.setState({
                                 geoJson: data.geoJson,
-                                lengths: data.lengths,
-                                dataUpdatedAt: new Date(data.updatedAt)
+                                lengths: lengths,
+                                dataUpdatedAt: new Date(data.updatedAt),
                             });
                         } else { 
                             console.debug(`Couldn't find data for area ${this.state.area} or it isn't fresh, hitting OSM...`);
