@@ -191,5 +191,11 @@ export function calculateLayersLengths(geoJson, layers) {
         lengths[l.id] = length;
     });
 
+    console.debug('TOTAL',
+        lengths.ciclovia + 
+        lengths.ciclofaixa + 
+        lengths.ciclorrota + 
+        lengths['calcada-compartilhada']);
+
     return lengths;
 }
