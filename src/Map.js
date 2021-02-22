@@ -17,6 +17,7 @@ import {
     POI_ZOOM_THRESHOLD,
 } from './constants.js'
 
+import Analytics from './Analytics.js'
 import AirtableDatabase from './AirtableDatabase.js'
 import CommentModal from './CommentModal.js'
 import NewCommentCursor from './NewCommentCursor.js'
@@ -104,6 +105,8 @@ class Map extends Component {
     };
 
     afterCommentCreate() {
+        Analytics.event('new_comment');
+
         this.hideCommentModal();
         this.addCommentsLayers();
     };
@@ -294,7 +297,7 @@ class Map extends Component {
 
         this.map.on('click', l.id, e => {
             if (e.features.length > 0 && !e.originalEvent.defaultPrevented && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
-                this.popups.showPOIPopup(e, iconsMap[l.icon+'-2x']);
+                this.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
             }
             e.originalEvent.preventDefault();
         });
