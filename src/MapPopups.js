@@ -2,7 +2,7 @@ import mapboxgl from 'mapbox-gl'
 
 import './MapPopups.css'
 import { osmi18n as i18n } from './osmi18n.js'
-
+import Analytics from './Analytics.js'
 
 class MapPopups {
     map;
@@ -111,7 +111,7 @@ class MapPopups {
             .addTo(this.map);
     }
 
-    showPOIPopup(e, iconSrc) {
+    showPOIPopup(e, iconSrc, poiType) {
         // const coords = e.features[0].geometry.coordinates.slice();
         const coords = e.lngLat;
         const properties = e.features[0].properties;
@@ -184,6 +184,14 @@ class MapPopups {
         this.poiPopup.setLngLat(coords)
             .setHTML(html)
             .addTo(this.map);
+
+            Analytics.event('view_item', {
+                items: [{
+                    item_name : `${poiType} - ${properties.name}`,
+                    item_variant: poiType,
+                    item_category: 'map data'
+                }],
+            });
     }
 
     showCyclewayPopup(e, layer) {
@@ -223,6 +231,14 @@ class MapPopups {
             .setHTML(html)
             .addTo(this.map);
         this.cyclewayPopup.addClassName(bgClass); 
+
+        Analytics.event('view_item', {
+            items: [{
+                item_name : `${layer.name} - ${properties.name}`,
+                item_variant: layer.name,
+                item_category: 'map data'
+            }],
+        });
     }
 
     hidePopup() {

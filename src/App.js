@@ -3,6 +3,8 @@ import { withRouter } from "react-router-dom";
 
 import { notification } from 'antd';
 
+import Analytics from './Analytics.js'
+
 import Map from './Map.js'
 import Spinner from './Spinner.js'
 import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
@@ -141,6 +143,9 @@ class App extends Component {
     }
 
     forceUpdate() {
+        Analytics.event('force_update', {
+            city_name: this.state.area
+        });
         this.updateData(true);
     }
 
@@ -186,30 +191,39 @@ class App extends Component {
         console.debug('oldData', oldData);
         console.debug('newData', newData);
 
+        let ret, before, after;
+
         if (DISABLE_DATA_HEALTY_TEST) {
-            return true;
+            ret = true;
         }
 
         if (!oldData || !oldData.features) {
-            return true;
+            ret = true;
         } else {
-            const nbrOldFeatures = oldData && oldData.features.length;
-            const nbrNewFeatures = newData && newData.features.length;
+            before = oldData && oldData.features.length;
+            after = newData && newData.features.length;
     
-            console.debug('nbrOldFeatures', nbrOldFeatures);
-            console.debug('nbrNewFeatures', nbrNewFeatures);
+            console.debug('before', before);
+            console.debug('after', after);
     
-            return !(nbrNewFeatures === 0 || nbrNewFeatures < nbrOldFeatures*0.1);
+            ret = !(after === 0 || after < before*0.1);
         }
 
+        Analytics.event('get_from_osm', {
+            city_name: this.state.area,
+            is_healthy: ret,
+            new_features: after - before 
+        });
+
+        return ret;
     }
 
     getDataFromOSM(options = {}) {
         const {areaName = this.state.area, forceUpdate} = options;
 
-        console.log('options', options);
-        console.log('areaName', areaName);
-        console.log('forceUpdate', forceUpdate);
+        console.debug('options', options);
+        console.debug('areaName', areaName);
+        console.debug('forceUpdate', forceUpdate);
 
         this.setState({ loading: true });
 
@@ -223,7 +237,7 @@ class App extends Component {
                     if (SAVE_TO_FIREBASE) {
                         this.storage.save(areaName, newData.geoJson, now);
                     }
-    
+
                     // this.geoJsonDiff(this.state.geoJson, newData.geoJson);
     
                     this.setState({
@@ -288,8 +302,15 @@ class App extends Component {
     }
 
     downloadData() {
-        const layerWays = this.state.layers.filter(l => l.type === 'way');
+        Analytics.event('purchase', {
+            items: [{
+                item_name : this.state.area,
+                item_category: 'download',
+                item_variant: 'geojson file'
+            }],
+        });
 
+        const layerWays = this.state.layers.filter(l => l.type === 'way');
         computeTypologies(this.state.geoJson, layerWays);
         cleanUpOSMTags(this.state.geoJson);
         downloadObjectAsJson(this.state.geoJson, `ciclomapa-${this.state.area}`);
@@ -302,6 +323,10 @@ class App extends Component {
 
         if (this.state.area !== prevState.area) {
             console.debug(`Changed area from ${prevState.area} to ${this.state.area}`);
+            
+            Analytics.event('switch_city', {
+                city_name: this.state.area
+            });
             
             this.updateData();
 
