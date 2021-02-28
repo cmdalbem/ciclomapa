@@ -4,6 +4,7 @@ import pako from 'pako';
 import skmeans from 'skmeans';
  
 import turfLength from '@turf/length';
+import turfDistance from '@turf/distance';
 
 
 export function gzipDecompress(data) {
@@ -100,11 +101,21 @@ export function computeTypologies(data, layers) {
 }
 
 export function angleBetweenPoints(p1, p2) {
-    return Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180 / Math.PI;
+    const rads = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]);
+    const degs = rads * 180 / Math.PI
+    return degs;
+    
+    // Convert to positives
+    // if (degs < 0) return degs+360;
+    // else return degs;
+}
+
+export function average(nums) {
+    return nums.reduce((a, b) => (a + b)) / nums.length;
 }
 
 export function calculateLayersLengths(geoJson, layers) {
-    const ERROR_THRESHOLD = 20;
+    const ERROR_THRESHOLD = 30;
 
     let lengths = {};
     
@@ -115,66 +126,105 @@ export function calculateLayersLengths(geoJson, layers) {
             : [];
         
         // Detect duplicates
-        let waysByName = {};
+        let streetsByName = {};
         features.forEach(f => {
             if (f.properties.name && f.properties.oneway && f.properties.oneway==='yes') {
-                if (waysByName[f.properties.name]) {
-                    waysByName[f.properties.name].push(f);
+                if (streetsByName[f.properties.name]) {
+                    streetsByName[f.properties.name].push(f);
                 } else {
-                    waysByName[f.properties.name] = [f];
+                    streetsByName[f.properties.name] = [f];
                 }
             }
         });
         
         // Remove ways that have only 1 segment
-        for (let key in waysByName) {
-            if (waysByName[key].length < 2) {
-                delete waysByName[key];
+        for (let key in streetsByName) {
+            if (streetsByName[key].length < 2) {
+                delete streetsByName[key];
             }
         }
         
         // Mark sides
-        for (let key in waysByName) {
-            const way = waysByName[key];
+        for (let key in streetsByName) {
+            const street = streetsByName[key];
 
             console.debug(l.name, key);
             
+            // Calculate angles
             let angles = [];
-            way.forEach(w => {
-                const angle = angleBetweenPoints(w.geometry.coordinates[0], w.geometry.coordinates[1]);
-                w.properties['ciclomapa:angle'] = angle;
-                angles.push(angle);
-            });
-            console.debug(angles);
+            street.forEach(seg => {
+                // console.debug(seg.geometry);
 
-            // Try to avoid streets with 1 side onlye
-            const accDifferences = angles.reduce((acc, cur, i, a) => {
-                console.debug(acc, cur, i);
+                let segmentAngles = seg.geometry.coordinates.map((g,i,a) => {
+                    if (i < a.length-1) return angleBetweenPoints(a[i], a[i+1])
+                    else return;
+                });
+                segmentAngles.pop(); // last item is undefined
+                // console.debug(segmentAngles);
+
+                const avgAngle = average(segmentAngles);
+                seg.properties['ciclomapa:avgAngle'] = avgAngle;
+
+                angles.push(avgAngle);
+            });
+            // console.debug(angles);
+
+            // Try to avoid streets with 1 side only that have minor differences
+            //  in their angles (average of differences is less than a threshold)
+            const accAngleDelta = angles.reduce((acc, cur, i, a) => {
+                // console.debug(acc, cur, i);
                 if (i < a.length-1) {
-                    return acc + Math.abs(cur - a[i+1]);
-                } else {
-                    return acc;
+                    let diff = cur - a[i + 1];
+                    // Compensate to get the smallest difference between angles
+                    diff += (diff > 180) ? -360 : (diff < -180) ? 360 : 0;
+                    acc += Math.abs(diff);
                 }
+                return acc;
             }, 0)
-            const avgError = accDifferences / angles.length;
-            console.debug('accDifferences', accDifferences);
-            console.debug('avgError', avgError);
+            const avgErrorDelta = accAngleDelta / angles.length;
+            // console.debug('accAngleDelta', accAngleDelta);
+            // console.debug('avgErrorDelta', avgErrorDelta);
 
-            way.forEach((w, i) => {
-                w.properties['ciclomapa:accDifferences'] = accDifferences;
-                w.properties['ciclomapa:avgError'] = avgError;
+            street.forEach((seg, i) => {
+                seg.properties['ciclomapa:accAngleDelta'] = accAngleDelta;
+                seg.properties['ciclomapa:avgErrorDelta'] = avgErrorDelta;
             });
 
-            if (avgError > ERROR_THRESHOLD) {
-                // angles = angles.map(a => [Math.cos(a), Math.sen(a)]);
+            // Clusterize angles to find sides A & B
+            if (avgErrorDelta > ERROR_THRESHOLD) {
                 const clusters = skmeans(angles, 2)
-                console.debug(clusters);
+                // console.debug(clusters);
                 
-                way.forEach((w, i) => {
-                    w.properties['ciclomapa:duplicate_candidate'] = 'yes';
-                    w.properties['ciclomapa:side'] = clusters.idxs[i] ? 'a' : 'b';
+                street.forEach((seg, i) => {
+                    seg.properties['ciclomapa:duplicate_candidate'] = 'yes';
+                    seg.properties['ciclomapa:side'] = clusters.idxs[i] ? 'a' : 'b';
                 });
             }
+        }
+
+        // Calculate max distance of points
+        for (let key in streetsByName) {
+            const street = streetsByName[key];
+            
+            let allPoints = [];
+            street.forEach(seg => {
+                seg.geometry.coordinates.forEach(p => {
+                    allPoints.push(p);
+                });
+            });
+            // console.debug(allPoints);
+
+            let maxDist = 0;
+            allPoints.forEach(p1 => {
+                allPoints.forEach(p2 => {
+                    maxDist = Math.max(maxDist, turfDistance(p1,p2));
+                })
+            })
+
+            street.forEach(seg => {
+                seg.properties['ciclomapa:max_dist'] = maxDist;
+                seg.properties['ciclomapa:max_dist_m'] = (maxDist*1000).toFixed(2);
+            });
         }
         
         // Calculate lengths
@@ -183,8 +233,18 @@ export function calculateLayersLengths(geoJson, layers) {
             if (!f.properties['ciclomapa:duplicate_candidate'] 
                 || (f.properties['ciclomapa:side'] && f.properties['ciclomapa:side'] === 'a')) {
                 const thisLength = turfLength(f);
-                length += thisLength;
-                f.properties['ciclomapa:comprimento'] = thisLength;
+
+                // @todo FIX ME we should compare the total length of the whole street, and not just the segment!!
+                // Case when street is linear and there's no overlap between hands
+                // Probably it's a street that changes hand in the middle
+                // if (f.properties['ciclomapa:max_dist'] > length * 2) {
+                //     console.debug('MAX DIST THREHOLD PASSED EINNNNN', f.properties.name);
+                //     f.properties['ciclomapa:ignored'] = 'TRUE';
+                //     f.properties['ciclomapa:side'] = 'b';
+                // } else {
+                    length += thisLength;
+                    f.properties['ciclomapa:length_m'] = (thisLength*1000).toFixed(2);
+                // }
             }
         })
 
