@@ -6,6 +6,9 @@ import skmeans from 'skmeans';
 import turfLength from '@turf/length';
 import turfDistance from '@turf/distance';
 
+const ERROR_THRESHOLD = 20;
+
+
 
 export function gzipDecompress(data) {
     return JSON.parse(pako.inflate(data), { to: 'string' });
@@ -114,121 +117,130 @@ export function average(nums) {
     return nums.reduce((a, b) => (a + b)) / nums.length;
 }
 
-export function calculateLayersLengths(geoJson, layers) {
-    const ERROR_THRESHOLD = 30;
+function detectDoubleWayBikePaths(l, features) {
+    // Detect duplicates
+    let streetsByName = {};
+    features.forEach(f => {
+        if (f.properties.name && f.properties.oneway && f.properties.oneway==='yes') {
+            if (streetsByName[f.properties.name]) {
+                streetsByName[f.properties.name].push(f);
+            } else {
+                streetsByName[f.properties.name] = [f];
+            }
+        }
+    });
+    
+    // Remove ways that have only 1 segment
+    for (let key in streetsByName) {
+        if (streetsByName[key].length < 2) {
+            delete streetsByName[key];
+        }
+    }
+    
+    // Mark sides
+    for (let key in streetsByName) {
+        const street = streetsByName[key];
 
+        console.debug(l.name, key);
+        
+        // Calculate angles
+        let angles = [];
+        street.forEach(seg => {
+            // console.debug(seg.geometry);
+
+            let segmentAngles = seg.geometry.coordinates.map((g,i,a) => {
+                if (i < a.length-1) return angleBetweenPoints(a[i], a[i+1])
+                else return;
+            });
+            segmentAngles.pop(); // last item is undefined
+            // console.debug(segmentAngles);
+
+            const avgAngle = average(segmentAngles);
+            seg.properties['ciclomapa:avgAngle'] = avgAngle;
+
+            angles.push(avgAngle);
+        });
+        // console.debug(angles);
+
+        // Try to avoid streets with 1 side only that have minor differences
+        //  in their angles (average of differences is less than a threshold)
+        const accAngleDelta = angles.reduce((acc, cur, i, a) => {
+            // console.debug(acc, cur, i);
+            if (i < a.length-1) {
+                let diff = cur - a[i + 1];
+                // Compensate to get the smallest difference between angles
+                diff += (diff > 180) ? -360 : (diff < -180) ? 360 : 0;
+                acc += Math.abs(diff);
+            }
+            return acc;
+        }, 0)
+        const avgErrorDelta = accAngleDelta / angles.length;
+        // console.debug('accAngleDelta', accAngleDelta);
+        // console.debug('avgErrorDelta', avgErrorDelta);
+
+        street.forEach((seg, i) => {
+            seg.properties['ciclomapa:accAngleDelta'] = accAngleDelta;
+            seg.properties['ciclomapa:avgErrorDelta'] = avgErrorDelta;
+        });
+
+        // Clusterize angles to find sides A & B
+        if (avgErrorDelta > ERROR_THRESHOLD) {
+            const clusters = skmeans(angles, 2)
+            // console.debug(clusters);
+            
+            street.forEach((seg, i) => {
+                seg.properties['ciclomapa:duplicate_candidate'] = 'yes';
+                seg.properties['ciclomapa:side'] = clusters.idxs[i] ? 'a' : 'b';
+            });
+        }
+    }
+
+    // Calculate max distance of points
+    for (let key in streetsByName) {
+        const street = streetsByName[key];
+        
+        let allPoints = [];
+        street.forEach(seg => {
+            seg.geometry.coordinates.forEach(p => {
+                allPoints.push(p);
+            });
+        });
+        // console.debug(allPoints);
+
+        let maxDist = 0;
+        allPoints.forEach(p1 => {
+            allPoints.forEach(p2 => {
+                maxDist = Math.max(maxDist, turfDistance(p1,p2));
+            })
+        })
+
+        street.forEach(seg => {
+            seg.properties['ciclomapa:max_dist'] = maxDist;
+            seg.properties['ciclomapa:max_dist_m'] = (maxDist*1000).toFixed(2);
+        });
+    }
+
+    return features;
+}
+
+export function calculateLayersLengths(geoJson, layers) {
     let lengths = {};
     
     layers.forEach(l => {
         // Use local classification to filter
-        const features = geoJson && geoJson.features ? 
+        let features = geoJson && geoJson.features ? 
             geoJson.features.filter(f => f.properties.type === l.name)
             : [];
-        
-        // Detect duplicates
-        let streetsByName = {};
-        features.forEach(f => {
-            if (f.properties.name && f.properties.oneway && f.properties.oneway==='yes') {
-                if (streetsByName[f.properties.name]) {
-                    streetsByName[f.properties.name].push(f);
-                } else {
-                    streetsByName[f.properties.name] = [f];
-                }
-            }
-        });
-        
-        // Remove ways that have only 1 segment
-        for (let key in streetsByName) {
-            if (streetsByName[key].length < 2) {
-                delete streetsByName[key];
-            }
-        }
-        
-        // Mark sides
-        for (let key in streetsByName) {
-            const street = streetsByName[key];
 
-            console.debug(l.name, key);
-            
-            // Calculate angles
-            let angles = [];
-            street.forEach(seg => {
-                // console.debug(seg.geometry);
-
-                let segmentAngles = seg.geometry.coordinates.map((g,i,a) => {
-                    if (i < a.length-1) return angleBetweenPoints(a[i], a[i+1])
-                    else return;
-                });
-                segmentAngles.pop(); // last item is undefined
-                // console.debug(segmentAngles);
-
-                const avgAngle = average(segmentAngles);
-                seg.properties['ciclomapa:avgAngle'] = avgAngle;
-
-                angles.push(avgAngle);
-            });
-            // console.debug(angles);
-
-            // Try to avoid streets with 1 side only that have minor differences
-            //  in their angles (average of differences is less than a threshold)
-            const accAngleDelta = angles.reduce((acc, cur, i, a) => {
-                // console.debug(acc, cur, i);
-                if (i < a.length-1) {
-                    let diff = cur - a[i + 1];
-                    // Compensate to get the smallest difference between angles
-                    diff += (diff > 180) ? -360 : (diff < -180) ? 360 : 0;
-                    acc += Math.abs(diff);
-                }
-                return acc;
-            }, 0)
-            const avgErrorDelta = accAngleDelta / angles.length;
-            // console.debug('accAngleDelta', accAngleDelta);
-            // console.debug('avgErrorDelta', avgErrorDelta);
-
-            street.forEach((seg, i) => {
-                seg.properties['ciclomapa:accAngleDelta'] = accAngleDelta;
-                seg.properties['ciclomapa:avgErrorDelta'] = avgErrorDelta;
-            });
-
-            // Clusterize angles to find sides A & B
-            if (avgErrorDelta > ERROR_THRESHOLD) {
-                const clusters = skmeans(angles, 2)
-                // console.debug(clusters);
-                
-                street.forEach((seg, i) => {
-                    seg.properties['ciclomapa:duplicate_candidate'] = 'yes';
-                    seg.properties['ciclomapa:side'] = clusters.idxs[i] ? 'a' : 'b';
-                });
-            }
-        }
-
-        // Calculate max distance of points
-        for (let key in streetsByName) {
-            const street = streetsByName[key];
-            
-            let allPoints = [];
-            street.forEach(seg => {
-                seg.geometry.coordinates.forEach(p => {
-                    allPoints.push(p);
-                });
-            });
-            // console.debug(allPoints);
-
-            let maxDist = 0;
-            allPoints.forEach(p1 => {
-                allPoints.forEach(p2 => {
-                    maxDist = Math.max(maxDist, turfDistance(p1,p2));
-                })
-            })
-
-            street.forEach(seg => {
-                seg.properties['ciclomapa:max_dist'] = maxDist;
-                seg.properties['ciclomapa:max_dist_m'] = (maxDist*1000).toFixed(2);
-            });
+        if (l.id === 'ciclovia' ||
+            l.id === 'ciclofaixa' ||
+            l.id === 'ciclorrota' ||
+            l.id === 'calcada-compartilhada') {
+            features = detectDoubleWayBikePaths(l, features);
         }
         
         // Calculate lengths
-        let length = 0;
+        let layerLength = 0;
         features.forEach(f => {
             if (!f.properties['ciclomapa:duplicate_candidate'] 
                 || (f.properties['ciclomapa:side'] && f.properties['ciclomapa:side'] === 'a')) {
@@ -242,13 +254,13 @@ export function calculateLayersLengths(geoJson, layers) {
                 //     f.properties['ciclomapa:ignored'] = 'TRUE';
                 //     f.properties['ciclomapa:side'] = 'b';
                 // } else {
-                    length += thisLength;
+                    layerLength += thisLength;
                     f.properties['ciclomapa:length_m'] = (thisLength*1000).toFixed(2);
                 // }
             }
         })
 
-        lengths[l.id] = length;
+        lengths[l.id] = layerLength;
     });
 
     console.debug('TOTAL',
