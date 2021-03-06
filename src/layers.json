@@ -1,6 +1,21 @@
 [
     {
-        "name": "Duplicadas - lado A",
+        "name": "Duplicadas - Falsos positivos",
+        "isActive": false,
+        "description": "",
+        "filters": [
+            ["ciclomapa:ignored", "true"]
+        ],
+        "style": {
+            "lineColor": "white",
+            "lineWidth": 8,
+            "borderColor": "purple",
+            "borderStyle": "solid",
+            "lineStyle": "dashed"
+        }
+    },
+    {
+        "name": "Duplicadas - Lado A",
         "isActive": false,
         "description": "Vias automaticamente detectadas como sendo duplicadas - EM TESTE!",
         "filters": [
@@ -15,7 +30,7 @@
         }
     },
     {
-        "name": "Duplicadas - lado B",
+        "name": "Duplicadas - Lado B",
         "isActive": false,
         "description": "Vias automaticamente detectadas como sendo duplicadas - EM TESTE!",
         "filters": [
