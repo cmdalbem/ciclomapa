@@ -14,7 +14,7 @@ import LayersPanel from './LayersPanel.js'
 import OSMController from './OSMController.js'
 import Storage from './Storage.js'
 import { downloadObjectAsJson } from './utils.js'
-import { computeTypologies, cleanUpOSMTags } from './geojsonUtils.js'
+import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './geojsonUtils.js'
 import {
     DEFAULT_LAT,
     DEFAULT_LNG,
@@ -43,7 +43,6 @@ class App extends Component {
         this.onLayersChange = this.onLayersChange.bind(this);
         this.downloadData = this.downloadData.bind(this);
         this.forceUpdate = this.forceUpdate.bind(this);
-        this.updateLengths = this.updateLengths.bind(this);
         this.onSpinnerClose = this.onSpinnerClose.bind(this);
 
         const prev = this.getStateFromLocalStorage();
@@ -111,12 +110,6 @@ class App extends Component {
 
             let str = JSON.stringify(state);
             window.localStorage.setItem('appstate', str);
-        });
-    }
-
-    updateLengths(newLengths) {
-        this.setState({
-            lengths: newLengths
         });
     }
 
@@ -229,21 +222,25 @@ class App extends Component {
 
         return OSMController.getData({ area: areaName })
             .then(newData => {
+                // this.geoJsonDiff(this.state.geoJson, newData.geoJson);
+
                 if (forceUpdate && !this.isDataHealthy(this.state.geoJson, newData.geoJson)) {
                     throw new Error('New data is not healthy.');
                 } else {
-                    const now = new Date();
+                    const geoJsonWithTypes = computeTypologies(this.state.geoJson, this.state.layers);
+                    const lengths = calculateLayersLengths(geoJsonWithTypes, this.state.layers);
                     
                     if (SAVE_TO_FIREBASE) {
-                        this.storage.save(areaName, newData.geoJson, now);
+                        this.storage.save(areaName, newData.geoJson, lengths);
                     }
 
                     // this.geoJsonDiff(this.state.geoJson, newData.geoJson);
     
                     this.setState({
                         geoJson: newData.geoJson,
-                        dataUpdatedAt: now,
-                        loading: false
+                        dataUpdatedAt: new Date(),
+                        loading: false,
+                        lengths: lengths
                     });
                 }
             }).catch(e => {
@@ -264,9 +261,16 @@ class App extends Component {
                     .then(data => {
                         if (data) {
                             console.debug('Database data is fresh.');
+
+                            // @TEMP: Force to always recalculate lengths
+                            const geoJsonWithTypes = computeTypologies(data.geoJson, this.state.layers);
+                            const lengths = calculateLayersLengths(geoJsonWithTypes, this.state.layers);
+
                             this.setState({
                                 geoJson: data.geoJson,
-                                dataUpdatedAt: new Date(data.updatedAt)
+                                // lengths: lengths,
+                                lengths: data.lengths,
+                                dataUpdatedAt: new Date(data.updatedAt),
                             });
                         } else { 
                             console.debug(`Couldn't find data for area ${this.state.area} or it isn't fresh, hitting OSM...`);
@@ -348,14 +352,18 @@ class App extends Component {
                     description:
                         'Não há dados cicloviários para esta cidade.',
                 });
-
-                // this.setState({
-                //     isDownloadUnavailable: true
-                // });
             } else {
-                // this.setState({
-                //     isDownloadUnavailable: false
-                // });
+                // Retrocompatibility case where lengths weren't save to database
+                if (!this.state.lengths) {
+                    console.debug('database didnt have lengths, computing...');
+                    
+                    const geoJsonWithTypes = computeTypologies(this.state.geoJson, this.state.layers);
+                    const lengths = calculateLayersLengths(geoJsonWithTypes, this.state.layers);
+                    
+                    this.setState({
+                        lengths: lengths
+                    });
+                }
             }
         }
         
