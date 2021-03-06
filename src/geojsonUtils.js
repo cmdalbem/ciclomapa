@@ -298,7 +298,7 @@ export function calculateLayersLengths(geoJson, layers) {
                     }
                 });
 
-                console.debug(street, street.totalLength);
+                // console.debug(street, street.totalLength);
             }
         }
 
@@ -311,12 +311,6 @@ export function calculateLayersLengths(geoJson, layers) {
             }
         })
     });
-
-    console.debug('TOTAL',
-        lengths.ciclovia +
-        lengths.ciclofaixa +
-        lengths.ciclorrota +
-        lengths['calcada-compartilhada']);
 
     return lengths;
 }
