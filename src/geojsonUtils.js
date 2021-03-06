@@ -62,52 +62,52 @@ export function computeTypologies(data, layers) {
                 .reverse()
                 .filter(l => !!l.filters)
                 .forEach(layer => {
-                let match = false;
-                layer.filters.forEach(filter => {
-                    let partsToMatch;
-                    if (typeof filter[0] === 'object') {
-                        partsToMatch = [false, false];
-                    } else {
-                        partsToMatch = [false];
-                    }
-
-                    Object.keys(feature.properties).forEach(propertyKey => {
+                    let match = false;
+                    layer.filters.forEach(filter => {
+                        let partsToMatch;
                         if (typeof filter[0] === 'object') {
-                            if ((propertyKey === filter[0][0] &&
-                                feature.properties[propertyKey] === filter[0][1])) {
-                                partsToMatch[0] = true;
-                            }
-
-                            if ((propertyKey === filter[1][0] &&
-                                feature.properties[propertyKey] === filter[1][1])) {
-                                partsToMatch[1] = true;
-                            }
+                            partsToMatch = [false, false];
                         } else {
-                            if ((propertyKey === filter[0] &&
-                                feature.properties[propertyKey] === filter[1])) {
-                                partsToMatch[0] = true;
-                            }
+                            partsToMatch = [false];
                         }
+
+                        Object.keys(feature.properties).forEach(propertyKey => {
+                            if (typeof filter[0] === 'object') {
+                                if ((propertyKey === filter[0][0] &&
+                                    feature.properties[propertyKey] === filter[0][1])) {
+                                    partsToMatch[0] = true;
+                                }
+
+                                if ((propertyKey === filter[1][0] &&
+                                    feature.properties[propertyKey] === filter[1][1])) {
+                                    partsToMatch[1] = true;
+                                }
+                            } else {
+                                if ((propertyKey === filter[0] &&
+                                    feature.properties[propertyKey] === filter[1])) {
+                                    partsToMatch[0] = true;
+                                }
+                            }
+                        });
+
+                        if ((typeof filter[0] === 'object' && partsToMatch[0] && partsToMatch[1])
+                            || partsToMatch[0]) {
+                            match = true;
+
+                            // "Proibido" layer should have priority over the rest
+                            if (!feature.properties.type || feature.properties.type !== 'Proibido') {
+                                feature.properties.type = layer.name;
+                            }
+                            // console.debug(`.  .  → ${feature.properties.name} (${feature.properties.id}) = ${layer.name}`);
+                        }
+
+                        // console.debug(`.  .  ${filter} ${match ? '✓' : ''}`);
                     });
 
-                    if ((typeof filter[0] === 'object' && partsToMatch[0] && partsToMatch[1])
-                        || partsToMatch[0]) {
-                        match = true;
-
-                        // "Proibido" layer should have priority over the rest
-                        if (!feature.properties.type || feature.properties.type !== 'Proibido') {
-                            feature.properties.type = layer.name;
-                        }
-                        // console.debug(`.  .  → ${feature.properties.name} (${feature.properties.id}) = ${layer.name}`);
+                    if (DEBUG && match) {
+                        console.debug(`.  ${layer.name}`);
                     }
-
-                    // console.debug(`.  .  ${filter} ${match ? '✓' : ''}`);
                 });
-
-                if (DEBUG && match) {
-                    console.debug(`.  ${layer.name}`);
-                }
-            });
         }
     });
 
@@ -240,14 +240,26 @@ function detectDoubleWayBikePaths(l, features) {
 export function calculateLayersLengths(geoJson, layers) {
     let lengths = {};
 
-    layers.forEach(l => {
+    layers
+        .filter(l => l.type === 'poi')
+        .forEach(l => {
+            let features = geoJson && geoJson.features ?
+                geoJson.features.filter(f => f.properties.type === l.name)
+                : [];
+            
+            lengths[l.id] = features.length;
+        })
+
+    layers
+        .filter(l => l.type === 'way')
+        .forEach(l => {
         lengths[l.id] = 0;
 
         // Use local classification to filter
         let features = geoJson && geoJson.features ?
             geoJson.features.filter(f => f.properties.type === l.name)
             : [];
-        
+
         // Calculate lengths
         features.forEach(f => {
             const thisLength = turfLength(f);
@@ -273,7 +285,7 @@ export function calculateLayersLengths(geoJson, layers) {
                 street.forEach(seg => {
                     // This is not the street official length, but the sum of segments lengths
                     seg.properties['ciclomapa:total_raw_length'] = street.totalLength;
-                    seg.properties['ciclomapa:dist_by_length_ratio'] = (seg.properties['ciclomapa:max_dist']/street.totalLength).toFixed(2);
+                    seg.properties['ciclomapa:dist_by_length_ratio'] = (seg.properties['ciclomapa:max_dist'] / street.totalLength).toFixed(2);
 
                     // Heuristic to detect false positives, when a street was clustered
                     //   as having 2 sides but actually it's a street thag changes its

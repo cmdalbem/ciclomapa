@@ -134,22 +134,26 @@ class LayersPanel extends Component {
                                             {l.name} 
                                         </span>
 
+                                    </div>
+
+                                    <div className="flex items-center">
                                         {
                                             this.props.lengths
                                                 && Object.keys(this.props.lengths).length > 0
-                                                && this.props.lengths[l.id] > 0
-                                                && <span className="text-sm" style={{ fontWeight: 300, opacity: .5 }}>
-                                                    {Math.round(this.props.lengths[l.id])}km
-                                            </span>
+                                                && this.props.lengths[l.id] > 0 
+                                                && <span className={`text-sm pl-4 transition-opacity duration-300 ${this.state.hover ? 'opacity-100' : 'opacity-50'}`}>
+                                                    { Math.round(this.props.lengths[l.id]) }
+                                                    { l.type === 'way' && ' km' }
+                                                </span>
                                         }
-                                    </div>
 
-                                    <div className={`ml-2 transition-opacity duration-300 ${this.state.hover ? 'opacity-100' : 'opacity-0'}`}>
-                                        {
-                                            l.isActive ?
-                                                <MdVisibility/>
-                                            :   <MdVisibilityOff/>
-                                        }
+                                        <div className={`ml-2 transition-opacity duration-300 ${this.state.hover ? 'opacity-100' : 'opacity-0'}`}>
+                                            {
+                                                l.isActive ?
+                                                    <MdVisibility/>
+                                                :   <MdVisibilityOff/>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             </Popover>
