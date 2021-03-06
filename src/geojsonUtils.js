@@ -6,8 +6,13 @@ import skmeans from 'skmeans';
 import turfLength from '@turf/length';
 import turfDistance from '@turf/distance';
 
-const ERROR_THRESHOLD = 20;
-const FALSE_POSITIVES_TRESHOLD = 0.8;
+
+// 0 = all segments have exactly the same angle
+const MIN_AVG_ANGLE_TRESHOLD = 20;
+
+// 0.5 = a perfectly straight street that has two parallel sides with opposite hands
+// 1 = a perfectly straight street that change its hand in the middle
+const DISTANCE_BY_LENGTH_RATIO_TRESHOLD = 0.8;
 
 
 
@@ -175,17 +180,17 @@ function detectDoubleWayBikePaths(l, features) {
             }
             return acc;
         }, 0)
-        const avgErrorDelta = accAngleDelta / angles.length;
+        const avgAngleDelta = accAngleDelta / angles.length;
         // console.debug('accAngleDelta', accAngleDelta);
-        // console.debug('avgErrorDelta', avgErrorDelta);
+        // console.debug('avgAngleDelta', avgAngleDelta);
 
         street.forEach((seg, i) => {
             seg.properties['ciclomapa:accAngleDelta'] = accAngleDelta;
-            seg.properties['ciclomapa:avgErrorDelta'] = avgErrorDelta;
+            seg.properties['ciclomapa:avgAngleDelta'] = avgAngleDelta;
         });
 
         // Clusterize angles to find sides A & B
-        if (avgErrorDelta > ERROR_THRESHOLD) {
+        if (avgAngleDelta > MIN_AVG_ANGLE_TRESHOLD) {
             const clusters = skmeans(angles, 2)
             // console.debug(clusters);
 
@@ -263,12 +268,13 @@ export function calculateLayersLengths(geoJson, layers) {
                 street.forEach(seg => {
                     // This is not the street official length, but the sum of segments lengths
                     seg.properties['ciclomapa:total_raw_length'] = street.totalLength;
+                    seg.properties['ciclomapa:dist_by_length_ratio'] = (seg.properties['ciclomapa:max_dist']/street.totalLength).toFixed(2);
 
                     // Heuristic to detect false positives, when a street was clustered
                     //   as having 2 sides but actually it's a street thag changes its
                     //   "hand" along itself.
                     if (seg.properties['ciclomapa:duplicate_candidate'] &&
-                        seg.properties['ciclomapa:max_dist'] > street.totalLength * FALSE_POSITIVES_TRESHOLD) {
+                        seg.properties['ciclomapa:dist_by_length_ratio'] > DISTANCE_BY_LENGTH_RATIO_TRESHOLD) {
                         seg.properties['ciclomapa:ignored'] = 'true';
                         delete seg.properties['ciclomapa:duplicate_candidate'];
                         delete seg.properties['ciclomapa:side'];
