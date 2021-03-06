@@ -54,10 +54,16 @@ class Map extends Component {
                 </div>
             </div>`;
 
-        const prettyProps = JSON.stringify(props, null, 2)
+        // Show only the props marked with ciclomapa:
+        let internalProps = {};
+        for (let k in props) {
+            if (k.includes('ciclomapa')) {
+                internalProps[k] = props[k];
+            }
+        }
+        html += JSON.stringify(internalProps, null, 2)
             .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-            .replace(/"|,|\{|\}/g, '');
-        html += prettyProps;
+            .replace(/"|,|\{|\}/g, '');;
 
         html += `
             <div class="footer">
@@ -144,8 +150,8 @@ class Map extends Component {
                     //         [place.bbox[2]+0.15, place.bbox[3]+0.15]  // Northeast coordinates
                     //     ]); 
                     // });
-                    
-                    this.props.onMapMoved({area: place.place_name});
+
+                    this.props.onMapMoved({ area: place.place_name });
                 }
             })
             .catch(err => {
@@ -192,7 +198,7 @@ class Map extends Component {
         if (l.style.borderColor) {
             // Border
             this.map.addLayer({
-                "id": l.id+'--border',
+                "id": l.id + '--border',
                 "type": "line",
                 "source": "osm",
                 "name": l.name,
@@ -205,16 +211,16 @@ class Map extends Component {
                     "line-color": l.style.borderColor,
                     "line-width": [
                         "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"], 
-                            10, 2,
-                            18, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth*6,
-                                l.style.lineWidth*3
-                            ]
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, 2,
+                        18, ['case',
+                            ['boolean', ['feature-state', 'hover'], false],
+                            l.style.lineWidth * 6,
+                            l.style.lineWidth * 3
+                        ]
                     ],
-                    ...(l.style.borderStyle === 'dashed' && {'line-dasharray': [.2, 2.5]})
+                    ...(l.style.borderStyle === 'dashed' && { 'line-dasharray': [.2, 2.5] })
                 },
                 "filter": filters,
             }, 'road-label-small');
@@ -234,16 +240,16 @@ class Map extends Component {
                     "line-color": l.style.lineColor,
                     "line-width": [
                         "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"],
-                            10, 2,
-                            18, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                (l.style.lineWidth - l.style.borderWidth)*6,
-                                (l.style.lineWidth - l.style.borderWidth)*3
-                            ]
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, 2,
+                        18, ['case',
+                            ['boolean', ['feature-state', 'hover'], false],
+                            (l.style.lineWidth - l.style.borderWidth) * 6,
+                            (l.style.lineWidth - l.style.borderWidth) * 3
+                        ]
                     ],
-                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [.2, 2.5]})
+                    ...(l.style.lineStyle === 'dashed' && { 'line-dasharray': [.2, 2.5] })
                 },
                 "filter": filters,
             }, 'road-label-small');
@@ -262,25 +268,25 @@ class Map extends Component {
                     "line-color": l.style.lineColor,
                     "line-width": [
                         "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"],
-                            10, 2,
-                            18, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth*6,
-                                l.style.lineWidth*3
-                            ]
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, 2,
+                        18, ['case',
+                            ['boolean', ['feature-state', 'hover'], false],
+                            l.style.lineWidth * 6,
+                            l.style.lineWidth * 3
+                        ]
                     ],
-                    ...(l.style.lineStyle === 'dashed' && {'line-dasharray': [.2, 2.5]})
+                    ...(l.style.lineStyle === 'dashed' && { 'line-dasharray': [.2, 2.5] })
                 },
                 "filter": filters,
             }, 'road-label-small');
         }
 
-        
+
         // Interactions
 
-        const interactiveId = l.style.borderColor ? 
+        const interactiveId = l.style.borderColor ?
             l.id + '--border'
             : l.id;
 
@@ -363,7 +369,7 @@ class Map extends Component {
         // Slice is used here to don't destructively reverse the original array.
         this.props.layers.slice().reverse().forEach(l => {
             this.addDynamicLayer(l);
-        }); 
+        });
 
         // if (!IS_MOBILE) {
         //     this.map.on('sourcedata', e => {
@@ -389,36 +395,36 @@ class Map extends Component {
         if (this.props.data !== prevProps.data) {
             this.map.getSource('osm').setData(this.props.data);
         }
-        
+
         if (this.props.showSatellite !== prevProps.showSatellite) {
             this.map.setLayoutProperty(
                 'satellite',
                 'visibility',
                 this.props.showSatellite ? 'visible' : 'none');
         }
-        
+
         // if (this.props.zoom !== prevProps.zoom) {
         //     this.map.setZoom(this.props.zoom);
         // }
-        
+
         if (this.props.center !== prevProps.center) {
             this.map.setCenter(this.props.center);
         }
-        
+
         // Compare only 'isActive' field of layers
         if (this.props.layers.map(l => l.isActive).join() === prevProps.layers.map(l => l.isActive).join()) {
-            this.props.layers.forEach( l => {
+            this.props.layers.forEach(l => {
                 this.map.setLayoutProperty(l.id, 'visibility', l.isActive ? 'visible' : 'none');
                 if (l.style.borderColor) {
-                    this.map.setLayoutProperty(l.id+'--border', 'visibility', l.isActive ? 'visible' : 'none');
+                    this.map.setLayoutProperty(l.id + '--border', 'visibility', l.isActive ? 'visible' : 'none');
                 }
             })
         }
     }
-    
+
     componentDidMount() {
         mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
-        
+
         this.map = new mapboxgl.Map({
             container: this.mapContainer,
             style: this.props.style,
@@ -456,7 +462,7 @@ class Map extends Component {
 
             let flyToPos;
             if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
-                flyToPos = [-40.3144,-20.2944];
+                flyToPos = [-40.3144, -20.2944];
             } else {
                 flyToPos = result.result.center;
             }
@@ -468,7 +474,7 @@ class Map extends Component {
             });
 
             this.reverseGeocode(result.result.center);
-            
+
             // Hide UI
             // @todo refactor this to use React state
             document.querySelector('body').classList.remove('show-city-picker');
@@ -489,12 +495,12 @@ class Map extends Component {
             trackUserLocation: false
         });
         geolocate.on('geolocate', result => {
-            console.debug('geolocate', result); 
+            console.debug('geolocate', result);
             this.reverseGeocode([result.coords.longitude, result.coords.latitude]);
         });
         this.map.addControl(geolocate, 'bottom-right');
-        
-        
+
+
         // map.addControl(new mapboxgl.FullscreenControl({ container: document.querySelector('body') }));
 
 
@@ -528,7 +534,7 @@ class Map extends Component {
             closeButton: false,
             className: 'hover-popup'
         });
-        
+
         // Initialize map data center
         this.reverseGeocode(this.props.center);
     }
