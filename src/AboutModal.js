@@ -20,11 +20,12 @@ class AboutModal extends Component {
                 maskClosable={true}
             >
                 <div className="text-base">
-                    <div className="text-6xl uppercase text-green-200 mt-1" style={{
+                    {/* <div className="text-6xl uppercase text-green-200 mt-1" style={{
                         fontFamily: 'Teko, sans-serif',
                     }}>
                         CicloMapa
-                    </div>
+                    </div> */}
+                    <img className="h-11 my-7" src="logo.svg" alt="CicloMapa"></img>
 
                     <p>
                         O CicloMapa é uma ferramenta que busca ampliar a visibilidade das infraestruturas cicloviárias (ou a falta delas) das cidades brasileiras, disponibilizando dados que auxiliem a incidência em políticas públicas para a ciclomobilidade.
