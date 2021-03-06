@@ -23,6 +23,8 @@
     "react-icons": "^3.11.0",
     "react-router-dom": "^5.0.1",
     "react-scripts": "4.0.0",
+    "skmeans": "^0.11.3",
+    "turf-distance": "^3.0.12",
     "zipson": "^0.2.12"
   },
   "scripts": {
