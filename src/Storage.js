@@ -45,13 +45,43 @@ class Storage {
 
     getAllCitiesDocs() {
         return new Promise(resolve => {
-            this.db.collection(DEFAULT_CITIES_COLLECTION).get().then((querySnapshot) => {
-                console.debug('[Firestore] Documents found:');
-                querySnapshot.forEach((doc) => {
-                    console.debug('• ' + doc.id, ' => ', doc.data());
+            this.db.collection(DEFAULT_CITIES_COLLECTION)
+                .where("part", "==", "")    
+                .get()
+                .then((querySnapshot) => {
+                    console.debug('[Firestore] Documents found:');
+                    querySnapshot.forEach((doc) => {
+                        console.debug('• ' + doc.id, ' => ', doc.data());
+                    });
+        
+                    resolve(querySnapshot);
                 });
-    
-                resolve(querySnapshot);
+        });
+    }
+
+    getAllCitiesStats() {
+        return new Promise(resolve => {
+            this.db.collection("stats")
+            .where("lengths.ciclovia", ">=", 0)    
+            .get()
+                .then((querySnapshot) => {
+                    console.debug('[Firestore] Documents found:');
+
+                    let docs = [];
+                    querySnapshot.forEach(doc => {
+                        let d = doc.data().lengths;
+                        
+                        d.total = d['ciclovia'];
+                        d.total += d['ciclorrota'];
+                        d.total += d['ciclofaixa'];
+                        d.total += d['calcada-compartilhada'];
+                        
+                        docs[doc.id] = d;
+                    });
+                    console.log(docs);
+                    console.table(docs);
+        
+                    resolve(querySnapshot);
             });
         });
     }
@@ -71,7 +101,8 @@ class Storage {
         return compressed;
     }
 
-    saveToFirestore(name, jsonStr, updatedAt, part) {
+    saveToFirestore(name, jsonStr, lengths, part) {
+        const now = new Date();
         let slug = slugify(name);
 
         if (part === 2) {
@@ -81,55 +112,75 @@ class Storage {
         return this.db.collection(DEFAULT_CITIES_COLLECTION).doc(slug).set({
             name: name,
             geoJson: jsonStr,
-            updatedAt: updatedAt,
+            updatedAt: now,
+            lengths: lengths,
             part: part || ''
         });
     }
 
-    save(name, geoJson, updatedAt) {
-        // Save to Local Storage
-        set(name, {
-            geoJson: geoJson,
-            updatedAt: updatedAt
+    saveStatsToFirestore(name, lengths) {
+        let slug = slugify(name);
+
+        return this.db.collection('stats').doc(slug).set({
+            lengths: lengths
         });
+    }
 
-        // Save to Firestore
-        try {
-            const jsonStr = stringify(geoJson, { fullPrecisionFloats: true }); 
+    save(name, geoJson, lengths) {
+        return new Promise((resolve, reject) => {
+            const now = new Date();
 
-            // Useful for checking in the console the size differences
-            // console.debug('regular stringfy:', JSON.stringify(geoJson));
-            // console.debug('zipson stringfy:', jsonStr);
+            // Save to Local Storage
+            set(name, {
+                geoJson: geoJson,
+                updatedAt: now
+            });
 
-            console.debug(`[Firebase] Saving document ${name}...`, geoJson);
+            // Save to Firestore
+            try {
+                const jsonStr = stringify(geoJson, { fullPrecisionFloats: true }); 
 
-            // geoJson = this.compressJson(geoJson);
-            this.saveToFirestore(name, jsonStr, updatedAt)
-                .then(() => {
-                    console.debug(`[Firebase] Document ${name} written successfully.`);
-                }).catch(error => {
-                    console.debug('[Firestore] Failed saving full data, splitting in 2...')
+                // Useful for checking in the console the size differences
+                // console.debug('regular stringfy:', JSON.stringify(geoJson));
+                // console.debug('zipson stringfy:', jsonStr);
 
-                    const part1 = jsonStr.slice(0, Math.ceil(jsonStr.length/2));
-                    const part2 = jsonStr.slice(Math.ceil(jsonStr.length/2));
+                console.debug(`[Firebase] Saving document ${name}...`, geoJson);
 
-                    this.saveToFirestore(name, part1, updatedAt, 1) 
+                this.saveStatsToFirestore(name, lengths)
+
+                // geoJson = this.compressJson(geoJson);
+                this.saveToFirestore(name, jsonStr, lengths)
                     .then(() => {
-                        console.debug(`[Firebase] Document ${name}1 written successfully.`);
+                        console.debug(`[Firebase] Document ${name} written successfully.`);
+                        resolve();
                     }).catch(error => {
-                        console.error("[Firebase] Error adding document: ", error);
-                    });        
- 
-                    this.saveToFirestore(name, part2, updatedAt, 2)
-                    .then(() => {
-                        console.debug(`[Firebase] Document ${name}2 written successfully.`);
-                    }).catch(error => {
-                        console.error("[Firebase] Error adding document: ", error);
+                        console.debug('[Firestore] Failed saving full data, splitting in 2...')
+
+                        const part1 = jsonStr.slice(0, Math.ceil(jsonStr.length/2));
+                        const part2 = jsonStr.slice(Math.ceil(jsonStr.length/2));
+
+                        this.saveToFirestore(name, part1, lengths, 1) 
+                        .then(() => {
+                            console.debug(`[Firebase] Document ${name}1 written successfully.`);
+                        }).catch(error => {
+                            console.error("[Firebase] Error adding document: ", error);
+                            reject();
+                        });        
+    
+                        this.saveToFirestore(name, part2, lengths, 2)
+                        .then(() => {
+                            console.debug(`[Firebase] Document ${name}2 written successfully.`);
+                            resolve();
+                        }).catch(error => {
+                            console.error("[Firebase] Error adding document: ", error);
+                            reject();
+                        });
                     });
-                });
-        } catch (e) {
-            console.error(e);
-        }
+            } catch (e) {
+                console.error(e);
+                reject();
+            }
+        });
     }
 
     printPOIsStats(geoJson) {
