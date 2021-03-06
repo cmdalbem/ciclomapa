@@ -177,11 +177,14 @@ class TopBar extends Component {
                     }
 
                     <div className="flex items-start justify-between px-6 py-3 text-white">
-                        <div className="text-2xl uppercase text-green-200 hidden sm:block" style={{
+                        
+                        {/* <div className="text-2xl uppercase text-green-200 hidden sm:block" style={{
                             fontFamily: 'Teko, sans-serif',
                         }}>
                             CicloMapa
-                        </div>
+                        </div> */}
+
+                        <img src="logo.svg" alt="CicloMapa"></img>
 
                         <div className="city-picker sm:text-center">
                             <div className="mb-1 sm:mb-1">
