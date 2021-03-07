@@ -63,7 +63,7 @@
         }
     },
     {
-        "name": "Bicicletas compartilhadas",
+        "name": "Estações de bicicleta",
         "description": "Estações de compartilhamento de bicicletas (bike sharing).",
         "filters": [
             ["amenity", "bicycle_rental"]

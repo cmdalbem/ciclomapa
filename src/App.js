@@ -11,6 +11,7 @@ import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
 import TopBar from './TopBar.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
+import AnalyticsSidebar from './AnalyticsSidebar.js'
 import OSMController from './OSMController.js'
 import Storage from './Storage.js'
 import { downloadObjectAsJson } from './utils.js'
@@ -406,33 +407,40 @@ class App extends Component {
     render() {
         return (
             <div>
-                <TopBar
-                    title={this.state.area}
-                    lastUpdate={this.state.dataUpdatedAt}
-                    lat={this.state.lat}
-                    lng={this.state.lng}
-                    z={this.state.zoom}
-                    downloadData={this.downloadData}
-                    // isDownloadUnavailable={this.state.isDownloadUnavailable}
-                    onMapMoved={this.onMapMoved}
-                    forceUpdate={this.forceUpdate}
-                />
+                {/* <div className=""> */}
+                    <TopBar
+                        title={this.state.area}
+                        lastUpdate={this.state.dataUpdatedAt}
+                        lat={this.state.lat}
+                        lng={this.state.lng}
+                        z={this.state.zoom}
+                        downloadData={this.downloadData}
+                        // isDownloadUnavailable={this.state.isDownloadUnavailable}
+                        onMapMoved={this.onMapMoved}
+                        forceUpdate={this.forceUpdate}
+                    />
+
+                    <Map
+                        ref={(map) => { window.map = map }}
+                        data={this.state.geoJson}
+                        layers={this.state.layers}
+                        style={this.state.mapStyle}
+                        zoom={this.state.zoom}
+                        center={this.state.center}
+                        showSatellite={this.state.showSatellite}
+                        location={this.state.area}
+                        updateData={this.updateData}
+                        onMapMoved={this.onMapMoved}
+                        updateLengths={this.updateLengths}
+                    />
+
+                    <AnalyticsSidebar
+                        layers={this.state.layers}
+                        lengths={this.state.lengths}
+                    />
+                {/* </div> */}
 
                 <CitySwitcherBackdrop/>
-
-                <Map
-                    ref={(map) => { window.map = map }}
-                    data={this.state.geoJson}
-                    layers={this.state.layers}
-                    style={this.state.mapStyle}
-                    zoom={this.state.zoom}
-                    center={this.state.center}
-                    showSatellite={this.state.showSatellite}
-                    location={this.state.area}
-                    updateData={this.updateData}
-                    onMapMoved={this.onMapMoved}
-                    updateLengths={this.updateLengths}
-                />
 
                 <div id="gradient-backdrop"/>
 
