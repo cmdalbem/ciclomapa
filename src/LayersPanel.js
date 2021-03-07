@@ -53,18 +53,10 @@ class LayersPanel extends Component {
     }
 
     render() {
-        const { lengths, layers } = this.props;
+        const { layers } = this.props;
         
         if (!layers) {
             return;
-        }
-
-        let total;
-        if (lengths) {
-            total = lengths.ciclovia
-                + lengths.ciclofaixa
-                + lengths.ciclorrota
-                + lengths['calcada-compartilhada'];
         }
 
         return (
@@ -147,14 +139,6 @@ class LayersPanel extends Component {
                                     </div>
 
                                     <div className="flex items-center">
-                                        {
-                                            lengths && lengths[l.id] > 0 &&
-                                                <span className={`text-sm pl-4 transition-opacity duration-300 ${this.state.hover ? 'opacity-100' : 'opacity-50'}`}>
-                                                    { Math.round(lengths[l.id]) }
-                                                    { l.type === 'way' && ' km' }
-                                                </span>
-                                        }
-
                                         <div className={`ml-2 transition-opacity duration-300 ${this.state.hover ? 'opacity-100' : 'opacity-0'}`}>
                                             {
                                                 l.isActive ?
@@ -166,21 +150,6 @@ class LayersPanel extends Component {
                                 </div>
                             </Popover>
                         )
-                    }
-
-                    {
-                        total &&
-                        <div className={`
-                            border-opacity-20 border-t border-white flex items-center justify-between px-0 py-0 sm:px-3 sm:py-1
-                            transition_opacity duration-300 ${this.state.hover ? 'opacity-100' : 'opacity-50'}`
-                        }>
-                            <span className="font-semibold pl-8">
-                                Total (infra cicloviária)
-                            </span>
-                            <span className="text-sm pr-5 transition-opacity duration-300">
-                                {Math.round(total)} km
-                            </span>
-                        </div>
                     }
                 </div>
             </>

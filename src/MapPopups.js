@@ -211,7 +211,7 @@ class MapPopups {
                 </div>
 
                 <div
-                    class="inline-block py-1 px-3 rounded-full bg-black"
+                    class="inline-block py-1 px-3 rounded-full bg-black font-bold"
                     style="color: ${layer.style.lineColor}"
                 >
                     ${layer.name}
