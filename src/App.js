@@ -407,48 +407,51 @@ class App extends Component {
     render() {
         return (
             <div>
-                {/* <div className=""> */}
-                    <TopBar
-                        title={this.state.area}
-                        lastUpdate={this.state.dataUpdatedAt}
-                        lat={this.state.lat}
-                        lng={this.state.lng}
-                        z={this.state.zoom}
-                        downloadData={this.downloadData}
-                        // isDownloadUnavailable={this.state.isDownloadUnavailable}
-                        onMapMoved={this.onMapMoved}
-                        forceUpdate={this.forceUpdate}
-                    />
+                <div className="flex">
+                    <div className="relative w-full">
+                        <TopBar
+                            title={this.state.area}
+                            lastUpdate={this.state.dataUpdatedAt}
+                            lat={this.state.lat}
+                            lng={this.state.lng}
+                            z={this.state.zoom}
+                            downloadData={this.downloadData}
+                            // isDownloadUnavailable={this.state.isDownloadUnavailable}
+                            onMapMoved={this.onMapMoved}
+                            forceUpdate={this.forceUpdate}
+                        />
 
-                    <Map
-                        ref={(map) => { window.map = map }}
-                        data={this.state.geoJson}
-                        layers={this.state.layers}
-                        style={this.state.mapStyle}
-                        zoom={this.state.zoom}
-                        center={this.state.center}
-                        showSatellite={this.state.showSatellite}
-                        location={this.state.area}
-                        updateData={this.updateData}
-                        onMapMoved={this.onMapMoved}
-                        updateLengths={this.updateLengths}
-                    />
+                        <Map
+                            ref={(map) => { window.map = map }}
+                            data={this.state.geoJson}
+                            layers={this.state.layers}
+                            style={this.state.mapStyle}
+                            zoom={this.state.zoom}
+                            center={this.state.center}
+                            showSatellite={this.state.showSatellite}
+                            location={this.state.area}
+                            updateData={this.updateData}
+                            onMapMoved={this.onMapMoved}
+                            updateLengths={this.updateLengths}
+                        />
+                        
+                        <MapStyleSwitcher 
+                            showSatellite={this.state.showSatellite}
+                            onMapStyleChange={this.onMapStyleChange}
+                            onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
+                        />
+                    </div>
 
                     <AnalyticsSidebar
                         layers={this.state.layers}
                         lengths={this.state.lengths}
                     />
-                {/* </div> */}
+                </div>
 
                 <CitySwitcherBackdrop/>
 
                 <div id="gradient-backdrop"/>
 
-                <MapStyleSwitcher 
-                    showSatellite={this.state.showSatellite}
-                    onMapStyleChange={this.onMapStyleChange}
-                    onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
-                />
  
                 <LayersPanel
                     layers={this.state.layers}
