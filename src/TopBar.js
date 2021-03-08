@@ -26,7 +26,6 @@ import {
     TOPBAR_HEIGHT,
     IS_MOBILE,
     ENABLE_COMMENTS,
-    IS_PROD
 } from './constants'
 
 import AboutModal from './AboutModal.js'
@@ -169,13 +168,6 @@ class TopBar extends Component {
                     className="w-full absolute flex flex-col"
                     style={{height: TOPBAR_HEIGHT, zIndex: 1}}
                 >
-                    {
-                        !IS_PROD &&
-                        <div className="flex w-full bg-yellow-300 text-black items-center justify-center text-center text-xs mb-2 py-1">
-                            Você está em um <b className="ml-1">ambiente de teste</b>. Pode futricar à vontade! ;)
-                        </div>
-                    }
-
                     <div className="flex items-start justify-between px-6 py-3 text-white">
                         
                         {/* <div className="text-2xl uppercase text-green-200 hidden sm:block" style={{

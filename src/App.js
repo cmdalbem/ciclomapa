@@ -23,7 +23,8 @@ import {
     OSM_DATA_MAX_AGE_MS,
     DEFAULT_MAPBOX_STYLE,
     SAVE_TO_FIREBASE,
-    DISABLE_DATA_HEALTY_TEST
+    DISABLE_DATA_HEALTY_TEST,
+    IS_PROD,
 } from './constants.js'
 
 // import './App.css';
@@ -407,6 +408,13 @@ class App extends Component {
     render() {
         return (
             <div>
+                {
+                    !IS_PROD &&
+                    <div className="flex w-full bg-yellow-300 text-black items-center justify-center text-center text-xs mb-2 py-1">
+                        Você está em um <b className="ml-1">ambiente de teste</b>. Pode futricar à vontade! ;)
+                    </div>
+                }
+                
                 <div className="flex">
                     <div className="relative w-full">
                         <TopBar
@@ -440,6 +448,8 @@ class App extends Component {
                             onMapStyleChange={this.onMapStyleChange}
                             onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
                         />
+
+                        <div id="gradient-backdrop"/>
                     </div>
 
                     <AnalyticsSidebar
@@ -450,9 +460,6 @@ class App extends Component {
 
                 <CitySwitcherBackdrop/>
 
-                <div id="gradient-backdrop"/>
-
- 
                 <LayersPanel
                     layers={this.state.layers}
                     lengths={this.state.lengths}
