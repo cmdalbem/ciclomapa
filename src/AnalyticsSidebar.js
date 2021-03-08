@@ -49,7 +49,7 @@ class AnalyticsSidebar extends Component {
 
         return (
             <div
-                className="background-black border-gray-600 border-l bottom-0 fixed h-screen right-0 top-0 w-60 z-10"
+                className="background-black border-gray-600 border-l h-screen w-60"
                 style={{background: '#211F1C'}}
             >
                 <div className="pt-5 px-4">
@@ -119,7 +119,7 @@ class AnalyticsSidebar extends Component {
                         <div className="relative">
                             <PieChart width={207} height={207}>
                                 <Pie
-                                    data={chartsData}
+                                    data={chartsData} dataKey="value"
                                     cx={'50%'} cy={'50%'}
                                     innerRadius={90} outerRadius={100}
                                     paddingAngle={4} strokeWidth={0}
