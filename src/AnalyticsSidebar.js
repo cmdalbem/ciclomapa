@@ -4,18 +4,17 @@ import { Popover, Button } from 'antd';
 import { PieChart, Pie, Cell } from 'recharts';
 
 import {
+    MdClose as IconClose,
     MdInfoOutline as IconInfo,
+    MdDataUsage as IconAnalytics,
 } from "react-icons/md";
-
-import {
-    IS_MOBILE,
-} from './constants.js'
 
 class AnalyticsSidebar extends Component {
     constructor(props) {
         super(props);
 
         this.state = {
+            open: this.props.open
         }
     }
 
@@ -49,13 +48,28 @@ class AnalyticsSidebar extends Component {
 
         return (
             <div
-                className="background-black border-gray-600 border-l h-screen w-60"
+                className={`
+                    background-black border-gray-600 border-l h-screen ${this.state.open ? 'w-60' : ''}
+                    transform transition-transform duration-500 ${this.state.open ? '' : 'translate-x-full'}`}
                 style={{background: '#211F1C'}}
             >
-                <div className="pt-5 px-4">
-                    <h2 className="">
-                        Estatísticas
-                    </h2>
+                <div className="px-4">
+                    <div className="flex w-full justify-between items-center pt-2 mt-1">
+                        <div className="flex items-center">
+                            <IconAnalytics/>
+
+                            <h2 className="my-0 pl-1">
+                                Estatísticas
+                            </h2>
+                        </div>
+
+                        <div
+                            className="text-xl cursor-pointer p-2 -mr-2 hover:bg-white hover:bg-opacity-10 rounded"
+                            onClick={() => this.props.toggle(false)}
+                            >
+                            <IconClose/>
+                        </div>
+                    </div>
 
                     <Section
                         title="People Near Bike (PNB)"
@@ -227,34 +241,36 @@ const DataLine = (props) =>
 
 const Section = (props) =>
     <div className="mt-7">
-        <Popover
-            placement="left"
-            arrowPointAtCenter={true} key={props.title}
-            content={(
-                <div style={{width: 320}}>
-                    <h3 className="text-lg">
-                        { props.title }
-                    </h3>
-                    
-                    { props.description }
+        <div className="flex w-full justify-between items-center">
+            <h3 className="font-regular m-0 opacity-50">
+                { props.title }
+            </h3>
 
-                    {
-                        props.link &&
-                        <Button ghost size="small" target="_BLANK" href={props.link}>
-                            Saiba mais
-                        </Button> 
-                    }
+            <Popover
+                placement="left"
+                arrowPointAtCenter={true} key={props.title}
+                content={(
+                    <div style={{width: 320}}>
+                        <h3 className="text-lg">
+                            { props.title }
+                        </h3>
+                        
+                        { props.description }
+
+                        {
+                            props.link &&
+                            <Button ghost target="_BLANK" href={props.link}>
+                                Saiba mais
+                            </Button> 
+                        }
+                    </div>
+                )}
+            >
+                <div className="opacity-50 hover:opacity-100 p-2 -mr-2 hover:bg-white hover:bg-opacity-10 rounded">
+                    <IconInfo/>
                 </div>
-            )}
-        >
-            <div className="flex w-full justify-between items-center cursor-pointer opacity-50">
-                <h3 className="font-regular m-0">
-                    { props.title }
-                </h3>
-
-                <IconInfo/>
+            </Popover>
             </div>
-        </Popover>
 
         <div className="mt-2">
             { props.children }
