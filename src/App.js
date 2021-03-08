@@ -46,6 +46,7 @@ class App extends Component {
         this.downloadData = this.downloadData.bind(this);
         this.forceUpdate = this.forceUpdate.bind(this);
         this.onSpinnerClose = this.onSpinnerClose.bind(this);
+        this.toggleSidebar = this.toggleSidebar.bind(this);
 
         const prev = this.getStateFromLocalStorage();
 
@@ -61,7 +62,8 @@ class App extends Component {
             loading: false,
             mapStyle: DEFAULT_MAPBOX_STYLE,
             layers: this.initLayers(prev && prev.layersStates),
-            lengths: {}
+            lengths: {},
+            isSidebarOpen: true,
         };
 
         if (this.state.area) {
@@ -71,6 +73,10 @@ class App extends Component {
         window.addEventListener('beforeunload', e => {
             this.saveStateToLocalStorage();
         });
+    }
+
+    toggleSidebar(state) {
+        this.setState({isSidebarOpen: state});
     }
 
     initLayers(layersStates) {
@@ -427,6 +433,8 @@ class App extends Component {
                             // isDownloadUnavailable={this.state.isDownloadUnavailable}
                             onMapMoved={this.onMapMoved}
                             forceUpdate={this.forceUpdate}
+                            isSidebarOpen={this.state.isSidebarOpen}
+                            toggleSidebar={this.toggleSidebar}
                         />
 
                         <Map
@@ -441,6 +449,7 @@ class App extends Component {
                             updateData={this.updateData}
                             onMapMoved={this.onMapMoved}
                             updateLengths={this.updateLengths}
+                            isSidebarOpen={this.state.isSidebarOpen}
                         />
                         
                         <MapStyleSwitcher 
@@ -452,10 +461,15 @@ class App extends Component {
                         <div id="gradient-backdrop"/>
                     </div>
 
-                    <AnalyticsSidebar
-                        layers={this.state.layers}
-                        lengths={this.state.lengths}
-                    />
+                    {
+                        this.state.isSidebarOpen &&
+                        <AnalyticsSidebar
+                            layers={this.state.layers}
+                            lengths={this.state.lengths}
+                            open={this.state.isSidebarOpen}
+                            toggle={this.toggleSidebar}
+                        />
+                    }
                 </div>
 
                 <CitySwitcherBackdrop/>

@@ -14,7 +14,8 @@ import {
     MdSync as IconUpdate,
     MdExpandMore as IconCaret,
     MdModeEdit as IconEdit,
-    MdInfo as IconInfo,
+    MdAccessTime as IconInfo,
+    MdDataUsage as IconAnalytics,
 } from "react-icons/md";
 import { IconContext } from "react-icons";
 
@@ -165,75 +166,12 @@ class TopBar extends Component {
             <IconContext.Provider value={{ className: 'react-icon' }}>
                 <div
                     id="topbar"
-                    className="w-full absolute flex flex-col"
+                    className="w-full absolute flex flex-col px-6 py-3"
                     style={{height: TOPBAR_HEIGHT, zIndex: 1}}
                 >
-                    <div className="flex items-start justify-between px-6 py-3 text-white">
-                        
-                        {/* <div className="text-2xl uppercase text-green-200 hidden sm:block" style={{
-                            fontFamily: 'Teko, sans-serif',
-                        }}>
-                            CicloMapa
-                        </div> */}
-
+                    <div className="flex items-center justify-between text-white">
                         <img src="logo.svg" alt="CicloMapa"></img>
 
-                        <div className="city-picker sm:text-center">
-                            <div className="mb-1 sm:mb-1">
-                                <Button
-                                    size='large'
-                                    onClick={this.showCityPicker}
-                                >
-                                    <h3 className="text-lg">
-                                        <span className="mr-3">
-                                            <span className="font-bold">
-                                                {city},
-                                            </span>
-
-                                            {state}
-                                        </span>
-
-                                        <IconCaret className="text-green-300"/>
-                                    </h3>
-                                </Button>
-                            </div>
-
-                            <div>
-                                {
-                                    lastUpdate && !IS_MOBILE &&
-                                    <Popover
-                                        trigger={IS_MOBILE ? 'click' : 'hover'}
-                                        placement="bottom"
-                                        arrowPointAtCenter={true}
-                                        content={(
-                                            <div style={{ maxWidth: 250 }}>
-                                                <Space size="small" direction="vertical" >
-                                                    <div>
-                                                        O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap em <b>{updatedAtStr}</b>.
-                                                    </div> 
-
-                                                    <Button
-                                                        size="small"
-                                                        icon={<IconUpdate />}
-                                                        block
-                                                        ghost
-                                                        onClick={forceUpdate}
-                                                    >
-                                                        Atualizar
-                                                    </Button>
-                                                </Space>
-                                            </div>
-                                        )}
-                                    >
-                                        <span className="font-regular cursor-default text-xs opacity-25 hover:opacity-100 transition-opacity duration-300">
-                                            Atualizado com OSM há <b>{timeSince(lastUpdate)}</b> <IconInfo/>
-                                        </span>
-                                    </Popover>
-
-                                }
-                            </div>
-                        </div>
-                        
                         <div className="nav-links font-white hidden sm:block">
                             <Button
                                 type="link"
@@ -256,9 +194,72 @@ class TopBar extends Component {
                                 </Button>
                             </Dropdown>
 
+                            {
+                                !this.props.isSidebarOpen &&
+                                <Button
+                                    ghost
+                                    onClick={() => this.props.toggleSidebar(true)}
+                                >
+                                    <IconAnalytics/> Estatísticas
+                                </Button>
+                            }
                         </div>
                     </div>
 
+                    <div className="city-picker sm:text-center absolute top-2">
+                        <div className="mb-1 sm:mb-1">
+                            <Button
+                                size='large'
+                                onClick={this.showCityPicker}
+                            >
+                                <h3 className="text-lg">
+                                    <span className="mr-3">
+                                        <span className="font-bold">
+                                            {city},
+                                        </span>
+
+                                        {state}
+                                    </span>
+
+                                    <IconCaret className="text-green-300"/>
+                                </h3>
+                            </Button>
+
+                            {
+                                lastUpdate && !IS_MOBILE &&
+                                <Popover
+                                    trigger={IS_MOBILE ? 'click' : 'hover'}
+                                    placement="bottom"
+                                    arrowPointAtCenter={true}
+                                    content={(
+                                        <div style={{ maxWidth: 250 }}>
+                                            <Space size="small" direction="vertical" >
+                                                <div>
+                                                    O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
+                                                </div> 
+
+                                                <Button
+                                                    size="small"
+                                                    icon={<IconUpdate />}
+                                                    type="primary"
+                                                    block
+                                                    onClick={forceUpdate}
+                                                >
+                                                    Atualizar
+                                                </Button>
+                                            </Space>
+                                        </div>
+                                    )}
+                                >
+                                    <span className="font-regular cursor text-xl pl-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
+                                        <IconInfo/>
+                                    </span>
+                                </Popover>
+
+                            }
+                        </div>
+
+                    </div>
                 </div>
 
                 <AboutModal
