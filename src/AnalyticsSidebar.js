@@ -53,7 +53,7 @@ class AnalyticsSidebar extends Component {
                 style={{background: '#211F1C'}}
             >
                 <div className="pt-5 px-4">
-                    <h2 className="font-bold">
+                    <h2 className="">
                         Estatísticas
                     </h2>
 
