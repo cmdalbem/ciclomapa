@@ -646,6 +646,10 @@ class Map extends Component {
                 }
             })
         }
+
+        if (this.props.isSidebarOpen !== prevProps.isSidebarOpen) {
+            map.resize();
+        }
     }
 
     componentDidMount() {
