@@ -1,8 +1,8 @@
 [
     {
-        "name": "Duplicadas - Falsos positivos",
+        "name": "TESTE - Falsos positivos",
         "isActive": false,
-        "description": "",
+        "description": "Vias originalmente detectadas como sendo duplicadas pelo nosso algoritmo porém filtradas depois por uma heurística para detectar faltos positivos.",
         "filters": [
             ["ciclomapa:ignored", "true"]
         ],
@@ -15,9 +15,9 @@
         }
     },
     {
-        "name": "Duplicadas - Lado A",
+        "name": "TESTE - Lado A",
         "isActive": false,
-        "description": "Vias automaticamente detectadas como sendo duplicadas - EM TESTE!",
+        "description": "Vias automaticamente detectadas como sendo duplicadas.",
         "filters": [
             ["ciclomapa:side", "a"]
         ],
@@ -30,9 +30,9 @@
         }
     },
     {
-        "name": "Duplicadas - Lado B",
+        "name": "TESTE - Lado B",
         "isActive": false,
-        "description": "Vias automaticamente detectadas como sendo duplicadas - EM TESTE!",
+        "description": "Vias automaticamente detectadas como sendo duplicadas.",
         "filters": [
             ["ciclomapa:side", "b"]
         ],
