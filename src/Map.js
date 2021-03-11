@@ -15,6 +15,7 @@ import {
     DEFAULT_LINE_WIDTH_MULTIPLIER,
     LINE_WIDTH_MULTIPLIER_HOVER,
     POI_ZOOM_THRESHOLD,
+    COMMENTS_ZOOM_THRESHOLD,
 } from './constants.js'
 
 import Analytics from './Analytics.js'
@@ -469,10 +470,16 @@ class Map extends Component {
                         "interpolate",
                         ["exponential", 1.5],
                         ["zoom"], 
-                        0, 0,
-                        15, 1
+                        10, 0.5,
+                        COMMENTS_ZOOM_THRESHOLD, 1
                     ],
-                    "icon-allow-overlap": true
+                    "icon-allow-overlap": [
+                        'step',
+                        ['zoom'],
+                        false,
+                        COMMENTS_ZOOM_THRESHOLD,
+                        true
+                    ],
                 },
                 'paint': {
                     'icon-opacity': [
