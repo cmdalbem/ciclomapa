@@ -416,7 +416,7 @@ class App extends Component {
             <div>
                 {
                     !IS_PROD &&
-                    <div className="flex w-full bg-yellow-300 text-black items-center justify-center text-center text-xs mb-2 py-1">
+                    <div className="flex w-full bg-yellow-300 text-black items-center justify-center text-center text-xs py-1">
                         Você está em um <b className="ml-1">ambiente de teste</b>. Pode futricar à vontade! ;)
                     </div>
                 }
