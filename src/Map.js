@@ -738,12 +738,7 @@ class Map extends Component {
             container: document.querySelector('body')
         }), 'bottom-right');
 
-        Object.keys(iconsMap).forEach(key => {
-            this.map.loadImage( iconsMap[key], (error, image) => {
-                if (error) throw error;
-                this.map.addImage(key, image);
-            });
-        });
+        this.loadImages();
         
         // Listeners
 
@@ -756,6 +751,20 @@ class Map extends Component {
         // Initialize map data center
         
         this.reverseGeocode(this.props.center);
+    }
+
+    loadImages() {
+        this.map.loadImage( commentIcon, (error, image) => {
+            if (error) throw error;
+            this.map.addImage('commentIcon', image);
+        }); 
+
+        Object.keys(iconsMap).forEach(key => {
+            this.map.loadImage( iconsMap[key], (error, image) => {
+                if (error) throw error;
+                this.map.addImage(key, image);
+            });
+        });
     }
 
     initLayers() {
