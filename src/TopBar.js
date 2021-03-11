@@ -166,10 +166,10 @@ class TopBar extends Component {
             <IconContext.Provider value={{ className: 'react-icon' }}>
                 <div
                     id="topbar"
-                    className="w-full absolute flex flex-col px-6 py-3"
+                    className="w-full absolute flex items-center px-6 py-3"
                     style={{height: TOPBAR_HEIGHT, zIndex: 1}}
                 >
-                    <div className="flex items-center justify-between text-white">
+                    <div className="flex items-center justify-between text-white w-full">
                         <img src="logo.svg" alt="CicloMapa"></img>
 
                         <div className="nav-links font-white hidden sm:block">
@@ -206,7 +206,7 @@ class TopBar extends Component {
                         </div>
                     </div>
 
-                    <div className="city-picker sm:text-center absolute top-2">
+                    <div className="city-picker sm:text-center">
                         <div className="mb-1 sm:mb-1">
                             <Button
                                 size='large'
