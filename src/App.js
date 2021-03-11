@@ -468,6 +468,7 @@ class App extends Component {
                             lengths={this.state.lengths}
                             open={this.state.isSidebarOpen}
                             toggle={this.toggleSidebar}
+                            location={this.state.area}
                         />
                     }
                 </div>
