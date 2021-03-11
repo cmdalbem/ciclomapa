@@ -38,6 +38,7 @@ export const DEFAULT_LNG = -38.5225359;
 export const DEFAULT_LAT = -3.7719909;
 export const DEFAULT_ZOOM = 10.9;
 export const POI_ZOOM_THRESHOLD = 14;
+export const COMMENTS_ZOOM_THRESHOLD = 14;
 
 
 // Layout
