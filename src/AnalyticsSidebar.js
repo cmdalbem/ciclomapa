@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
 import { Popover, Button } from 'antd';
 
-import { PieChart, Pie, Cell } from 'recharts';
+import { PieChart, Pie } from 'recharts';
+
+import AirtableDatabase from './AirtableDatabase.js'
 
 import {
     MdClose as IconClose,
@@ -13,8 +15,73 @@ class AnalyticsSidebar extends Component {
     constructor(props) {
         super(props);
 
+        this.airtableDatabase = new AirtableDatabase();
+
         this.state = {
             open: this.props.open
+        }
+    }
+
+    componentDidMount() {
+        this.loadPNB();
+        this.updateData();
+    }
+
+    async loadPNB() {
+        this.setState({
+            pnbValues: await this.airtableDatabase.getPNB()
+        });
+
+        this.updateLocation();
+    }
+
+    updateLocation() {
+        let search;
+        if (this.state.pnbValues && this.state.pnbValues.length > 0) {
+            search = this.state.pnbValues.find(
+                v => this.props.location
+                    .toLowerCase()
+                    .includes(v.fields.location.toLowerCase())
+            );
+            if (search) {
+                this.setState({pnb: search.fields});
+            }
+        }
+    }
+
+    updateData() {
+        const { lengths, layers } = this.props;
+
+        if (lengths && layers) {
+            this.setState({
+                totalLength: lengths['ciclovia']
+                    + lengths['ciclofaixa']
+                    + lengths['ciclorrota']
+                    + lengths['calcada-compartilhada'],
+                chartsData: layers
+                    .filter(l => 
+                        l.id === 'ciclovia' ||
+                        l.id === 'ciclofaixa' ||
+                        l.id === 'ciclorrota' ||
+                        l.id === 'calcada-compartilhada')
+                    .map(l => lengths && 
+                        {
+                            value: lengths[l.id],
+                            fill: l.style.lineColor
+                        }
+                    )
+            });
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.location !== this.props.location) {
+            this.updateLocation();
+        }
+
+        if (prevProps.layers !== this.props.layers ||
+            prevProps.lengths !== this.props.lengths) {
+            this.updateData();
         }
     }
 
@@ -24,27 +91,6 @@ class AnalyticsSidebar extends Component {
         if (!layers) {
             return;
         }
-
-        let totalLength;
-        if (lengths) {
-            totalLength = lengths.ciclovia
-                + lengths.ciclofaixa
-                + lengths.ciclorrota
-                + lengths['calcada-compartilhada'];
-        }
-
-        const chartsData = layers
-            .filter(l => 
-                l.id === 'ciclovia' ||
-                l.id === 'ciclofaixa' ||
-                l.id === 'ciclorrota' ||
-                l.id === 'calcada-compartilhada')
-            .map(l => lengths && 
-                {
-                    value: lengths[l.id],
-                    fill: l.style.lineColor
-                }
-            );
 
         return (
             <div
@@ -71,33 +117,36 @@ class AnalyticsSidebar extends Component {
                         </div>
                     </div>
 
-                    <Section
-                        title="People Near Bike (PNB)"
-                        link={"https://itdpbrasil.org/pnb/"}
-                        description={<>
-                            <p>
-                                Para avaliar as políticas de ciclomobilidade com maior efetividade, o ITDP Brasil apura anualmente um indicador percentual de pessoas que vivem próximas da infraestrutura cicloviária (PNB sigla em inglês para People Near Bike).
-                            </p>
-                            <p>
-                                A partir da rede cicloviária disponível no CicloMapa, o indicador mostra quantas pessoas moram a menos de 300 metros de uma ciclovia, ciclofaixa, ciclorrota ou calçada compartilhada.
-                            </p>
-                        </>}
-                    >
-                        <BigNum>
-                            19%
-                        </BigNum>
+                    {
+                        this.state.pnb &&
+                        <Section
+                            title="People Near Bike (PNB)"
+                            link={"https://itdpbrasil.org/pnb/"}
+                            description={<>
+                                <p>
+                                    Para avaliar as políticas de ciclomobilidade com maior efetividade, o ITDP Brasil apura anualmente um indicador percentual de pessoas que vivem próximas da infraestrutura cicloviária (PNB sigla em inglês para People Near Bike).
+                                </p>
+                                <p>
+                                    A partir da rede cicloviária disponível no CicloMapa, o indicador mostra quantas pessoas moram a menos de 300 metros de uma ciclovia, ciclofaixa, ciclorrota ou calçada compartilhada.
+                                </p>
+                            </>}
+                        >
+                            <BigNum>
+                                {this.state.pnb.total + '%'}
+                            </BigNum>
 
-                        <DataLine
-                            name="Mulheres negras"
-                            length={15}
-                            unit="%"
-                        />
-                        <DataLine
-                            name="Mulheres renda até 1 SM"
-                            length={19}
-                            unit="%"
-                        />
-                    </Section>
+                            <DataLine
+                                name="Mulheres negras"
+                                length={this.state.pnb.total_black_women}
+                                unit="%"
+                            />
+                            <DataLine
+                                name="Mulheres renda até 1 SM"
+                                length={this.state.pnb.total_women_less_one_salary}
+                                unit="%"
+                            />
+                        </Section>
+                    }
 
                     <Section
                         title="IDECiclo"
@@ -133,7 +182,7 @@ class AnalyticsSidebar extends Component {
                         <div className="relative">
                             <PieChart width={207} height={207}>
                                 <Pie
-                                    data={chartsData} dataKey="value"
+                                    data={this.state.chartsData} dataKey="value"
                                     cx={'50%'} cy={'50%'}
                                     innerRadius={90} outerRadius={100}
                                     paddingAngle={4} strokeWidth={0}
@@ -142,14 +191,14 @@ class AnalyticsSidebar extends Component {
                             </PieChart>
 
                             {
-                                totalLength &&
+                                this.state.totalLength &&
                                 <div
                                     className="absolute top-0 w-full flex flex-col items-center justify-center text-xs"
                                     style={{height: '207px'}}
                                 >
                                     TOTAL
                                     <div className="text-4xl font-regular tracking-tighter">
-                                        { Math.round(totalLength)}
+                                        { Math.round(this.state.totalLength)}
                                     </div> 
                                     km
                                 </div>
@@ -168,7 +217,7 @@ class AnalyticsSidebar extends Component {
                                         <DataLineWithBarChart
                                             name={l.name}
                                             length={lengths && lengths[l.id]}
-                                            percent={lengths && lengths[l.id] * 100 / totalLength}
+                                            percent={lengths && lengths[l.id] * 100 / this.state.totalLength}
                                             color={l.style.lineColor}
                                             unit="km"
                                         />

@@ -2,6 +2,7 @@ const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.REACT_APP_AIRTABLE_BASE_ID;
 
 const COMMENTS_TABLE_NAME = 'Comments';
+const PNB_TABLE_NAME = 'PNB';
 
 const TAGS_LIST_COMMENT_ID = 44;
 
@@ -64,7 +65,7 @@ class AirtableDatabase {
     }
 
     async getComments() {
-        let comments = await this.fetchTable(COMMENTS_TABLE_NAME);        
+        let comments = await this.fetchTable(COMMENTS_TABLE_NAME);
         
         if (comments) {
             const tagsListComment = comments.filter(c => c.fields.id === TAGS_LIST_COMMENT_ID)[0];
@@ -79,6 +80,10 @@ class AirtableDatabase {
                 console.error('getComments(): Error retrieving tags list');
             }
         }
+    }
+
+    async getPNB(city) {
+        return await this.fetchTable(PNB_TABLE_NAME);
     }
 
     async create(fields) {
