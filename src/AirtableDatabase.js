@@ -2,7 +2,7 @@ const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.REACT_APP_AIRTABLE_BASE_ID;
 
 const COMMENTS_TABLE_NAME = 'Comments';
-const PNB_TABLE_NAME = 'PNB';
+const METADATA_TABLE_NAME = 'Metadata';
 
 const TAGS_LIST_COMMENT_ID = 44;
 
@@ -82,8 +82,8 @@ class AirtableDatabase {
         }
     }
 
-    async getPNB(city) {
-        return await this.fetchTable(PNB_TABLE_NAME);
+    async getMetadata(city) {
+        return await this.fetchTable(METADATA_TABLE_NAME);
     }
 
     async create(fields) {

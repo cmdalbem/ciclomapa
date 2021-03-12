@@ -3,9 +3,10 @@ import { Popover, Button } from 'antd';
 
 import { PieChart, Pie } from 'recharts';
 
+import { removeAccents } from './utils.js';
 import AirtableDatabase from './AirtableDatabase.js'
 
-import {
+import { 
     MdClose as IconClose,
     MdInfoOutline as IconInfo,
     MdDataUsage as IconAnalytics,
@@ -23,13 +24,13 @@ class AnalyticsSidebar extends Component {
     }
 
     componentDidMount() {
-        this.loadPNB();
+        this.loadMetadata();
         this.updateData();
     }
 
-    async loadPNB() {
+    async loadMetadata() {
         this.setState({
-            pnbValues: await this.airtableDatabase.getPNB()
+            allMetadata: await this.airtableDatabase.getMetadata()
         });
 
         this.updateLocation();
@@ -37,14 +38,19 @@ class AnalyticsSidebar extends Component {
 
     updateLocation() {
         let search;
-        if (this.state.pnbValues && this.state.pnbValues.length > 0) {
-            search = this.state.pnbValues.find(
+        if (this.state.allMetadata && this.state.allMetadata.length > 0) {
+            search = this.state.allMetadata.find(
                 v => this.props.location
                     .toLowerCase()
-                    .includes(v.fields.location.toLowerCase())
+                    .removeAccents()
+                    .includes(
+                        v.fields.location
+                            .toLowerCase()
+                            .removeAccents()
+                    )
             );
             if (search) {
-                this.setState({pnb: search.fields});
+                this.setState({cityMetadata: search.fields});
             }
         }
     }
@@ -118,7 +124,7 @@ class AnalyticsSidebar extends Component {
                     </div>
 
                     {
-                        this.state.pnb &&
+                        this.state.cityMetadata && this.state.cityMetadata.pnb_total &&
                         <Section
                             title="People Near Bike (PNB)"
                             link={"https://itdpbrasil.org/pnb/"}
@@ -132,38 +138,41 @@ class AnalyticsSidebar extends Component {
                             </>}
                         >
                             <BigNum>
-                                {this.state.pnb.total + '%'}
+                                {this.state.cityMetadata.pnb_total + '%'}
                             </BigNum>
 
                             <DataLine
                                 name="Mulheres negras"
-                                length={this.state.pnb.total_black_women}
+                                length={this.state.cityMetadata.pnb_black_women}
                                 unit="%"
                             />
                             <DataLine
                                 name="Mulheres renda até 1 SM"
-                                length={this.state.pnb.total_women_less_one_salary}
+                                length={this.state.cityMetadata.pnb_women_less_one_salary}
                                 unit="%"
                             />
                         </Section>
                     }
 
-                    <Section
-                        title="IDECiclo"
-                        link="https://ideciclo.ameciclo.org/"
-                        description={<>
-                            <p>
-                                O Índice de Desenvolvimento Cicloviário é uma metodologia para avaliar a malha cicloviária de uma cidade de forma objetiva e replicável, que permite acompanhar a evolução dos parâmetros de qualidade ao longo de uma gestão para uma comparação temporal e intermunicipal. 
-                            </p>
-                            <p>
-                                O índice, desenvolvido pela Ameciclo, assemelha-se ao Copenhagenize Index, iniciativa do escritório dinamarquês Copenheganize, que tenta avaliar e monitorar ao longo do tempo várias cidades do mundo quanto à promoção do uso da bicicleta nestas cidades.
-                            </p>
-                        </>}
-                    >
-                        <BigNum>
-                            0,107
-                        </BigNum>
-                    </Section>
+                    {
+                        this.state.cityMetadata && this.state.cityMetadata.ideciclo &&
+                        <Section
+                            title="IDECiclo"
+                            link="https://ideciclo.ameciclo.org/"
+                            description={<>
+                                <p>
+                                    O Índice de Desenvolvimento Cicloviário é uma metodologia para avaliar a malha cicloviária de uma cidade de forma objetiva e replicável, que permite acompanhar a evolução dos parâmetros de qualidade ao longo de uma gestão para uma comparação temporal e intermunicipal. 
+                                </p>
+                                <p>
+                                    O índice, desenvolvido pela Ameciclo, assemelha-se ao Copenhagenize Index, iniciativa do escritório dinamarquês Copenheganize, que tenta avaliar e monitorar ao longo do tempo várias cidades do mundo quanto à promoção do uso da bicicleta nestas cidades.
+                                </p>
+                            </>}
+                        >
+                            <BigNum>
+                                { this.state.cityMetadata.ideciclo }
+                            </BigNum>
+                        </Section>
+                    }
 
                     <Section
                         title="Vias"
