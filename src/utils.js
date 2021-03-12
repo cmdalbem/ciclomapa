@@ -96,3 +96,8 @@ export function timeSince(date) {
     // return Math.floor(seconds) + " segundos";
     return " poucos segundos";
 }
+
+// Thanks https://stackoverflow.com/questions/990904/remove-accents-diacritics-in-a-string-in-javascript
+String.prototype.removeAccents = function() {
+    return this.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
