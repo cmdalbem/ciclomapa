@@ -25,6 +25,7 @@ import {
     SAVE_TO_FIREBASE,
     DISABLE_DATA_HEALTY_TEST,
     IS_PROD,
+    THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE,
 } from './constants.js'
 
 // import './App.css';
@@ -150,81 +151,83 @@ class App extends Component {
         this.updateData(true);
     }
 
-    // geoJsonDiff(oldData, newData) {
-    //     console.debug('oldData', oldData);
-    //     console.debug('newData', newData);
-
-    //     let a = new Set(oldData.features.map(i => i.id));
-    //     let b = new Set(newData.features.map(i => i.id));        
-    //     // let a = new Set(oldData.features.map(i => JSON.stringify(i)));
-    //     // let b = new Set(newData.features.map(i => JSON.stringify(i)));
-
-    //     let a_minus_b = new Set([...a].filter(x => !b.has(x)));
-    //     let b_minus_a = new Set([...b].filter(x => !a.has(x)));
-    //     let a_intersect_b = new Set([...a].filter(x => b.has(x)));
-
-    //     // a_minus_b = [...a_minus_b].map(i => JSON.parse(i));
-    //     // b_minus_a = [...b_minus_a].map(i => JSON.parse(i));
-    //     // a_intersect_b = [...a_intersect_b].map(i => JSON.parse(i));
-    //     a_minus_b = [...a_minus_b];
-    //     b_minus_a = [...b_minus_a];
-    //     a_intersect_b = [...a_intersect_b];
-
-    //     console.debug('Removed:', a_minus_b);
-    //     console.debug('Added:', b_minus_a);
-    //     console.debug('Didnt change:', a_intersect_b);
-
-    //     notification.success({
-    //         message: 'Sucesso',
-    //         description:
-    //             a_minus_b.length === 0 && b_minus_a.length === 0 ?
-    //             <span>
-    //                 Não houve alterações no mapa cicloviários desde a última atualização.
-    //             </span>
-    //             :
-    //             <span>
-    //                 <b>{a_minus_b.length}</b> caminhos removidos e <b>{b_minus_a.length}</b> adicionados.
-    //             </span>
-    //     });
-    // }
-
-    isDataHealthy(oldData, newData) {
+    geoJsonDiff(oldData, newData) {
         console.debug('oldData', oldData);
         console.debug('newData', newData);
 
-        let ret, before, after;
+        let a = new Set(oldData.features.map(i => i.id));
+        let b = new Set(newData.features.map(i => i.id));
+        
+        // @todo compare full data, not only IDs
+        // let a = new Set(oldData.features.map(i => JSON.stringify(i)));
+        // let b = new Set(newData.features.map(i => JSON.stringify(i)));
+
+        let a_minus_b = new Set([...a].filter(x => !b.has(x)));
+        let b_minus_a = new Set([...b].filter(x => !a.has(x)));
+        let a_intersect_b = new Set([...a].filter(x => b.has(x)));
+
+        // a_minus_b = [...a_minus_b].map(i => JSON.parse(i));
+        // b_minus_a = [...b_minus_a].map(i => JSON.parse(i));
+        // a_intersect_b = [...a_intersect_b].map(i => JSON.parse(i));
+
+        a_minus_b = [...a_minus_b];
+        b_minus_a = [...b_minus_a];
+        a_intersect_b = [...a_intersect_b];
+
+        console.debug('Removed:', a_minus_b);
+        console.debug('Added:', b_minus_a);
+        console.debug('Might\'ve changed:', a_intersect_b);
+
+        notification.success({
+            message: 'Dados atualizados com sucesso',
+            description:
+                a_minus_b.length === 0 && b_minus_a.length === 0 ?
+                <div>
+                    Não houve alterações no mapa cicloviários desde a última atualização.
+                </div>
+                :
+                <div>
+                    <div>
+                        <b>{a_minus_b.length}</b> removidos
+                    </div>
+                    <div>
+                        <b>{b_minus_a.length}</b> adicionados
+                    </div>
+                </div>
+        });
+    }
+
+    isDataHealthy(oldData, newData) {
+        let isHealthy, before, after;
 
         if (DISABLE_DATA_HEALTY_TEST) {
-            ret = true;
+            isHealthy = true;
         }
 
         if (!oldData || !oldData.features) {
-            ret = true;
+            isHealthy = true;
         } else {
             before = oldData && oldData.features.length;
             after = newData && newData.features.length;
     
             console.debug('before', before);
             console.debug('after', after);
+            console.debug('diff', after - before);
     
-            ret = !(after === 0 || after < before*0.1);
+            isHealthy = !(after === 0 || after < before * THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE);
         }
 
         Analytics.event('get_from_osm', {
             city_name: this.state.area,
-            is_healthy: ret,
+            is_healthy: isHealthy,
             new_features: after - before 
         });
 
-        return ret;
+        return isHealthy;
     }
 
     getDataFromOSM(options = {}) {
         const {areaName = this.state.area, forceUpdate} = options;
-
-        console.debug('options', options);
-        console.debug('areaName', areaName);
-        console.debug('forceUpdate', forceUpdate);
 
         this.setState({ loading: true });
 
@@ -235,15 +238,13 @@ class App extends Component {
                 if (forceUpdate && !this.isDataHealthy(this.state.geoJson, newData.geoJson)) {
                     throw new Error('New data is not healthy.');
                 } else {
-                    const geoJsonWithTypes = computeTypologies(this.state.geoJson, this.state.layers);
-                    const lengths = calculateLayersLengths(geoJsonWithTypes, this.state.layers);
+                    // Since this is a heavy operation we only do it when syncing with new OSM data
+                    const lengths = calculateLayersLengths(this.state.geoJson, this.state.layers);
                     
                     if (SAVE_TO_FIREBASE) {
                         this.storage.save(areaName, newData.geoJson, lengths);
                     }
 
-                    // this.geoJsonDiff(this.state.geoJson, newData.geoJson);
-    
                     this.setState({
                         geoJson: newData.geoJson,
                         dataUpdatedAt: new Date(),
@@ -270,13 +271,8 @@ class App extends Component {
                         if (data) {
                             console.debug('Database data is fresh.');
 
-                            // @TEMP: Force to always recalculate lengths
-                            const geoJsonWithTypes = computeTypologies(data.geoJson, this.state.layers);
-                            const lengths = calculateLayersLengths(geoJsonWithTypes, this.state.layers);
-
                             this.setState({
                                 geoJson: data.geoJson,
-                                // lengths: lengths,
                                 lengths: data.lengths,
                                 dataUpdatedAt: new Date(data.updatedAt),
                             });
@@ -322,6 +318,7 @@ class App extends Component {
             }],
         });
 
+        // Enable only layers of type "way" to download
         const layerWays = this.state.layers.filter(l => l.type === 'way');
         computeTypologies(this.state.geoJson, layerWays);
         cleanUpOSMTags(this.state.geoJson);
@@ -355,21 +352,19 @@ class App extends Component {
 
         if (this.state.geoJson !== prevState.geoJson) {
             if (!this.state.geoJson || (this.state.geoJson.features && this.state.geoJson.features.length === 0)) {
+                // @todo link to our tutorials and invite the user to start mapping it
                 notification['warning']({
                     message: 'Ops',
                     description:
                         'Não há dados cicloviários para esta cidade.',
                 });
             } else {
-                // Retrocompatibility case where lengths weren't save to database
+                // Retrocompatibility case where lengths weren't saved to database
                 if (!this.state.lengths) {
                     console.debug('database didnt have lengths, computing...');
                     
-                    const geoJsonWithTypes = computeTypologies(this.state.geoJson, this.state.layers);
-                    const lengths = calculateLayersLengths(geoJsonWithTypes, this.state.layers);
-                    
                     this.setState({
-                        lengths: lengths
+                        lengths: calculateLayersLengths(this.state.geoJson, this.state.layers)
                     });
                 }
             }

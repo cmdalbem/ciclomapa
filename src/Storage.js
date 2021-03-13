@@ -101,7 +101,7 @@ class Storage {
         return compressed;
     }
 
-    saveToFirestore(name, jsonStr, lengths, part) {
+    saveGeoJSONToFirestore(name, jsonStr, lengths, part) {
         const now = new Date();
         let slug = slugify(name);
 
@@ -144,35 +144,42 @@ class Storage {
                 // console.debug('regular stringfy:', JSON.stringify(geoJson));
                 // console.debug('zipson stringfy:', jsonStr);
 
-                console.debug(`[Firebase] Saving document ${name}...`, geoJson);
-
+                console.debug(`[Firebase] Saving lengths for ${name}...`, lengths);
                 this.saveStatsToFirestore(name, lengths)
-
-                // geoJson = this.compressJson(geoJson);
-                this.saveToFirestore(name, jsonStr, lengths)
                     .then(() => {
-                        console.debug(`[Firebase] Document ${name} written successfully.`);
+                        console.debug(`[Firebase] Lengths for ${name} saved successfully.`);
+                    })
+                    .catch(error => {
+                        console.error("[Firebase] Error saving lengths: ", error);
+                        reject();
+                    });  
+
+                console.debug(`[Firebase] Saving GeoJSON ${name}...`, geoJson);
+                // geoJson = this.compressJson(geoJson);
+                this.saveGeoJSONToFirestore(name, jsonStr, lengths)
+                    .then(() => {
+                        console.debug(`[Firebase] GeoJSON ${name} written successfully.`);
                         resolve();
                     }).catch(error => {
-                        console.debug('[Firestore] Failed saving full data, splitting in 2...')
+                        console.debug('[Firestore] Splitting GeoJSON in 2...')
 
                         const part1 = jsonStr.slice(0, Math.ceil(jsonStr.length/2));
                         const part2 = jsonStr.slice(Math.ceil(jsonStr.length/2));
 
-                        this.saveToFirestore(name, part1, lengths, 1) 
+                        this.saveGeoJSONToFirestore(name, part1, lengths, 1) 
                         .then(() => {
-                            console.debug(`[Firebase] Document ${name}1 written successfully.`);
+                            console.debug(`[Firebase] GeoJSON ${name}1 written successfully.`);
                         }).catch(error => {
-                            console.error("[Firebase] Error adding document: ", error);
+                            console.error("[Firebase] Error saving GeoJSON: ", error);
                             reject();
                         });        
     
-                        this.saveToFirestore(name, part2, lengths, 2)
+                        this.saveGeoJSONToFirestore(name, part2, lengths, 2)
                         .then(() => {
-                            console.debug(`[Firebase] Document ${name}2 written successfully.`);
+                            console.debug(`[Firebase] GeoJSON ${name}2 written successfully.`);
                             resolve();
                         }).catch(error => {
-                            console.error("[Firebase] Error adding document: ", error);
+                            console.error("[Firebase] Error saving GeoJSON: ", error);
                             reject();
                         });
                     });
@@ -215,7 +222,7 @@ class Storage {
                 });
             }
         }
-        console.table(tagsTable);
+        // console.table(tagsTable);
 
         let valuesTable = [];
         for(let t in valuesCount) {
@@ -228,7 +235,7 @@ class Storage {
                 });
             }
         }
-        console.table(valuesTable);
+        // console.table(valuesTable);
     }
 
     getDataFromDB(slug, resolve, reject) {
