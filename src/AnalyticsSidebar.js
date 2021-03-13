@@ -130,10 +130,13 @@ class AnalyticsSidebar extends Component {
                             link={"https://itdpbrasil.org/pnb/"}
                             description={<>
                                 <p>
-                                    Para avaliar as políticas de ciclomobilidade com maior efetividade, o ITDP Brasil apura anualmente um indicador percentual de pessoas que vivem próximas da infraestrutura cicloviária (PNB sigla em inglês para People Near Bike).
+                                    Para avaliar as políticas de ciclomobilidade com maior efetividade, o ITDP Brasil apura anualmente um indicador percentual de pessoas que vivem próximas da infraestrutura cicloviária, o People Near Bike (pessoas próximas a bicicleta, em livre tradução).
                                 </p>
                                 <p>
                                     A partir da rede cicloviária disponível no CicloMapa, o indicador mostra quantas pessoas moram a menos de 300 metros de uma ciclovia, ciclofaixa, ciclorrota ou calçada compartilhada.
+                                </p>
+                                <p>
+                                    Escala: de 0% a 100%.
                                 </p>
                             </>}
                         >
@@ -157,14 +160,17 @@ class AnalyticsSidebar extends Component {
                     {
                         this.state.cityMetadata && this.state.cityMetadata.ideciclo &&
                         <Section
-                            title="IDECiclo"
+                            title="IDECICLO"
                             link="https://ideciclo.ameciclo.org/"
                             description={<>
                                 <p>
-                                    O Índice de Desenvolvimento Cicloviário é uma metodologia para avaliar a malha cicloviária de uma cidade de forma objetiva e replicável, que permite acompanhar a evolução dos parâmetros de qualidade ao longo de uma gestão para uma comparação temporal e intermunicipal. 
+                                    O Índice de Desenvolvimento Cicloviário (IDECICLO) tem como objetivo avaliar qualitativamente a infraestrutura cicloviária da cidade de forma objetiva e replicável de modo que haja acompanhamento da evolução dos parâmetros para uma comparação entre infraestruturas e entre cidades, de maneira a construir uma séria histórica.
                                 </p>
                                 <p>
-                                    O índice, desenvolvido pela Ameciclo, assemelha-se ao Copenhagenize Index, iniciativa do escritório dinamarquês Copenheganize, que tenta avaliar e monitorar ao longo do tempo várias cidades do mundo quanto à promoção do uso da bicicleta nestas cidades.
+                                    O IDECICLO faz uma avaliação local de cada estrutura e pondera esta sob a malha total da cidade e com as velocidades máximas das vias que estão sendo inseridas, podendo ser um índice comparativo entre cidades e entre estruturas.
+                                </p>
+                                <p>
+                                    Escala: de 0 a 1.
                                 </p>
                             </>}
                         >
