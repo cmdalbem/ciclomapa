@@ -133,11 +133,11 @@ function detectDoubleWayBikePaths(l, features) {
     let streetsByName = {};
     features.forEach(f => {
         if (f.properties.name && f.properties.oneway && f.properties.oneway === 'yes') {
-            if (streetsByName[f.properties.name]) {
-                streetsByName[f.properties.name].push(f);
-            } else {
-                streetsByName[f.properties.name] = [f];
-            }
+                if (streetsByName[f.properties.name]) {
+                    streetsByName[f.properties.name].push(f);
+                } else {
+                    streetsByName[f.properties.name] = [f];
+                }
         }
     });
 
@@ -240,12 +240,14 @@ function detectDoubleWayBikePaths(l, features) {
 export function calculateLayersLengths(geoJson, layers) {
     let lengths = {};
 
+    const geoJsonWithTypes = computeTypologies(geoJson, layers);
+    
     layers
         .filter(l => l.type === 'poi')
         .forEach(l => {
-            let features = geoJson && geoJson.features ?
-                geoJson.features.filter(f => f.properties.type === l.name)
-                : [];
+            let features = geoJsonWithTypes && geoJsonWithTypes.features ?
+                    geoJsonWithTypes.features.filter(f => f.properties.type === l.name)
+                    : [];
             
             lengths[l.id] = features.length;
         })
@@ -256,9 +258,9 @@ export function calculateLayersLengths(geoJson, layers) {
         lengths[l.id] = 0;
 
         // Use local classification to filter
-        let features = geoJson && geoJson.features ?
-            geoJson.features.filter(f => f.properties.type === l.name)
-            : [];
+        let features = geoJsonWithTypes && geoJsonWithTypes.features ?
+                geoJsonWithTypes.features.filter(f => f.properties.type === l.name)
+                : [];
 
         // Calculate lengths
         features.forEach(f => {
