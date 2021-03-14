@@ -674,76 +674,78 @@ class Map extends Component {
         
         // Native Mapbox map controls
 
-        if (!IS_MOBILE) {
-            this.searchBar = new MapboxGeocoder({
+        if (!this.props.embedMode) {
+            if (!IS_MOBILE) {
+                this.searchBar = new MapboxGeocoder({
+                    accessToken: mapboxgl.accessToken,
+                    mapboxgl: mapboxgl,
+                    language: 'pt-br',
+                    placeholder: 'Buscar endereços, estabelecimentos, ...',
+                    countries: IS_PROD ? 'br' : '',
+                    // collapsed: IS_MOBILE
+                });
+                this.map.addControl(this.searchBar, 'bottom-right');
+            }
+    
+            const cityPicker = new MapboxGeocoder({
                 accessToken: mapboxgl.accessToken,
                 mapboxgl: mapboxgl,
                 language: 'pt-br',
-                placeholder: 'Buscar endereços, estabelecimentos, ...',
+                placeholder: `Buscar cidades ${IS_PROD ? 'brasileiras' : 'no mundo'}`,
                 countries: IS_PROD ? 'br' : '',
-                // collapsed: IS_MOBILE
+                types: 'place',
+                marker: false,
+                clearOnBlur: true,
+                flyTo: false
             });
-            this.map.addControl(this.searchBar, 'bottom-right');
+            cityPicker.on('result', result => {
+                console.debug('geocoder result', result);
+    
+                let flyToPos;
+                if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
+                    flyToPos = [-40.3144, -20.2944];
+                } else {
+                    flyToPos = result.result.center;
+                }
+                this.map.flyTo({
+                    center: flyToPos,
+                    zoom: DEFAULT_ZOOM,
+                    speed: 2,
+                    minZoom: 6
+                });
+    
+                this.reverseGeocode(result.result.center);
+    
+                // Hide UI
+                // @todo refactor this to use React state
+                document.querySelector('body').classList.remove('show-city-picker');
+                cityPicker.clear();
+            });
+            this.map.addControl(cityPicker, 'top-left');
+    
+            this.map.addControl(
+                new mapboxgl.NavigationControl({
+                    showCompass: false
+                }),
+                'bottom-right'
+            );
+            const geolocate = new mapboxgl.GeolocateControl({
+                positionOptions: {
+                    enableHighAccuracy: true
+                },
+                trackUserLocation: false
+            });
+            geolocate.on('geolocate', result => {
+                console.debug('geolocate', result);
+                this.reverseGeocode([result.coords.longitude, result.coords.latitude]);
+            });
+            this.map.addControl(geolocate, 'bottom-right');
+            
+            
+            this.map.addControl(new mapboxgl.FullscreenControl({
+                container: document.querySelector('body')
+            }), 'bottom-right');
         }
-
-        const cityPicker = new MapboxGeocoder({
-            accessToken: mapboxgl.accessToken,
-            mapboxgl: mapboxgl,
-            language: 'pt-br',
-            placeholder: `Buscar cidades ${IS_PROD ? 'brasileiras' : 'no mundo'}`,
-            countries: IS_PROD ? 'br' : '',
-            types: 'place',
-            marker: false,
-            clearOnBlur: true,
-            flyTo: false
-        });
-        cityPicker.on('result', result => {
-            console.debug('geocoder result', result);
-
-            let flyToPos;
-            if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
-                flyToPos = [-40.3144, -20.2944];
-            } else {
-                flyToPos = result.result.center;
-            }
-            this.map.flyTo({
-                center: flyToPos,
-                zoom: DEFAULT_ZOOM,
-                speed: 2,
-                minZoom: 6
-            });
-
-            this.reverseGeocode(result.result.center);
-
-            // Hide UI
-            // @todo refactor this to use React state
-            document.querySelector('body').classList.remove('show-city-picker');
-            cityPicker.clear();
-        });
-        this.map.addControl(cityPicker, 'top-left');
-
-        this.map.addControl(
-            new mapboxgl.NavigationControl({
-                showCompass: false
-            }),
-            'bottom-right'
-        );
-        const geolocate = new mapboxgl.GeolocateControl({
-            positionOptions: {
-                enableHighAccuracy: true
-            },
-            trackUserLocation: false
-        });
-        geolocate.on('geolocate', result => {
-            console.debug('geolocate', result);
-            this.reverseGeocode([result.coords.longitude, result.coords.latitude]);
-        });
-        this.map.addControl(geolocate, 'bottom-right');
-        
-        
-        this.map.addControl(new mapboxgl.FullscreenControl({
-            container: document.querySelector('body')
-        }), 'bottom-right');
 
         this.loadImages();
         
