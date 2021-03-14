@@ -1,0 +1,721 @@
+{
+  "type": "FeatureCollection",
+  "generator": "overpass-ide",
+  "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
+  "timestamp": "2021-03-14T20:20:22Z",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/30674098",
+        "IBGE:GEOCODIGO": "3550308",
+        "capital": "4",
+        "ele": "760",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/4/4b/Bandeira_da_cidade_de_S%C3%A3o_Paulo.svg",
+        "is_in": "São Paulo,Brasil",
+        "is_in:continent": "South America",
+        "is_in:country": "Brazil",
+        "is_in:country_code": "BR",
+        "is_in:state": "São Paulo",
+        "is_in:state_code": "SP",
+        "loc_name": "Sampa",
+        "name": "São Paulo",
+        "old_name": "São Paulo de Piratininga",
+        "place": "city",
+        "population": "12176866",
+        "population:date": "2018",
+        "short_name": "São Paulo",
+        "source": "IBGE",
+        "source:name:oc": "Lo Congrès",
+        "source:population": "IBGE",
+        "start_date": "1554-01-25",
+        "state_capital": "yes",
+        "website": "http://www.capital.sp.gov.br/",
+        "wikidata": "Q174",
+        "wikipedia": "pt:São Paulo"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -46.6333824,
+          -23.5506507
+        ]
+      },
+      "id": "node/30674098"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/34567423",
+        "addr:country": "BR",
+        "admin_level": "2",
+        "alt_name": "RA I",
+        "capital": "yes",
+        "capital_ISO3166-1": "yes",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/3/3c/Bandeira_do_Distrito_Federal_%28Brasil%29.svg",
+        "loc_name": "BSB",
+        "name": "Brasília",
+        "place": "city",
+        "population": "3055149",
+        "population:date": "2015-07-01",
+        "reg_name": "Região Administrativa Um",
+        "source:name:oc": "Lo Congrès",
+        "state_capital": "yes",
+        "website": "http://www.brasilia.df.gov.br/",
+        "wikidata": "Q2844",
+        "wikipedia": "pt:Brasília"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -47.8823172,
+          -15.7934036
+        ]
+      },
+      "id": "node/34567423"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/34582422",
+        "IBGE:GEOCODIGO": "3304557",
+        "alt_name:gl": "Rio de Janeiro",
+        "census": "2010",
+        "ele": "31",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/a/a9/Bandeira_da_cidade_do_Rio_de_Janeiro.svg",
+        "heritage": "1",
+        "heritage:operator": "whc",
+        "loc_name": "Rio",
+        "name": "Rio de Janeiro",
+        "old_name": "São Sebastião do Rio de Janeiro",
+        "place": "city",
+        "population": "6429923",
+        "ref:LOCODE": "BRRIO",
+        "ref:whc": "1100",
+        "state_capital": "yes",
+        "website": "http://www.rio.rj.gov.br/",
+        "whc:criteria": "4",
+        "whc:inscription_date": "2012-07-01",
+        "wikidata": "Q8678",
+        "wikipedia": "pt:Rio de Janeiro",
+        "wikipedia:gl": "Río de Xaneiro",
+        "wikipedia:ru": "Рио-де-Жанейро"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -43.2093727,
+          -22.9110137
+        ]
+      },
+      "id": "node/34582422"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/34593849",
+        "ele": "8",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/9/95/Bandeira_de_Salvador.svg",
+        "name": "Salvador",
+        "place": "city",
+        "population": "2902927",
+        "ref:LOCODE": "BRSSA",
+        "short_name": "SSA",
+        "source:population": "IBGE 2009",
+        "state_capital": "yes",
+        "website": "http://www.salvador.ba.gov.br/",
+        "wikidata": "Q36947",
+        "wikipedia": "pt:Salvador (Bahia)"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -38.4812772,
+          -12.9822499
+        ]
+      },
+      "id": "node/34593849"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/90200226",
+        "capital": "4",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/f/f6/Bandeira_de_Florian%C3%B3polis.svg",
+        "is_in": "Florianópolis, Santa Catarina, SC, Brasil, BR",
+        "is_in:continent": "South America",
+        "is_in:country": "Brazil",
+        "is_in:state": "Santa Catarina",
+        "is_in:state_code": "SC",
+        "loc_name": "Floripa",
+        "name": "Florianópolis",
+        "old_name": "Nossa Senhora do Desterro",
+        "place": "city",
+        "population": "485838",
+        "state_capital": "yes",
+        "website": "http://www.pmf.sc.gov.br/",
+        "wikidata": "Q132997",
+        "wikipedia": "pt:Florianópolis"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -48.5496098,
+          -27.5973002
+        ]
+      },
+      "id": "node/90200226"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/155590820",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/f/f6/Bandeira_de_S%C3%A3o_Lu%C3%ADs.svg",
+        "int_name": "Sao Luis",
+        "name": "São Luís",
+        "place": "city",
+        "population": "1053919",
+        "state_capital": "yes",
+        "website": "http://www.saoluis.ma.gov.br/",
+        "wikidata": "Q28441",
+        "wikipedia": "pt:São Luís (Maranhão)"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -44.2448718,
+          -2.5634605
+        ]
+      },
+      "id": "node/155590820"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/195594311",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/3/38/Bandeira_de_Manaus.svg",
+        "name": "Manaus",
+        "place": "city",
+        "population": "1982179",
+        "ref:LOCODE": "BRMAO",
+        "source": "IBGE",
+        "source:name:oc": "Lo Congrès",
+        "state_capital": "yes",
+        "website": "http://www.manaus.am.gov.br/",
+        "wikidata": "Q40236",
+        "wikipedia": "pt:Manaus"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -59.9825041,
+          -3.1316333
+        ]
+      },
+      "id": "node/195594311"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/206136859",
+        "IBGE:GEOCODIGO": "4106902",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/9/9f/Bandeira_de_Curitiba.svg",
+        "is_in": "Paraná, PR, Brasil, BR, South America",
+        "is_in:continent": "South America",
+        "is_in:country": "Brasil",
+        "is_in:country_code": "BR",
+        "name": "Curitiba",
+        "place": "city",
+        "population": "1848943",
+        "source:name:oc": "Lo Congrès",
+        "state_capital": "yes",
+        "website": "http://www.curitiba.pr.gov.br/",
+        "wikidata": "Q4361",
+        "wikipedia": "pt:Curitiba"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2712724,
+          -25.4295963
+        ]
+      },
+      "id": "node/206136859"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/210731106",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/8/8f/Bandeira_de_Natal.svg",
+        "is_in:country": "Brazil",
+        "name": "Natal",
+        "place": "city",
+        "population": "853929",
+        "state_capital": "yes",
+        "website": "http://www.natal.rn.gov.br/",
+        "wikidata": "Q131620",
+        "wikipedia": "pt:Natal (Rio Grande do Norte)"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -35.2080905,
+          -5.805398
+        ]
+      },
+      "id": "node/210731106"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/210738427",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/3/38/Bandeira_de_Fortaleza.svg",
+        "loc_name": "Fortal",
+        "name": "Fortaleza",
+        "place": "city",
+        "population": "2551805",
+        "source:name:oc": "Lo Congrès",
+        "state_capital": "yes",
+        "website": "https://www.fortaleza.ce.gov.br/",
+        "wikidata": "Q43463",
+        "wikipedia": "pt:Fortaleza"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -38.5217989,
+          -3.7304512
+        ]
+      },
+      "id": "node/210738427"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/243198608",
+        "census": "2010",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/f/fa/Bandeira_de_Vit%C3%B3ria.svg",
+        "name": "Vitória",
+        "old_name": "Vila Nova do Espírito Santo",
+        "place": "city",
+        "population": "348265",
+        "ref:LOCODE": "BRVIX",
+        "short_name": "VIX",
+        "source": "IBGE",
+        "state_capital": "yes",
+        "website": "http://www.vitoria.es.gov.br/",
+        "wikidata": "Q168376",
+        "wikipedia": "pt:Vitória (Espírito Santo)"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -40.3376682,
+          -20.3200917
+        ]
+      },
+      "id": "node/243198608"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/243850404",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/b/be/Bandeira_de_Goi%C3%A2nia.svg",
+        "int_name": "Goiania",
+        "is_in:continent": "South America",
+        "is_in:country": "Brazil",
+        "name": "Goiânia",
+        "place": "city",
+        "population": "1393579",
+        "source:name:oc": "Lo Congrès",
+        "state_capital": "yes",
+        "website": "http://www.goiania.go.gov.br/",
+        "wikidata": "Q83189",
+        "wikipedia": "pt:Goiânia"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -49.2532691,
+          -16.680882
+        ]
+      },
+      "id": "node/243850404"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/243850406",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/7/70/Bandeira_de_Aracaju.svg",
+        "name": "Aracaju",
+        "place": "city",
+        "population": "614577",
+        "state_capital": "yes",
+        "website": "https://www.aracaju.se.gov.br/",
+        "wikidata": "Q170578",
+        "wikipedia": "pt:Aracaju"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -37.0774655,
+          -10.9162061
+        ]
+      },
+      "id": "node/243850406"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/243850911",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/4/44/Bandeira_de_Macei%C3%B3.svg",
+        "int_name": "Maceio",
+        "name": "Maceió",
+        "place": "city",
+        "population": "996736",
+        "state_capital": "yes",
+        "website": "http://www.maceio.al.gov.br/",
+        "wikidata": "Q168888",
+        "wikipedia": "pt:Maceió"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -35.7339264,
+          -9.6476843
+        ]
+      },
+      "id": "node/243850911"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/246671856",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/9/97/Bandeira_de_Belo_Horizonte_%28Minas_Gerais%29.svg",
+        "loc_name": "Beagá",
+        "name": "Belo Horizonte",
+        "place": "city",
+        "population": "2479175",
+        "short_name": "BH",
+        "source": "geominas",
+        "source:name:oc": "Lo Congrès",
+        "state_capital": "yes",
+        "website": "http://www.pbh.gov.br/",
+        "wikidata": "Q42800",
+        "wikipedia": "pt:Belo Horizonte"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -43.9450948,
+          -19.9227318
+        ]
+      },
+      "id": "node/246671856"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/256304928",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/2/2e/Bandeira_de_Porto_Velho.svg",
+        "name": "Porto Velho",
+        "place": "city",
+        "population": "484992",
+        "state_capital": "yes",
+        "website": "https://www.portovelho.ro.gov.br/",
+        "wikidata": "Q172512",
+        "wikipedia": "pt:Porto Velho"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -63.8735438,
+          -8.7494525
+        ]
+      },
+      "id": "node/256304928"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/313557783",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/3/39/Bandeira_de_Porto_Alegre_%28RS%29.svg",
+        "is_in": "Rio Grande do Sul,Brasil",
+        "is_in:continent": "South America",
+        "is_in:country": "Brazil",
+        "is_in:state": "Rio Grande do Sul",
+        "is_in:state_code": "RS",
+        "loc_name": "PoA",
+        "name": "Porto Alegre",
+        "note": "Oficialmente em frente aos prédios do governo estadual.",
+        "place": "city",
+        "population": "1467823",
+        "source:name:oc": "Lo Congrès",
+        "state_capital": "yes",
+        "website": "http://www.portoalegre.rs.gov.br/",
+        "wikidata": "Q40269",
+        "wikipedia": "pt:Porto Alegre"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -51.2303767,
+          -30.0324999
+        ]
+      },
+      "id": "node/313557783"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/316858015",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/0/08/Bandeira_de_Boa_Vista_%28Roraima%29.svg",
+        "name": "Boa Vista",
+        "place": "city",
+        "population": "399213",
+        "source": "IBGE",
+        "state_capital": "yes",
+        "website": "https://www.boavista.rr.gov.br/",
+        "wikidata": "Q181056",
+        "wikipedia": "pt:Boa Vista (Roraima)"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.6719582,
+          2.8208478
+        ]
+      },
+      "id": "node/316858015"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/319054316",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/e/e4/Bandeira_cg_ed.jpg",
+        "loc_name": "Campão",
+        "name": "Campo Grande",
+        "place": "city",
+        "population": "874210",
+        "source:population": "IBGE est 2017",
+        "state_capital": "yes",
+        "website": "http://www.pmcg.ms.gov.br/",
+        "wikidata": "Q168929",
+        "wikipedia": "pt:Campo Grande (Mato Grosso do Sul)"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -54.6162947,
+          -20.4640173
+        ]
+      },
+      "id": "node/319054316"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/320661313",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/3/3a/Br-pi-tr.gif",
+        "name": "Teresina",
+        "place": "city",
+        "population": "836474",
+        "state_capital": "yes",
+        "website": "http://www.teresina.pi.gov.br/",
+        "wikidata": "Q165341",
+        "wikipedia": "pt:Teresina"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -42.809588,
+          -5.0896403
+        ]
+      },
+      "id": "node/320661313"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/332175615",
+        "census": "2008",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/5/5b/Bandeira_de_Rio_Branco.svg",
+        "is_in:continent": "South America",
+        "is_in:country": "Brazil",
+        "is_in:municipality": "Rio Branco",
+        "name": "Rio Branco",
+        "place": "city",
+        "population": "357194",
+        "source": "IBGE",
+        "state_capital": "yes",
+        "website": "http://www.riobranco.ac.gov.br/",
+        "wikidata": "Q171612",
+        "wikipedia": "pt:Rio Branco"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.8220778,
+          -9.9765362
+        ]
+      },
+      "id": "node/332175615"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/339722677",
+        "alt_name:en": "Macapa",
+        "census": "2008",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/a/a4/Bandeira_de_Macap%C3%A1.svg",
+        "is_in:continent": "South America",
+        "is_in:country": "Brazil",
+        "is_in:country_code": "BR",
+        "is_in:municipality": "Macapá",
+        "is_in:state": "Amapá",
+        "name": "Macapá",
+        "place": "city",
+        "population": "437255",
+        "source": "IBGE",
+        "source:name:en": "Wikipedia",
+        "state_capital": "yes",
+        "website": "http://www.macapa.ap.gov.br/",
+        "wikidata": "Q180215",
+        "wikipedia": "pt:Macapá"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -51.0569588,
+          0.0401529
+        ]
+      },
+      "id": "node/339722677"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/342039019",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/9/9b/Bandeira_de_Palmas.svg",
+        "is_in:country": "Brazil",
+        "name": "Palmas",
+        "place": "city",
+        "population": "265409",
+        "state_capital": "yes",
+        "website": "http://www.palmas.to.gov.br/",
+        "wikidata": "Q178993",
+        "wikipedia": "pt:Palmas"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -48.3337793,
+          -10.1835604
+        ]
+      },
+      "id": "node/342039019"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/370757335",
+        "alt_name": "Belém do Pará",
+        "alt_name:ar": "بيليم",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/b/bc/Bandeira_belem.jpg",
+        "int_name": "Belem",
+        "is_in:country": "Brazil",
+        "is_in:country_code": "BR",
+        "is_in:municipality": "Belém",
+        "name": "Belém",
+        "place": "city",
+        "population": "1425923",
+        "postal_code": "66000-000",
+        "source": "IBGE",
+        "source:name:oc": "Lo Congrès",
+        "state_capital": "yes",
+        "website": "http://www.belem.pa.gov.br/",
+        "wikidata": "Q12829733",
+        "wikipedia": "pt:Belém (Pará)"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -48.4682453,
+          -1.45056
+        ]
+      },
+      "id": "node/370757335"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/603066977",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/d/d9/Bandeira_de_Jo%C3%A3o_Pessoa.svg",
+        "int_name": "Joao Pessoa",
+        "loc_name": "Jampa",
+        "name": "João Pessoa",
+        "place": "city",
+        "population": "769604",
+        "source": "IBGE",
+        "state_capital": "yes",
+        "website": "http://www.joaopessoa.pb.gov.br/",
+        "wikidata": "Q167436",
+        "wikipedia": "pt:João Pessoa"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -34.882028,
+          -7.1215981
+        ]
+      },
+      "id": "node/603066977"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/655122109",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/8/86/Band_recife.gif",
+        "name": "Recife",
+        "place": "city",
+        "population": "1599514",
+        "source:name:oc": "Lo Congrès",
+        "state_capital": "yes",
+        "website": "http://www.recife.pe.gov.br/",
+        "wikidata": "Q48344",
+        "wikipedia": "pt:Recife"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -34.8848193,
+          -8.0584933
+        ]
+      },
+      "id": "node/655122109"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/1722974578",
+        "flag": "http://upload.wikimedia.org/wikipedia/commons/6/6b/Bandeira_de_Cuiab%C3%A1.svg",
+        "int_name": "Cuiaba",
+        "name": "Cuiabá",
+        "place": "city",
+        "population": "612547",
+        "state_capital": "yes",
+        "website": "http://www.cuiaba.mt.gov.br/",
+        "wikidata": "Q170762",
+        "wikipedia": "pt:Cuiabá"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -56.0991301,
+          -15.5986686
+        ]
+      },
+      "id": "node/1722974578"
+    }
+  ]
+}
