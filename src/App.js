@@ -3,8 +3,13 @@ import { withRouter } from "react-router-dom";
 
 import { notification } from 'antd';
 
-import Analytics from './Analytics.js'
+import { 
+    MdSync as IconUpdate,
+    MdRemove as IconRemove,
+    MdAdd as IconAdd,
+} from "react-icons/md";
 
+import Analytics from './Analytics.js'
 import Map from './Map.js'
 import Spinner from './Spinner.js'
 import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
@@ -26,6 +31,7 @@ import {
     DISABLE_DATA_HEALTY_TEST,
     IS_PROD,
     THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE,
+    IS_MOBILE,
 } from './constants.js'
 
 // import './App.css';
@@ -155,6 +161,11 @@ class App extends Component {
         console.debug('oldData', oldData);
         console.debug('newData', newData);
 
+        if (!(oldData && oldData.features &&
+            newData && newData.features)) {
+            return;
+        }
+
         let a = new Set(oldData.features.map(i => i.id));
         let b = new Set(newData.features.map(i => i.id));
         
@@ -188,16 +199,17 @@ class App extends Component {
                 :
                 <div>
                     <div>
-                        <b>{a_minus_b.length}</b> removidos
+                        <IconAdd className="inline"/> <b>{b_minus_a.length}</b> adicionados
                     </div>
                     <div>
-                        <b>{b_minus_a.length}</b> adicionados
+                        <IconRemove className="inline"/> <b>{a_minus_b.length}</b> removidos
                     </div>
                 </div>
         });
     }
 
-    isDataHealthy(oldData, newData) {
+    // Sometimes some Overpass servers return empty results instead of an error state 
+    isOSMDataHealthy(oldData, newData) {
         let isHealthy, before, after;
 
         if (DISABLE_DATA_HEALTY_TEST) {
@@ -233,13 +245,13 @@ class App extends Component {
 
         return OSMController.getData({ area: areaName })
             .then(newData => {
-                // this.geoJsonDiff(this.state.geoJson, newData.geoJson);
+                this.geoJsonDiff(this.state.geoJson, newData.geoJson);
 
-                if (forceUpdate && !this.isDataHealthy(this.state.geoJson, newData.geoJson)) {
+                if (forceUpdate && !this.isOSMDataHealthy(this.state.geoJson, newData.geoJson)) {
                     throw new Error('New data is not healthy.');
                 } else {
                     // Since this is a heavy operation we only do it when syncing with new OSM data
-                    const lengths = calculateLayersLengths(this.state.geoJson, this.state.layers);
+                    const lengths = calculateLayersLengths(newData.geoJson, this.state.layers);
                     
                     if (SAVE_TO_FIREBASE) {
                         this.storage.save(areaName, newData.geoJson, lengths);
@@ -277,7 +289,13 @@ class App extends Component {
                                 dataUpdatedAt: new Date(data.updatedAt),
                             });
                         } else { 
-                            console.debug(`Couldn't find data for area ${this.state.area} or it isn't fresh, hitting OSM...`);
+                            console.debug(`Couldn't find previously saved data for area ${this.state.area}, hitting OSM...`);
+
+                            this.setState({
+                                geoJson: null,
+                                lengths: {},
+                            })
+
                             this.getDataFromOSM();
                         }
                     }).catch(e => {
@@ -320,9 +338,13 @@ class App extends Component {
 
         // Enable only layers of type "way" to download
         const layerWays = this.state.layers.filter(l => l.type === 'way');
-        computeTypologies(this.state.geoJson, layerWays);
-        cleanUpOSMTags(this.state.geoJson);
-        downloadObjectAsJson(this.state.geoJson, `ciclomapa-${this.state.area}`);
+        
+        // Deep object clone
+        var data = JSON.parse(JSON.stringify(this.state.geoJson));
+        
+        computeTypologies(data, layerWays);
+        cleanUpOSMTags(data);
+        downloadObjectAsJson(data, `ciclomapa-${this.state.area}`);
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -336,7 +358,7 @@ class App extends Component {
             Analytics.event('switch_city', {
                 city_name: this.state.area
             });
-            
+
             this.updateData();
 
             // Only redo the query if we need new data
@@ -457,14 +479,15 @@ class App extends Component {
                     </div>
 
                     {
+                        !IS_MOBILE &&
                         this.state.isSidebarOpen &&
-                        <AnalyticsSidebar
-                            layers={this.state.layers}
-                            lengths={this.state.lengths}
-                            open={this.state.isSidebarOpen}
-                            toggle={this.toggleSidebar}
-                            location={this.state.area}
-                        />
+                            <AnalyticsSidebar
+                                layers={this.state.layers}
+                                lengths={this.state.lengths}
+                                open={this.state.isSidebarOpen}
+                                toggle={this.toggleSidebar}
+                                location={this.state.area}
+                            />
                     }
                 </div>
 
