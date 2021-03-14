@@ -53,7 +53,7 @@ class LayersPanel extends Component {
     }
 
     render() {
-        const { layers } = this.props;
+        const { layers, embedMode } = this.props;
         
         if (!layers) {
             return;
@@ -78,16 +78,22 @@ class LayersPanel extends Component {
                 }
                 <div
                     id="layersPanel"
-                    className={`fixed text-white ${IS_MOBILE && this.state.collapsed ? 'hidden' : ''}`}
+                    className={`
+                        fixed text-white 
+                        ${IS_MOBILE && this.state.collapsed ? 'hidden' : ''}
+                        ${embedMode ? 'pointer-events-none' : 'cursor-pointer'}
+                    `}
                     style={{
-                        bottom: IS_MOBILE ? 100 : 40,
+                        bottom: IS_MOBILE ? 100 : 30,
                         left: 12
                     }}
                     onMouseEnter={() => this.setState({hover: true})}
                     onMouseLeave={() => this.setState({hover: false})}
                 >
                     {
-                        layers.map(l =>
+                        layers
+                        .filter(l => embedMode ? l.isActive : true)
+                        .map(l =>
                             <Popover
                                 placement="left"
                                 arrowPointAtCenter={true} key={l.name}
@@ -105,7 +111,7 @@ class LayersPanel extends Component {
                                 )}
                             >
                                 <div
-                                    className="flex cursor-pointer items-center justify-between px-0 pb-0 sm:pb-1 sm:px-3 hover:bg-black hover:bg-opacity-50"
+                                    className="flex items-center justify-between px-0 pb-0 sm:pb-1 sm:px-3 hover:bg-black hover:bg-opacity-50"
                                     onClick={this.onChange.bind(this, l.id, !l.isActive)}
                                     style={{ opacity: l.isActive ? 1 : .5 }}
                                 >

@@ -87,13 +87,15 @@ class TopBar extends Component {
     }
 
     componentDidMount() {
-        get('hasSeenWelcomeMsg')
-                .then(data => {
-                    if (!data) {
-                        this.openAboutModal();
-                        set('hasSeenWelcomeMsg', true);
-                    }
-                });
+        if (!this.props.embedMode) {
+            get('hasSeenWelcomeMsg')
+                    .then(data => {
+                        if (!data) {
+                            this.openAboutModal();
+                            set('hasSeenWelcomeMsg', true);
+                        }
+                    });
+        }
     }
 
     newComment() {
@@ -124,7 +126,8 @@ class TopBar extends Component {
             title,
             lastUpdate,
             forceUpdate,
-            downloadData
+            downloadData,
+            embedMode
         } = this.props;
 
         const parts = title.split(',');
@@ -170,96 +173,108 @@ class TopBar extends Component {
                     style={{height: TOPBAR_HEIGHT, zIndex: 1}}
                 >
                     <div className="flex items-center justify-between text-white w-full">
-                        <img src="logo.svg" alt="CicloMapa"></img>
+                        <a target="_BLANK" href="">
+                            <img src="logo.svg" alt="CicloMapa"></img>
+                        </a>
 
                         <div className="nav-links font-white hidden sm:block">
-                            <Button
-                                type="link"
-                                onClick={this.openAboutModal}
-                            >
-                                Sobre
-                            </Button>
-
-                            <Button
-                                ghost
-                                onClick={downloadData}
-                            >
-                                <IconDownload /> Dados
-                            </Button>
-
-                            <Dropdown overlay={collaborateMenu}>
-                                <Button ghost>
-                                    <span className="mr-2"> Colaborar </span>
-                                    <IconCaret className="text-green-300" />
-                                </Button>
-                            </Dropdown>
-
                             {
-                                !this.props.isSidebarOpen &&
-                                <Button
-                                    ghost
-                                    onClick={() => this.props.toggleSidebar(true)}
-                                >
-                                    <IconAnalytics/> Estatísticas
-                                </Button>
+                                !embedMode ? <>
+                                    <Button
+                                        type="link"
+                                        onClick={this.openAboutModal}
+                                    >
+                                        Sobre
+                                    </Button>
+                                    
+                                    <Button
+                                        ghost
+                                        onClick={downloadData}
+                                    >
+                                        <IconDownload /> Dados
+                                    </Button>
+
+                                    <Dropdown overlay={collaborateMenu}>
+                                        <Button ghost>
+                                            <span className="mr-2"> Colaborar </span>
+                                            <IconCaret className="text-green-300" />
+                                        </Button>
+                                    </Dropdown>
+
+                                    {
+                                        !this.props.isSidebarOpen &&
+                                        <Button
+                                            ghost
+                                            onClick={() => this.props.toggleSidebar(true)}
+                                        >
+                                            <IconAnalytics/> Estatísticas
+                                        </Button>
+                                    }
+                                </>
+                                :
+                                <Button ghost target="_BLANK" href={''}>
+                                    Ver mapa completo
+                                </Button> 
                             }
                         </div>
                     </div>
 
-                    <div className="city-picker sm:text-center">
-                        <div className="mb-1 sm:mb-1">
-                            <Button
-                                size='large'
-                                onClick={this.showCityPicker}
-                            >
-                                <h3 className="text-lg">
-                                    <span className="mr-3">
-                                        <span className="font-bold">
-                                            {city},
+                    {
+                        !embedMode && 
+                        <div className="city-picker sm:text-center">
+                            <div className="mb-1 sm:mb-1">
+                                <Button
+                                    size='large'
+                                    onClick={this.showCityPicker}
+                                >
+                                    <h3 className="text-lg">
+                                        <span className="mr-3">
+                                            <span className="font-bold">
+                                                {city},
+                                            </span>
+
+                                            {state}
                                         </span>
 
-                                        {state}
-                                    </span>
+                                        <IconCaret className="text-green-300"/>
+                                    </h3>
+                                </Button>
 
-                                    <IconCaret className="text-green-300"/>
-                                </h3>
-                            </Button>
+                                {
+                                    lastUpdate && !IS_MOBILE &&
+                                    <Popover
+                                        trigger={IS_MOBILE ? 'click' : 'hover'}
+                                        placement="bottom"
+                                        arrowPointAtCenter={true}
+                                        content={(
+                                            <div style={{ maxWidth: 250 }}>
+                                                <Space size="small" direction="vertical" >
+                                                    <div>
+                                                        O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
+                                                    </div> 
 
-                            {
-                                lastUpdate && !IS_MOBILE &&
-                                <Popover
-                                    trigger={IS_MOBILE ? 'click' : 'hover'}
-                                    placement="bottom"
-                                    arrowPointAtCenter={true}
-                                    content={(
-                                        <div style={{ maxWidth: 250 }}>
-                                            <Space size="small" direction="vertical" >
-                                                <div>
-                                                    O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
-                                                </div> 
+                                                    <Button
+                                                        size="small"
+                                                        icon={<IconUpdate />}
+                                                        type="primary"
+                                                        block
+                                                        onClick={forceUpdate}
+                                                    >
+                                                        Atualizar
+                                                    </Button>
+                                                </Space>
+                                            </div>
+                                        )}
+                                    >
+                                        <span className="font-regular cursor text-xl pl-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
+                                            <IconInfo/>
+                                        </span>
+                                    </Popover>
 
-                                                <Button
-                                                    size="small"
-                                                    icon={<IconUpdate />}
-                                                    type="primary"
-                                                    block
-                                                    onClick={forceUpdate}
-                                                >
-                                                    Atualizar
-                                                </Button>
-                                            </Space>
-                                        </div>
-                                    )}
-                                >
-                                    <span className="font-regular cursor text-xl pl-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
-                                        <IconInfo/>
-                                    </span>
-                                </Popover>
-
-                            }
+                                }
+                            </div>
                         </div>
-
-                    </div>
+                    }
                 </div>
 
                 <AboutModal
