@@ -71,6 +71,7 @@ class App extends Component {
             layers: this.initLayers(prev && prev.layersStates),
             lengths: {},
             isSidebarOpen: true,
+            embedMode: urlParams.embed
         };
 
         if (this.state.area) {
@@ -129,7 +130,7 @@ class App extends Component {
     }
 
     getParamsFromURL() {
-        const possibleParams = ['z', 'lat', 'lng'];
+        const possibleParams = [ 'z', 'lat', 'lng', 'embed' ];
         const urlParams = new URLSearchParams(this.props.location.search);
         let paramsObj = {}
 
@@ -139,6 +140,8 @@ class App extends Component {
                 paramsObj[p] = value;
             }
         })
+
+        console.debug('url params obj:', paramsObj);
 
         return paramsObj;
     }
@@ -341,7 +344,7 @@ class App extends Component {
         
         // Deep object clone
         var data = JSON.parse(JSON.stringify(this.state.geoJson));
-        
+
         computeTypologies(data, layerWays);
         cleanUpOSMTags(data);
         downloadObjectAsJson(data, `ciclomapa-${this.state.area}`);
@@ -452,6 +455,7 @@ class App extends Component {
                             forceUpdate={this.forceUpdate}
                             isSidebarOpen={this.state.isSidebarOpen}
                             toggleSidebar={this.toggleSidebar}
+                            embedMode={this.state.embedMode}
                         />
 
                         <Map
@@ -467,19 +471,24 @@ class App extends Component {
                             onMapMoved={this.onMapMoved}
                             updateLengths={this.updateLengths}
                             isSidebarOpen={this.state.isSidebarOpen}
+                            embedMode={this.state.embedMode}
                         />
                         
-                        <MapStyleSwitcher 
-                            showSatellite={this.state.showSatellite}
-                            onMapStyleChange={this.onMapStyleChange}
-                            onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
-                        />
+                        {
+                            !this.state.embedMode &&
+                            <MapStyleSwitcher 
+                                showSatellite={this.state.showSatellite}
+                                onMapStyleChange={this.onMapStyleChange}
+                                onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
+                            />
+                        }
 
                         <div id="gradient-backdrop"/>
                     </div>
 
                     {
                         !IS_MOBILE &&
+                        !this.state.embedMode &&
                         this.state.isSidebarOpen &&
                             <AnalyticsSidebar
                                 layers={this.state.layers}
@@ -497,6 +506,7 @@ class App extends Component {
                     layers={this.state.layers}
                     lengths={this.state.lengths}
                     onLayersChange={this.onLayersChange}
+                    embedMode={this.state.embedMode}
                 />
 
                 {
