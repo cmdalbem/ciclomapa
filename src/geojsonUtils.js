@@ -41,6 +41,16 @@ export function cleanUpOSMTags(data) {
     });
 }
 
+export function cleanUpInternalTags(data) {
+    data.features.forEach(feature => {
+        Object.keys(feature.properties).forEach(propertyKey => {
+            if (propertyKey.includes('ciclomapa')) {
+                delete feature.properties[propertyKey];
+            }
+        });
+    });
+}
+
 export function computeTypologies(data, layers) {
     const DEBUG = false;
 

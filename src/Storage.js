@@ -2,8 +2,8 @@ import { get, set } from 'idb-keyval';
 
 import firebase from 'firebase';
 
+import { cleanUpInternalTags, gzipCompress } from './geojsonUtils.js'
 import { slugify, sizeOf } from './utils.js'
-import { gzipCompress } from './geojsonUtils.js'
 import { stringify, parse } from 'zipson';
 
 import { osmi18n } from './osmi18n.js'
@@ -62,41 +62,50 @@ class Storage {
     getAllCitiesStats() {
         return new Promise(resolve => {
             this.db.collection("stats")
-            .where("lengths.ciclovia", ">=", 0)    
-            .get()
-                .then((querySnapshot) => {
-                    console.debug('[Firestore] Documents found:');
+                .where("lengths.ciclovia", ">=", 0)    
+                .get()
+                    .then(querySnapshot => {
+                        console.debug('[Firestore] Documents found:');
 
-                    let docs = [];
-                    querySnapshot.forEach(doc => {
-                        let d = doc.data().lengths;
-                        
-                        d.total = d['ciclovia'];
-                        d.total += d['ciclorrota'];
-                        d.total += d['ciclofaixa'];
-                        d.total += d['calcada-compartilhada'];
-                        
-                        docs[doc.id] = d;
-                    });
-                    console.log(docs);
-                    console.table(docs);
-        
-                    resolve(querySnapshot);
-            });
+                        let docs = [];
+                        querySnapshot.forEach(doc => {
+                            let di = doc.data().lengths;
+                            if (di && doc.id) {
+                                di.total = di['ciclovia'];
+                                di.total += di['ciclorrota'];
+                                di.total += di['ciclofaixa'];
+                                di.total += di['calcada-compartilhada'];
+                                
+                                console.debug(doc.id);
+                                docs[doc.id] = di;
+                            }
+                        });
+                        console.log(docs);
+                        console.table(docs);
+            
+                        resolve(querySnapshot);
+                });
         });
     }
 
     compressJson(data) {
-        console.debug('Before: ', sizeOf(data));
+        let compressed;
 
-        // Minimize size by cleaning clearing OSM tags
+        console.debug('JSON before compression: ', sizeOf(data));
+
         // @todo DOESNT WORK because Mapbox needs the OSM tags to render the layers
+        // Minimize size by cleaning clearing OSM tags
         // cleanUpOSMTags(data);
         
+        // I think it's not needed sincee stringify already does it?
         // Compress with gzip
-        const compressed = gzipCompress(data);
+        // compressed = gzipCompress(data);
 
-        console.debug('After: ', sizeOf(compressed));
+        cleanUpInternalTags(data);
+
+        compressed = stringify(data, { fullPrecisionFloats: true }); 
+
+        console.debug('JSON after compression: ', sizeOf(compressed));
 
         return compressed;
     }
@@ -138,11 +147,7 @@ class Storage {
 
             // Save to Firestore
             try {
-                const jsonStr = stringify(geoJson, { fullPrecisionFloats: true }); 
-
-                // Useful for checking in the console the size differences
-                // console.debug('regular stringfy:', JSON.stringify(geoJson));
-                // console.debug('zipson stringfy:', jsonStr);
+                const compressed = this.compressJson(geoJson);
 
                 console.debug(`[Firebase] Saving lengths for ${name}...`, lengths);
                 this.saveStatsToFirestore(name, lengths)
@@ -155,16 +160,15 @@ class Storage {
                     });  
 
                 console.debug(`[Firebase] Saving GeoJSON ${name}...`, geoJson);
-                // geoJson = this.compressJson(geoJson);
-                this.saveGeoJSONToFirestore(name, jsonStr, lengths)
+                this.saveGeoJSONToFirestore(name, compressed, lengths)
                     .then(() => {
                         console.debug(`[Firebase] GeoJSON ${name} written successfully.`);
                         resolve();
                     }).catch(error => {
                         console.debug('[Firestore] Splitting GeoJSON in 2...')
 
-                        const part1 = jsonStr.slice(0, Math.ceil(jsonStr.length/2));
-                        const part2 = jsonStr.slice(Math.ceil(jsonStr.length/2));
+                        const part1 = compressed.slice(0, Math.ceil(compressed.length/2));
+                        const part2 = compressed.slice(Math.ceil(compressed.length/2));
 
                         this.saveGeoJSONToFirestore(name, part1, lengths, 1) 
                         .then(() => {
