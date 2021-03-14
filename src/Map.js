@@ -26,6 +26,8 @@ import MapPopups from './MapPopups.js'
 
 import './Map.css'
 
+import capitalsGeojson from './brazil_capitals.geojson';
+
 // @todo: improve this please
 import commentIcon from './img/icons/poi-comment.png';
 
@@ -126,7 +128,9 @@ class Map extends Component {
     }
 
     reverseGeocode(lngLat) {
-        console.debug('lngLat', lngLat);
+        if (lngLat.lat && lngLat.lng) {
+            lngLat = [lngLat.lng, lngLat.lat];
+        }
 
         if (!lngLat || !lngLat[0] || !lngLat[1]) {
             console.error('Something wrong with lngLat passed.');
@@ -532,6 +536,65 @@ class Map extends Component {
         }
     }
 
+    addCitiesLayer() {
+        this.map.addSource(
+            'cities', {
+            'type': 'geojson',
+            'data': capitalsGeojson,
+            "generateId": true
+        });
+
+        this.map.addLayer({
+            'id': 'cities',
+            'type': 'symbol',
+            'source': 'cities',
+            'layout': {
+                'text-field': ['get', 'name'],
+                'text-font': ['IBM Plex Sans Bold'],
+                "text-offset": [0, 0],
+                'text-size': [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"], 
+                        4, 12,
+                        10, 18
+                ],
+                'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
+            },
+            'paint': {
+                'text-opacity': [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"], 
+                        4, 1,
+                        11, 0
+                ],
+                'text-color': '#B6F9D1',
+                'text-halo-width': 1,
+                'text-halo-color': '#1c1a17',
+            }
+        });
+
+        this.map.on('mouseenter', 'cities', e => {
+            this.map.getCanvas().style.cursor = 'pointer';
+        });
+
+        this.map.on('mouseleave', 'cities', e => {
+            this.map.getCanvas().style.cursor = '';
+        });
+
+        this.map.on('click', 'cities', e => {
+            const coords = e.features[0].geometry.coordinates.slice();
+
+            this.map.flyTo({
+                center: coords,
+                zoom: DEFAULT_ZOOM,
+            }); 
+
+            this.reverseGeocode(coords);
+        });
+    }
+
     initGeojsonLayers(layers) {
         const map = this.map;
 
@@ -571,6 +634,8 @@ class Map extends Component {
                     this.addLayerPoi(l);
                 }
             });
+
+            this.addCitiesLayer();
     
             map.on('mousemove', function(e) {
                 const features = map.queryRenderedFeatures(e.point, {
