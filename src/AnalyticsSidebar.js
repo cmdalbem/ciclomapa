@@ -206,7 +206,7 @@ class AnalyticsSidebar extends Component {
                             </PieChart>
 
                             {
-                                this.state.totalLength &&
+                                this.state.totalLength && this.state.totalLength >= 0 &&
                                 <div
                                     className="absolute top-0 w-full flex flex-col items-center justify-center text-xs"
                                     style={{height: '207px'}}
@@ -254,8 +254,8 @@ class AnalyticsSidebar extends Component {
                     >
                         {
                             layers
-                                .filter(l => l.type === 'poi')
-                                .map(l => lengths && lengths[l.id] > 0 && 
+                                .filter(l => l.type === 'poi' && l.name !== 'Comentários')
+                                .map(l => lengths && lengths[l.id] >= 0 && 
                                     <DataLine
                                         name={l.name}
                                         length={lengths[l.id]}
@@ -298,8 +298,8 @@ const DataLine = (props) =>
         </span>
 
         <span>
-            { props.length && Math.round(props.length) }
-            { props.unit && ' ' + props.unit }
+            { props.length !== undefined && Math.round(props.length) }
+            { props.length !== undefined && props.unit && ' ' + props.unit }
         </span>
     </div>
 
