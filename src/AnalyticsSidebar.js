@@ -231,6 +231,7 @@ class AnalyticsSidebar extends Component {
                                     .map(l => 
                                         <DataLineWithBarChart
                                             name={l.name}
+                                            key={l.name}
                                             length={lengths && lengths[l.id]}
                                             percent={lengths && lengths[l.id] * 100 / this.state.totalLength}
                                             color={l.style.lineColor}
@@ -258,6 +259,7 @@ class AnalyticsSidebar extends Component {
                                 .map(l => lengths && lengths[l.id] >= 0 && 
                                     <DataLine
                                         name={l.name}
+                                        key={l.name}
                                         length={lengths[l.id]}
                                     />
                                 )
@@ -276,7 +278,7 @@ const BigNum = ({children}) =>
     </div>
 
 const DataLineWithBarChart = (props) =>
-    <div className="mb-2">
+    <div className="mb-2"> 
         <DataLine {...props}/>
 
         <div className="w-full h-1 relative bg-white bg-opacity-10 mt-1">
