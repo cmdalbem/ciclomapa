@@ -88,7 +88,9 @@ class Storage {
         });
     }
 
-    compressJson(data) {
+    compressJson(_data) {
+        // Deep object clone
+        var data = JSON.parse(JSON.stringify(_data));
         let compressed;
 
         console.debug('JSON before compression: ', sizeOf(data));
