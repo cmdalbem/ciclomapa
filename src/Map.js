@@ -449,6 +449,7 @@ class Map extends Component {
         }
 
         this.setState(await this.airtableDatabase.getComments());
+
         if (this.state.comments.length > 0) {
             this.map.getSource('commentsSrc').setData({
                 'type': 'FeatureCollection',
@@ -474,7 +475,7 @@ class Map extends Component {
                         "interpolate",
                         ["exponential", 1.5],
                         ["zoom"], 
-                        10, 0.5,
+                        8, 0,
                         COMMENTS_ZOOM_THRESHOLD, 1
                     ],
                     "icon-allow-overlap": [
@@ -549,6 +550,7 @@ class Map extends Component {
             'type': 'symbol',
             'source': 'cities',
             'layout': {
+                "text-allow-overlap": true,
                 'text-field': ['get', 'name'],
                 'text-font': ['IBM Plex Sans Bold'],
                 "text-offset": [0, 0],
