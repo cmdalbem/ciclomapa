@@ -32,3 +32,30 @@ body {
     // background: radial-gradient(circle, transparent 60%, #211f1c 100%);
     box-shadow: inset 0px 60px 100px 0px #211f1c;
 }
+
+// Transition-in effect
+#ciclomapa #analyticsSidebar,
+#ciclomapa #mapSwitcher,
+#ciclomapa .mapboxgl-ctrl-bottom-right,
+#ciclomapa #layersPanel,
+#ciclomapa #topbar {
+    transition: transform 1000ms, opacity 1000ms;
+    opacity: 1;
+}
+
+#ciclomapa.hideUI #topbar {
+    transform: translateY(-100%);
+    opacity: 0;
+}
+
+#ciclomapa.hideUI #layersPanel {
+    transform: translateX(-100%);
+    opacity: 0;
+}
+
+#ciclomapa.hideUI #mapSwitcher,
+#ciclomapa.hideUI #analyticsSidebar,
+#ciclomapa.hideUI .mapboxgl-ctrl-bottom-right {
+    transform: translateX(100%);
+    opacity: 0;
+}

@@ -3,12 +3,14 @@ import { withRouter } from "react-router-dom";
 
 import { notification } from 'antd';
 
+import { get, set } from 'idb-keyval';
+
 import { 
-    MdSync as IconUpdate,
     MdRemove as IconRemove,
     MdAdd as IconAdd,
 } from "react-icons/md";
 
+import AboutModal from './AboutModal.js'
 import Analytics from './Analytics.js'
 import Map from './Map.js'
 import Spinner from './Spinner.js'
@@ -34,7 +36,6 @@ import {
     IS_MOBILE,
 } from './constants.js'
 
-// import './App.css';
 import './App.less';
 
 class App extends Component {
@@ -44,7 +45,6 @@ class App extends Component {
 
     constructor(props) {
         super(props);
-
         this.updateData = this.updateData.bind(this);
         this.onMapStyleChange = this.onMapStyleChange.bind(this);
         this.onMapShowSatelliteChanged = this.onMapShowSatelliteChanged.bind(this);
@@ -54,10 +54,13 @@ class App extends Component {
         this.forceUpdate = this.forceUpdate.bind(this);
         this.onSpinnerClose = this.onSpinnerClose.bind(this);
         this.toggleSidebar = this.toggleSidebar.bind(this);
+        this.openAboutModal = this.openAboutModal.bind(this);
+        this.closeAboutModal = this.closeAboutModal.bind(this);
 
         const prev = this.getStateFromLocalStorage();
 
         const urlParams = this.getParamsFromURL();
+
         this.state = {
             area: (prev && prev.area) || '',
             showSatellite: (prev && prev.showSatellite) || false,
@@ -70,21 +73,30 @@ class App extends Component {
             mapStyle: DEFAULT_MAPBOX_STYLE,
             layers: this.initLayers(prev && prev.layersStates),
             lengths: {},
-            isSidebarOpen: true,
-            embedMode: urlParams.embed
+            embedMode: urlParams.embed,
+            isSidebarOpen: false,
+            hideUI: true,
+            aboutModal: false
         };
 
         if (this.state.area) {
             this.updateData();
         }
-
-        window.addEventListener('beforeunload', e => {
-            this.saveStateToLocalStorage();
-        });
     }
 
     toggleSidebar(state) {
         this.setState({isSidebarOpen: state});
+    }
+
+    openAboutModal() {
+        this.setState({ aboutModal: true })
+    } 
+
+    closeAboutModal() {
+        this.setState({
+            aboutModal: false,
+            hideUI: false
+        })
     }
 
     initLayers(layersStates) {
@@ -408,6 +420,29 @@ class App extends Component {
         }
     }
 
+    componentDidMount() {
+        if (!this.state.embedMode) {
+            get('hasSeenWelcomeMsg')
+                .then(data => {
+                    if (!data) {
+                        console.log('show welcome!!!!')
+                        this.openAboutModal();
+                        set('hasSeenWelcomeMsg', true);
+                    }
+                });
+        }
+
+        setTimeout(() => {
+            if (!this.state.aboutModal) {
+                this.setState({hideUI: false});
+            }
+        }, 1000);
+
+        window.addEventListener('beforeunload', e => {
+            this.saveStateToLocalStorage();
+        });
+    }
+
     onRouteChanged() {
         // @todo Fix infinite loop
         // this.setState(this.getParamsFromURL());
@@ -433,13 +468,13 @@ class App extends Component {
 
     render() {
         return (
-            <div>
+            <div id="ciclomapa" className={this.state.hideUI ? "hideUI" : ""}>
                 {
                     !IS_PROD &&
                     <div className="flex w-full bg-yellow-300 text-black items-center justify-center text-center text-xs py-1">
                         Você está em um <b className="ml-1">ambiente de teste</b>. Pode futricar à vontade! ;)
                     </div>
-                }
+                } 
                 
                 <div className="flex">
                     <div className="relative w-full">
@@ -456,6 +491,7 @@ class App extends Component {
                             isSidebarOpen={this.state.isSidebarOpen}
                             toggleSidebar={this.toggleSidebar}
                             embedMode={this.state.embedMode}
+                            openAboutModal={this.openAboutModal}
                         />
 
                         <Map
@@ -507,6 +543,11 @@ class App extends Component {
                     lengths={this.state.lengths}
                     onLayersChange={this.onLayersChange}
                     embedMode={this.state.embedMode}
+                />
+
+                <AboutModal
+                    visible={this.state.aboutModal}
+                    onClose={this.closeAboutModal}
                 />
 
                 {

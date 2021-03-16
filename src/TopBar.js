@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { get, set } from 'idb-keyval';
 
 import {
     Space,
@@ -29,7 +28,6 @@ import {
     ENABLE_COMMENTS,
 } from './constants'
 
-import AboutModal from './AboutModal.js'
 import EditModal from './EditModal.js'
 
 import { ReactComponent as IconComment } from './img/icons/newcomment.svg';
@@ -41,9 +39,6 @@ class TopBar extends Component {
     constructor(props) {
         super(props);
 
-        this.openAboutModal = this.openAboutModal.bind(this);
-        this.closeAboutModal = this.closeAboutModal.bind(this);
-        
         this.openEditModal = this.openEditModal.bind(this);
         this.closeEditModal = this.closeEditModal.bind(this);
         this.onEditModalCheckboxChange = this.onEditModalCheckboxChange.bind(this);
@@ -52,18 +47,9 @@ class TopBar extends Component {
         this.getOsmUrl = this.getOsmUrl.bind(this);
 
         this.state = {
-            aboutModal: false,
             editModal: false,
             hasDismissedEditModal: false
         };
-    }
-
-    openAboutModal() {
-        this.setState({ aboutModal: true });
-    }
-
-    closeAboutModal() {
-        this.setState({ aboutModal: false });
     }
 
     openEditModal() {
@@ -84,18 +70,6 @@ class TopBar extends Component {
         let body = document.querySelector('body');
         body.classList.add('show-city-picker');
         body.querySelector('.mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder input').focus();
-    }
-
-    componentDidMount() {
-        if (!this.props.embedMode) {
-            get('hasSeenWelcomeMsg')
-                    .then(data => {
-                        if (!data) {
-                            this.openAboutModal();
-                            set('hasSeenWelcomeMsg', true);
-                        }
-                    });
-        }
     }
 
     newComment() {
@@ -182,16 +156,9 @@ class TopBar extends Component {
                                 !embedMode ? <>
                                     <Button
                                         type="link"
-                                        onClick={this.openAboutModal}
+                                        onClick={this.props.openAboutModal}
                                     >
                                         Sobre
-                                    </Button>
-                                    
-                                    <Button
-                                        ghost
-                                        onClick={downloadData}
-                                    >
-                                        <IconDownload /> Dados
                                     </Button>
 
                                     <Dropdown overlay={collaborateMenu}>
@@ -200,6 +167,13 @@ class TopBar extends Component {
                                             <IconCaret className="text-green-300" />
                                         </Button>
                                     </Dropdown>
+                                    
+                                    <Button
+                                        ghost
+                                        onClick={downloadData}
+                                    >
+                                        <IconDownload /> Dados
+                                    </Button>
 
                                     {
                                         !this.props.isSidebarOpen &&
@@ -207,7 +181,7 @@ class TopBar extends Component {
                                             ghost
                                             onClick={() => this.props.toggleSidebar(true)}
                                         >
-                                            <IconAnalytics/> Estatísticas
+                                            <IconAnalytics/> Métricas
                                         </Button>
                                     }
                                 </>
@@ -276,11 +250,6 @@ class TopBar extends Component {
                         </div>
                     }
                 </div>
-
-                <AboutModal
-                    visible={this.state.aboutModal}
-                    onClose={this.closeAboutModal}
-                />
 
                 <EditModal
                     visible={this.state.editModal}
