@@ -100,6 +100,7 @@ class AnalyticsSidebar extends Component {
 
         return (
             <div
+                id="analyticsSidebar"
                 className={`
                     background-black border-l border-opacity-10 border-white h-screen ${this.state.open ? 'w-60' : ''}
                     transform transition-transform duration-500 ${this.state.open ? '' : 'translate-x-full'}`}
@@ -111,7 +112,7 @@ class AnalyticsSidebar extends Component {
                             <IconAnalytics/>
 
                             <h2 className="my-0 pl-1">
-                                Estatísticas
+                                Métricas
                             </h2>
                         </div>
 
