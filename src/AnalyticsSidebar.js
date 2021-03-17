@@ -102,7 +102,7 @@ class AnalyticsSidebar extends Component {
             <div
                 id="analyticsSidebar"
                 className={`
-                    background-black border-l border-opacity-10 border-white h-screen ${this.state.open ? 'w-60' : ''}
+                    overflow-y-autobackground-black border-l border-opacity-10 border-white h-screen ${this.state.open ? 'w-80 overflow-y-auto' : ''}
                     transform transition-transform duration-500 ${this.state.open ? '' : 'translate-x-full'}`}
                 style={{background: '#211F1C'}}
             >
