@@ -12,6 +12,8 @@ import {
     MdDataUsage as IconAnalytics,
 } from "react-icons/md";
 
+const PIE_CHART_WIDTH_PX = 207;
+
 class AnalyticsSidebar extends Component {
     constructor(props) {
         super(props);
@@ -49,9 +51,9 @@ class AnalyticsSidebar extends Component {
                             .removeAccents()
                     )
             );
-            if (search) {
-                this.setState({cityMetadata: search.fields});
-            }
+            this.setState({
+                cityMetadata: search && search.fields
+            });
         }
     }
 
@@ -102,7 +104,7 @@ class AnalyticsSidebar extends Component {
             <div
                 id="analyticsSidebar"
                 className={`
-                    overflow-y-autobackground-black border-l border-opacity-10 border-white h-screen ${this.state.open ? 'w-80 overflow-y-auto' : ''}
+                    background-black border-l border-opacity-10 border-white h-screen ${this.state.open ? 'w-60 overflow-y-auto flex-none' : ''}
                     transform transition-transform duration-500 ${this.state.open ? '' : 'translate-x-full'}`}
                 style={{background: '#211F1C'}}
             >
@@ -196,7 +198,7 @@ class AnalyticsSidebar extends Component {
                         </>}
                     >
                         <div className="relative">
-                            <PieChart width={207} height={207}>
+                            <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
                                 <Pie
                                     data={this.state.chartsData} dataKey="value"
                                     cx={'50%'} cy={'50%'}
@@ -210,7 +212,7 @@ class AnalyticsSidebar extends Component {
                                 this.state.totalLength && this.state.totalLength >= 0 &&
                                 <div
                                     className="absolute top-0 w-full flex flex-col items-center justify-center text-xs"
-                                    style={{height: '207px'}}
+                                    style={{height: PIE_CHART_WIDTH_PX+'px'}}
                                 >
                                     TOTAL
                                     <div className="text-4xl font-regular tracking-tighter">
