@@ -98,7 +98,11 @@ class LayersPanel extends Component {
                                 placement="left"
                                 arrowPointAtCenter={true} key={l.name}
                                 content={(
-                                    <div style={{width: 300}}>
+                                    <div style={{width: 320}}>
+                                        <h3 className="text-lg">
+                                            { l.name }
+                                        </h3>
+
                                         {
                                             l.type === 'way' &&
                                             <img
