@@ -185,6 +185,7 @@ class AnalyticsSidebar extends Component {
 
                     <Section
                         title="Vias"
+                        beta={true}
                         description={<>
                             <p>
                                 As extensões totais das vias são calculadas automaticamente com base nos dados do OpenStreetMap. 
@@ -313,6 +314,13 @@ const Section = (props) =>
         <div className="flex w-full justify-between items-center">
             <h3 className="font-regular m-0 opacity-50">
                 { props.title }
+
+                {
+                    props.beta &&
+                    <span class="bg-white opacity-75 ml-2 px-1 py-0 rounded-full text-black text-xs" style={{fontSize: 10}}>
+                        BETA
+                    </span>
+                }
             </h3>
 
             <Popover
