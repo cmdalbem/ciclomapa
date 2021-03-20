@@ -27,8 +27,6 @@ const iconsMap = {
     "poi-rental": bikerentalIcon
 }
 
-const MAX_MINIATURE_LENGTH = 250;
-
 
 class LayersPanel extends Component {
     constructor(props) {

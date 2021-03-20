@@ -147,7 +147,7 @@ class TopBar extends Component {
                     style={{height: TOPBAR_HEIGHT, zIndex: 1}}
                 >
                     <div className="flex items-center justify-between text-white w-full">
-                        <a target="_BLANK" href="">
+                        <a href="/">
                             <img src="logo.svg" alt="CicloMapa"></img>
                         </a>
 

@@ -45,8 +45,8 @@ class Spinner extends Component {
                                     <circle className="path" cx='50' cy='50' r='20' fill='none' strokeWidth='4' strokeMiterlimit='10'/>
                                 </svg> */}
 
-                                <div class="progress-materializecss">
-                                    <div class="indeterminate"></div>
+                                <div className="progress-materializecss">
+                                    <div className="indeterminate"></div>
                                 </div>
 
                                 <div className="text-4xl leading-tight mb-3">

@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 
 import normal from './img/normal.png';
 import satellite from './img/satelite.png';
-import light from './img/light.png';
+// import light from './img/light.png';
 
 import './MapStyleSwitcher.css'
 
