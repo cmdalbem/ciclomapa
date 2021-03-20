@@ -108,7 +108,6 @@ export const osmi18n = {
     'source': null,
     'shop': null,
     'alt_name': null,
-    'building': null,
     'addr:housename': null,
     'addr:door': null,
     'addr:postcode': null,

@@ -171,7 +171,7 @@ function detectDoubleWayBikePaths(l, features) {
 
             let segmentAngles = seg.geometry.coordinates.map((g, i, a) => {
                 if (i < a.length - 1) return angleBetweenPoints(a[i], a[i + 1])
-                else return;
+                else return undefined;
             });
             segmentAngles.pop(); // last item is undefined
             // console.debug(segmentAngles);
@@ -315,7 +315,6 @@ export function calculateLayersLengths(geoJson, layers) {
         }
 
         // Sum up layer lengths
-        let layerLength = 0;
         features.forEach(f => {
             if (!f.properties['ciclomapa:duplicate_candidate']
                 || (f.properties['ciclomapa:side'] && f.properties['ciclomapa:side'] === 'a')) {

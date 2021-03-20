@@ -317,7 +317,10 @@ const Section = (props) =>
 
                 {
                     props.beta &&
-                    <span class="bg-white opacity-75 ml-2 px-1 py-0 rounded-full text-black text-xs" style={{fontSize: 10}}>
+                    <span 
+                        className="bg-white opacity-75 ml-2 px-1 py-0 rounded-full text-black text-xs"
+                        style={{fontSize: 10}}
+                    >
                         BETA
                     </span>
                 }

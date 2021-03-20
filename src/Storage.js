@@ -2,7 +2,8 @@ import { get, set } from 'idb-keyval';
 
 import firebase from 'firebase';
 
-import { cleanUpInternalTags, gzipCompress } from './geojsonUtils.js'
+// import { cleanUpInternalTags, gzipCompress } from './geojsonUtils.js'
+import { cleanUpInternalTags } from './geojsonUtils.js'
 import { slugify, sizeOf } from './utils.js'
 import { stringify, parse } from 'zipson';
 
