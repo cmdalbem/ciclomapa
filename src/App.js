@@ -74,7 +74,7 @@ class App extends Component {
             layers: this.initLayers(prev && prev.layersStates),
             lengths: {},
             embedMode: urlParams.embed,
-            isSidebarOpen: false,
+            isSidebarOpen: true,
             hideUI: true,
             aboutModal: false
         };

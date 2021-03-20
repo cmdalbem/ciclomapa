@@ -151,6 +151,63 @@ class TopBar extends Component {
                             <img src="logo.svg" alt="CicloMapa"></img>
                         </a>
 
+                        {
+                            !embedMode && 
+                            <div className="city-picker sm:text-center">
+                                <div className="mb-1 sm:mb-1">
+                                    <Button
+                                        size='large'
+                                        onClick={this.showCityPicker}
+                                    >
+                                        <h3 className="text-lg">
+                                            <span className="mr-3">
+                                                <span className="font-bold">
+                                                    {city},
+                                                </span>
+
+                                                {state}
+                                            </span>
+
+                                            <IconCaret className="text-green-300"/>
+                                        </h3>
+                                    </Button>
+
+                                    {
+                                        lastUpdate && !IS_MOBILE &&
+                                        <Popover
+                                            trigger={IS_MOBILE ? 'click' : 'hover'}
+                                            placement="bottom"
+                                            arrowPointAtCenter={true}
+                                            content={(
+                                                <div style={{ maxWidth: 250 }}>
+                                                    <Space size="small" direction="vertical" >
+                                                        <div>
+                                                            O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
+                                                        </div> 
+
+                                                        <Button
+                                                            size="small"
+                                                            icon={<IconUpdate />}
+                                                            type="primary"
+                                                            block
+                                                            onClick={forceUpdate}
+                                                        >
+                                                            Atualizar
+                                                        </Button>
+                                                    </Space>
+                                                </div>
+                                            )}
+                                        >
+                                            <span className="font-regular cursor text-xl pl-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
+                                                <IconInfo/>
+                                            </span>
+                                        </Popover>
+
+                                    }
+                                </div>
+                            </div>
+                        }
+
                         <div className="nav-links font-white hidden sm:block">
                             {
                                 !embedMode ? <>
@@ -192,63 +249,6 @@ class TopBar extends Component {
                             }
                         </div>
                     </div>
-
-                    {
-                        !embedMode && 
-                        <div className="city-picker sm:text-center">
-                            <div className="mb-1 sm:mb-1">
-                                <Button
-                                    size='large'
-                                    onClick={this.showCityPicker}
-                                >
-                                    <h3 className="text-lg">
-                                        <span className="mr-3">
-                                            <span className="font-bold">
-                                                {city},
-                                            </span>
-
-                                            {state}
-                                        </span>
-
-                                        <IconCaret className="text-green-300"/>
-                                    </h3>
-                                </Button>
-
-                                {
-                                    lastUpdate && !IS_MOBILE &&
-                                    <Popover
-                                        trigger={IS_MOBILE ? 'click' : 'hover'}
-                                        placement="bottom"
-                                        arrowPointAtCenter={true}
-                                        content={(
-                                            <div style={{ maxWidth: 250 }}>
-                                                <Space size="small" direction="vertical" >
-                                                    <div>
-                                                        O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
-                                                    </div> 
-
-                                                    <Button
-                                                        size="small"
-                                                        icon={<IconUpdate />}
-                                                        type="primary"
-                                                        block
-                                                        onClick={forceUpdate}
-                                                    >
-                                                        Atualizar
-                                                    </Button>
-                                                </Space>
-                                            </div>
-                                        )}
-                                    >
-                                        <span className="font-regular cursor text-xl pl-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
-                                            <IconInfo/>
-                                        </span>
-                                    </Popover>
-
-                                }
-                            </div>
-                        </div>
-                    }
                 </div>
 
                 <EditModal
