@@ -15,7 +15,7 @@
     "gh-pages": "^3.1.0",
     "idb-keyval": "^5.0.4",
     "jquery": "^3.6.0",
-    "mapbox-gl": "^2.1.1",
+    "mapbox-gl": "^1.13.0",
     "osmtogeojson": "^3.0.0-beta.4",
     "pako": "^2.0.3",
     "react": "^16.0.1",
