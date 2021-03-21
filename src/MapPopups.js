@@ -221,10 +221,16 @@ class MapPopups {
             </div>
         `;
 
-        // const prettyProps = JSON.stringify(props, null, 2)
-        //     .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-        //     .replace(/"|,|\{|\}/g, '');
-        // html += prettyProps;
+        // Show only the props marked with ciclomapa:
+        let internalProps = {};
+        for (let k in properties) {
+            if (k.includes('ciclomapa')) {
+                internalProps[k] = properties[k];
+            }
+        }
+        html += JSON.stringify(internalProps, null, 2)
+            .replace(/(?:\r\n|\r|\n)/g, '<br/>')
+            .replace(/"|,|\{|\}/g, '');;
 
         this.cyclewayPopup
             .setLngLat(coords)
