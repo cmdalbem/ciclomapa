@@ -67,17 +67,18 @@ class App extends Component {
             showSatellite: (prev && prev.showSatellite) || false,
             zoom: (prev && prev.zoom) || urlParams.z || DEFAULT_ZOOM,
             center: [
-                (prev && prev.lng) || parseFloat(urlParams.lng) || DEFAULT_LNG,
-                (prev && prev.lat) || parseFloat(urlParams.lat) || DEFAULT_LAT],
+                parseFloat(urlParams.lng) || (prev && prev.lng) || DEFAULT_LNG,
+                parseFloat(urlParams.lat) || (prev && prev.lat) || DEFAULT_LAT],
             geoJson: null,
+            debugMode: urlParams.debug || false,
             loading: false,
             mapStyle: DEFAULT_MAPBOX_STYLE,
-            layers: this.initLayers(prev && prev.layersStates),
+            layers: this.initLayers(prev && prev.layersStates, urlParams.debug || false),
             lengths: {},
             embedMode: urlParams.embed,
             isSidebarOpen: true,
             hideUI: true,
-            aboutModal: false
+            aboutModal: false,
         };
 
         if (this.state.area) {
@@ -100,8 +101,8 @@ class App extends Component {
         })
     }
 
-    initLayers(layersStates) {
-        const layers = OSMController.getLayers();
+    initLayers(layersStates, debugMode) {
+        const layers = OSMController.getLayers(debugMode); 
 
         // Merge with locally saved state
         if (layersStates && Object.keys(layersStates).length > 0) {
@@ -143,7 +144,7 @@ class App extends Component {
     }
 
     getParamsFromURL() {
-        const possibleParams = [ 'z', 'lat', 'lng', 'embed' ];
+        const possibleParams = [ 'z', 'lat', 'lng', 'embed', 'debug' ];
         const urlParams = new URLSearchParams(this.props.location.search);
         let paramsObj = {}
 
@@ -419,6 +420,12 @@ class App extends Component {
                 params += `lat=${this.state.lat.toFixed(7)}`;
                 params += `&lng=${this.state.lng.toFixed(7)}`;
                 params += `&z=${this.state.zoom.toFixed(2)}`;
+                if (this.state.debugMode) {
+                    params += `&debug=true`;
+                }
+                if (this.state.embedMode) {
+                    params += `&embed=true`;
+                }
                 this.props.history.push({
                     search: params
                 })
@@ -446,6 +453,14 @@ class App extends Component {
         window.addEventListener('beforeunload', e => {
             this.saveStateToLocalStorage();
         });
+
+        if (!this.state.debugMode) {
+            const emptyFunc = () => {};
+            console.log = emptyFunc;
+            console.debug = emptyFunc;
+            console.warn = emptyFunc;
+            console.error = emptyFunc;
+        }
     }
 
     onRouteChanged() {

@@ -63,7 +63,7 @@ class OSMController {
         `;
     }
 
-    static massageLayersData() {
+    static getLayers(debugMode) {
         layers.default.forEach(l => {
             // Generate an ID based on name
             l.id = slugify(l.name);
@@ -71,7 +71,6 @@ class OSMController {
             // Omitted values
             l.isActive = l.isActive !== undefined ? l.isActive : true;
             l.type = l.type || 'way';
-
             if (l.style) {
                 l.style.lineStyle = l.style.lineStyle || 'solid';
 
@@ -82,11 +81,11 @@ class OSMController {
             }
         });
 
-        return layers.default;
-    }
+        if (!debugMode) {
+            layers.default = layers.default.filter(l => !l.onlyDebug || l.onlyDebug && l.onlyDebug === false);
+        }
 
-    static getLayers() {
-        return this.massageLayersData();
+        return layers.default;
     }
 
     static getAreaId(areaName) {

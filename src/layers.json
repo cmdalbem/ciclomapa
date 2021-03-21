@@ -2,6 +2,7 @@
     {
         "name": "TESTE - Falsos positivos (verde)",
         "isActive": false,
+        "onlyDebug": true,
         "description": "Vias originalmente detectadas como sendo duplicadas pelo nosso algoritmo porém filtradas depois por uma heurística para detectar faltos positivos.",
         "filters": [
             ["ciclomapa:ignored", "true"]
@@ -17,6 +18,7 @@
     {
         "name": "TESTE - Lado A (azul)",
         "isActive": false,
+        "onlyDebug": true,
         "description": "Vias automaticamente detectadas como sendo duplicadas.",
         "filters": [
             ["ciclomapa:side", "a"]
@@ -32,6 +34,7 @@
     {
         "name": "TESTE - Lado B (rosa)",
         "isActive": false,
+        "onlyDebug": true,
         "description": "Vias automaticamente detectadas como sendo duplicadas.",
         "filters": [
             ["ciclomapa:side", "b"]
