@@ -138,10 +138,13 @@ export function average(nums) {
     return nums.reduce((a, b) => (a + b)) / nums.length;
 }
 
-function detectDoubleWayBikePaths(l, features) {
+function detectDoubleWayBikePaths(l, segments) {
     // Detect duplicates
     let streetsByName = {};
-    features.forEach(f => {
+    segments.forEach(f => {
+        // if (f.properties.name && 
+        //     (  (f.properties['oneway:bicycle'] && f.properties['oneway:bicycle'] === 'yes') 
+        //     || (!f.properties['oneway:bicycle'] && f.properties.oneway && f.properties.oneway === 'yes'))) {
         if (f.properties.name && f.properties.oneway && f.properties.oneway === 'yes') {
                 if (streetsByName[f.properties.name]) {
                     streetsByName[f.properties.name].push(f);
@@ -242,7 +245,7 @@ function detectDoubleWayBikePaths(l, features) {
     }
 
     return [
-        features,
+        segments,
         streetsByName
     ];
 }
@@ -252,31 +255,33 @@ export function calculateLayersLengths(geoJson, layers) {
 
     const geoJsonWithTypes = computeTypologies(geoJson, layers);
     
+    // POI case, just count total number of elements
     layers
         .filter(l => l.type === 'poi')
         .forEach(l => {
-            let features = geoJsonWithTypes && geoJsonWithTypes.features ?
+            let segments = geoJsonWithTypes && geoJsonWithTypes.features ?
                     geoJsonWithTypes.features.filter(f => f.properties.type === l.name)
                     : [];
             
-            lengths[l.id] = features.length;
+            lengths[l.id] = segments.length;
         })
 
+    // Way case, go full-blown length computation
     layers
         .filter(l => l.type === 'way')
         .forEach(l => {
         lengths[l.id] = 0;
 
         // Use local classification to filter
-        let features = geoJsonWithTypes && geoJsonWithTypes.features ?
+        let segments = geoJsonWithTypes && geoJsonWithTypes.features ?
                 geoJsonWithTypes.features.filter(f => f.properties.type === l.name)
                 : [];
 
         // Calculate lengths
-        features.forEach(f => {
+        segments.forEach(f => {
             const thisLength = turfLength(f);
-            f.properties['ciclomapa:length'] = thisLength;
-            f.properties['ciclomapa:length_m'] = (thisLength * 1000).toFixed(2);
+            f.properties['ciclomapa:segment_length'] = thisLength;
+            f.properties['ciclomapa:segment_length_m'] = (thisLength * 1000).toFixed(2);
         })
 
         if (l.id === 'ciclovia' ||
@@ -284,43 +289,99 @@ export function calculateLayersLengths(geoJson, layers) {
             l.id === 'ciclorrota' ||
             l.id === 'calcada-compartilhada') {
             let streetsByName;
-            [features, streetsByName] = detectDoubleWayBikePaths(l, features);
+            [segments, streetsByName] = detectDoubleWayBikePaths(l, segments);
 
             // Sum total lengths for names streets
             for (let key in streetsByName) {
                 const street = streetsByName[key];
 
                 street.totalLength = 0;
+                street.totalLengthSideA = 0;
+                street.totalLengthSideB = 0;
                 street.forEach(seg => {
-                    street.totalLength += seg.properties['ciclomapa:length'];
+                    street.totalLength += seg.properties['ciclomapa:segment_length'];
+                    if (seg.properties['ciclomapa:side'] === 'a') {
+                        street.totalLengthSideA += seg.properties['ciclomapa:segment_length'];
+                    } else {
+                        street.totalLengthSideB += seg.properties['ciclomapa:segment_length'];
+                    }
                 });
                 street.forEach(seg => {
-                    // This is not the street official length, but the sum of segments lengths
-                    seg.properties['ciclomapa:total_raw_length'] = street.totalLength;
                     seg.properties['ciclomapa:dist_by_length_ratio'] = (seg.properties['ciclomapa:max_dist'] / street.totalLength).toFixed(2);
 
-                    // Heuristic to detect false positives, when a street was clustered
-                    //   as having 2 sides but actually it's a street thag changes its
+                    // Heuristic to detect false positives: when a street was clustered
+                    //   as having 2 sides but actually it's a street that changes its
                     //   "hand" along itself.
                     if (seg.properties['ciclomapa:duplicate_candidate'] &&
                         seg.properties['ciclomapa:dist_by_length_ratio'] > DISTANCE_BY_LENGTH_RATIO_TRESHOLD) {
                         seg.properties['ciclomapa:ignored'] = 'true';
                         delete seg.properties['ciclomapa:duplicate_candidate'];
                         delete seg.properties['ciclomapa:side'];
+
+                        street.falsePositive = true;
+                    } else {
+                        // Raw length = sum of segments lengths (thus, not real official length)
+                        seg.properties['ciclomapa:total_raw_length'] = street.totalLength;
+                        seg.properties['ciclomapa:total_raw_length__side_a'] = street.totalLengthSideA;
+                        seg.properties['ciclomapa:total_raw_length__side_b'] = street.totalLengthSideB;
+
+                        if (street.totalLengthSideA > street.totalLengthSideB) {
+                            seg.properties['ciclomapa:bigger_side'] = 'a'
+                            seg.properties['ciclomapa:smaller_side'] = 'b'
+                        } else {
+                            seg.properties['ciclomapa:bigger_side'] = 'b'
+                            seg.properties['ciclomapa:smaller_side'] = 'a'
+                        }
                     }
                 });
 
                 // console.debug(street, street.totalLength);
             }
+
+
+            // Consider a random side each time
+            // const STRATEGY = 'random';
+    
+            // Consider always the side the longest
+            // const STRATEGY = 'optimistic';
+    
+            // Consider always the side the shortest
+            // const STRATEGY = 'pessimistic';
+    
+            // Ignore sides, cut total raw street length by half and call it a day
+            const STRATEGY = 'cut-by-half';
+    
+            // Sum up layer lengths
+            if (STRATEGY !== 'cut-by-half') {
+                segments.forEach(f => {
+                    if (!f.properties['ciclomapa:duplicate_candidate']
+                        || (STRATEGY === 'pessimistic' && f.properties['ciclomapa:side'] === f.properties['ciclomapa:smaller_side']) 
+                        || (STRATEGY === 'optimistic' && f.properties['ciclomapa:side'] === f.properties['ciclomapa:bigger_side'])
+                        || (STRATEGY === 'random' && f.properties['ciclomapa:side'] === 'a')) {
+                        lengths[l.id] += f.properties['ciclomapa:segment_length'];
+                    }
+                })
+            } else {
+                // Sum all segments that are not part of duplicated streets 
+                segments
+                    .filter(seg => !seg.properties['ciclomapa:side'])
+                    .forEach(seg => {
+                        // console.debug('segment outside named street:', seg);
+                        lengths[l.id] += seg.properties['ciclomapa:segment_length'];
+                    });
+                
+                // Sum total length of duplicated streets
+                for (let name in streetsByName) {
+                    const s = streetsByName[name];
+                    if (!s.falsePositive) {
+                        lengths[l.id] += s.totalLength / 2;
+                        // console.debug(name, s.totalLength / 2);
+                    }
+                }
+            }
         }
 
-        // Sum up layer lengths
-        features.forEach(f => {
-            if (!f.properties['ciclomapa:duplicate_candidate']
-                || (f.properties['ciclomapa:side'] && f.properties['ciclomapa:side'] === 'a')) {
-                lengths[l.id] += f.properties['ciclomapa:length'];
-            }
-        })
+
     });
 
     return lengths;

@@ -1,6 +1,6 @@
 [
     {
-        "name": "TESTE - Falsos positivos",
+        "name": "TESTE - Falsos positivos (verde)",
         "isActive": false,
         "description": "Vias originalmente detectadas como sendo duplicadas pelo nosso algoritmo porém filtradas depois por uma heurística para detectar faltos positivos.",
         "filters": [
@@ -8,38 +8,38 @@
         ],
         "style": {
             "lineColor": "white",
-            "lineWidth": 8,
-            "borderColor": "purple",
+            "lineWidth": 10,
+            "borderColor": "green",
             "borderStyle": "solid",
             "lineStyle": "dashed"
         }
     },
     {
-        "name": "TESTE - Lado A",
+        "name": "TESTE - Lado A (azul)",
         "isActive": false,
         "description": "Vias automaticamente detectadas como sendo duplicadas.",
         "filters": [
             ["ciclomapa:side", "a"]
         ],
         "style": {
-            "lineColor": "white",
+            "lineColor": "lightblue",
             "lineWidth": 8,
-            "borderColor": "#4ba96e",
+            "borderColor": "#0B54FE",
             "borderStyle": "solid",
             "lineStyle": "dashed"
         }
     },
     {
-        "name": "TESTE - Lado B",
+        "name": "TESTE - Lado B (rosa)",
         "isActive": false,
         "description": "Vias automaticamente detectadas como sendo duplicadas.",
         "filters": [
             ["ciclomapa:side", "b"]
         ],
         "style": {
-            "lineColor": "white",
+            "lineColor": "pink",
             "lineWidth": 8,
-            "borderColor": "red",
+            "borderColor": "#FC0FC0",
             "borderStyle": "solid",
             "lineStyle": "dashed"
         }
