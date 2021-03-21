@@ -34,6 +34,7 @@ import {
     IS_PROD,
     THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE,
     IS_MOBILE,
+    FORCE_RECALCULATE_LENGTHS_ALWAYS
 } from './constants.js'
 
 import './App.less';
@@ -297,6 +298,10 @@ class App extends Component {
                     .then(data => {
                         if (data) {
                             console.debug('Database data is fresh.');
+
+                            if (FORCE_RECALCULATE_LENGTHS_ALWAYS) {
+                                data.lengths = calculateLayersLengths(data.geoJson, this.state.layers);
+                            }
 
                             this.setState({
                                 geoJson: data.geoJson,
