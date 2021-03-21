@@ -217,7 +217,7 @@ class AnalyticsSidebar extends Component {
                                 >
                                     TOTAL
                                     <div className="text-4xl font-regular tracking-tighter">
-                                        { Math.round(this.state.totalLength)}
+                                        { this.state.totalLength.toFixed(1)}
                                     </div> 
                                     km
                                 </div>
