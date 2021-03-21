@@ -52,12 +52,13 @@ export const IS_MOBILE = window.matchMedia && window.matchMedia(`(max-width: ${M
 
 // Debug & local development
 
+export const IS_PROD = window.location.hostname === 'ciclomapa.org.br';
 export const ENABLE_COMMENTS = true;
 export const SAVE_TO_FIREBASE = true;
 export const DISABLE_DATA_HEALTY_TEST = false;
 export const THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE = 0.1;
 export const DISABLE_LOCAL_STORAGE = true;
-export const IS_PROD = window.location.hostname === 'ciclomapa.org.br';
+export const FORCE_RECALCULATE_LENGTHS_ALWAYS = !IS_PROD;
 
 
 // Other
