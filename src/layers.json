@@ -162,7 +162,7 @@
         ],
         "style": {
             "lineColor": "#E9C46A",
-            "lineWidth": 3
+            "lineWidth": 4
         }
     },
     {
@@ -177,8 +177,8 @@
             ["cycleway:right", "sidepath"]
         ],
         "style": {
-            "lineColor": "#F4A261",
-            "lineWidth": 3
+            "lineColor": "#E76F51",
+            "lineWidth": 4
         }
     },
     {
