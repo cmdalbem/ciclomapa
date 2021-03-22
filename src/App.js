@@ -549,6 +549,7 @@ class App extends Component {
                             updateLengths={this.updateLengths}
                             isSidebarOpen={this.state.isSidebarOpen}
                             embedMode={this.state.embedMode}
+                            debugMode={this.state.debugMode}
                         />
                         
                         {

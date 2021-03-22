@@ -736,7 +736,7 @@ class Map extends Component {
             zoom: this.props.zoom
         });
 
-        this.popups = new MapPopups(this.map);
+        this.popups = new MapPopups(this.map, this.props.debugMode);
 
         
         // Native Mapbox map controls
