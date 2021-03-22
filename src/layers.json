@@ -125,10 +125,7 @@
         ],
         "style": {
             "lineColor": "#059669",
-            "lineWidth": 8,
-            "borderColor": "#10B981",
-            "borderWidth": 4,
-            "borderStyle": "solid"
+            "lineWidth": 8
         }
     },
     {
@@ -144,7 +141,7 @@
             ["cycleway:left", "opposite_lane"]
         ],
         "style": {
-            "lineColor": "#b4fad0",
+            "lineColor": "#A1C181",
             "lineWidth": 6
         }
     },
@@ -164,7 +161,7 @@
             ["cycleway", "opposite_share_busway"]
         ],
         "style": {
-            "lineColor": "#f8c9ae",
+            "lineColor": "#E9C46A",
             "lineWidth": 3
         }
     },
@@ -180,7 +177,7 @@
             ["cycleway:right", "sidepath"]
         ],
         "style": {
-            "lineColor": "#FFA500",
+            "lineColor": "#F4A261",
             "lineWidth": 3
         }
     },
