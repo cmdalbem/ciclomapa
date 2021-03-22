@@ -34,7 +34,8 @@ import {
     IS_PROD,
     THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE,
     IS_MOBILE,
-    FORCE_RECALCULATE_LENGTHS_ALWAYS
+    FORCE_RECALCULATE_LENGTHS_ALWAYS,
+    DEFAULT_LENGTH_CALCULATE_STRATEGIES
 } from './constants.js'
 
 import './App.less';
@@ -57,6 +58,7 @@ class App extends Component {
         this.toggleSidebar = this.toggleSidebar.bind(this);
         this.openAboutModal = this.openAboutModal.bind(this);
         this.closeAboutModal = this.closeAboutModal.bind(this);
+        this.onChangeStrategy = this.onChangeStrategy.bind(this);
 
         const prev = this.getStateFromLocalStorage();
 
@@ -79,11 +81,16 @@ class App extends Component {
             isSidebarOpen: true,
             hideUI: true,
             aboutModal: false,
+            lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES
         };
 
         if (this.state.area) {
             this.updateData();
         }
+    }
+
+    onChangeStrategy(event) {
+        this.setState({ lengthCalculationStrategy: event.target.value });
     }
 
     toggleSidebar(state) {
@@ -107,7 +114,7 @@ class App extends Component {
         // Merge with locally saved state
         if (layersStates && Object.keys(layersStates).length > 0) {
             layers.forEach(l => {
-                if (layersStates[l.id]) {
+                if (layersStates[l.id] !== undefined) {
                     l.isActive = layersStates[l.id];
                 }
             });
@@ -123,7 +130,7 @@ class App extends Component {
     }
 
     saveStateToLocalStorage() {
-        requestAnimationFrame( () => {
+        // requestAnimationFrame( () => {
             let layersStates = {};
             this.state.layers.forEach(l => {
                 layersStates[l.id] = l.isActive;
@@ -140,7 +147,7 @@ class App extends Component {
 
             let str = JSON.stringify(state);
             window.localStorage.setItem('appstate', str);
-        });
+        // });
     }
 
     getParamsFromURL() {
@@ -268,7 +275,7 @@ class App extends Component {
                     throw new Error('New data is not healthy.');
                 } else {
                     // Since this is a heavy operation we only do it when syncing with new OSM data
-                    const lengths = calculateLayersLengths(newData.geoJson, this.state.layers);
+                    const lengths = calculateLayersLengths(newData.geoJson, this.state.layers, this.state.lengthCalculationStrategy);
                     
                     if (SAVE_TO_FIREBASE) {
                         this.storage.save(areaName, newData.geoJson, lengths);
@@ -301,7 +308,7 @@ class App extends Component {
                             console.debug('Database data is fresh.');
 
                             if (FORCE_RECALCULATE_LENGTHS_ALWAYS) {
-                                data.lengths = calculateLayersLengths(data.geoJson, this.state.layers);
+                                data.lengths = calculateLayersLengths(data.geoJson, this.state.layers, this.state.lengthCalculationStrategy);
                             }
 
                             this.setState({
@@ -406,9 +413,7 @@ class App extends Component {
                 if (!this.state.lengths) {
                     console.debug('database didnt have lengths, computing...');
                     
-                    this.setState({
-                        lengths: calculateLayersLengths(this.state.geoJson, this.state.layers)
-                    });
+                    this.calculateLengths();
                 }
             }
         }
@@ -430,6 +435,22 @@ class App extends Component {
                     search: params
                 })
         }
+
+        if (this.state.lengthCalculationStrategy !== prevState.lengthCalculationStrategy) {
+            // @todo olha a gambiarra!
+            // Deep clone geoJson data to force Mapbox to update the data layers
+            const clone = JSON.parse(JSON.stringify(this.state.geoJson));
+            this.setState({
+                geoJson: clone,
+                lengths: calculateLayersLengths(clone, this.state.layers, this.state.lengthCalculationStrategy)
+            });
+        }
+    }
+
+    calculateLengths() {
+        this.setState({
+            lengths: calculateLayersLengths(this.state.geoJson, this.state.layers, this.state.lengthCalculationStrategy)
+        });
     }
 
     componentDidMount() {
@@ -550,8 +571,11 @@ class App extends Component {
                                 layers={this.state.layers}
                                 lengths={this.state.lengths}
                                 open={this.state.isSidebarOpen}
-                                toggle={this.toggleSidebar}
                                 location={this.state.area}
+                                lengthCalculationStrategy={this.state.lengthCalculationStrategy}
+                                debugMode={this.state.debugMode}
+                                toggle={this.toggleSidebar}
+                                onChangeStrategy={this.onChangeStrategy}
                             />
                     }
                 </div>

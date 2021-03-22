@@ -3,14 +3,18 @@ import { Popover, Button } from 'antd';
 
 import { PieChart, Pie } from 'recharts';
 
-import { removeAccents } from './utils.js';
-import AirtableDatabase from './AirtableDatabase.js'
-
 import { 
     MdClose as IconClose,
     MdInfoOutline as IconInfo,
     MdDataUsage as IconAnalytics,
 } from "react-icons/md";
+
+import { removeAccents } from './utils.js';
+import AirtableDatabase from './AirtableDatabase.js'
+
+import {
+    LENGTH_CALCULATE_STRATEGIES
+} from "./constants.js"
 
 const PIE_CHART_WIDTH_PX = 207;
 
@@ -99,6 +103,28 @@ class AnalyticsSidebar extends Component {
         if (!layers) {
             return;
         }
+
+        const translateStrategy = {
+            random: 'Aleatório',
+            optimistic: 'Otimista',
+            pessimistic: 'Pessimista',
+            average: 'Média'
+        }
+        const strategiesDropdown =
+            <div className="w-full flex justify-center mb-2">
+                <select
+                    name="strategy"
+                    className="text-green-200 capitalize rounded px-1 bg-white bg-opacity-10"
+                    onChange={this.props.onChangeStrategy}
+                    defaultValue={this.props.lengthCalculationStrategy}
+                >
+                    {
+                        LENGTH_CALCULATE_STRATEGIES.map(s =>
+                            <option value={s}> {translateStrategy[s]} </option>        
+                        )
+                    }
+                </select>
+            </div>
 
         return (
             <div
@@ -198,6 +224,11 @@ class AnalyticsSidebar extends Component {
                             </p>
                         </>}
                     >
+                        {
+                            this.props.debugMode &&
+                            strategiesDropdown
+                        }
+
                         <div className="relative">
                             <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
                                 <Pie

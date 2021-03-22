@@ -65,3 +65,10 @@ export const FORCE_RECALCULATE_LENGTHS_ALWAYS = !IS_PROD;
 
 const ONE_DAY_MS = 1000 * 60 * 60 * 24;
 export const OSM_DATA_MAX_AGE_MS = 7 * ONE_DAY_MS;
+export const LENGTH_CALCULATE_STRATEGIES = [
+    'random',       // Consider a random side each time
+    'optimistic',   // Consider always the side the longest
+    'pessimistic',  // Consider always the side the shortest
+    'average',  // Ignore sides, cut total raw street length by half and call it a day
+]
+export const DEFAULT_LENGTH_CALCULATE_STRATEGIES = 'average';
