@@ -196,16 +196,18 @@ export function angleToEmojiDirection(angle) {
 function detectDoubleWayBikePaths(l, segments) {
     // Detect duplicates
     let streetsByName = {};
-    segments.forEach(f => {
-        if (f.properties.name && 
-            (  (f.properties['oneway:bicycle'] && f.properties['oneway:bicycle'] === 'yes') 
-            || (!f.properties['oneway:bicycle'] && f.properties.oneway && f.properties.oneway === 'yes'))) {
-        // if (f.properties.name && f.properties.oneway && f.properties.oneway === 'yes') {
-                if (streetsByName[f.properties.name]) {
-                    streetsByName[f.properties.name].push(f);
+    segments.forEach(seg => {
+        if (seg.properties.name && 
+            (  (seg.properties['oneway:bicycle'] && seg.properties['oneway:bicycle'] === 'yes') 
+            || (!seg.properties['oneway:bicycle'] && seg.properties.oneway && seg.properties.oneway === 'yes'))) {
+        // if (seg.properties.name && seg.properties.oneway && seg.properties.oneway === 'yes') {
+                if (streetsByName[seg.properties.name]) {
+                    streetsByName[seg.properties.name].push(seg);
                 } else {
-                    streetsByName[f.properties.name] = [f];
+                    streetsByName[seg.properties.name] = [seg];
                 }
+        } else if (!seg.properties.name) {
+            seg.properties['ciclomapa:unnamed'] = 'true';
         }
     });
 
@@ -223,7 +225,6 @@ function detectDoubleWayBikePaths(l, segments) {
         // Calculate angles
         let angles = [];
         street.forEach(seg => {
-
             let segmentAngles = seg.geometry.coordinates.map((g, i, a) => {
                 if (i < a.length - 1) return angleBetweenPoints(a[i], a[i + 1])
                 else return undefined;
@@ -346,10 +347,6 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
             const thisLength = turfLength(seg);
             seg.properties['ciclomapa:segment_length'] = thisLength;
             seg.properties['ciclomapa:segment_length_m'] = (thisLength * 1000).toFixed(2);
-
-            if (!seg.properties.name) {
-                seg.properties['ciclomapa:unnamed'] = 'true';
-            }
         })
 
         if (l.id === 'ciclovia' ||
