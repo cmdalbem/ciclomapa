@@ -1,23 +1,46 @@
 [
     {
-        "name": "TESTE - Falsos positivos (verde)",
-        "isActive": false,
+        "name": "DEBUG - Inclusas",
         "onlyDebug": true,
-        "description": "Vias originalmente detectadas como sendo duplicadas pelo nosso algoritmo porém filtradas depois por uma heurística para detectar faltos positivos.",
+        "description": "Vias inclusas no cálculo de total de kilometros da cidade.",
         "filters": [
-            ["ciclomapa:ignored", "true"]
+            ["ciclomapa:considered", "true"]
         ],
         "style": {
-            "lineColor": "white",
-            "lineWidth": 10,
+            "lineColor": "lightgreen",
+            "lineWidth": 12,
             "borderColor": "green",
             "borderStyle": "solid",
             "lineStyle": "dashed"
         }
     },
     {
-        "name": "TESTE - Lado A (azul)",
-        "isActive": false,
+        "name": "DEBUG - Vias sem nome",
+        "onlyDebug": true,
+        "description": "Vias sem nome são problemáticas porque nosso algoritmo de detecção de vias duplicadas necessita que a via tenha nome para sabermos que os segmentos pertencem à mesma rua e portanto precisam ser comparados entre sim.",
+        "filters": [
+            ["ciclomapa:unnamed", "true"]
+        ],
+        "style": {
+            "lineColor": "#e03e3d",
+            "lineWidth": 8
+        }
+    },
+    {
+        "name": "DEBUG - Falsos positivos",
+        "onlyDebug": true,
+        "description": "Vias originalmente detectadas como sendo duplicadas pelo nosso algoritmo porém filtradas depois por uma heurística para detectar faltos positivos.",
+        "filters": [
+            ["ciclomapa:ignored", "true"]
+        ],
+        "style": {
+            "lineColor": "lightgreen",
+            "lineWidth": 8,
+            "lineStyle": "dashed"
+        }
+    },
+    {
+        "name": "DEBUG - Lado A (azul)",
         "onlyDebug": true,
         "description": "Vias automaticamente detectadas como sendo duplicadas.",
         "filters": [
@@ -32,8 +55,7 @@
         }
     },
     {
-        "name": "TESTE - Lado B (rosa)",
-        "isActive": false,
+        "name": "DEBUG - Lado B (rosa)",
         "onlyDebug": true,
         "description": "Vias automaticamente detectadas como sendo duplicadas.",
         "filters": [
