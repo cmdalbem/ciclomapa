@@ -11,8 +11,9 @@ class MapPopups {
     commentPopup;
     poiPopup;
 
-    constructor(map) {
+    constructor(map, debugMode) {
         this.map = map;
+        this.debugMode = debugMode;
 
         // "closeOnClick: false" enables chaining clicks continually
         //   from POI to POI, otherwise clicking on another POI would
@@ -197,10 +198,26 @@ class MapPopups {
     showCyclewayPopup(e, layer) {
         const coords = e.lngLat;
         const properties = e.features[0].properties;
-        
         const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
-
         const bgClass = layer.id;
+
+        let internalPropsStr = '';
+        if (this.debugMode) {
+            // Show only the props marked with ciclomapa:
+            let internalProps = {};
+            for (let k in properties) {
+                if (k.includes('ciclomapa')) {
+                    internalProps[k.split('ciclomapa:')[1]] = properties[k];
+                }
+            }
+            internalPropsStr = `
+                <div class="text-white">
+                    ${JSON.stringify(internalProps, null, 2)
+                    .replace(/(?:\r\n|\r|\n)/g, '<br/>')
+                    .replace(/"|,|\{|\}/g, '')}
+                </div>
+            `;
+        }
 
         let html = `
             <div class="text-black">
@@ -217,20 +234,11 @@ class MapPopups {
                     ${layer.name}
                 </div>
 
+                ${internalPropsStr}
+
                 ${this.getFooter(osmUrl)}
             </div>
         `;
-
-        // Show only the props marked with ciclomapa:
-        let internalProps = {};
-        for (let k in properties) {
-            if (k.includes('ciclomapa')) {
-                internalProps[k] = properties[k];
-            }
-        }
-        html += JSON.stringify(internalProps, null, 2)
-            .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-            .replace(/"|,|\{|\}/g, '');;
 
         this.cyclewayPopup
             .setLngLat(coords)
