@@ -155,7 +155,7 @@ class AnalyticsSidebar extends Component {
                     {
                         this.state.cityMetadata && this.state.cityMetadata.pnb_total &&
                         <Section
-                            title="People Near Bike (PNB)"
+                            title="PNB"
                             link={"https://itdpbrasil.org/pnb/"}
                             description={<>
                                 <p>
@@ -189,8 +189,8 @@ class AnalyticsSidebar extends Component {
                     {
                         this.state.cityMetadata && this.state.cityMetadata.ideciclo &&
                         <Section
-                            title="IDECICLO"
-                            link="https://ideciclo.ameciclo.org/"
+                            title="IDECiclo"
+                            link="https://plataformadedados.netlify.app/ideciclo/"
                             description={<>
                                 <p>
                                     O Índice de Desenvolvimento Cicloviário (IDECICLO) tem como objetivo avaliar qualitativamente a infraestrutura cicloviária da cidade de forma objetiva e replicável de modo que haja acompanhamento da evolução dos parâmetros para uma comparação entre infraestruturas e entre cidades, de maneira a construir uma séria histórica.
