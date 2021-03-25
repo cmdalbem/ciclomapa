@@ -272,8 +272,12 @@ function detectDoubleWayBikePaths(l, segments) {
 
                 clustersAnglesList[side].push(`${seg.properties['ciclomapa:avgAngle_direction']} ${seg.properties['ciclomapa:avgAngle']}`);
             });
-
-            // console.debug(streetName, clustersAnglesList);
+        } else {
+            // Since this street didn't meet basic criteria, we can stop 
+            //   considering it on all next checks and calculations.
+            // @todo make absolute sure it's safe to delete an array element
+            //   in the middle of a "for in" loop.
+            delete streetsByName[streetName];
         }
     }
 
@@ -313,7 +317,7 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
 
     console.debug('calculateLayersLengths()', strategy, geoJson, layers);
     
-    // POI case, just count total number of elements
+    // POI case: just count total number of elements
     layers
         .filter(l => l.type === 'poi')
         .forEach(l => {
@@ -324,7 +328,7 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
             lengths[l.id] = segments.length;
         })
 
-    // Way case, go full-blown length computation
+    // Way case: go full-blown length computation
     layers
         .filter(l => l.type === 'way')
         .forEach(l => {
@@ -399,8 +403,6 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
                         street.falsePositive = true;
                     }
                 });
-
-                // console.debug(street, street.totalLength);
             }
 
             // Sum up layer lengths
@@ -417,9 +419,8 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
             } else {
                 // Sum all segments that are not part of duplicated streets 
                 segments
-                    .filter(seg => !seg.properties['ciclomapa:side'])
+                    .filter(seg => !seg.properties['ciclomapa:duplicate_candidate'])
                     .forEach(seg => {
-                        // console.debug('segment outside named street:', seg);
                         lengths[l.id] += seg.properties['ciclomapa:segment_length'];
                         seg.properties['ciclomapa:considered'] = 'true';
                     });
@@ -429,17 +430,15 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
                     const street = streetsByName[name];
                     if (!street.falsePositive) {
                         lengths[l.id] += street.totalLength / 2;
-                    }
 
-                    // Tag all segments so we can visualize it
-                    street.forEach(seg => {
-                        seg.properties['ciclomapa:considered'] = 'true';
-                    })
+                        // Tag all segments so we can visualize it
+                        street.forEach(seg => {
+                            seg.properties['ciclomapa:considered'] = 'true';
+                        })
+                    }
                 }
             }
         }
-
-
     });
 
     return lengths;
