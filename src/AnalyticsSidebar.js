@@ -162,7 +162,7 @@ class AnalyticsSidebar extends Component {
                                     Para avaliar as políticas de ciclomobilidade com maior efetividade, o ITDP Brasil apura anualmente um indicador percentual de pessoas que vivem próximas da infraestrutura cicloviária, o People Near Bike (pessoas próximas a bicicleta, em livre tradução).
                                 </p>
                                 <p>
-                                    A partir da rede cicloviária disponível no CicloMapa, o indicador mostra quantas pessoas moram a menos de 300 metros de uma ciclovia, ciclofaixa, ciclorrota ou calçada compartilhada.
+                                    A partir da rede cicloviária disponível no CicloMapa, o indicador mostra quantas pessoas moram a menos de 300 metros de uma ciclovia, ciclofaixa, ou ciclorrota.
                                 </p>
                                 <p>
                                     Escala: de 0% a 100%.
