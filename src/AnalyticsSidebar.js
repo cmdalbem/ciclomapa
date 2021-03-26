@@ -157,12 +157,10 @@ class AnalyticsSidebar extends Component {
                         <Section
                             title="PNB"
                             link={"https://itdpbrasil.org/pnb/"}
+                            year={this.state.cityMetadata.pnb_year}
                             description={<>
                                 <p>
-                                    Para avaliar as políticas de ciclomobilidade com maior efetividade, o ITDP Brasil apura anualmente um indicador percentual de pessoas que moram a até 300 metros de ciclovias e ciclofaixas, o People Near Bike (pessoas próximas a bicicleta).
-                                </p>
-                                <p>
-                                    Escala: de 0% a 100%.
+                                    O People Near Bike (pessoas próximas a bicicleta) é apurado anualmente pelo ITDP Brasil para avaliar as políticas de ciclomobilidade com maior efetividade e indica o percentual de pessoas que moram a até 300 metros de ciclovias e ciclofaixas.
                                 </p>
                             </>}
                         >
@@ -188,6 +186,7 @@ class AnalyticsSidebar extends Component {
                         <Section
                             title="IDECiclo"
                             link="https://plataformadedados.netlify.app/ideciclo/"
+                            year={this.state.cityMetadata.ideciclo_year}
                             description={<>
                                 <p>
                                     O Índice de Desenvolvimento Cicloviário (IDECICLO) tem como objetivo avaliar qualitativamente a infraestrutura cicloviária da cidade de forma objetiva e replicável de modo que haja acompanhamento da evolução dos parâmetros para uma comparação entre infraestruturas e entre cidades, de maneira a construir uma séria histórica.
@@ -354,31 +353,40 @@ const Section = (props) =>
                 }
             </h3>
 
-            <Popover
-                placement="left"
-                arrowPointAtCenter={true} key={props.title}
-                content={(
-                    <div style={{width: 320}}>
-                        <h3 className="text-lg">
-                            { props.title }
-                        </h3>
-                        
-                        { props.description }
+            <div className="flex items-center">
+                {
+                    props.year &&
+                    <span className="opacity-50 text-xs">
+                        { props.year }
+                    </span>
+                }
 
-                        {
-                            props.link &&
-                            <Button ghost target="_BLANK" href={props.link}>
-                                Saiba mais
-                            </Button> 
-                        }
+                <Popover
+                    placement="left"
+                    arrowPointAtCenter={true} key={props.title}
+                    content={(
+                        <div style={{width: 320}}>
+                            <h3 className="text-lg">
+                                { props.title }
+                            </h3>
+                            
+                            { props.description }
+
+                            {
+                                props.link &&
+                                <Button ghost target="_BLANK" href={props.link}>
+                                    Saiba mais
+                                </Button> 
+                            }
+                        </div>
+                    )}
+                >
+                    <div className="opacity-50 hover:opacity-100 p-2 -mr-2 hover:bg-white hover:bg-opacity-10 rounded">
+                        <IconInfo/>
                     </div>
-                )}
-            >
-                <div className="opacity-50 hover:opacity-100 p-2 -mr-2 hover:bg-white hover:bg-opacity-10 rounded">
-                    <IconInfo/>
-                </div>
-            </Popover>
+                </Popover>
             </div>
+        </div>
 
         <div className="mt-2">
             { props.children }
