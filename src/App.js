@@ -60,25 +60,25 @@ class App extends Component {
         this.closeAboutModal = this.closeAboutModal.bind(this);
         this.onChangeStrategy = this.onChangeStrategy.bind(this);
 
-        const prev = this.getStateFromLocalStorage();
+        const prev = this.getStateFromLocalStorage() || {};
 
         const urlParams = this.getParamsFromURL();
 
         this.state = {
-            area: (prev && prev.area) || '',
-            showSatellite: (prev && prev.showSatellite) || false,
-            zoom: (prev && prev.zoom) || urlParams.z || DEFAULT_ZOOM,
+            area: prev.area || '',
+            showSatellite: prev.showSatellite !== undefined ? prev.showSatellite : false,
+            zoom: prev.zoom || urlParams.z || DEFAULT_ZOOM,
             center: [
-                parseFloat(urlParams.lng) || (prev && prev.lng) || DEFAULT_LNG,
-                parseFloat(urlParams.lat) || (prev && prev.lat) || DEFAULT_LAT],
+                parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
+                parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT],
             geoJson: null,
             debugMode: urlParams.debug || false,
             loading: false,
             mapStyle: DEFAULT_MAPBOX_STYLE,
-            layers: this.initLayers(prev && prev.layersStates, urlParams.debug || false),
+            layers: this.initLayers(prev.layersStates, urlParams.debug || false),
             lengths: {},
             embedMode: urlParams.embed,
-            isSidebarOpen: true,
+            isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : !IS_PROD,
             hideUI: true,
             aboutModal: false,
             lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES
@@ -142,7 +142,8 @@ class App extends Component {
                 zoom: this.state.zoom,
                 lng: this.state.lng,
                 lat: this.state.lat,
-                layersStates: layersStates
+                isSidebarOpen: this.state.isSidebarOpen,
+                layersStates: layersStates,
             }
 
             let str = JSON.stringify(state);
