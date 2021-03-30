@@ -2,10 +2,10 @@ import React, { Component } from 'react';
 import { Popover } from 'antd';
 
 import {
-    MdVisibility,
-    MdVisibilityOff,
-    MdLayers,
-} from "react-icons/md";
+    HiEye as IconVisible,
+    HiEyeOff as IconHidden,
+    HiAdjustments as IconLayers,
+} from "react-icons/hi";
 
 import { slugify } from './utils.js'
 
@@ -61,17 +61,18 @@ class LayersPanel extends Component {
             <>
                 {
                     IS_MOBILE &&
-                        <div className={`
-                                p-4 border border-gray-600 rounded text-lg fixed
-                                ${this.state.collapsed ? 'text-gray-300 bg-gray-900 ' : 'text-gray-900 bg-gray-100 '}
-                            `}
+                        <div
+                            className={`
+                                p-4 border border-white border-opacity-20 rounded text-lg fixed
+                                ${this.state.collapsed ? 'text-gray-300' : 'text-gray-900 bg-gray-100'}`}
                             onClick={this.toggleCollapse}
                             style={{
                                 bottom: 40,
-                                left: 12
+                                left: 12,
+                                background: this.state.collapsed ? '#1c1717' : ''
                             }}
                         >
-                            <MdLayers/>
+                            <IconLayers/>
                         </div>
                 }
                 <div
@@ -150,8 +151,8 @@ class LayersPanel extends Component {
                                         <div className={`ml-2 transition-opacity duration-300 ${this.state.hover ? 'opacity-100' : 'opacity-0'}`}>
                                             {
                                                 l.isActive ?
-                                                    <MdVisibility/>
-                                                :   <MdVisibilityOff/>
+                                                    <IconVisible/>
+                                                :   <IconHidden/>
                                             }
                                         </div>
                                     </div>

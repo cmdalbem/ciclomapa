@@ -4,8 +4,11 @@ import { Popover, Button } from 'antd';
 import { PieChart, Pie } from 'recharts';
 
 import { 
-    MdClose as IconClose,
-    MdInfoOutline as IconInfo,
+    HiX as IconClose,
+    HiInformationCircle as IconInfo
+} from "react-icons/hi";
+
+import {
     MdDataUsage as IconAnalytics,
 } from "react-icons/md";
 

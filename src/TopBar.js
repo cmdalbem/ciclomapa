@@ -167,8 +167,8 @@ class TopBar extends Component {
 
                         {
                             !embedMode && 
-                            <div className="city-picker sm:text-center w-full">
-                                <div className="mb-1 sm:mb-1 w-full">
+                            <div className={`city-picker sm:text-center ${IS_MOBILE && 'w-full'}`}>
+                                <div className={`mb-1 sm:mb-1 ${IS_MOBILE && 'w-full'}`}>
                                     <Button
                                         size='large'
                                         block={IS_MOBILE}

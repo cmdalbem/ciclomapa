@@ -28,7 +28,7 @@
   background: #1c1717;
   color: white;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .mapboxgl-ctrl-group button {

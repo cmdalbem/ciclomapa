@@ -6,11 +6,6 @@ import {
     Button
 } from 'antd';
 
-// import {
-//     MdModeEdit as IconEdit,
-// } from "react-icons/md";
-
-
 class EditModal extends Component {
     render() {
         return (
