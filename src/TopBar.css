@@ -1,7 +1,3 @@
-.nav-links > button + button {
-    margin-left: 12px;
-}
-
 .react-icon {
     display: inline-block;
     margin-right: 4px;

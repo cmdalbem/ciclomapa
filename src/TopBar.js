@@ -223,10 +223,10 @@ class TopBar extends Component {
                             </div>
                         }
 
-                        <div className="nav-links font-white hidden sm:block">
+                        <div className="nav-links font-white">
                             {
-                                !embedMode ? <>
-                                    <Button
+                                !embedMode ? <div className="hidden sm:block">
+                                    <Button className="ml-3"
                                         type="link"
                                         onClick={this.props.openAboutModal}
                                     >
@@ -234,13 +234,13 @@ class TopBar extends Component {
                                     </Button>
 
                                     <Dropdown overlay={collaborateMenu}>
-                                        <Button ghost>
+                                        <Button className="ml-3" ghost>
                                             <span className="mr-2"> Colaborar </span>
                                             <IconCaret className="text-green-300" />
                                         </Button>
                                     </Dropdown>
                                     
-                                    <Button
+                                    <Button className="ml-3"
                                         ghost
                                         onClick={downloadData}
                                     >
@@ -249,14 +249,14 @@ class TopBar extends Component {
 
                                     {
                                         !this.props.isSidebarOpen &&
-                                        <Button
+                                        <Button className="ml-3"
                                             ghost
                                             onClick={() => this.props.toggleSidebar(true)}
                                         >
                                             <IconAnalytics/> Métricas
                                         </Button>
                                     }
-                                </>
+                                </div>
                                 :
                                 <Button ghost target="_BLANK" href={window.location.href.replace(/&embed=true/g,'')}>
                                     <IconMap/> Ver mapa completo

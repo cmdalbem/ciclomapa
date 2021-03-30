@@ -53,8 +53,8 @@ class LayersPanel extends Component {
     render() {
         const { layers, embedMode } = this.props;
         
-        if (!layers) {
-            return;
+        if (!layers || (embedMode && IS_MOBILE)) {
+            return null;
         }
 
         return (
