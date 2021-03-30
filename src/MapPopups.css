@@ -46,19 +46,19 @@
   .ciclovia .mapboxgl-popup-tip { border-bottom-color: #10B981; }
   .ciclovia .mapboxgl-popup-close-button { color: black; }
   
-  .ciclofaixa .mapboxgl-popup-content { background: #b4fad0; }
-  .ciclofaixa .mapboxgl-popup-tip { border-top-color: #b4fad0; }
-  .ciclofaixa .mapboxgl-popup-tip { border-bottom-color: #b4fad0; }
+  .ciclofaixa .mapboxgl-popup-content { background: #A1C181; }
+  .ciclofaixa .mapboxgl-popup-tip { border-top-color: #A1C181; }
+  .ciclofaixa .mapboxgl-popup-tip { border-bottom-color: #A1C181; }
   .ciclofaixa .mapboxgl-popup-close-button { color: black; }
   
-  .ciclorrota .mapboxgl-popup-content { background: #F7C9B0; }
-  .ciclorrota .mapboxgl-popup-tip { border-top-color: #F7C9B0; }
-  .ciclorrota .mapboxgl-popup-tip { border-bottom-color: #F7C9B0; }
+  .ciclorrota .mapboxgl-popup-content { background: #E9C46A; }
+  .ciclorrota .mapboxgl-popup-tip { border-top-color: #E9C46A; }
+  .ciclorrota .mapboxgl-popup-tip { border-bottom-color: #E9C46A; }
   .ciclorrota .mapboxgl-popup-close-button { color: black; }
   
-  .calcada-compartilhada .mapboxgl-popup-content { background: #FF8A00; }
-  .calcada-compartilhada .mapboxgl-popup-tip { border-top-color: #FF8A00; }
-  .calcada-compartilhada .mapboxgl-popup-tip { border-bottom-color: #FF8A00; }
+  .calcada-compartilhada .mapboxgl-popup-content { background: #E76F51; }
+  .calcada-compartilhada .mapboxgl-popup-tip { border-top-color: #E76F51; }
+  .calcada-compartilhada .mapboxgl-popup-tip { border-bottom-color: #E76F51; }
   .calcada-compartilhada .mapboxgl-popup-close-button { color: black; }
   
   .baixa-velocidade .mapboxgl-popup-content { background: #FF8A00; }
