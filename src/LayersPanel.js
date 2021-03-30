@@ -137,7 +137,7 @@ class LayersPanel extends Component {
                                                 }}
                                                 ></span>
                                             : 
-                                            <img className="h-4 sm:h-5" src={iconsMap[l.icon]} alt=""/>
+                                            <img className="h-4" src={iconsMap[l.icon]} alt=""/>
                                         }
                                         </span>
 
