@@ -9,13 +9,26 @@ import {
 } from 'antd';
 
 import {
-    MdFileDownload as IconDownload,
-    MdSync as IconUpdate,
-    MdExpandMore as IconCaret,
-    MdModeEdit as IconEdit,
-    MdAccessTime as IconInfo,
+    // MdFileDownload as IconDownload,
+    // MdSync as IconUpdate,
+    // MdExpandMore as IconCaret,
+    // MdModeEdit as IconEdit,
+    // MdAccessTime as IconInfo,
     MdDataUsage as IconAnalytics,
+    // MdMap as IconMap,
 } from "react-icons/md";
+import {
+    HiOutlineMap as IconMap,
+    HiDownload as IconDownload,
+    HiOutlineRefresh as IconUpdate,
+    HiOutlineChevronDown as IconCaret,
+    HiPencil as IconEdit,
+    HiOutlineInformationCircle as IconInfo,
+    // HiChartPie as IconAnalytics,
+    HiOutlineOfficeBuilding as IconCity,
+    HiChatAlt as IconComment,
+} from "react-icons/hi"
+
 import { IconContext } from "react-icons";
 
 import {
@@ -29,8 +42,6 @@ import {
 } from './constants'
 
 import EditModal from './EditModal.js'
-
-import { ReactComponent as IconComment } from './img/icons/newcomment.svg';
 
 import './TopBar.css'
 
@@ -118,7 +129,7 @@ class TopBar extends Component {
             <Menu onClick={this.handleMenuClick}>
                 {
                     ENABLE_COMMENTS &&
-                    <Menu.Item key="comment" icon={<IconComment className="react-icon" />}>
+                    <Menu.Item key="comment" icon={<IconComment/>}>
                         Comentar
                     </Menu.Item>
                 }
@@ -143,23 +154,27 @@ class TopBar extends Component {
             <IconContext.Provider value={{ className: 'react-icon' }}>
                 <div
                     id="topbar"
-                    className="w-full absolute flex items-center px-6 py-3"
+                    className="w-full absolute flex items-center px-2 sm:px-6 py-3"
                     style={{height: TOPBAR_HEIGHT, zIndex: 1}}
                 >
                     <div className="flex items-center justify-between text-white w-full">
-                        <a href="/" className={embedMode ? 'opacity-25' : ''}>
-                            <img src="logo.svg" alt="CicloMapa"></img>
-                        </a>
+                        {
+                            !IS_MOBILE &&
+                            <a href="/" className={embedMode ? 'opacity-25' : ''}>
+                                <img src="logo.svg" alt="CicloMapa"></img>
+                            </a>
+                        }
 
                         {
                             !embedMode && 
-                            <div className="city-picker sm:text-center">
-                                <div className="mb-1 sm:mb-1">
+                            <div className="city-picker sm:text-center w-full">
+                                <div className="mb-1 sm:mb-1 w-full">
                                     <Button
                                         size='large'
+                                        block={IS_MOBILE}
                                         onClick={this.showCityPicker}
                                     >
-                                        <h3 className="text-lg">
+                                        <h3 className="text-lg flex items-center justify-between">
                                             <span className="mr-3">
                                                 <span className="font-bold">
                                                     {city},
@@ -244,7 +259,7 @@ class TopBar extends Component {
                                 </>
                                 :
                                 <Button ghost target="_BLANK" href={window.location.href.replace(/&embed=true/g,'')}>
-                                    Ver mapa completo
+                                    <IconMap/> Ver mapa completo
                                 </Button> 
                             }
                         </div>
