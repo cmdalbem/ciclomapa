@@ -60,9 +60,9 @@ class App extends Component {
         this.closeAboutModal = this.closeAboutModal.bind(this);
         this.onChangeStrategy = this.onChangeStrategy.bind(this);
 
-        const prev = this.getStateFromLocalStorage() || {};
-
         const urlParams = this.getParamsFromURL();
+        
+        const prev = urlParams.embed ? {} : this.getStateFromLocalStorage() || {};
 
         this.state = {
             area: prev.area || '',
@@ -79,7 +79,7 @@ class App extends Component {
             lengths: {},
             embedMode: urlParams.embed,
             isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : !IS_PROD,
-            hideUI: true,
+            hideUI: !urlParams.embed,
             aboutModal: false,
             lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES
         };

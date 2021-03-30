@@ -537,7 +537,7 @@ class Map extends Component {
         }
     }
 
-    addCitiesLayer() {
+    addCitiesLinksLayer() {
         this.map.addSource(
             'cities', {
             'type': 'geojson',
@@ -637,7 +637,9 @@ class Map extends Component {
                 }
             });
 
-            this.addCitiesLayer();
+            if (!this.props.embedMode) {
+                this.addCitiesLinksLayer();
+            }
     
             map.on('mousemove', function(e) {
                 const features = map.queryRenderedFeatures(e.point, {

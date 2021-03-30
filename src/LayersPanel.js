@@ -140,7 +140,7 @@ class LayersPanel extends Component {
                                         }
                                         </span>
 
-                                        <span className="font-semibold">
+                                        <span className={`font-semibold ${embedMode ? 'text-xs' : ''}`}>
                                             {l.name} 
                                         </span>
 

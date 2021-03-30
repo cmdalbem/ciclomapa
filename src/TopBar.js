@@ -147,7 +147,7 @@ class TopBar extends Component {
                     style={{height: TOPBAR_HEIGHT, zIndex: 1}}
                 >
                     <div className="flex items-center justify-between text-white w-full">
-                        <a href="/">
+                        <a href="/" className={embedMode ? 'opacity-25' : ''}>
                             <img src="logo.svg" alt="CicloMapa"></img>
                         </a>
 
@@ -243,7 +243,7 @@ class TopBar extends Component {
                                     }
                                 </>
                                 :
-                                <Button ghost target="_BLANK" href={''}>
+                                <Button ghost target="_BLANK" href={window.location.href.replace(/&embed=true/g,'')}>
                                     Ver mapa completo
                                 </Button> 
                             }
