@@ -144,7 +144,8 @@ class Map extends Component {
             .reverseGeocode({
                 query: lngLat,
                 types: ['place'],
-                limit: 1
+                limit: 1,
+                language: ['pt-br']
             })
             .send()
             .then(response => {
@@ -735,8 +736,11 @@ class Map extends Component {
             container: this.mapContainer,
             style: this.props.style,
             center: this.props.center,
-            zoom: this.props.zoom
-        });
+            zoom: this.props.zoom,
+            attributionControl: false
+        }).addControl(new mapboxgl.AttributionControl({
+            compact: false
+        }));
 
         this.popups = new MapPopups(this.map, this.props.debugMode);
 

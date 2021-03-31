@@ -9,9 +9,8 @@ export const OVERPASS_SERVERS = [
 ];
 
 export const AREA_ID_OVERRIDES = {
-    'Vitória, Espirito Santo, Brazil': 3601825817,
-    'Brasília, Distrito Federal, Brazil': 3602662005,
-    'Brasília, Federal District, Brazil': 3602662005,
+    'Vitória, Espirito Santo, Brasil': 3601825817,
+    'Brasília, Distrito Federal, Brasil': 3602662005,
     'København, Capital RegionDenmark, Denmark': 3613707878,
     'Comuna 01, Buenos Aires, Argentina': 3601224652,
     'Stockholm, Stockholm, Sweden': 3600398021,
@@ -33,7 +32,7 @@ export const LINE_WIDTH_MULTIPLIER_HOVER = 3;
 
 // Map
 
-export const DEFAULT_AREA = 'Fortaleza, Ceará, Brazil';
+export const DEFAULT_AREA = 'Fortaleza, Ceará, Brasil';
 export const DEFAULT_LNG = -38.5225359;
 export const DEFAULT_LAT = -3.7719909;
 export const DEFAULT_ZOOM = 12;
