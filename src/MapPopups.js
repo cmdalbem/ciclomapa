@@ -4,6 +4,9 @@ import './MapPopups.css'
 import { osmi18n as i18n } from './osmi18n.js'
 import Analytics from './Analytics.js'
 
+import { IS_MOBILE } from "./constants.js";
+
+
 class MapPopups {
     map;
 
@@ -19,7 +22,7 @@ class MapPopups {
         //   from POI to POI, otherwise clicking on another POI would
         //   just close the popup from the previous one.
         this.cyclewayPopup = new mapboxgl.Popup({
-            closeOnClick: false
+            closeOnClick: IS_MOBILE,
         });
         this.cyclewayPopup.on('close', e => {
             if (this.selectedCycleway) {
@@ -29,12 +32,12 @@ class MapPopups {
         });
 
         this.commentPopup = new mapboxgl.Popup({
-            closeOnClick: false,
+            closeOnClick: IS_MOBILE,
             offset: 25
         });
 
         this.poiPopup = new mapboxgl.Popup({
-            closeOnClick: false,
+            closeOnClick: IS_MOBILE,
             offset: 25
         });
     }

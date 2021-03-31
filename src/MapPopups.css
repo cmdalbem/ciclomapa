@@ -14,64 +14,93 @@
 }
 
 .mapboxgl-popup-content {
-    padding: 24px 16px;
-    min-width: 360px;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-  }
-  
-  .mapboxgl-popup-close-button {
-    font-size: 18px;
-    width: 42px;
-    height: 42px;
-    color: white;
-  }
-  
-  .mapboxgl-popup-content {
-    background: #333;
-    color: white;
+  padding: 24px 16px;
+  min-width: 360px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+}
 
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+.mapboxgl-popup-close-button {
+  font-size: 18px;
+  width: 42px;
+  height: 42px;
+  color: white;
+}
+
+.mapboxgl-popup-content {
+  background: #333;
+  color: white;
+
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+  border-top-color: #333;
+}
+
+.mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
+  border-bottom-color: #333;
+}
+
+.ciclovia .mapboxgl-popup-content { background: #10B981; }
+.ciclovia .mapboxgl-popup-tip { border-top-color: #10B981; }
+.ciclovia .mapboxgl-popup-tip { border-bottom-color: #10B981; }
+.ciclovia .mapboxgl-popup-close-button { color: black; }
+
+.ciclofaixa .mapboxgl-popup-content { background: #A1C181; }
+.ciclofaixa .mapboxgl-popup-tip { border-top-color: #A1C181; }
+.ciclofaixa .mapboxgl-popup-tip { border-bottom-color: #A1C181; }
+.ciclofaixa .mapboxgl-popup-close-button { color: black; }
+
+.ciclorrota .mapboxgl-popup-content { background: #E9C46A; }
+.ciclorrota .mapboxgl-popup-tip { border-top-color: #E9C46A; }
+.ciclorrota .mapboxgl-popup-tip { border-bottom-color: #E9C46A; }
+.ciclorrota .mapboxgl-popup-close-button { color: black; }
+
+.calcada-compartilhada .mapboxgl-popup-content { background: #E76F51; }
+.calcada-compartilhada .mapboxgl-popup-tip { border-top-color: #E76F51; }
+.calcada-compartilhada .mapboxgl-popup-tip { border-bottom-color: #E76F51; }
+.calcada-compartilhada .mapboxgl-popup-close-button { color: black; }
+
+.baixa-velocidade .mapboxgl-popup-content { background: #FF8A00; }
+.baixa-velocidade .mapboxgl-popup-tip { border-top-color: #FF8A00; }
+.baixa-velocidade .mapboxgl-popup-tip { border-bottom-color: #FF8A00; }
+.baixa-velocidade .mapboxgl-popup-close-button { color: black; }
+
+.trilha .mapboxgl-popup-content { background: #996633; }
+.trilha .mapboxgl-popup-tip { border-top-color: #996633; }
+.trilha .mapboxgl-popup-tip { border-bottom-color: #996633; }
+.trilha .mapboxgl-popup-close-button { color: black; }
+
+.proibido .mapboxgl-popup-content { background: #F56565; }
+.proibido .mapboxgl-popup-tip { border-top-color: #F56565; }
+.proibido .mapboxgl-popup-tip { border-bottom-color: #F56565; }
+.proibido .mapboxgl-popup-close-button { color: black; }
+
+
+  /* Mobile */
+
+@media (min-width: 320px) and (max-width: 480px) {
+  .mapboxgl-popup {
+    position: fixed;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    transform: none !important;
+    top: unset;
+    z-index: 10;
+    box-shadow: 0 -8px 30px #1c1a17;
   }
-  
-  .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
-    border-top-color: #333;
+
+  /* .mapboxgl-popup-content .-mb-2.mt-10 {
+      display: none;
+  } */
+
+  .mapboxgl-popup-tip {
+      display: none;
   }
-  
-  .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
-    border-bottom-color: #333;
+
+  .mapboxgl-popup-content {
+      min-width: auto;
+      width: calc(100vw - 16px);
   }
-  
-  .ciclovia .mapboxgl-popup-content { background: #10B981; }
-  .ciclovia .mapboxgl-popup-tip { border-top-color: #10B981; }
-  .ciclovia .mapboxgl-popup-tip { border-bottom-color: #10B981; }
-  .ciclovia .mapboxgl-popup-close-button { color: black; }
-  
-  .ciclofaixa .mapboxgl-popup-content { background: #A1C181; }
-  .ciclofaixa .mapboxgl-popup-tip { border-top-color: #A1C181; }
-  .ciclofaixa .mapboxgl-popup-tip { border-bottom-color: #A1C181; }
-  .ciclofaixa .mapboxgl-popup-close-button { color: black; }
-  
-  .ciclorrota .mapboxgl-popup-content { background: #E9C46A; }
-  .ciclorrota .mapboxgl-popup-tip { border-top-color: #E9C46A; }
-  .ciclorrota .mapboxgl-popup-tip { border-bottom-color: #E9C46A; }
-  .ciclorrota .mapboxgl-popup-close-button { color: black; }
-  
-  .calcada-compartilhada .mapboxgl-popup-content { background: #E76F51; }
-  .calcada-compartilhada .mapboxgl-popup-tip { border-top-color: #E76F51; }
-  .calcada-compartilhada .mapboxgl-popup-tip { border-bottom-color: #E76F51; }
-  .calcada-compartilhada .mapboxgl-popup-close-button { color: black; }
-  
-  .baixa-velocidade .mapboxgl-popup-content { background: #FF8A00; }
-  .baixa-velocidade .mapboxgl-popup-tip { border-top-color: #FF8A00; }
-  .baixa-velocidade .mapboxgl-popup-tip { border-bottom-color: #FF8A00; }
-  .baixa-velocidade .mapboxgl-popup-close-button { color: black; }
-  
-  .trilha .mapboxgl-popup-content { background: #996633; }
-  .trilha .mapboxgl-popup-tip { border-top-color: #996633; }
-  .trilha .mapboxgl-popup-tip { border-bottom-color: #996633; }
-  .trilha .mapboxgl-popup-close-button { color: black; }
-  
-  .proibido .mapboxgl-popup-content { background: #F56565; }
-  .proibido .mapboxgl-popup-tip { border-top-color: #F56565; }
-  .proibido .mapboxgl-popup-tip { border-bottom-color: #F56565; }
-  .proibido .mapboxgl-popup-close-button { color: black; }
+}
