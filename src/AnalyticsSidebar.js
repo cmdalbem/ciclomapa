@@ -156,7 +156,7 @@ class AnalyticsSidebar extends Component {
                     </div>
 
                     {
-                        this.state.cityMetadata && this.state.cityMetadata.pnb_total &&
+                        this.state.cityMetadata && this.state.cityMetadata.pnb_total!==undefined &&
                         <Section
                             title="PNB"
                             link={"https://itdpbrasil.org/pnb/"}
@@ -185,7 +185,7 @@ class AnalyticsSidebar extends Component {
                     }
 
                     {
-                        this.state.cityMetadata && this.state.cityMetadata.ideciclo &&
+                        this.state.cityMetadata && this.state.cityMetadata.ideciclo!==undefined &&
                         <Section
                             title="IDECiclo"
                             link="https://plataformadedados.netlify.app/ideciclo/"
