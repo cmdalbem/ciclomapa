@@ -4,8 +4,10 @@ import { Popover } from 'antd';
 import {
     HiEye as IconVisible,
     HiEyeOff as IconHidden,
-    HiAdjustments as IconLayers,
 } from "react-icons/hi";
+import {
+    BsLayersFill as IconLayers,
+} from "react-icons/bs";
 
 import { slugify } from './utils.js'
 
@@ -62,13 +64,14 @@ class LayersPanel extends Component {
                 {
                     IS_MOBILE &&
                         <div
+                            id="layersPanelMobileButton"
                             className={`
                                 p-4 border border-white border-opacity-20 rounded text-lg fixed
                                 ${this.state.collapsed ? 'text-gray-300' : 'text-gray-900 bg-gray-100'}`}
                             onClick={this.toggleCollapse}
                             style={{
-                                bottom: 40,
-                                left: 12,
+                                bottom: 30,
+                                left: 8,
                                 background: this.state.collapsed ? '#1c1717' : ''
                             }}
                         >
@@ -79,12 +82,14 @@ class LayersPanel extends Component {
                     id="layersPanel"
                     className={`
                         fixed text-white 
-                        ${IS_MOBILE && this.state.collapsed ? 'hidden' : ''}
-                        ${embedMode ? 'pointer-events-none' : 'cursor-pointer'}
+                        ${IS_MOBILE && 'rounded border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
+                        ${IS_MOBILE && this.state.collapsed ? 'hidden ' : ''}
+                        ${embedMode ? 'pointer-events-none ' : 'cursor-pointer '}
                     `}
                     style={{
                         bottom: IS_MOBILE ? 100 : 30,
-                        left: 12
+                        left: 8,
+                        background: IS_MOBILE && '#1c1717'
                     }}
                     onMouseEnter={() => this.setState({hover: true})}
                     onMouseLeave={() => this.setState({hover: false})}
@@ -114,12 +119,12 @@ class LayersPanel extends Component {
                                 )}
                             >
                                 <div
-                                    className="flex items-center justify-between px-0 pb-0 sm:pb-1 sm:px-3 hover:bg-black hover:bg-opacity-50"
+                                    className="flex items-center justify-between px-4 py-2 sm:pb-1 sm:px-3 hover:bg-black hover:bg-opacity-50"
                                     onClick={this.onChange.bind(this, l.id, !l.isActive)}
                                     style={{ opacity: l.isActive ? 1 : .5 }}
                                 >
                                     <div className="flex items-center">
-                                        <span className="w-4 sm:w-6 mr-2 inline-block flex justify-center">
+                                        <span className="w-6 mr-2 inline-block flex justify-center">
                                         {
                                             l.type === 'way' ?
                                                 <span className='w-full'
@@ -148,7 +153,7 @@ class LayersPanel extends Component {
                                     </div>
 
                                     <div className="flex items-center">
-                                        <div className={`ml-2 transition-opacity duration-300 ${this.state.hover ? 'opacity-100' : 'opacity-0'}`}>
+                                        <div className={`ml-2 transition-opacity duration-300 ${this.state.hover || IS_MOBILE ? 'opacity-100' : 'opacity-0'}`}>
                                             {
                                                 l.isActive ?
                                                     <IconVisible/>
