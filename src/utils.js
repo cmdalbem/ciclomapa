@@ -14,8 +14,9 @@ export function doesAContainsB(a, b) {
 
 // Thanks https://stackoverflow.com/questions/19721439/download-json-object-as-a-file-from-browser
 export function downloadObjectAsJson(data, fileName) {
+    fileName += '.geojson';
     const blob = new Blob([JSON.stringify(data)], {
-        type: 'application/json',
+        type: 'application/geo+json',
         name: fileName
     }); 
     saveAs(blob, fileName);
