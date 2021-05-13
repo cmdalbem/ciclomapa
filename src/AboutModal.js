@@ -59,7 +59,7 @@ class AboutModal extends Component {
                                     <a className="underline" href="https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/" title="CicloMapa | UCB - União de Ciclistas do Brasil" target="_blank" rel="noopener noreferrer">
                                         Tutoriais
                                     </a>
-                                    <a className="underline" href="mailto:contato@ciclomapa.com.br" target="_blank" rel="noopener noreferrer">
+                                    <a className="underline" href="mailto:contato@ciclomapa.org.br" target="_blank" rel="noopener noreferrer">
                                         Contato
                                     </a>
 
