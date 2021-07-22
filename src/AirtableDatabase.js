@@ -68,10 +68,19 @@ class AirtableDatabase {
         let comments = await this.fetchTable(COMMENTS_TABLE_NAME);
         
         if (comments) {
+            // This special comment has a list of all possible tags
             const tagsListComment = comments.filter(c => c.fields.id === TAGS_LIST_COMMENT_ID)[0];
+
             if (tagsListComment) {
                 const tagsList = tagsListComment.fields.tags;
+                
+                // Filter out solved comments
+                // @todo filter them when fetching the table, to improve performance
+                comments = comments.filter(c => c.fields.status !== 'Resolvida');
+                
+                // Ignore if there are comments without latlong
                 comments = comments.filter(c => c.fields.latlong !== undefined);
+
                 return {
                     comments,
                     tagsList
