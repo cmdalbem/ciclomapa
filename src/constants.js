@@ -2,18 +2,19 @@
 
 export const OVERPASS_SERVERS = [
     'https://overpass.kumi.systems/api/interpreter',
-    'https://overpass-api.de/api/interpreter',
-    'http://overpass.openstreetmap.fr/api/interpreter',
-    'http://overpass.osm.ch/api/interpreter',
-    'https://overpass.nchc.org.tw'
+    'https://z.overpass-api.de/api/interpreter',
+    'https://overpass.openstreetmap.fr/api/interpreter',
+    'https://overpass.osm.ch/api/interpreter',
+    'https://overpass.nchc.org.tw/api/interpreter'
 ];
 
 export const AREA_ID_OVERRIDES = {
     'Vitória, Espirito Santo, Brasil': 3601825817,
     'Brasília, Distrito Federal, Brasil': 3602662005,
     'København, Capital RegionDenmark, Denmark': 3613707878,
-    'Comuna 01, Buenos Aires, Argentina': 3601224652,
+    'Comuna 1, Buenos Aires, Argentina': 3601224652,
     'Stockholm, Stockholm, Sweden': 3600398021,
+    'São Paulo, São Paulo, Brasil': 3600298285,
 };
 
 
