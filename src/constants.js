@@ -15,6 +15,7 @@ export const AREA_ID_OVERRIDES = {
     'Comuna 1, Buenos Aires, Argentina': 3601224652,
     'Stockholm, Stockholm, Sweden': 3600398021,
     'São Paulo, São Paulo, Brasil': 3600298285,
+    'Rio de Janeiro, Rio de Janeiro, Brasil': 3602697338,
 };
 
 
