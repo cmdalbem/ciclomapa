@@ -117,7 +117,7 @@ class Storage {
         const now = new Date();
         let slug = slugify(name);
 
-        if (part === 2) {
+        if (!!part && part > 1) {
             slug += part;
         }
 
@@ -152,6 +152,8 @@ class Storage {
             try {
                 const compressed = this.compressJson(geoJson);
 
+                // Save calculated lengths
+                // @todo: add updatedAt field
                 console.debug(`[Firebase] Saving lengths for ${name}...`, lengths);
                 this.saveStatsToFirestore(name, lengths)
                     .then(() => {
@@ -162,33 +164,69 @@ class Storage {
                         reject();
                     });  
 
+                // Save GeoJSON data
+                // 
+                // @todo This looks horrible, I know. Here's how it could be improved:
+                //   - Better estimate package size and compare with Firestore limitations;
+                //   - Rewrite function to be generic (prob. a recursive approach is a good idea);
+                //   - Migrate storage to use other product or technology with less limitations.
+                // 
                 console.debug(`[Firebase] Saving GeoJSON ${name}...`, geoJson);
                 this.saveGeoJSONToFirestore(name, compressed, lengths)
                     .then(() => {
-                        console.debug(`[Firebase] GeoJSON ${name} written successfully.`);
+                        console.debug(`[Firebase] GeoJSON ${name} saved successfully.`);
                         resolve();
                     }).catch(error => {
-                        console.debug('[Firestore] Splitting GeoJSON in 2...')
+                        console.debug('[Firestore] Failed to save GeoJSON in 1 part, splitting in 2...')
 
                         const part1 = compressed.slice(0, Math.ceil(compressed.length/2));
                         const part2 = compressed.slice(Math.ceil(compressed.length/2));
 
                         this.saveGeoJSONToFirestore(name, part1, lengths, 1) 
                         .then(() => {
-                            console.debug(`[Firebase] GeoJSON ${name}1 written successfully.`);
+                            console.debug(`[Firebase] GeoJSON ${name} (1/2) saved successfully.`);
+
+                            this.saveGeoJSONToFirestore(name, part2, lengths, 2)
+                            .then(() => {
+                                console.debug(`[Firebase] GeoJSON ${name} (2/2) saved successfully.`);
+                                resolve();
+                            }).catch(error => {
+                                console.error(`[Firebase] Error saving GeoJSON ${name} (2/2): `, error);
+                                reject();
+                            });
                         }).catch(error => {
-                            console.error("[Firebase] Error saving GeoJSON: ", error);
-                            reject();
+                            console.debug('[Firestore] Failed to save GeoJSON in 2 parts, splitting in 3...')
+                            
+                            const divider = Math.ceil(compressed.length/3);
+                            const partb1 = compressed.slice(0, divider);
+                            const partb2 = compressed.slice(divider, divider*2);
+                            const partb3 = compressed.slice(divider*2, divider*3);
+
+                            this.saveGeoJSONToFirestore(name, partb1, lengths, 1) 
+                            .then(() => {
+                                console.debug(`[Firebase] GeoJSON ${name} (1/3) saved successfully.`);
+
+                                this.saveGeoJSONToFirestore(name, partb2, lengths, 2)
+                                .then(() => {
+                                    console.debug(`[Firebase] GeoJSON ${name} (2/3) saved successfully.`);
+                                    
+                                    this.saveGeoJSONToFirestore(name, partb3, lengths, 3)
+                                    .then(() => {
+                                        console.debug(`[Firebase] GeoJSON ${name} (3/3) saved successfully.`);
+                                        resolve();
+                                    }).catch(error => {
+                                        console.error(`[Firebase] Error saving GeoJSON ${name} (3/3): `, error);
+                                        reject();
+                                    });
+                                }).catch(error => {
+                                    console.error(`[Firebase] Error saving GeoJSON ${name} (2/3): `, error);
+                                    reject();
+                                });
+                            }).catch(error => {
+                                console.error(`[Firebase] Error saving GeoJSON ${name} (1/3): `, error);
+                                reject();
+                            });   
                         });        
-    
-                        this.saveGeoJSONToFirestore(name, part2, lengths, 2)
-                        .then(() => {
-                            console.debug(`[Firebase] GeoJSON ${name}2 written successfully.`);
-                            resolve();
-                        }).catch(error => {
-                            console.error("[Firebase] Error saving GeoJSON: ", error);
-                            reject();
-                        });
                     });
             } catch (e) {
                 console.error(e);
@@ -245,38 +283,47 @@ class Storage {
         // console.table(valuesTable);
     }
 
-    getDataFromDB(slug, resolve, reject) {
-        this.db.collection(DEFAULT_CITIES_COLLECTION).doc(slug).get().then(doc => {
+    getDataFromDB(slug, resolve, reject, part) {
+        const slugWithPart = slug + (part ? part : '');
+        this.db.collection(DEFAULT_CITIES_COLLECTION).doc(slugWithPart).get().then(doc => {
             if (doc.exists) {
                 let data = doc.data();
 
                 console.debug("[Firebase] Document data:", data);
 
-                // Decompress gzip
-                // data.geoJson = gzipDecompress(data.geoJson)
-
-                // Split files case
-                if (data.part === 1) {
-                    this.dataBuffer = data.geoJson; 
-                    return this.getDataFromDB(slug + '2', resolve, reject);
-                } else if (data.part === 2) {
-                    data.geoJson = this.dataBuffer + data.geoJson;
+                if (!data.part || data.part === 1) {
+                    // Recursion iteration 0
+                    this.dataBuffer = {};
+                    this.dataBuffer.geoJson = data.geoJson; 
+                    this.dataBuffer.updatedAt = data.updatedAt; 
+                    return this.getDataFromDB(slug, resolve, reject, 2);
+                } else if (data.part >= 2) {
+                    // Recursion iteration n
+                    this.dataBuffer.geoJson += data.geoJson;
+                    return this.getDataFromDB(slug, resolve, reject, data.part+1);
                 }
- 
-                try {
-                    data.geoJson = parse(data.geoJson);
-                } catch(e) {
-                    // For retrocompatibility
-                    data.geoJson = JSON.parse(data.geoJson);
-                }
-                data.updatedAt = data.updatedAt.toDate();
-
-                this.printPOIsStats(data.geoJson);
-
-                resolve(data);
             } else {
                 console.debug("[Firebase] No document for: ", slug);
-                resolve();
+
+                // Check if recursion tail
+                if (!!part) {
+                    let ret = {};
+                    ret.updatedAt = this.dataBuffer.updatedAt.toDate();
+    
+                    try {
+                        ret.geoJson = parse(this.dataBuffer.geoJson);
+                    } catch(e) {
+                        // Retrocompatibility, for when we didn't use Zipson compression
+                        console.error(e);
+                        ret.geoJson = JSON.parse(this.dataBuffer.geoJson);
+                    }
+                    
+                    this.printPOIsStats(ret.geoJson);
+
+                    resolve(ret);
+                } else {
+                    resolve();
+                }
             }
         }).catch(error => {
             console.error(`[Firebase] Error getting document: ${slug}`, error);
