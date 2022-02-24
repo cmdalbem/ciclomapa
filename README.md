@@ -1,4 +1,4 @@
-![Mockups of different devices showing the app](./mockups.png)
+![Mockups of different devices showing the app](./.github/mockups.png)
 
 
 # CicloMapa
@@ -31,7 +31,7 @@ The basic premise is that the OSM Overpass API is *very* slow and we couldn't hi
 
 We store a mirror of the OSM data in a Firebase Database. Any user (possibly an OSM contributor) can manually update this data, which will automatically update the Database.
 
-![A diagram of the system architecture and how it communicates with external services](./arch.jpg)
+![A diagram of the system architecture and how it communicates with external services](./.github/arch.jpg)
 
 
 # Getting started
