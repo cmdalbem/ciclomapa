@@ -1,4 +1,4 @@
-# Contribution Guide
+# Contributing
 
 We're using [GitHub Issues](https://github.com/cmdalbem/ciclomapa/issues) for our backlog. Feel free to take a look around and chose the task you want. Use the tags at your advantage:
 
@@ -15,3 +15,35 @@ After you've chosen your task, you have no doubts on it and you're ready to star
 5. Create the pull request.
 
 Alternatively see the GitHub documentation on [creating a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request).
+
+---
+
+## Visual Studio Code
+
+### Settings
+
+`.vscode/settings.json`
+```
+{
+  ...
+  "editor.formatOnSave": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  ...
+}
+```
+
+### Extensions
+
+#### [EditorConfig](https://editorconfig.org/)
+
+`code --install-extension EditorConfig.EditorConfig`
+
+#### [ESLint](https://eslint.org/)
+
+`code --install-extension dbaeumer.vscode-eslint`
+
+#### [Prettier](https://prettier.io/)
+
+`code --install-extension esbenp.prettier-vscode`
