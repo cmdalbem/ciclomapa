@@ -105,6 +105,15 @@
     semver "^6.3.0"
     source-map "^0.5.0"
 
+"@babel/eslint-parser@^7.17.0":
+  version "7.17.0"
+  resolved "https://registry.yarnpkg.com/@babel/eslint-parser/-/eslint-parser-7.17.0.tgz#eabb24ad9f0afa80e5849f8240d0e5facc2d90d6"
+  integrity sha512-PUEJ7ZBXbRkbq3qqM/jZ2nIuakUBqCYc7Qf52Lj7dlZ6zERnqisdHioL0l4wwQZnmskMeasqUNzLBFKs3nylXA==
+  dependencies:
+    eslint-scope "^5.1.1"
+    eslint-visitor-keys "^2.1.0"
+    semver "^6.3.0"
+
 "@babel/generator@^7.12.1", "@babel/generator@^7.16.7":
   version "7.16.7"
   resolved "https://registry.yarnpkg.com/@babel/generator/-/generator-7.16.7.tgz#b42bf46a3079fa65e1544135f32e7958f048adbb"
@@ -1038,7 +1047,7 @@
     "@babel/types" "^7.4.4"
     esutils "^2.0.2"
 
-"@babel/preset-react@^7.12.5", "@babel/preset-react@^7.16.0":
+"@babel/preset-react@^7.12.5", "@babel/preset-react@^7.16.0", "@babel/preset-react@^7.16.7":
   version "7.16.7"
   resolved "https://registry.yarnpkg.com/@babel/preset-react/-/preset-react-7.16.7.tgz#4c18150491edc69c183ff818f9f2aecbe5d93852"
   integrity sha512-fWpyI8UM/HE6DfPBzD8LnhQ/OcH8AgTaqcqP2nGOXEUV+VKBR5JRN9hCk9ai+zQQ57vtm9oWeXguBCPNUjytgA==
@@ -5453,7 +5462,7 @@ eslint-visitor-keys@^1.0.0, eslint-visitor-keys@^1.1.0, eslint-visitor-keys@^1.3
   resolved "https://registry.yarnpkg.com/eslint-visitor-keys/-/eslint-visitor-keys-1.3.0.tgz#30ebd1ef7c2fdff01c3a4f151044af25fab0523e"
   integrity sha512-6J72N8UNa462wa/KFODt/PJ3IU60SDpC3QXC1Hjc1BXXpfL2C9R5+AU7jhe0F6GREqVMh4Juu+NY7xn+6dipUQ==
 
-eslint-visitor-keys@^2.0.0:
+eslint-visitor-keys@^2.0.0, eslint-visitor-keys@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/eslint-visitor-keys/-/eslint-visitor-keys-2.1.0.tgz#f65328259305927392c938ed44eb0a5c9b2bd303"
   integrity sha512-0rSmRBzXgDzIsD6mGdJgevzgezI534Cer5L/vyMX0kHzT/jiB43jRhd9YUlMGYLQy2zprNmoT8qasCGtY+QaKw==
