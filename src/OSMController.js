@@ -85,7 +85,7 @@ class OSMController {
     });
 
     if (!debugMode) {
-      layers.default = layers.default.filter(
+      layers.default.prop = layers.default.filter(
         (l) => !l.onlyDebug || (l.onlyDebug && l.onlyDebug === false)
       );
     }
