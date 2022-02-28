@@ -30,7 +30,7 @@
   },
   "scripts": {
     "start": "craco start",
-    "lint": "eslint src",
+    "lint": "eslint src --max-warnings=0",
     "build": "craco build",
     "test": "craco test",
     "eject": "react-scripts eject",
