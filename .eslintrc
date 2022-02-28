@@ -3,7 +3,8 @@
   "env": {
     "browser": true,
     "es2021": true,
-    "node": true
+    "node": true,
+    "jest/globals": true
   },
   "settings": {
     "react": {
@@ -28,7 +29,8 @@
     }
   },
   "plugins": [
-    "react"
+    "react",
+    "jest"
   ],
   "rules": {
     "prettier/prettier": "warn",
