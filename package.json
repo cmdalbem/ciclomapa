@@ -57,6 +57,7 @@
     "@babel/preset-react": "^7.16.7",
     "eslint": "^7.11.0",
     "eslint-config-prettier": "^8.4.0",
+    "eslint-plugin-jest": "^26.1.1",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-react": "^7.28.0",
     "prettier": "2.5.1"
