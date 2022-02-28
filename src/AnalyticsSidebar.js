@@ -120,7 +120,10 @@ class AnalyticsSidebar extends Component {
           defaultValue={this.props.lengthCalculationStrategy}
         >
           {LENGTH_CALCULATE_STRATEGIES.map((s) => (
-            <option value={s}> {translateStrategy[s]} </option>
+            <option key={s} value={s}>
+              {' '}
+              {translateStrategy[s]}{' '}
+            </option>
           ))}
         </select>
       </div>
