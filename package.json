@@ -38,6 +38,11 @@
     "deploy": "gh-pages -d build",
     "prepare": "husky install"
   },
+  "lint-staged": {
+    "src/**/*": [
+      "yarn lint --fix"
+    ]
+  },
   "eslintConfig": {
     "extends": "react-app"
   },
