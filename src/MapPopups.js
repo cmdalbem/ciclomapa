@@ -151,7 +151,7 @@ class MapPopups {
                     switch (key) {
                       case 'website':
                       case 'email':
-                      case 'facebook':
+                      case 'facebook': {
                         // Sometimes people will not put the http part of the link on OSM,
                         // making the browser think the link is a subpage of CicloMapa and
                         // adding our domain to the beggining of it.
@@ -164,7 +164,7 @@ class MapPopups {
                                     class="underline" href=${link}>
                                     Link</a>`,
                         ];
-
+                      }
                       default:
                         if (translatedName) {
                           return [
