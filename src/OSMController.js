@@ -100,9 +100,22 @@ class OSMController {
                         console.debug('nominatimData', nominatimData);
 
                         if (nominatimData.length > 0) {
-                            // Get most relevant result from Nomatim and do this crazy operation to get the final area id
+                            // This tries to replicate the behavior of the "geocodeArea" filter on Overpass Turbo.
+                            // Gets the first 'relation' result from Nomatim and extract its corresponding area.
                             // Source: https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL#By_area_.28area.29
-                            let areaId = 3600000000 + nominatimData[0].osm_id;
+                            let osmId;
+                            for(let i=0; i < nominatimData.length && osmId === undefined; i++) {
+                                console.log('nominatimData[i]', nominatimData[i]);
+                                if (nominatimData[i].osm_type === 'relation') {
+                                    osmId = nominatimData[i].osm_id;
+                                }
+                            }
+                            // Fallback if there's no relation in search results. Not sure if it's needed, but just in case.
+                            if (!osmId) {
+                                osmId = nominatimData[0].osm_id;
+                            }
+                            
+                            let areaId = 3600000000 + osmId;
                             
                             resolve(areaId);
                         } else {
