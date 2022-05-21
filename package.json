@@ -30,11 +30,18 @@
   },
   "scripts": {
     "start": "craco start",
+    "lint": "eslint src --max-warnings=0",
     "build": "craco build",
     "test": "craco test",
     "eject": "react-scripts eject",
     "predeploy": "yarn run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "src/**/*": [
+      "yarn lint --fix"
+    ]
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -50,5 +57,17 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.17.0",
+    "@babel/preset-react": "^7.16.7",
+    "eslint": "^7.11.0",
+    "eslint-config-prettier": "^8.4.0",
+    "eslint-plugin-jest": "^26.1.1",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-react": "^7.28.0",
+    "husky": "^7.0.0",
+    "lint-staged": "^12.3.4",
+    "prettier": "2.5.1"
   }
 }

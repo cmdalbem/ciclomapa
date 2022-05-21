@@ -163,8 +163,6 @@ class App extends Component {
             }
         })
 
-        console.debug('url params obj:', paramsObj);
-
         return paramsObj;
     }
 

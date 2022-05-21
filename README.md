@@ -1,4 +1,4 @@
-![Mockups of different devices showing the app](./mockups.png)
+![Mockups of different devices showing the app](./.github/mockups.png)
 
 
 # CicloMapa
@@ -31,7 +31,7 @@ The basic premise is that the OSM Overpass API is *very* slow and we couldn't hi
 
 We store a mirror of the OSM data in a Firebase Database. Any user (possibly an OSM contributor) can manually update this data, which will automatically update the Database.
 
-![A diagram of the system architecture and how it communicates with external services](./arch.jpg)
+![A diagram of the system architecture and how it communicates with external services](./.github/arch.jpg)
 
 
 # Getting started
@@ -64,21 +64,9 @@ yarn run deploy
 
 ## Contributing
 
-We're using [GitHub Issues](https://github.com/cmdalbem/ciclomapa/issues) for our backlog. Feel free to take a look around and chose the task you want. Use the tags at your advantage:
+Thanks for considering contributing to CicloMapa!
 
-- `complexity` tags tell you how difficult a task *probably* is.
-- `good first issue` is the perfect place to start if you're new to the project, or to coding itself.
-- `help wanted` are issues where external help is currently more needed.
-
-After you've chosen your task, you have no doubts on it and you're ready to start coding, follow these steps:
-
-1. Fork this repository.
-2. Create a branch: `git checkout -b <branch_name>`.
-3. Make your changes and commit them: `git commit -m '<commit_message>'`
-4. Push to the original branch: `git push origin <project_name>/<location>`
-5. Create the pull request.
-
-Alternatively see the GitHub documentation on [creating a pull request](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request).
+Check out our [Contribution Guide](.github/CONTRIBUTING.md).
 
 
 ## Contact
