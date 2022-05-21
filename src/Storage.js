@@ -306,7 +306,7 @@ class Storage {
                 console.debug("[Firebase] No document for: ", slug);
 
                 // Check if recursion tail
-                if (!!part) {
+                if (!part) {
                     let ret = {};
                     ret.updatedAt = this.dataBuffer.updatedAt.toDate();
     
