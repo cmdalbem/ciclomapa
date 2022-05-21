@@ -277,7 +277,19 @@ class App extends Component {
                     const lengths = calculateLayersLengths(newData.geoJson, this.state.layers, this.state.lengthCalculationStrategy);
                     
                     if (SAVE_TO_FIREBASE) {
-                        this.storage.save(areaName, newData.geoJson, lengths);
+                        this.storage.save(areaName, newData.geoJson, lengths)
+                            .then(() => {
+                                notification.success({
+                                    message: 'Banco de dados atualizado',
+                                    description: "O banco do CicloMapa foi atualizado com a versão mais recente dos dados desta cidade."
+                                });
+                            }).catch(e => {
+                                notification['error']({
+                                    message: 'Erro ao atualizar banco de dados',
+                                    description:
+                                        'Por alguma razão não conseguimos atualizar o banco de dados com esta versão dos dados. Por favor tente novamente ou contate os desenvolvedores.',
+                                });
+                            });
                     }
 
                     this.setState({
