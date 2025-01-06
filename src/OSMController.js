@@ -12,7 +12,7 @@ import {
 } from './constants.js'
 import { slugify } from './utils.js'
 
-import * as layers from './layers.json';
+import * as layersDefinitions from './layers.json';
 
 class OSMController {
     // getQuery() converts our CicloMapa layers filter syntax to the OSM Overpass query syntax
@@ -33,7 +33,7 @@ class OSMController {
     static getQuery(constraints) {
         const bbox = constraints.bbox;
         const areaId = constraints.areaId;
-        const filteredLayers = layers.default.filter(l => l.filters);
+        const filteredLayers = layersDefinitions.default.filter(l => l.filters);
 
         const body = filteredLayers.map(l =>
             (l.type === 'poi' ? ['node', 'way'] : ['way']).map( element =>
@@ -64,7 +64,9 @@ class OSMController {
     }
 
     static getLayers(debugMode) {
-        layers.default.forEach(l => {
+        let layers = layersDefinitions.default;
+        
+        layers.forEach(l => {
             // Generate an ID based on name
             l.id = slugify(l.name);
 
@@ -82,10 +84,10 @@ class OSMController {
         });
 
         if (!debugMode) {
-            layers.default = layers.default.filter(l => !l.onlyDebug || l.onlyDebug && l.onlyDebug === false);
+            layers = layers.filter(l => !l.onlyDebug || l.onlyDebug && l.onlyDebug === false);
         }
 
-        return layers.default;
+        return layers;
     }
 
     static getAreaId(areaName) {
