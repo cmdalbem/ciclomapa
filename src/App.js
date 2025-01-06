@@ -1,5 +1,10 @@
 import React, { Component } from 'react';
-import { withRouter } from "react-router-dom";
+import {
+    useLocation,
+    useNavigate,
+    useParams,
+  } from "react-router-dom";
+  
 
 import { notification } from 'antd';
 
@@ -444,9 +449,10 @@ class App extends Component {
                 if (this.state.embedMode) {
                     params += `&embed=true`;
                 }
-                this.props.history.push({
-                    search: params
-                })
+                // @todo add me back!
+                // this.props.history.push({
+                //     search: params
+                // })
         }
 
         if (this.state.lengthCalculationStrategy !== prevState.lengthCalculationStrategy) {
@@ -623,6 +629,23 @@ class App extends Component {
         );
     }
 }
+
+function withRouter(Component) {
+    function ComponentWithRouterProp(props) {
+      let location = useLocation();
+      let navigate = useNavigate();
+      let params = useParams();
+      return (
+        <Component
+          {...props}
+          router={{ location, navigate, params }}
+          location={location}
+        />
+      );
+    }
+  
+    return ComponentWithRouterProp;
+  }  
 
 const withRouterAndRef = Wrapped => {
     const WithRouter = withRouter(({ forwardRef, ...otherProps }) => (
