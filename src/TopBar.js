@@ -234,31 +234,25 @@ class TopBar extends Component {
                                     </Button>
 
                                     <Dropdown overlay={collaborateMenu}>
-                                        <Button className="ml-3" ghost>
+                                        <Button className="ml-3">
                                             <span className="mr-2"> Colaborar </span>
                                             <IconCaret className="text-green-300" />
                                         </Button>
                                     </Dropdown>
                                     
-                                    <Button className="ml-3"
-                                        ghost
-                                        onClick={downloadData}
-                                    >
+                                    <Button className="ml-3" onClick={downloadData}>
                                         <IconDownload /> Dados
                                     </Button>
 
                                     {
                                         !this.props.isSidebarOpen &&
-                                        <Button className="ml-3"
-                                            ghost
-                                            onClick={() => this.props.toggleSidebar(true)}
-                                        >
+                                        <Button className="ml-3" onClick={() => this.props.toggleSidebar(true)}>
                                             <IconAnalytics/> Métricas
                                         </Button>
                                     }
                                 </div>
                                 :
-                                <Button ghost target="_BLANK" href={window.location.href.replace(/&embed=true/g,'')}>
+                                <Button target="_BLANK" href={window.location.href.replace(/&embed=true/g,'')}>
                                     <IconMap/> Ver mapa completo
                                 </Button> 
                             }
