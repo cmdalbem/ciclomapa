@@ -15,22 +15,26 @@ const debugStyles = {
 class AirtableDatabase {
     async fetchTable(tableName, view, offset, accumulator=[]) {
         if (!AIRTABLE_API_KEY) {
-            console.error('No AIRTABLE_API_KEY!');
+            console.error('No AIRTABLE_API_KEY found');
             return;
         }
 
-        let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}?api_key=${AIRTABLE_API_KEY}`;
+        let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}`;
         if (view) {
             queryUrl += `&view=${view}`;
         }
-
         if (offset) {
             queryUrl += `&offset=${offset}`;
         }
-         
-        const response = await fetch(queryUrl);
+        const response = await fetch(
+            queryUrl, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+            }});
+
         const data = await response.json();
-        
+
         if (data.records && data.records.length > 0) {
             let accumulated = data.records;
     
@@ -49,14 +53,13 @@ class AirtableDatabase {
     }
 
     async post(tableName, data) {
-        let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}?api_key=${AIRTABLE_API_KEY}`;
-
-        console.debug('data', data);
+        let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}`;
 
         await fetch(queryUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
             },
             body: JSON.stringify(data)
         }).then(res => {
