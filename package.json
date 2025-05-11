@@ -14,7 +14,7 @@
     "antd": "^4.14.0",
     "craco-less": "^3.0.1",
     "file-saver": "^2.0.5",
-    "firebase": "^8.3.1",
+    "firebase": "^10.9.0",
     "gh-pages": "^6.3.0",
     "idb-keyval": "^6.2.1",
     "jquery": "^3.6.0",
