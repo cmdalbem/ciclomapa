@@ -449,93 +449,95 @@ class Map extends Component {
             this.map.removeLayer('comentarios');
         }
 
-        this.setState(await this.airtableDatabase.getComments());
-
-        if (this.state.comments.length > 0) {
-            this.map.getSource('commentsSrc').setData({
-                'type': 'FeatureCollection',
-                'features': this.state.comments.map(c => {
-                    return {
-                        'type': 'Feature',
-                        'geometry': {
-                            'type': 'Point',
-                            'coordinates': c.fields.latlong.split(',').reverse()
+        this.setState(
+            await this.airtableDatabase.getComments(),
+            () => {
+                if (this.state.comments.length > 0) {
+                    this.map.getSource('commentsSrc').setData({
+                        'type': 'FeatureCollection',
+                        'features': this.state.comments.map(c => {
+                            return {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': c.fields.latlong.split(',').reverse()
+                                },
+                                'properties': c.fields
+                            };
+                        })
+                    });
+        
+                    this.map.addLayer({
+                        'id': 'comentarios',
+                        'type': 'symbol',
+                        'source': 'commentsSrc',
+                        'layout': {
+                            'icon-image': 'commentIcon',
+                            'icon-size': [
+                                "interpolate",
+                                ["exponential", 1.5],
+                                ["zoom"], 
+                                8, 0,
+                                COMMENTS_ZOOM_THRESHOLD, 1
+                            ],
+                            "icon-allow-overlap": [
+                                'step',
+                                ['zoom'],
+                                false,
+                                COMMENTS_ZOOM_THRESHOLD,
+                                true
+                            ],
                         },
-                        'properties': c.fields
-                    };
-                })
-            });
-
-            this.map.addLayer({
-                'id': 'comentarios',
-                'type': 'symbol',
-                'source': 'commentsSrc',
-                'layout': {
-                    'icon-image': 'commentIcon',
-                    'icon-size': [
-                        "interpolate",
-                        ["exponential", 1.5],
-                        ["zoom"], 
-                        8, 0,
-                        COMMENTS_ZOOM_THRESHOLD, 1
-                    ],
-                    "icon-allow-overlap": [
-                        'step',
-                        ['zoom'],
-                        false,
-                        COMMENTS_ZOOM_THRESHOLD,
-                        true
-                    ],
-                },
-                'paint': {
-                    'icon-opacity': [
-                        'case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                        .8,
-                        1
-                    ]
-                }
-            });
-
-            // Interactions
-
-            this.map.on('mouseenter', 'comentarios', e => {
-                if (e.features.length > 0) {
-                    this.map.getCanvas().style.cursor = 'pointer';
-    
-                    if (this.hoveredComment) {
-                        this.map.setFeatureState({
-                            source: 'commentsSrc',
-                            id: this.hoveredComment },
-                            { hover: false });
-                    }
-                    this.hoveredComment = e.features[0].id;
-                    this.map.setFeatureState({
-                        source: 'commentsSrc',
-                        id: this.hoveredComment },
-                        { hover: true });
-                }
-            });
-    
-            this.map.on('mouseleave', 'comentarios', e => {
-                if (this.hoveredComment) {// && !this.selectedCycleway) {
-                    this.map.getCanvas().style.cursor = '';
-
-                    this.map.setFeatureState({
-                        source: 'commentsSrc',
-                        id: this.hoveredComment },
-                        { hover: false });
-                }
-                this.hoveredComment = null;
-            });
-
-            this.map.on('click', 'comentarios', e => {
-                if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-                    this.popups.showCommentPopup(e);
-                    e.originalEvent.preventDefault();
-                }
-            });
-        }
+                        'paint': {
+                            'icon-opacity': [
+                                'case',
+                                ['boolean', ['feature-state', 'hover'], false],
+                                .8,
+                                1
+                            ]
+                        }
+                    });
+        
+                    // Interactions
+        
+                    this.map.on('mouseenter', 'comentarios', e => {
+                        if (e.features.length > 0) {
+                            this.map.getCanvas().style.cursor = 'pointer';
+            
+                            if (this.hoveredComment) {
+                                this.map.setFeatureState({
+                                    source: 'commentsSrc',
+                                    id: this.hoveredComment },
+                                    { hover: false });
+                            }
+                            this.hoveredComment = e.features[0].id;
+                            this.map.setFeatureState({
+                                source: 'commentsSrc',
+                                id: this.hoveredComment },
+                                { hover: true });
+                        }
+                    });
+            
+                    this.map.on('mouseleave', 'comentarios', e => {
+                        if (this.hoveredComment) {// && !this.selectedCycleway) {
+                            this.map.getCanvas().style.cursor = '';
+        
+                            this.map.setFeatureState({
+                                source: 'commentsSrc',
+                                id: this.hoveredComment },
+                                { hover: false });
+                        }
+                        this.hoveredComment = null;
+                    });
+        
+                    this.map.on('click', 'comentarios', e => {
+                        if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
+                            this.popups.showCommentPopup(e);
+                            e.originalEvent.preventDefault();
+                        }
+                    });
+            }
+        });
     }
 
     addCitiesLinksLayer() {
