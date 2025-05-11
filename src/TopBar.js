@@ -128,9 +128,9 @@ class TopBar extends Component {
         const collaborateMenu = (
             <Menu onClick={this.handleMenuClick}>
                 {
-                    ENABLE_COMMENTS &&
-                    <Menu.Item key="comment" icon={<IconComment/>}>
-                        Comentar
+                    // ENABLE_COMMENTS &&
+                    <Menu.Item key="comment" disabled icon={<IconComment/>}>
+                        Comentar (em manutenção)
                     </Menu.Item>
                 }
                 <Menu.Item key="edit" icon={<IconEdit />}>
