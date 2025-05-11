@@ -302,10 +302,10 @@ class Map extends Component {
         });
 
         this.map.on('click', l.id, e => {
-            if (e.features.length > 0 && !e.originalEvent.defaultPrevented && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
+            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
                 this.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
+                e.originalEvent.preventDefault();
             }
-            e.originalEvent.preventDefault();
         });
     }
 
@@ -422,7 +422,7 @@ class Map extends Component {
         // Click interaction
         // Hover interaction is handled globally with map.on('mousemove')
         this.map.on('click', l.id + '--interactive', e => {
-            if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
+            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
                 // if (this.selectedCycleway) {
                 //     this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: false });
                 // }
@@ -433,8 +433,8 @@ class Map extends Component {
                     l.id === e.features[0].layer.id.split('--')[0]
                 );
                 this.popups.showCyclewayPopup(e, layer);
+                e.originalEvent.preventDefault();
             }
-            e.originalEvent.preventDefault();
         });
     }
 
@@ -530,10 +530,10 @@ class Map extends Component {
             });
 
             this.map.on('click', 'comentarios', e => {
-                if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
+                if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
                     this.popups.showCommentPopup(e);
+                    e.originalEvent.preventDefault();
                 }
-                e.originalEvent.preventDefault();
             });
         }
     }
@@ -587,14 +587,16 @@ class Map extends Component {
         });
 
         this.map.on('click', 'cities', e => {
-            const coords = e.features[0].geometry.coordinates.slice();
-
-            this.map.flyTo({
-                center: coords,
-                zoom: DEFAULT_ZOOM,
-            }); 
-
-            this.reverseGeocode(coords);
+            if (e && e.features && e.features.length > 0) {
+                const coords = e.features[0].geometry.coordinates.slice();
+    
+                this.map.flyTo({
+                    center: coords,
+                    zoom: DEFAULT_ZOOM,
+                }); 
+    
+                this.reverseGeocode(coords);
+            }
         });
     }
 
