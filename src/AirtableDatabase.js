@@ -19,7 +19,7 @@ class AirtableDatabase {
             return;
         }
 
-        let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}`;
+        let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}?`;
         if (view) {
             queryUrl += `&view=${view}`;
         }
