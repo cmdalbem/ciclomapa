@@ -129,8 +129,8 @@ class TopBar extends Component {
             <Menu onClick={this.handleMenuClick}>
                 {
                     // ENABLE_COMMENTS &&
-                    <Menu.Item key="comment" disabled icon={<IconComment/>}>
-                        Comentar (em manutenção)
+                    <Menu.Item key="comment" icon={<IconComment/>}>
+                        Comentar
                     </Menu.Item>
                 }
                 <Menu.Item key="edit" icon={<IconEdit />}>

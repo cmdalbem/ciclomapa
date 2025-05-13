@@ -866,10 +866,11 @@ class Map extends Component {
     }
 
     newComment() {
-        this.setState({ showCommentCursor: true });
-        this.map.once('click', e => {
-            this.newCommentCoords = e.lngLat;
-            this.showCommentModal();
+        this.setState({ showCommentCursor: true }, () => {
+            this.map.once('click', e => {
+                this.newCommentCoords = e.lngLat;
+                this.showCommentModal();
+            });
         })
     }
 
