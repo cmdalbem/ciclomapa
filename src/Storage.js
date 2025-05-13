@@ -195,35 +195,44 @@ class Storage {
                                 reject();
                             });
                         }).catch(error => {
-                            console.debug('[Firestore] Failed to save GeoJSON in 2 parts, splitting in 3...')
+                            console.debug('[Firestore] Failed to save GeoJSON in 2 parts, splitting in 4...')
                             
-                            const divider = Math.ceil(compressed.length/3);
+                            const divider = Math.ceil(compressed.length / 4);
                             const partb1 = compressed.slice(0, divider);
-                            const partb2 = compressed.slice(divider, divider*2);
-                            const partb3 = compressed.slice(divider*2, divider*3);
+                            const partb2 = compressed.slice(divider, divider * 2);
+                            const partb3 = compressed.slice(divider * 2, divider * 3);
+                            const partb4 = compressed.slice(divider * 3, divider * 4);
 
-                            this.saveGeoJSONToFirestore(name, partb1, lengths, 1) 
+                            this.saveGeoJSONToFirestore(name, partb1, lengths, 1)
                             .then(() => {
-                                console.debug(`[Firebase] GeoJSON ${name} (1/3) saved successfully.`);
+                                console.debug(`[Firebase] GeoJSON ${name} (1/4) saved successfully.`);
 
                                 this.saveGeoJSONToFirestore(name, partb2, lengths, 2)
                                 .then(() => {
-                                    console.debug(`[Firebase] GeoJSON ${name} (2/3) saved successfully.`);
-                                    
+                                    console.debug(`[Firebase] GeoJSON ${name} (2/4) saved successfully.`);
+
                                     this.saveGeoJSONToFirestore(name, partb3, lengths, 3)
                                     .then(() => {
-                                        console.debug(`[Firebase] GeoJSON ${name} (3/3) saved successfully.`);
-                                        resolve();
+                                        console.debug(`[Firebase] GeoJSON ${name} (3/4) saved successfully.`);
+
+                                        this.saveGeoJSONToFirestore(name, partb4, lengths, 4)
+                                        .then(() => {
+                                            console.debug(`[Firebase] GeoJSON ${name} (4/4) saved successfully.`);
+                                            resolve();
+                                        }).catch(error => {
+                                            console.error(`[Firebase] Error saving GeoJSON ${name} (4/4): `, error);
+                                            reject();
+                                        });
                                     }).catch(error => {
-                                        console.error(`[Firebase] Error saving GeoJSON ${name} (3/3): `, error);
+                                        console.error(`[Firebase] Error saving GeoJSON ${name} (3/4): `, error);
                                         reject();
                                     });
                                 }).catch(error => {
-                                    console.error(`[Firebase] Error saving GeoJSON ${name} (2/3): `, error);
+                                    console.error(`[Firebase] Error saving GeoJSON ${name} (2/4): `, error);
                                     reject();
                                 });
                             }).catch(error => {
-                                console.error(`[Firebase] Error saving GeoJSON ${name} (1/3): `, error);
+                                console.error(`[Firebase] Error saving GeoJSON ${name} (1/4): `, error);
                                 reject();
                             });   
                         });        
