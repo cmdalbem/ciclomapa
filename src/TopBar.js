@@ -170,11 +170,10 @@ class TopBar extends Component {
                             <div className={`city-picker sm:text-center ${IS_MOBILE && 'w-full'}`}>
                                 <div className={`mb-1 sm:mb-1 ${IS_MOBILE && 'w-full'}`}>
                                     <Button
-                                        size='large'
                                         block={IS_MOBILE}
                                         onClick={this.showCityPicker}
                                     >
-                                        <h3 className="text-lg flex items-center justify-between">
+                                        <h3 className="flex items-center justify-between">
                                             <span className="mr-3">
                                                 <span className="font-bold">
                                                     {city},
@@ -226,7 +225,7 @@ class TopBar extends Component {
                         <div className="nav-links font-white">
                             {
                                 !embedMode ? <div className="hidden sm:block">
-                                    <Button className="ml-3"
+                                    <Button className="ml-2"
                                         type="link"
                                         onClick={this.props.openAboutModal}
                                     >
@@ -234,19 +233,19 @@ class TopBar extends Component {
                                     </Button>
 
                                     <Dropdown overlay={collaborateMenu}>
-                                        <Button className="ml-3">
+                                        <Button className="ml-2">
                                             <span className="mr-2"> Colaborar </span>
                                             <IconCaret className="text-green-300" />
                                         </Button>
                                     </Dropdown>
                                     
-                                    <Button className="ml-3" onClick={downloadData}>
+                                    <Button className="ml-2" onClick={downloadData}>
                                         <IconDownload /> Dados
                                     </Button>
 
                                     {
                                         !this.props.isSidebarOpen &&
-                                        <Button className="ml-3" onClick={() => this.props.toggleSidebar(true)}>
+                                        <Button className="ml-2" onClick={() => this.props.toggleSidebar(true)}>
                                             <IconAnalytics/> Métricas
                                         </Button>
                                     }
