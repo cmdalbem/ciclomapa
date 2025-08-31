@@ -23,6 +23,7 @@ import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
 import TopBar from './TopBar.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
+import DirectionsPanel from './DirectionsPanel.js'
 import AnalyticsSidebar from './AnalyticsSidebar.js'
 import OSMController from './OSMController.js'
 import Storage from './Storage.js'
@@ -495,13 +496,13 @@ class App extends Component {
             this.saveStateToLocalStorage();
         });
 
-        if (!this.state.debugMode) {
-            const emptyFunc = () => {};
-            console.log = emptyFunc;
-            console.debug = emptyFunc;
-            console.warn = emptyFunc;
-            console.error = emptyFunc;
-        }
+        // if (!this.state.debugMode) {
+        //     const emptyFunc = () => {};
+        //     console.log = emptyFunc;
+        //     console.debug = emptyFunc;
+        //     console.warn = emptyFunc;
+        //     console.error = emptyFunc;
+        // }
     }
 
     onRouteChanged() {
@@ -610,6 +611,10 @@ class App extends Component {
                     layers={this.state.layers}
                     lengths={this.state.lengths}
                     onLayersChange={this.onLayersChange}
+                    embedMode={this.state.embedMode}
+                />
+
+                <DirectionsPanel
                     embedMode={this.state.embedMode}
                 />
 
