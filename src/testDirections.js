@@ -17,7 +17,8 @@ export async function testMapboxDirections(from, to) {
                 { coordinates: toCoords }
             ],
             geometries: 'geojson',
-            overview: 'simplified',
+            overview: 'full',
+            alternatives: true,
             steps: false
         }).send();
         
