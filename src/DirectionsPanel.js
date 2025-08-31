@@ -24,21 +24,24 @@ const { TextArea } = Input;
 class DirectionsPanel extends Component {
     constructor(props) {
         super(props);
+        this.state = {
+            collapsed: false,
+            fromPoint: null,
+            toPoint: null,
+            directions: null,
+            loading: false,
+            error: null,
+            fromGeocoderAttached: false,
+            toGeocoderAttached: false,
+            hoveredRouteIndex: null // Added for hover state
+        };
 
         this.toggleCollapse = this.toggleCollapse.bind(this);
         this.calculateDirections = this.calculateDirections.bind(this);
         this.clearDirections = this.clearDirections.bind(this);
-        this.initGeocoders = this.initGeocoders.bind(this);
-        
-        this.state = {
-            collapsed: IS_MOBILE,
-            fromPoint: null, // Will store geocoder result
-            toPoint: null,   // Will store geocoder result
-            directions: null,
-            loading: false,
-            error: null,
-            geocodersInitialized: false // New state variable
-        }
+        this.selectRoute = this.selectRoute.bind(this);
+        this.handleRouteHover = this.handleRouteHover.bind(this);
+        this.handleRouteLeave = this.handleRouteLeave.bind(this);
     }
 
     componentDidMount() {
@@ -193,6 +196,53 @@ class DirectionsPanel extends Component {
         }
     }
 
+    selectRoute(index) {
+        // No longer needed since we show all routes
+        console.log('Route selection disabled - showing all routes');
+    }
+
+    handleRouteHover(routeIndex) {
+        console.log('🖱️ Route hover:', routeIndex);
+        this.setState({ hoveredRouteIndex: routeIndex });
+        // Set hover state on the specific route in the map
+        if (this.props.map) {
+            console.log('🗺️ Map available, setting feature state');
+            // Clear hover state on all routes first
+            if (this.state.directions && this.state.directions.routes) {
+                this.state.directions.routes.forEach((route, index) => {
+                    console.log(`🔄 Clearing hover state for route ${index}`);
+                    this.props.map.setFeatureState(
+                        { source: 'directions-route', id: index },
+                        { hover: false }
+                    );
+                });
+            }
+            // Set hover state on the hovered route
+            console.log(`✨ Setting hover state for route ${routeIndex}`);
+            this.props.map.setFeatureState(
+                { source: 'directions-route', id: routeIndex },
+                { hover: true }
+            );
+        } else {
+            console.log('❌ Map not available');
+        }
+    }
+
+    handleRouteLeave() {
+        console.log('🚫 Route leave, clearing hover states');
+        this.setState({ hoveredRouteIndex: null });
+        // Clear hover state on all routes in the map
+        if (this.props.map && this.state.directions && this.state.directions.routes) {
+            this.state.directions.routes.forEach((route, index) => {
+                console.log(`🔄 Clearing hover state for route ${index}`);
+                this.props.map.setFeatureState(
+                    { source: 'directions-route', id: index },
+                    { hover: false }
+                );
+            });
+        }
+    }
+
     render() {
         const { embedMode } = this.props;
         const { collapsed, fromPoint, toPoint, directions, loading, error } = this.state;
@@ -310,11 +360,41 @@ class DirectionsPanel extends Component {
                         )}
 
                         {directions && (
-                            <div className="mt-3 p-3 bg-green-600 bg-opacity-20 border border-green-500 rounded">
-                                <h4 className="font-semibold text-green-300 mb-2">Route Found!</h4>
-                                <div className="text-sm">
-                                    <div>Distance: {directions.routes?.[0]?.distance ? `${(directions.routes[0].distance / 1000).toFixed(2)} km` : 'N/A'}</div>
-                                    <div>Duration: {directions.routes?.[0]?.duration ? `${Math.round(directions.routes[0].duration / 60)} min` : 'N/A'}</div>
+                            <div className="mt-3">
+                                <h4 className="font-semibold text-green-300 mb-2">Rotas disponíveis</h4>
+                                <div className="space-y-2">
+                                    {directions.routes && directions.routes.map((route, index) => (
+                                        <div
+                                            key={index}
+                                            className="bg-white bg-opacity-10 border border-white border-opacity-20 rounded-lg p-3 cursor-pointer hover:bg-opacity-20 transition-colors"
+                                            onMouseEnter={() => this.handleRouteHover(index)}
+                                            onMouseLeave={this.handleRouteLeave}
+                                        >
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center">
+                                                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-xs font-bold text-white mr-2">
+                                                        {index + 1}
+                                                    </div>
+                                                    <span className="text-sm font-medium">
+                                                        {route.distance ? `${(route.distance / 1000).toFixed(1)} km` : 'N/A'}
+                                                    </span>
+                                                </div>
+                                                <div className="text-sm text-gray-300">
+                                                    {route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'}
+                                                </div>
+                                            </div>
+                                            {route.legs && route.legs[0] && (
+                                                <div className="text-xs text-gray-400 space-y-1">
+                                                    {route.legs[0].steps && route.legs[0].steps.length > 0 && (
+                                                        <div className="flex items-center">
+                                                            <span className="mr-2">🚴</span>
+                                                            <span>{route.legs[0].steps.length} etapas</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}

@@ -634,44 +634,7 @@ class Map extends Component {
                 "generateId": true
             });
 
-            // Directions layer
-            map.addSource("directions-route", {
-                "type": "geojson",
-                "data": {
-                    'type': 'FeatureCollection',
-                    'features': []
-                }
-            });
-            const DIRECTIONS_LINE_WIDTH = 16;
-            map.addLayer({
-                id: 'directions-route',
-                type: 'line',
-                source: 'directions-route',
-                layout: {
-                    'line-join': 'round',
-                    'line-cap': 'round'
-                },
-                paint: {
-                    'line-color': 'white',
-                    'line-opacity': 0.2,
-                    "line-width": [
-                        "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"],
-                            10, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                DIRECTIONS_LINE_WIDTH * 1.5,
-                                Math.max(1, DIRECTIONS_LINE_WIDTH/4)
-                            ],
-                            18, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                DIRECTIONS_LINE_WIDTH * DEFAULT_LINE_WIDTH_MULTIPLIER * LINE_WIDTH_MULTIPLIER_HOVER,
-                                DIRECTIONS_LINE_WIDTH * DEFAULT_LINE_WIDTH_MULTIPLIER
-                            ]
-                    ]
-                },
-                filter: ['==', '$type', 'LineString']
-            });
+
 
             // layers.json is ordered from most to least important, but we 
             //   want the most important ones to be on top so we add in reverse.
@@ -718,6 +681,44 @@ class Map extends Component {
             console.warn('Map layers already initialized.');
         }
 
+    }
+
+    initDirectionsLayers() {
+        const map = this.map;
+        if (!map) return;
+
+        // Initialize directions route layer
+        const DIRECTIONS_LINE_WIDTH = 16;
+        map.addSource("directions-route", {
+            "type": "geojson",
+            "data": {
+                'type': 'FeatureCollection',
+                'features': []
+            }
+        });
+        map.addLayer({
+            id: 'directions-route',
+            type: 'line',
+            source: 'directions-route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': 'white',
+                'line-opacity': [
+                    'case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                        0.8,
+                        0.2
+                ],
+                "line-width": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, Math.max(1, DIRECTIONS_LINE_WIDTH/4),
+                        18, DIRECTIONS_LINE_WIDTH * DEFAULT_LINE_WIDTH_MULTIPLIER
+                ]
+            },
+            filter: ['==', '$type', 'LineString']
+        });
     }
 
     componentDidUpdate(prevProps) {
@@ -784,39 +785,38 @@ class Map extends Component {
         const map = this.map;
         if (!map) return;
 
-        // If we have new directions, update the existing layers
-        if (directions && directions.routes && directions.routes.length > 0) {
-            console.log('Updating directions on map:', directions);
-            
-            if (directions.routes[0] && directions.routes[0].geometry) {
-                // Update the route data
-                map.getSource('directions-route').setData(directions.routes[0].geometry);
+        // Check if directions sources exist (they might not be initialized yet)
+        if (!map.getSource('directions-route')) {
+            console.warn('Directions sources not yet initialized, skipping update');
+            return;
+        }
 
-                // Fit the map to show the entire route
-                if (directions.bbox) {
-                    map.fitBounds(directions.bbox, {
-                        padding: 50,
-                        duration: 1000
-                    });
-                }
-            } else {
-                console.error('No geometry found in directions');
+        // Update the existing layers' data
+        if (directions && directions.routes && directions.routes.length > 0) {
+            // Create a combined GeoJSON with all routes
+            const allRoutes = {
+                type: 'FeatureCollection',
+                features: directions.routes.map((route, index) => ({
+                    type: 'Feature',
+                    id: index, // Add explicit ID for feature state
+                    properties: { 
+                        routeIndex: index,
+                        distance: route.distance,
+                        duration: route.duration
+                    },
+                    geometry: route.geometry
+                }))
+            };
+            
+            // Update the route layer with all routes
+            map.getSource('directions-route').setData(allRoutes);
+            
+            if (directions.bbox) { 
+                map.fitBounds(directions.bbox, { padding: 50, duration: 1000 }); 
             }
         } else {
             // Clear the directions by setting empty data
-            console.log('Clearing directions from map');
-            map.getSource('directions-route').setData({
-                type: 'FeatureCollection',
-                features: []
-            });
-            map.getSource('directions-origin').setData({
-                type: 'FeatureCollection',
-                features: []
-            });
-            map.getSource('directions-destination').setData({
-                type: 'FeatureCollection',
-                features: []
-            });
+            map.getSource('directions-route').setData({ type: 'FeatureCollection', features: [] });
         }
     }
 
@@ -951,6 +951,9 @@ class Map extends Component {
         if (ENABLE_COMMENTS) {
             this.addCommentsLayers();
         }
+
+        // Initialize directions layers after style has loaded
+        this.initDirectionsLayers();
 
         this.onMapMoved();
 
