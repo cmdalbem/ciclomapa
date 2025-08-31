@@ -65,6 +65,9 @@ class App extends Component {
         this.openAboutModal = this.openAboutModal.bind(this);
         this.closeAboutModal = this.closeAboutModal.bind(this);
         this.onChangeStrategy = this.onChangeStrategy.bind(this);
+        this.onDirectionsCalculated = this.onDirectionsCalculated.bind(this);
+        this.onDirectionsCleared = this.onDirectionsCleared.bind(this);
+        this.setMapRef = this.setMapRef.bind(this);
 
         const urlParams = this.getParamsFromURL();
         
@@ -87,7 +90,9 @@ class App extends Component {
             isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : !IS_PROD,
             hideUI: !urlParams.embed,
             aboutModal: false,
-            lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES
+            lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
+            directions: null,
+            map: null
         };
 
         if (this.state.area) {
@@ -528,6 +533,20 @@ class App extends Component {
         });
     }
 
+    onDirectionsCalculated(directions) {
+        this.setState({ directions });
+        console.log('Directions received in App:', directions);
+    }
+
+    onDirectionsCleared() {
+        this.setState({ directions: null });
+        console.log('Directions cleared from App');
+    }
+
+    setMapRef(map) {
+        this.setState({ map });
+    }
+
     render() {
         return (
             <div id="ciclomapa" className={this.state.hideUI ? "hideUI" : ""}>
@@ -571,6 +590,8 @@ class App extends Component {
                             isSidebarOpen={this.state.isSidebarOpen}
                             embedMode={this.state.embedMode}
                             debugMode={this.state.debugMode}
+                            directions={this.state.directions}
+                            setMapRef={this.setMapRef}
                         />
                         
                         {
@@ -616,6 +637,9 @@ class App extends Component {
 
                 <DirectionsPanel
                     embedMode={this.state.embedMode}
+                    onDirectionsCalculated={this.onDirectionsCalculated}
+                    onDirectionsCleared={this.onDirectionsCleared}
+                    map={this.state.map}
                 />
 
                 <AboutModal

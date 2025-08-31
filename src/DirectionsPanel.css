@@ -1,10 +1,12 @@
+/* Directions Panel Styles */
+
 #directionsPanel {
-    background: rgba(28, 23, 23, 0.95); 
+    background: rgba(28, 23, 23, 0.95);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
+    z-index: 2;
 }
 
 /* Mobile responsive */
@@ -13,25 +15,10 @@
         min-width: 280px;
         max-width: 90vw;
     }
-    
-    #directionsPanelMobileButton {
-        bottom: 30px;
-        right: 8px;
-    }
 }
 
-/* Animation for panel appearance */
-#directionsPanel {
-    animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+/* .mapboxgl-ctrl-geocoder--input {
+  background: #1c1717;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+} */

@@ -6,12 +6,17 @@ import {
     HiOutlineArrowRight as IconArrow,
     HiOutlineX as IconClose
 } from "react-icons/hi";
+import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
+import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
+import mapboxgl from 'mapbox-gl';
 
 import { testMapboxDirections } from './testDirections.js';
 import './DirectionsPanel.css';
 
 import {
     IS_MOBILE,
+    IS_PROD,
+    MAPBOX_ACCESS_TOKEN
 } from './constants.js'
 
 const { TextArea } = Input;
@@ -23,15 +28,93 @@ class DirectionsPanel extends Component {
         this.toggleCollapse = this.toggleCollapse.bind(this);
         this.calculateDirections = this.calculateDirections.bind(this);
         this.clearDirections = this.clearDirections.bind(this);
+        this.initGeocoders = this.initGeocoders.bind(this);
         
         this.state = {
             collapsed: IS_MOBILE,
-            fromPoint: '-22.971177,-43.180278', // Copacabana (lat, lng)
-            toPoint: '-22.983333,-43.200278',   // Ipanema (lat, lng)
+            fromPoint: null, // Will store geocoder result
+            toPoint: null,   // Will store geocoder result
             directions: null,
             loading: false,
-            error: null
+            error: null,
+            geocodersInitialized: false // New state variable
         }
+    }
+
+    componentDidMount() {
+        // Wait for map to be available
+        this.initGeocodersInterval = setInterval(() => {
+            if (this.props.map) {
+                this.initGeocoders();
+                clearInterval(this.initGeocodersInterval);
+            }
+        }, 100);
+    }
+
+    componentDidUpdate(prevProps) {
+        // If map becomes available, initialize geocoders
+        if (this.props.map && !prevProps.map) {
+            console.log('Map became available, initializing geocoders');
+            this.initGeocoders();
+        }
+    }
+
+    componentWillUnmount() {
+        if (this.initGeocodersInterval) {
+            clearInterval(this.initGeocodersInterval);
+        }
+    }
+
+    initGeocoders() {
+        // Wait for map to be available
+        if (!this.props.map) {
+            console.log('Map not available yet, waiting...');
+            return;
+        }
+
+        console.log('Initializing geocoders with map:', this.props.map);
+
+        // Initialize "From" geocoder
+        this.fromGeocoder = new MapboxGeocoder({
+            accessToken: MAPBOX_ACCESS_TOKEN,
+            mapboxgl: mapboxgl,
+            placeholder: 'Digite o ponto de partida...',
+            language: 'pt-BR',
+            countries: 'br',
+            marker: true,
+        });
+
+        // Initialize "To" geocoder
+        this.toGeocoder = new MapboxGeocoder({
+            accessToken: MAPBOX_ACCESS_TOKEN,
+            mapboxgl: mapboxgl,
+            placeholder: 'Digite o destino...',
+            language: 'pt-BR',
+            countries: 'br',
+            marker: true,
+        });
+
+        // Add event listeners
+        this.fromGeocoder.on('result', (result) => {
+            this.setState({ fromPoint: result });
+            console.log('From point selected:', result);
+        });
+
+        this.toGeocoder.on('result', (result) => {
+            this.setState({ toPoint: result });
+            console.log('To point selected:', result);
+        });
+
+        // Clear results when clearing
+        this.fromGeocoder.on('clear', () => {
+            this.setState({ fromPoint: null });
+        });
+
+        this.toGeocoder.on('clear', () => {
+            this.setState({ toPoint: null });
+        });
+
+        // Geocoders will be attached via ref callbacks in render
     }
 
     toggleCollapse() {
@@ -44,37 +127,29 @@ class DirectionsPanel extends Component {
         this.setState({ loading: true, error: null, directions: null });
         
         try {
-            // Use the coordinates from the input fields
-            const from = this.state.fromPoint;
-            const to = this.state.toPoint;
-            
-            // Validate coordinates format
-            if (!from || !to) {
-                throw new Error('Please enter both from and to coordinates');
+            // Check if both points are selected
+            if (!this.state.fromPoint || !this.state.toPoint) {
+                throw new Error('Por favor, selecione os pontos de partida e destino');
             }
             
-            // Test the coordinates format (simple validation)
-            const coordRegex = /^-?\d+\.\d+,-?\d+\.\d+$/;
-            if (!coordRegex.test(from) || !coordRegex.test(to)) {
-                throw new Error('Coordinates must be in format: lat,lng (e.g., -22.971177,-43.180278)');
-            }
+            // Extract coordinates from geocoder results
+            // Mapbox geocoder returns [longitude, latitude] which is what we need
+            const fromCoords = this.state.fromPoint.result.center;
+            const toCoords = this.state.toPoint.result.center;
             
-            // Parse coordinates from "lat,lng" strings to [lng, lat] arrays
-            // Note: Mapbox expects [longitude, latitude] order
-            const fromCoords = from.split(',').map(coord => parseFloat(coord.trim()));
-            const toCoords = to.split(',').map(coord => parseFloat(coord.trim()));
+            console.log('Calculating directions from:', fromCoords, 'to:', toCoords);
             
-            // Convert from [lat, lng] to [lng, lat] for Mapbox
-            const fromMapbox = [fromCoords[1], fromCoords[0]]; // [lng, lat]
-            const toMapbox = [toCoords[1], toCoords[0]]; // [lng, lat]
-            
-            console.log('Parsed coordinates:', { from: fromMapbox, to: toMapbox });
-            
-            const directions = await testMapboxDirections(fromMapbox, toMapbox);
+            const directions = await testMapboxDirections(fromCoords, toCoords);
             this.setState({ 
                 directions, 
                 loading: false 
             });
+            
+            // Pass the directions data to the parent component
+            if (this.props.onDirectionsCalculated) {
+                this.props.onDirectionsCalculated(directions);
+            }
+            
             console.log('Directions calculated:', directions);
         } catch (error) {
             this.setState({ 
@@ -88,8 +163,34 @@ class DirectionsPanel extends Component {
     clearDirections() {
         this.setState({ 
             directions: null, 
-            error: null 
+            error: null,
+            fromPoint: null,
+            toPoint: null
         });
+        
+        // Safely clear the geocoder inputs
+        try {
+            if (this.fromGeocoder && this.state.fromGeocoderAttached) {
+                this.fromGeocoder.clear();
+            }
+            if (this.toGeocoder && this.state.toGeocoderAttached) {
+                this.toGeocoder.clear();
+            }
+        } catch (error) {
+            console.warn('Error clearing geocoders:', error);
+            // If clearing fails, just reset the state
+        }
+        
+        // Reset attachment flags so geocoders can be re-attached if needed
+        this.setState({
+            fromGeocoderAttached: false,
+            toGeocoderAttached: false
+        });
+        
+        // Notify parent to clear the route from the map
+        if (this.props.onDirectionsCleared) {
+            this.props.onDirectionsCleared();
+        }
     }
 
     render() {
@@ -151,35 +252,40 @@ class DirectionsPanel extends Component {
 
                         <Space direction="vertical" size="small" className="w-full">
                             <div>
-                                <label className="block text-sm mb-1">De:</label>
-                                <Input
-                                    value={fromPoint}
-                                    onChange={(e) => this.setState({ fromPoint: e.target.value })}
-                                    placeholder="lat,lng"
-                                    className="text-black"
+                                <label className="block text-sm mb-1">De</label>
+                                <div 
+                                    ref={el => {
+                                        if (el && this.fromGeocoder && !el.hasChildNodes() && !this.state.fromGeocoderAttached) {
+                                            console.log('Attaching from geocoder to DOM');
+                                            const geocoderElement = this.fromGeocoder.onAdd(this.props.map);
+                                            el.appendChild(geocoderElement);
+                                            this.setState({ fromGeocoderAttached: true });
+                                        }
+                                    }}
+                                    className="geocoder-container"
                                 />
-                            </div>
-
-                            <div className="flex justify-center">
-                                <IconArrow className="text-green-300" />
                             </div>
 
                             <div>
-                                <label className="block text-sm mb-1">Para:</label>
-                                <Input
-                                    value={toPoint}
-                                    onChange={(e) => this.setState({ toPoint: e.target.value })}
-                                    placeholder="lat,lng"
-                                    className="text-black"
+                                <label className="block text-sm mb-1">Para</label>
+                                <div 
+                                    ref={el => {
+                                        if (el && this.toGeocoder && !el.hasChildNodes() && !this.state.toGeocoderAttached) {
+                                            console.log('Attaching to geocoder to DOM');
+                                            const geocoderElement = this.toGeocoder.onAdd(this.props.map);
+                                            el.appendChild(geocoderElement);
+                                            this.setState({ toGeocoderAttached: true });
+                                        }
+                                    }}
+                                    className="geocoder-container"
                                 />
                             </div>
-
-                            <Divider className="my-2" />
 
                             <Button
                                 type="primary"
                                 onClick={this.calculateDirections}
                                 loading={loading}
+                                disabled={!this.state.fromPoint || !this.state.toPoint}
                                 block
                                 className="bg-green-600 hover:bg-green-700"
                             >
