@@ -449,10 +449,11 @@ class App extends Component {
                 if (this.state.embedMode) {
                     params += `&embed=true`;
                 }
-                // @todo add me back!
-                // this.props.history.push({
-                //     search: params
-                // })
+                if (this.props.router && this.props.router.navigate) {
+                    this.props.router.navigate({
+                        search: params
+                    }, { replace: true });
+                }
         }
 
         if (this.state.lengthCalculationStrategy !== prevState.lengthCalculationStrategy) {
