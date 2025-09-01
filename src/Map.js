@@ -716,7 +716,7 @@ class Map extends Component {
                     "interpolate",
                         ["exponential", 1.5],
                         ["zoom"],
-                        10, Math.max(1, DIRECTIONS_LINE_WIDTH/4),
+                        6, Math.max(1, DIRECTIONS_LINE_WIDTH/4),
                         18, DIRECTIONS_LINE_WIDTH * DEFAULT_LINE_WIDTH_MULTIPLIER
                 ]
             },
