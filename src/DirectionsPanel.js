@@ -360,7 +360,7 @@ class DirectionsPanel extends Component {
                                 }}
                             />
 
-                            <Button
+                            {/* <Button
                                 type="primary"
                                 onClick={this.calculateDirections}
                                 loading={loading}
@@ -370,7 +370,7 @@ class DirectionsPanel extends Component {
                                 className="mt-2 bg-green-600 hover:bg-green-700"
                             >
                                 Calcular rota
-                            </Button>
+                            </Button> */}
                         </Space>
 
                         {error && (
@@ -381,11 +381,11 @@ class DirectionsPanel extends Component {
 
                         {directions && (
                             <div className="mt-5">
-                                <div className="space-y-2">
+                                <div className="space-y-1">
                                     {directions.routes && directions.routes.map((route, index) => (
                                         <div
                                             key={index}
-                                            className={`border border-white border-opacity-20 rounded-lg p-3 cursor-pointer hover:bg-opacity-10 hover:border-opacity-60 transition-colors ${
+                                            className={`rounded-lg p-2 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors ${
                                                 this.state.selectedRouteIndex === index ? 'bg-white bg-opacity-20 border-opacity-60' : ''
                                             }`}
                                             onMouseEnter={() => this.handleRouteHover(index)}

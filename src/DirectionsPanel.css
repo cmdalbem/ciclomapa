@@ -21,7 +21,8 @@
     }
     
     .mapboxgl-ctrl-geocoder.mapboxgl-ctrl {
-        background: #1c1717;
+        background: rgba(28, 23, 23, 0.5);
+        border-radius: 8px;
 
         .mapboxgl-ctrl-geocoder--button {
             background: none !important;
