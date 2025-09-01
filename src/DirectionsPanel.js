@@ -15,7 +15,8 @@ import { testMapboxDirections } from './testDirections.js';
 import './DirectionsPanel.css';
 
 import {
-    MAPBOX_ACCESS_TOKEN
+    MAPBOX_ACCESS_TOKEN,
+    IS_PROD
 } from './constants.js'
 
 class DirectionsPanel extends Component {
@@ -89,8 +90,10 @@ class DirectionsPanel extends Component {
             placeholder: 'Origem',
             language: 'pt-BR',
             flyTo: false,
-            countries: 'br',
+            countries: IS_PROD ? 'br' : '',
             marker: true,
+            useBrowserFocus: true,
+            enableGeolocation: true
         });
 
         // Initialize "To" geocoder
@@ -100,8 +103,9 @@ class DirectionsPanel extends Component {
             placeholder: 'Destino',
             language: 'pt-BR',
             flyTo: false,
-            countries: 'br',
+            countries: IS_PROD ? 'br' : '',
             marker: true,
+            useBrowserFocus: true
         });
 
         // Add event listeners
