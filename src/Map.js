@@ -16,6 +16,8 @@ import {
     LINE_WIDTH_MULTIPLIER_HOVER,
     POI_ZOOM_THRESHOLD,
     COMMENTS_ZOOM_THRESHOLD,
+    DIRECTIONS_LINE_WIDTH,
+    DIRECTIONS_LINE_BORDER_WIDTH,
 } from './constants.js'
 
 import Analytics from './Analytics.js'
@@ -311,11 +313,9 @@ class Map extends Component {
 
     addLayerWay(l) {
         const filters = this.convertFilterToMapboxFilter(l);
-        const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
-
         const dashedLineStyle = { 'line-dasharray': [1, 1] };
-
-        
+        // Will be used as "beforeId" prop in AddLayer
+        const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
 
         this.map.addLayer({
             "id": l.id + '--interactive',
@@ -685,10 +685,9 @@ class Map extends Component {
 
     initDirectionsLayers() {
         const map = this.map;
+        const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
         if (!map) return;
 
-        // Initialize directions route layer
-        const DIRECTIONS_LINE_WIDTH = 16;
         map.addSource("directions-route", {
             "type": "geojson",
             "data": {
@@ -697,7 +696,7 @@ class Map extends Component {
             }
         });
         map.addLayer({
-            id: 'directions-route',
+            id: 'directions-route--border',
             type: 'line',
             source: 'directions-route',
             layout: { 'line-join': 'round', 'line-cap': 'round' },
@@ -705,9 +704,13 @@ class Map extends Component {
                 'line-color': 'white',
                 'line-opacity': [
                     'case',
-                    ['boolean', ['feature-state', 'hover'], false],
-                        0.8,
-                        0.2
+                    ['boolean', ['feature-state', 'selected'], false],
+                        1,
+                    ['case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                            0.8,
+                            0.3
+                    ]
                 ],
                 "line-width": [
                     "interpolate",
@@ -718,7 +721,29 @@ class Map extends Component {
                 ]
             },
             filter: ['==', '$type', 'LineString']
-        });
+        }, layerUnderneathName);
+        map.addLayer({
+            id: 'directions-route',
+            type: 'line',
+            source: 'directions-route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': [
+                    'case',
+                    ['boolean', ['feature-state', 'selected'], false],
+                        '#2d2e30', // Selected color = street color
+                        '#1c1a17' // Default color = map color (darker, for better contrast)
+                ],
+                "line-width": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, Math.max(1, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH)/4),
+                        18, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH) * DEFAULT_LINE_WIDTH_MULTIPLIER
+                ]
+            },
+            filter: ['==', '$type', 'LineString']
+        }, layerUnderneathName);
     }
 
     componentDidUpdate(prevProps) {
@@ -946,14 +971,12 @@ class Map extends Component {
     }
 
     initLayers() {
+        this.initDirectionsLayers();
         this.initGeojsonLayers(this.props.layers);
             
         if (ENABLE_COMMENTS) {
             this.addCommentsLayers();
         }
-
-        // Initialize directions layers after style has loaded
-        this.initDirectionsLayers();
 
         this.onMapMoved();
 
