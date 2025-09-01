@@ -6,6 +6,7 @@ import {
     HiOutlineArrowRight as IconArrow,
     HiOutlineX as IconClose
 } from "react-icons/hi";
+import { LuBike as IconBike, LuRoute as IconRoute } from "react-icons/lu";
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import mapboxgl from 'mapbox-gl';
@@ -14,12 +15,8 @@ import { testMapboxDirections } from './testDirections.js';
 import './DirectionsPanel.css';
 
 import {
-    IS_MOBILE,
-    IS_PROD,
     MAPBOX_ACCESS_TOKEN
 } from './constants.js'
-
-const { TextArea } = Input;
 
 class DirectionsPanel extends Component {
     constructor(props) {
@@ -33,7 +30,8 @@ class DirectionsPanel extends Component {
             error: null,
             fromGeocoderAttached: false,
             toGeocoderAttached: false,
-            hoveredRouteIndex: null // Added for hover state
+            hoveredRouteIndex: null, // Added for hover state
+            selectedRouteIndex: null // Added for selection state
         };
 
         this.toggleCollapse = this.toggleCollapse.bind(this);
@@ -42,6 +40,8 @@ class DirectionsPanel extends Component {
         this.selectRoute = this.selectRoute.bind(this);
         this.handleRouteHover = this.handleRouteHover.bind(this);
         this.handleRouteLeave = this.handleRouteLeave.bind(this);
+        this.cleanupGeocoders = this.cleanupGeocoders.bind(this);
+        this.handleRouteClick = this.handleRouteClick.bind(this);
     }
 
     componentDidMount() {
@@ -57,7 +57,7 @@ class DirectionsPanel extends Component {
     componentDidUpdate(prevProps) {
         // If map becomes available, initialize geocoders
         if (this.props.map && !prevProps.map) {
-            console.log('Map became available, initializing geocoders');
+            console.debug('Map became available, initializing geocoders');
             this.initGeocoders();
         }
     }
@@ -66,23 +66,29 @@ class DirectionsPanel extends Component {
         if (this.initGeocodersInterval) {
             clearInterval(this.initGeocodersInterval);
         }
+        // Clean up geocoders when component unmounts
+        this.cleanupGeocoders();
     }
 
     initGeocoders() {
         // Wait for map to be available
         if (!this.props.map) {
-            console.log('Map not available yet, waiting...');
+            console.debug('Map not available yet, waiting...');
             return;
         }
 
-        console.log('Initializing geocoders with map:', this.props.map);
+        console.debug('Initializing geocoders with map:', this.props.map);
+
+        // Clean up any existing geocoders first
+        this.cleanupGeocoders();
 
         // Initialize "From" geocoder
         this.fromGeocoder = new MapboxGeocoder({
             accessToken: MAPBOX_ACCESS_TOKEN,
             mapboxgl: mapboxgl,
-            placeholder: 'Digite o ponto de partida...',
+            placeholder: 'Origem',
             language: 'pt-BR',
+            flyTo: false,
             countries: 'br',
             marker: true,
         });
@@ -91,21 +97,26 @@ class DirectionsPanel extends Component {
         this.toGeocoder = new MapboxGeocoder({
             accessToken: MAPBOX_ACCESS_TOKEN,
             mapboxgl: mapboxgl,
-            placeholder: 'Digite o destino...',
+            placeholder: 'Destino',
             language: 'pt-BR',
+            flyTo: false,
             countries: 'br',
             marker: true,
         });
 
         // Add event listeners
         this.fromGeocoder.on('result', (result) => {
-            this.setState({ fromPoint: result });
-            console.log('From point selected:', result);
+            console.debug('From point selected:', result);
+            this.setState({ fromPoint: result }, () => {
+                this.calculateDirections();
+            });
         });
 
         this.toGeocoder.on('result', (result) => {
-            this.setState({ toPoint: result });
-            console.log('To point selected:', result);
+            console.debug('To point selected:', result);
+            this.setState({ toPoint: result }, () => {
+                this.calculateDirections();
+            });
         });
 
         // Clear results when clearing
@@ -117,7 +128,49 @@ class DirectionsPanel extends Component {
             this.setState({ toPoint: null });
         });
 
+        // Reset attachment flags
+        this.setState({
+            fromGeocoderAttached: false,
+            toGeocoderAttached: false
+        });
+
         // Geocoders will be attached via ref callbacks in render
+    }
+
+    cleanupGeocoders() {
+        // Remove geocoders from map if they exist
+        if (this.fromGeocoder && this.props.map) {
+            try {
+                this.fromGeocoder.onRemove(this.props.map);
+            } catch (error) {
+                console.debug('Error removing from geocoder:', error);
+            }
+        }
+        
+        if (this.toGeocoder && this.props.map) {
+            try {
+                this.toGeocoder.onRemove(this.props.map);
+            } catch (error) {
+                console.debug('Error removing to geocoder:', error);
+            }
+        }
+
+        // Clear DOM containers
+        const fromContainer = document.getElementById('fromGeocoder');
+        const toContainer = document.getElementById('toGeocoder');
+        
+        if (fromContainer) {
+            fromContainer.innerHTML = '';
+        }
+        if (toContainer) {
+            toContainer.innerHTML = '';
+        }
+
+        // Reset state
+        this.setState({
+            fromGeocoderAttached: false,
+            toGeocoderAttached: false
+        });
     }
 
     toggleCollapse() {
@@ -127,39 +180,36 @@ class DirectionsPanel extends Component {
     }
 
     async calculateDirections() {
-        this.setState({ loading: true, error: null, directions: null });
-        
-        try {
-            // Check if both points are selected
-            if (!this.state.fromPoint || !this.state.toPoint) {
-                throw new Error('Por favor, selecione os pontos de partida e destino');
+        if (this.state.fromPoint && this.state.toPoint) {
+            this.setState({ loading: true, error: null, directions: null });
+
+            try {
+                // Extract coordinates from geocoder results
+                // Mapbox geocoder returns [longitude, latitude] which is what we need
+                const fromCoords = this.state.fromPoint.result.center;
+                const toCoords = this.state.toPoint.result.center;
+                
+                console.debug('Calculating directions from:', fromCoords, 'to:', toCoords);
+                
+                const directions = await testMapboxDirections(fromCoords, toCoords);
+                this.setState({ 
+                    directions, 
+                    loading: false 
+                });
+                
+                // Pass the directions data to the parent component
+                if (this.props.onDirectionsCalculated) {
+                    this.props.onDirectionsCalculated(directions);
+                }
+                
+                console.debug('Directions calculated:', directions);
+            } catch (error) {
+                this.setState({ 
+                    error: error.message, 
+                    loading: false 
+                });
+                console.error('Directions error:', error);
             }
-            
-            // Extract coordinates from geocoder results
-            // Mapbox geocoder returns [longitude, latitude] which is what we need
-            const fromCoords = this.state.fromPoint.result.center;
-            const toCoords = this.state.toPoint.result.center;
-            
-            console.log('Calculating directions from:', fromCoords, 'to:', toCoords);
-            
-            const directions = await testMapboxDirections(fromCoords, toCoords);
-            this.setState({ 
-                directions, 
-                loading: false 
-            });
-            
-            // Pass the directions data to the parent component
-            if (this.props.onDirectionsCalculated) {
-                this.props.onDirectionsCalculated(directions);
-            }
-            
-            console.log('Directions calculated:', directions);
-        } catch (error) {
-            this.setState({ 
-                error: error.message, 
-                loading: false 
-            });
-            console.error('Directions error:', error);
         }
     }
 
@@ -168,27 +218,12 @@ class DirectionsPanel extends Component {
             directions: null, 
             error: null,
             fromPoint: null,
-            toPoint: null
+            toPoint: null,
+            selectedRouteIndex: null
         });
         
-        // Safely clear the geocoder inputs
-        try {
-            if (this.fromGeocoder && this.state.fromGeocoderAttached) {
-                this.fromGeocoder.clear();
-            }
-            if (this.toGeocoder && this.state.toGeocoderAttached) {
-                this.toGeocoder.clear();
-            }
-        } catch (error) {
-            console.warn('Error clearing geocoders:', error);
-            // If clearing fails, just reset the state
-        }
-        
-        // Reset attachment flags so geocoders can be re-attached if needed
-        this.setState({
-            fromGeocoderAttached: false,
-            toGeocoderAttached: false
-        });
+        // Clean up geocoders properly
+        this.cleanupGeocoders();
         
         // Notify parent to clear the route from the map
         if (this.props.onDirectionsCleared) {
@@ -198,43 +233,32 @@ class DirectionsPanel extends Component {
 
     selectRoute(index) {
         // No longer needed since we show all routes
-        console.log('Route selection disabled - showing all routes');
+        console.debug('Route selection disabled - showing all routes');
     }
 
     handleRouteHover(routeIndex) {
-        console.log('🖱️ Route hover:', routeIndex);
         this.setState({ hoveredRouteIndex: routeIndex });
-        // Set hover state on the specific route in the map
         if (this.props.map) {
-            console.log('🗺️ Map available, setting feature state');
-            // Clear hover state on all routes first
             if (this.state.directions && this.state.directions.routes) {
                 this.state.directions.routes.forEach((route, index) => {
-                    console.log(`🔄 Clearing hover state for route ${index}`);
                     this.props.map.setFeatureState(
                         { source: 'directions-route', id: index },
                         { hover: false }
                     );
                 });
             }
-            // Set hover state on the hovered route
-            console.log(`✨ Setting hover state for route ${routeIndex}`);
             this.props.map.setFeatureState(
                 { source: 'directions-route', id: routeIndex },
                 { hover: true }
             );
         } else {
-            console.log('❌ Map not available');
         }
     }
 
     handleRouteLeave() {
-        console.log('🚫 Route leave, clearing hover states');
         this.setState({ hoveredRouteIndex: null });
-        // Clear hover state on all routes in the map
         if (this.props.map && this.state.directions && this.state.directions.routes) {
             this.state.directions.routes.forEach((route, index) => {
-                console.log(`🔄 Clearing hover state for route ${index}`);
                 this.props.map.setFeatureState(
                     { source: 'directions-route', id: index },
                     { hover: false }
@@ -243,93 +267,94 @@ class DirectionsPanel extends Component {
         }
     }
 
-    render() {
-        const { embedMode } = this.props;
-        const { collapsed, fromPoint, toPoint, directions, loading, error } = this.state;
+    handleRouteClick(routeIndex) {
+        console.debug('Route clicked:', routeIndex);
+        this.setState({ selectedRouteIndex: routeIndex });
         
-        if (embedMode) {
-            return null;
+        if (this.props.map && this.state.directions && this.state.directions.routes) {
+            // Clear selection state on all routes first
+            this.state.directions.routes.forEach((route, index) => {
+                this.props.map.setFeatureState(
+                    { source: 'directions-route', id: index },
+                    { selected: false }
+                );
+            });
+            
+            // Set selection state on the clicked route
+            this.props.map.setFeatureState(
+                { source: 'directions-route', id: routeIndex },
+                { selected: true }
+            );
         }
+    }
 
+    render() {
+        const { directions, loading, error } = this.state;
+        
         return (
             <>
-                {
-                    IS_MOBILE &&
-                        <div
-                            id="directionsPanelMobileButton"
-                            className={`
-                                p-4 border border-white border-opacity-20 rounded text-lg fixed
-                                ${collapsed ? 'text-gray-300' : 'text-gray-900 bg-gray-100'}`}
-                            onClick={this.toggleCollapse}
-                            style={{
-                                bottom: 30,
-                                right: 8,
-                                background: collapsed ? '#1c1717' : ''
-                            }}
-                        >
-                            <IconMap/>
-                        </div>
-                }
                 <div
                     id="directionsPanel"
-                    className={`
-                        fixed text-white 
-                        ${IS_MOBILE && 'rounded border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
-                        ${IS_MOBILE && collapsed ? 'hidden ' : ''}
-                        ${embedMode ? 'pointer-events-none ' : 'cursor-pointer '}
-                    `}
-                    style={{
-                        top: IS_MOBILE ? 100 : 90,
-                        left: 24,
-                        background: IS_MOBILE && '#1c1717',
-                        minWidth: '300px'
-                    }}
+                    className="fixed text-white cursor-pointer"
                 >
                     <div className="p-4">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex justify-between mb-2">
                             <h3 className="text-lg font-semibold flex items-center">
-                                <IconMap className="mr-2" />
+                                <IconRoute className="mr-2" />
                                 Rotas
+                                <span 
+                                    className="bg-white opacity-75 ml-2 px-1 py-0 rounded-full text-black text-xs"
+                                    style={{fontSize: 10}}
+                                >
+                                    BETA
+                                </span>
                             </h3>
-                            <Button 
-                                type="text" 
-                                size="small" 
-                                icon={<IconClose />}
-                                onClick={this.toggleCollapse}
-                                className="text-white hover:text-gray-300"
-                            />
+
+                            {directions && (
+                                <Button
+                                    onClick={this.clearDirections}
+                                    type="text" 
+                                    size="small" 
+                                >
+                                    Limpar
+                                </Button>
+                            )}
                         </div>
 
                         <Space direction="vertical" size="small" className="w-full">
-                            <div>
-                                <label className="block text-sm mb-1">De</label>
-                                <div 
-                                    ref={el => {
-                                        if (el && this.fromGeocoder && !el.hasChildNodes() && !this.state.fromGeocoderAttached) {
-                                            console.log('Attaching from geocoder to DOM');
+                            <div 
+                                id="fromGeocoder"
+                                className='flex'
+                                ref={el => {
+                                    if (el && this.fromGeocoder && !el.hasChildNodes() && !this.state.fromGeocoderAttached) {
+                                        console.debug('Attaching from geocoder to DOM');
+                                        try {
                                             const geocoderElement = this.fromGeocoder.onAdd(this.props.map);
                                             el.appendChild(geocoderElement);
                                             this.setState({ fromGeocoderAttached: true });
+                                        } catch (error) {
+                                            console.debug('Error attaching from geocoder:', error);
                                         }
-                                    }}
-                                    className="geocoder-container"
-                                />
-                            </div>
+                                    }
+                                }}
+                            />
 
-                            <div>
-                                <label className="block text-sm mb-1">Para</label>
-                                <div 
-                                    ref={el => {
-                                        if (el && this.toGeocoder && !el.hasChildNodes() && !this.state.toGeocoderAttached) {
-                                            console.log('Attaching to geocoder to DOM');
+                            <div 
+                                id="toGeocoder"
+                                className='flex'
+                                ref={el => {
+                                    if (el && this.toGeocoder && !el.hasChildNodes() && !this.state.toGeocoderAttached) {
+                                        console.debug('Attaching to geocoder to DOM');
+                                        try {
                                             const geocoderElement = this.toGeocoder.onAdd(this.props.map);
                                             el.appendChild(geocoderElement);
                                             this.setState({ toGeocoderAttached: true });
+                                        } catch (error) {
+                                            console.debug('Error attaching to geocoder:', error);
                                         }
-                                    }}
-                                    className="geocoder-container"
-                                />
-                            </div>
+                                    }
+                                }}
+                            />
 
                             <Button
                                 type="primary"
@@ -337,20 +362,11 @@ class DirectionsPanel extends Component {
                                 loading={loading}
                                 disabled={!this.state.fromPoint || !this.state.toPoint}
                                 block
-                                className="bg-green-600 hover:bg-green-700"
+                                // size="large"
+                                className="mt-2 bg-green-600 hover:bg-green-700"
                             >
                                 Calcular rota
                             </Button>
-
-                            {directions && (
-                                <Button
-                                    onClick={this.clearDirections}
-                                    block
-                                    className="text-white border-white hover:bg-white hover:text-black"
-                                >
-                                    Limpar resultados
-                                </Button>
-                            )}
                         </Space>
 
                         {error && (
@@ -360,33 +376,38 @@ class DirectionsPanel extends Component {
                         )}
 
                         {directions && (
-                            <div className="mt-3">
-                                <h4 className="font-semibold text-green-300 mb-2">Rotas disponíveis</h4>
+                            <div className="mt-5">
                                 <div className="space-y-2">
                                     {directions.routes && directions.routes.map((route, index) => (
                                         <div
                                             key={index}
-                                            className="bg-white bg-opacity-10 border border-white border-opacity-20 rounded-lg p-3 cursor-pointer hover:bg-opacity-20 transition-colors"
+                                            className={`border border-white border-opacity-20 rounded-lg p-3 cursor-pointer hover:bg-opacity-10 hover:border-opacity-60 transition-colors ${
+                                                this.state.selectedRouteIndex === index ? 'bg-white bg-opacity-20 border-opacity-60' : ''
+                                            }`}
                                             onMouseEnter={() => this.handleRouteHover(index)}
                                             onMouseLeave={this.handleRouteLeave}
+                                            onClick={() => this.handleRouteClick(index)}
                                         >
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center">
-                                                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-xs font-bold text-white mr-2">
-                                                        {index + 1}
-                                                    </div>
-                                                    <span className="text-sm font-medium">
-                                                        {route.distance ? `${(route.distance / 1000).toFixed(1)} km` : 'N/A'}
+                                            <div className="flex justify-between mb-2">
+                                                <div className="flex">
+                                                    <IconBike className="mt-1 mr-3" />
+                                                    <span className="directions--legLabel text-sm font-medium align-left">
+                                                        {route.legs && route.legs.length > 0 && route.legs[0].summary}
                                                     </span>
                                                 </div>
-                                                <div className="text-sm text-gray-300">
-                                                    {route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'}
+                                                <div className="flex flex-col flex-end">
+                                                    <span className="text-sm text-right">
+                                                        {route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'}
+                                                    </span>
+                                                    <span className="text-sm text-gray-300 text-right">
+                                                        {route.distance ? `${(route.distance / 1000).toFixed(1)} km` : 'N/A'}
+                                                    </span>
                                                 </div>
                                             </div>
                                             {route.legs && route.legs[0] && (
                                                 <div className="text-xs text-gray-400 space-y-1">
                                                     {route.legs[0].steps && route.legs[0].steps.length > 0 && (
-                                                        <div className="flex items-center">
+                                                        <div className="flex">
                                                             <span className="mr-2">🚴</span>
                                                             <span>{route.legs[0].steps.length} etapas</span>
                                                         </div>

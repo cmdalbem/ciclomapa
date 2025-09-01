@@ -635,12 +635,14 @@ class App extends Component {
                     embedMode={this.state.embedMode}
                 />
 
-                <DirectionsPanel
-                    embedMode={this.state.embedMode}
-                    onDirectionsCalculated={this.onDirectionsCalculated}
-                    onDirectionsCleared={this.onDirectionsCleared}
-                    map={this.state.map}
-                />
+                { !IS_MOBILE &&
+                    <DirectionsPanel
+                        embedMode={this.state.embedMode}
+                        onDirectionsCalculated={this.onDirectionsCalculated}
+                        onDirectionsCleared={this.onDirectionsCleared}
+                        map={this.state.map}
+                    />
+                }
 
                 <AboutModal
                     visible={this.state.aboutModal}
