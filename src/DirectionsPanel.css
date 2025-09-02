@@ -4,7 +4,7 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     /* box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); */
-    z-index: 1000;
+    z-index: 1;
     position: absolute;
     top: 90px;  
     left: 24px;
@@ -40,4 +40,39 @@
     .directions--legLabel {
         max-width: 14rem;
     }
+}
+
+/* Custom marker styles */
+.custom-marker {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid white;
+    /* box-shadow: 0 2px 4px rgba(0,0,0,0.3); */
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    /* font-weight: bold; */
+    color: white;
+    /* text-shadow: 1px 1px 2px rgba(0,0,0,0.7); */
+    background-color: #2d2e30;
+}
+/* 
+.custom-marker--from {
+    background-color: #3b82f6;
+}
+
+.custom-marker--to {
+    background-color: #ef4444; 
+} */
+
+.custom-marker:hover {
+    opacity: 0.8;
+}
+
+.custom-marker--dragging {
+    cursor: grabbing;
+    opacity: 0.5;
 }
