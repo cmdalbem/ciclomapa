@@ -10,6 +10,7 @@ import { LuBike as IconBike, LuRoute as IconRoute } from "react-icons/lu";
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import mapboxgl from 'mapbox-gl';
+import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
 import { testMapboxDirections } from './testDirections.js';
 import './DirectionsPanel.css';
@@ -18,6 +19,8 @@ import {
     MAPBOX_ACCESS_TOKEN,
     IS_PROD
 } from './constants.js'
+
+const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
 class DirectionsPanel extends Component {
     constructor(props) {
@@ -35,6 +38,10 @@ class DirectionsPanel extends Component {
             selectedRouteIndex: null // Added for selection state
         };
 
+        // Custom draggable markers
+        this.fromMarker = null;
+        this.toMarker = null;
+
         this.toggleCollapse = this.toggleCollapse.bind(this);
         this.calculateDirections = this.calculateDirections.bind(this);
         this.clearDirections = this.clearDirections.bind(this);
@@ -43,6 +50,10 @@ class DirectionsPanel extends Component {
         this.handleRouteLeave = this.handleRouteLeave.bind(this);
         this.cleanupGeocoders = this.cleanupGeocoders.bind(this);
         this.handleRouteClick = this.handleRouteClick.bind(this);
+        this.handleMarkerDrag = this.handleMarkerDrag.bind(this);
+        this.createCustomMarker = this.createCustomMarker.bind(this);
+        this.reverseGeocode = this.reverseGeocode.bind(this);
+        this.setDefaultPositions = this.setDefaultPositions.bind(this);
     }
 
     componentDidMount() {
@@ -50,6 +61,7 @@ class DirectionsPanel extends Component {
         this.initGeocodersInterval = setInterval(() => {
             if (this.props.map) {
                 this.initGeocoders();
+                this.setDefaultPositions();
                 clearInterval(this.initGeocodersInterval);
             }
         }, 100);
@@ -91,7 +103,7 @@ class DirectionsPanel extends Component {
             language: 'pt-BR',
             flyTo: false,
             countries: IS_PROD ? 'br' : '',
-            marker: true,
+            marker: false, // Disable default marker
             useBrowserFocus: true,
             enableGeolocation: true
         });
@@ -104,13 +116,28 @@ class DirectionsPanel extends Component {
             language: 'pt-BR',
             flyTo: false,
             countries: IS_PROD ? 'br' : '',
-            marker: true,
+            marker: false, // Disable default marker
             useBrowserFocus: true
         });
 
         // Add event listeners
         this.fromGeocoder.on('result', (result) => {
             console.debug('From point selected:', result);
+            
+            // Remove existing from marker
+            if (this.fromMarker) {
+                this.fromMarker.remove();
+            }
+            
+            // Create new custom marker
+            this.fromMarker = this.createCustomMarker(result.result.center, 'from');
+            this.fromMarker.addTo(this.props.map);
+            
+            // Add drag event listener
+            this.fromMarker.on('dragend', () => {
+                this.handleMarkerDrag(this.fromMarker, 'from');
+            });
+            
             this.setState({ fromPoint: result }, () => {
                 this.calculateDirections();
             });
@@ -118,6 +145,21 @@ class DirectionsPanel extends Component {
 
         this.toGeocoder.on('result', (result) => {
             console.debug('To point selected:', result);
+            
+            // Remove existing to marker
+            if (this.toMarker) {
+                this.toMarker.remove();
+            }
+            
+            // Create new custom marker
+            this.toMarker = this.createCustomMarker(result.result.center, 'to');
+            this.toMarker.addTo(this.props.map);
+            
+            // Add drag event listener
+            this.toMarker.on('dragend', () => {
+                this.handleMarkerDrag(this.toMarker, 'to');
+            });
+            
             this.setState({ toPoint: result }, () => {
                 this.calculateDirections();
             });
@@ -125,10 +167,18 @@ class DirectionsPanel extends Component {
 
         // Clear results when clearing
         this.fromGeocoder.on('clear', () => {
+            if (this.fromMarker) {
+                this.fromMarker.remove();
+                this.fromMarker = null;
+            }
             this.setState({ fromPoint: null });
         });
 
         this.toGeocoder.on('clear', () => {
+            if (this.toMarker) {
+                this.toMarker.remove();
+                this.toMarker = null;
+            }
             this.setState({ toPoint: null });
         });
 
@@ -157,6 +207,16 @@ class DirectionsPanel extends Component {
             } catch (error) {
                 console.debug('Error removing to geocoder:', error);
             }
+        }
+
+        // Remove custom markers
+        if (this.fromMarker) {
+            this.fromMarker.remove();
+            this.fromMarker = null;
+        }
+        if (this.toMarker) {
+            this.toMarker.remove();
+            this.toMarker = null;
         }
 
         // Clear DOM containers
@@ -292,6 +352,181 @@ class DirectionsPanel extends Component {
         }
     }
 
+    createCustomMarker(coordinates, type) {
+        // Create a custom marker element
+        const el = document.createElement('div');
+        el.className = `custom-marker custom-marker--${type}`;
+        el.innerHTML = type === 'from' ? 'A' : 'B';
+
+        // Add drag event listeners for visual feedback
+        el.addEventListener('mousedown', () => {
+            el.classList.add('custom-marker--dragging');
+        });
+
+        el.addEventListener('mouseup', () => {
+            el.classList.remove('custom-marker--dragging');
+        });
+
+        el.addEventListener('mouseleave', () => {
+            el.classList.remove('custom-marker--dragging');
+        });
+
+        // Create the marker
+        const marker = new mapboxgl.Marker({
+            element: el,
+            draggable: true
+        }).setLngLat(coordinates);
+
+        return marker;
+    }
+
+    handleMarkerDrag(marker, type) {
+        const coordinates = marker.getLngLat();
+        console.debug(`${type} marker dragged to:`, coordinates);
+
+        // Show loading state
+        this.setState({ loading: true });
+
+        // Update the state with new coordinates
+        const newPoint = {
+            result: {
+                center: [coordinates.lng, coordinates.lat],
+                place_name: 'Arrastado para nova posição'
+            }
+        };
+
+        if (type === 'from') {
+            this.setState({ fromPoint: newPoint }, () => {
+                this.reverseGeocode(coordinates, 'from');
+                this.calculateDirections();
+            });
+        } else {
+            this.setState({ toPoint: newPoint }, () => {
+                this.reverseGeocode(coordinates, 'to');
+                this.calculateDirections();
+            });
+        }
+    }
+
+    reverseGeocode(coordinates, type) {
+        if (!coordinates) return;
+
+        // Convert coordinates to the format expected by the geocoding API
+        const lngLat = [coordinates.lng, coordinates.lat];
+
+        geocodingClient
+            .reverseGeocode({
+                query: lngLat,
+                types: ['address', 'poi', 'place'],
+                limit: 1,
+                language: ['pt-br']
+            })
+            .send()
+            .then(response => {
+                const features = response.body.features;
+                console.debug('Reverse geocode result:', features);
+
+                if (features && features[0]) {
+                    const place = features[0];
+                    const address = place.place_name || place.text || 'Nova posição';
+                    
+                    // Update the geocoder input with the actual address
+                    const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
+                    if (geocoder && geocoder.setInput) {
+                        geocoder.setInput(address);
+                    }
+
+                    // Update the state with the full result for consistency
+                    const newPoint = {
+                        result: {
+                            center: lngLat,
+                            place_name: address,
+                            ...place
+                        }
+                    };
+
+                    if (type === 'from') {
+                        this.setState({ fromPoint: newPoint });
+                    } else {
+                        this.setState({ toPoint: newPoint });
+                    }
+                } else {
+                    // Fallback if no address found
+                    const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
+                    if (geocoder && geocoder.setInput) {
+                        geocoder.setInput('Nova posição');
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Reverse geocoding error:', err);
+                // Fallback on error
+                const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
+                if (geocoder && geocoder.setInput) {
+                    geocoder.setInput('Nova posição');
+                }
+            });
+    }
+
+    setDefaultPositions() {
+        // Only set default positions if no points are already set
+        if (this.state.fromPoint || this.state.toPoint) {
+            console.debug('Points already set, skipping default positions');
+            return;
+        }
+
+        // Default coordinates for testing
+        const defaultOrigin = [-46.691189278307775, -23.611870922598996];
+        const defaultDestination = [-46.673828, -23.583401];
+
+        console.debug('Setting default positions for testing');
+
+        // Create default points
+        const fromPoint = {
+            result: {
+                center: defaultOrigin,
+                place_name: 'Origem padrão'
+            }
+        };
+
+        const toPoint = {
+            result: {
+                center: defaultDestination,
+                place_name: 'Destino padrão'
+            }
+        };
+
+        // Set the state with default points
+        this.setState({ 
+            fromPoint: fromPoint,
+            toPoint: toPoint
+        }, () => {
+            // Create custom markers for default positions
+            this.fromMarker = this.createCustomMarker(defaultOrigin, 'from');
+            this.fromMarker.addTo(this.props.map);
+            this.fromMarker.on('dragend', () => {
+                this.handleMarkerDrag(this.fromMarker, 'from');
+            });
+
+            this.toMarker = this.createCustomMarker(defaultDestination, 'to');
+            this.toMarker.addTo(this.props.map);
+            this.toMarker.on('dragend', () => {
+                this.handleMarkerDrag(this.toMarker, 'to');
+            });
+
+            // Update geocoder input fields
+            if (this.fromGeocoder && this.fromGeocoder.setInput) {
+                this.fromGeocoder.setInput('Origem padrão');
+            }
+            if (this.toGeocoder && this.toGeocoder.setInput) {
+                this.toGeocoder.setInput('Destino padrão');
+            }
+
+            // Calculate directions with default positions
+            this.calculateDirections();
+        });
+    }
+
     render() {
         const { directions, loading, error } = this.state;
         
@@ -372,6 +607,13 @@ class DirectionsPanel extends Component {
                                 Calcular rota
                             </Button> */}
                         </Space>
+
+                        {/* {loading && (
+                            <div className="mt-3 p-2 bg-blue-600 bg-opacity-20 border border-blue-500 rounded text-blue-200 text-sm flex items-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-200 mr-2"></div>
+                                Recalculando rota...
+                            </div>
+                        )} */}
 
                         {error && (
                             <div className="mt-3 p-2 bg-red-600 bg-opacity-20 border border-red-500 rounded text-red-200 text-sm">
