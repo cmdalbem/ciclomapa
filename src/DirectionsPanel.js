@@ -35,12 +35,17 @@ class DirectionsPanel extends Component {
             fromGeocoderAttached: false,
             toGeocoderAttached: false,
             hoveredRouteIndex: null, // Added for hover state
-            selectedRouteIndex: null // Added for selection state
+            selectedRouteIndex: null, // Added for selection state
+            focusedInput: null // 'from' or 'to' or null
         };
 
         // Custom draggable markers
         this.fromMarker = null;
         this.toMarker = null;
+        
+        // Direct event listeners for input elements
+        this.fromInputListeners = null;
+        this.toInputListeners = null;
 
         this.toggleCollapse = this.toggleCollapse.bind(this);
         this.calculateDirections = this.calculateDirections.bind(this);
@@ -54,6 +59,10 @@ class DirectionsPanel extends Component {
         this.createCustomMarker = this.createCustomMarker.bind(this);
         this.reverseGeocode = this.reverseGeocode.bind(this);
         this.setDefaultPositions = this.setDefaultPositions.bind(this);
+        this.handleInputFocus = this.handleInputFocus.bind(this);
+        this.handleInputBlur = this.handleInputBlur.bind(this);
+        this.handleMapClick = this.handleMapClick.bind(this);
+        this.attachGeocoderToDOM = this.attachGeocoderToDOM.bind(this);
     }
 
     componentDidMount() {
@@ -61,7 +70,8 @@ class DirectionsPanel extends Component {
         this.initGeocodersInterval = setInterval(() => {
             if (this.props.map) {
                 this.initGeocoders();
-                this.setDefaultPositions();
+                this.setupMapClickListener();
+                // this.setDefaultPositions();
                 clearInterval(this.initGeocodersInterval);
             }
         }, 100);
@@ -72,6 +82,7 @@ class DirectionsPanel extends Component {
         if (this.props.map && !prevProps.map) {
             console.debug('Map became available, initializing geocoders');
             this.initGeocoders();
+            this.setupMapClickListener();
         }
     }
 
@@ -81,6 +92,8 @@ class DirectionsPanel extends Component {
         }
         // Clean up geocoders when component unmounts
         this.cleanupGeocoders();
+        // Clean up map click listener
+        this.removeMapClickListener();
     }
 
     initGeocoders() {
@@ -143,6 +156,9 @@ class DirectionsPanel extends Component {
             });
         });
 
+        // Store the geocoder element for later use when attaching to DOM
+        this.fromGeocoderElement = null;
+
         this.toGeocoder.on('result', (result) => {
             console.debug('To point selected:', result);
             
@@ -164,6 +180,9 @@ class DirectionsPanel extends Component {
                 this.calculateDirections();
             });
         });
+
+        // Store the geocoder element for later use when attaching to DOM
+        this.toGeocoderElement = null;
 
         // Clear results when clearing
         this.fromGeocoder.on('clear', () => {
@@ -228,6 +247,19 @@ class DirectionsPanel extends Component {
         }
         if (toContainer) {
             toContainer.innerHTML = '';
+        }
+
+        // Clean up direct input event listeners
+        if (this.fromInputListeners) {
+            this.fromInputListeners.element.removeEventListener('focus', this.fromInputListeners.focus);
+            this.fromInputListeners.element.removeEventListener('blur', this.fromInputListeners.blur);
+            this.fromInputListeners = null;
+        }
+        
+        if (this.toInputListeners) {
+            this.toInputListeners.element.removeEventListener('focus', this.toInputListeners.focus);
+            this.toInputListeners.element.removeEventListener('blur', this.toInputListeners.blur);
+            this.toInputListeners = null;
         }
 
         // Reset state
@@ -527,6 +559,184 @@ class DirectionsPanel extends Component {
         });
     }
 
+    setupMapClickListener() {
+        if (!this.props.map) {
+            console.debug('Map not available for click listener setup');
+            return;
+        }
+        
+        console.debug('Setting up map click listener');
+        // Remove any existing click listener
+        this.removeMapClickListener();
+        
+        // Add new click listener
+        this.mapClickListener = (e) => {
+            // console.debug("Map clicked");
+            if (this.state.focusedInput) {
+                this.handleMapClick(e);
+            }
+        };
+        
+        this.props.map.on('click', this.mapClickListener);
+        console.debug('Map click listener attached');
+    }
+
+    removeMapClickListener() {
+        if (this.props.map && this.mapClickListener) {
+            console.debug('Removing map click listener');
+            this.props.map.off('click', this.mapClickListener);
+            this.mapClickListener = null;
+        }
+    }
+
+    handleInputFocus(inputType) {
+        console.debug(`Input focused: ${inputType}`);
+        this.setState({ focusedInput: inputType });
+
+        if (this[`${inputType}GeocoderElement`]) {
+            this[`${inputType}GeocoderElement`].querySelector('input').placeholder = 'Digite ou clique no mapa';
+        }
+        
+        // Update cursor style to indicate map clicking is active
+        // if (this.props.map) {
+        //     this.props.map.getCanvas().style.cursor = 'crosshair';
+        //     console.debug('Map cursor changed to crosshair');
+        // }
+    }
+
+    handleInputBlur(inputType) {
+        console.debug(`Input blurred: ${inputType}, current focused: ${this.state.focusedInput}`);
+        
+        // // Only clear focus if it's the same input that's being blurred
+        // if (this.state.focusedInput === inputType) {
+        //     this.setState({ focusedInput: null });
+        //     console.debug('Focus cleared, resetting cursor');
+            
+        //     // Reset cursor style
+        //     if (this.props.map) {
+        //         this.props.map.getCanvas().style.cursor = '';
+        //     }
+        // } else {
+        //     console.debug('Blur ignored - different input is focused');
+        // }
+
+        if (this[`${inputType}GeocoderElement`]) {
+            this[`${inputType}GeocoderElement`].querySelector('input').placeholder = inputType === 'from' ? 'Origem' : 'Destino';
+        }
+    }
+
+    handleMapClick(e) {
+        // console.debug('Map clicked, focused input:', this.state.focusedInput);
+        if (!this.state.focusedInput) {
+            console.debug('No input focused, ignoring map click');
+            return;
+        }
+        
+        const coordinates = [e.lngLat.lng, e.lngLat.lat];
+        console.debug(`${this.state.focusedInput} point set by map click:`, coordinates);
+        
+        // Create a point object similar to geocoder result
+        const newPoint = {
+            result: {
+                center: coordinates,
+                place_name: 'Ponto selecionado no mapa'
+            }
+        };
+        
+        if (this.state.focusedInput === 'from') {
+            console.debug('Setting FROM point via map click');
+            // Remove existing from marker
+            if (this.fromMarker) {
+                this.fromMarker.remove();
+            }
+            
+            // Create new custom marker
+            this.fromMarker = this.createCustomMarker(coordinates, 'from');
+            this.fromMarker.addTo(this.props.map);
+            
+            // Add drag event listener
+            this.fromMarker.on('dragend', () => {
+                this.handleMarkerDrag(this.fromMarker, 'from');
+            });
+            
+            this.setState({ fromPoint: newPoint }, () => {
+                this.reverseGeocode(e.lngLat, 'from');
+                this.calculateDirections();
+            });
+        } else if (this.state.focusedInput === 'to') {
+            console.debug('Setting TO point via map click');
+            // Remove existing to marker
+            if (this.toMarker) {
+                this.toMarker.remove();
+            }
+            
+            // Create new custom marker
+            this.toMarker = this.createCustomMarker(coordinates, 'to');
+            this.toMarker.addTo(this.props.map);
+            
+            // Add drag event listener
+            this.toMarker.on('dragend', () => {
+                this.handleMarkerDrag(this.toMarker, 'to');
+            });
+            
+            this.setState({ toPoint: newPoint }, () => {
+                this.reverseGeocode(e.lngLat, 'to');
+                this.calculateDirections();
+            });
+        }
+        
+        // Clear focus after setting a point
+        console.debug('Clearing focus after setting point');
+        this.setState({ focusedInput: null });
+        if (this.props.map) {
+            this.props.map.getCanvas().style.cursor = '';
+        }
+    }
+
+    attachGeocoderToDOM(geocoder, geocoderType, containerId, attachedStateKey) {
+        return (el) => {
+            if (el && geocoder && !el.hasChildNodes() && !this.state[attachedStateKey]) {
+                console.debug(`Attaching ${geocoderType} geocoder to DOM`);
+                try {
+                    const geocoderElement = geocoder.onAdd(this.props.map);
+                    el.appendChild(geocoderElement);
+                    
+                    // Store the geocoder element
+                    this[`${geocoderType}GeocoderElement`] = geocoderElement;
+                    
+                    // Add focus/blur listeners to the input element
+                    const input = geocoderElement.querySelector('input');
+                    if (input) {
+                        console.debug(`Found ${geocoderType.toUpperCase()} input element, adding event listeners`);
+                        
+                        const focusHandler = () => {
+                            console.debug(`${geocoderType.toUpperCase()} input focus event triggered`);
+                            this.handleInputFocus(geocoderType);
+                        };
+                        const blurHandler = () => {
+                            console.debug(`${geocoderType.toUpperCase()} input blur event triggered`);
+                            this.handleInputBlur(geocoderType);
+                        };
+                        
+                        input.addEventListener('focus', focusHandler);
+                        input.addEventListener('blur', blurHandler);
+                        
+                        // Store references for cleanup
+                        this[`${geocoderType}InputListeners`] = {
+                            element: input,
+                            focus: focusHandler,
+                            blur: blurHandler
+                        };
+                    }
+                    
+                    this.setState({ [attachedStateKey]: true });
+                } catch (error) {
+                    console.debug(`Error attaching ${geocoderType} geocoder:`, error);
+                }
+            }
+        };
+    }
+
     render() {
         const { directions, loading, error } = this.state;
         
@@ -564,35 +774,13 @@ class DirectionsPanel extends Component {
                             <div 
                                 id="fromGeocoder"
                                 className='flex'
-                                ref={el => {
-                                    if (el && this.fromGeocoder && !el.hasChildNodes() && !this.state.fromGeocoderAttached) {
-                                        console.debug('Attaching from geocoder to DOM');
-                                        try {
-                                            const geocoderElement = this.fromGeocoder.onAdd(this.props.map);
-                                            el.appendChild(geocoderElement);
-                                            this.setState({ fromGeocoderAttached: true });
-                                        } catch (error) {
-                                            console.debug('Error attaching from geocoder:', error);
-                                        }
-                                    }
-                                }}
+                                ref={this.attachGeocoderToDOM(this.fromGeocoder, 'from', 'fromGeocoder', 'fromGeocoderAttached')}
                             />
 
                             <div 
                                 id="toGeocoder"
                                 className='flex'
-                                ref={el => {
-                                    if (el && this.toGeocoder && !el.hasChildNodes() && !this.state.toGeocoderAttached) {
-                                        console.debug('Attaching to geocoder to DOM');
-                                        try {
-                                            const geocoderElement = this.toGeocoder.onAdd(this.props.map);
-                                            el.appendChild(geocoderElement);
-                                            this.setState({ toGeocoderAttached: true });
-                                        } catch (error) {
-                                            console.debug('Error attaching to geocoder:', error);
-                                        }
-                                    }
-                                }}
+                                ref={this.attachGeocoderToDOM(this.toGeocoder, 'to', 'toGeocoder', 'toGeocoderAttached')}
                             />
 
                             {/* <Button
