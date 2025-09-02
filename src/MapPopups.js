@@ -52,16 +52,16 @@ class MapPopups {
                     Acha que estes dados podem ser melhorados?
                 </div>
                 
-                <a class="text-${color} border border-opacity-25 border-${color} px-2 py-1 rounded-sm mr-2"
+                <a class="text-${color} border border-opacity-25 border-${color} px-2 py-1 rounded-xl mr-1"
                     target="_BLANK" rel="noopener"
                     href="${osmUrl}"
                 >
                     <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" class="react-icon" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>    
-                    Editar
+                    Editar no OSM
                 </a>
 
                 <a  href="#"
-                    class="text-${color} border border-opacity-25 border-${color} px-2 py-1 rounded-sm"
+                    class="text-${color} border border-opacity-25 border-${color} px-2 py-1 rounded-xl"
                     onClick="document.dispatchEvent(new Event('newComment'));"
                 >
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="react-icon"><path fill-rule="evenodd" clip-rule="evenodd" d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H8L3 22V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15ZM13 14V11H16V9H13V6H11V9H8V11H11V14H13Z"></path></svg>
