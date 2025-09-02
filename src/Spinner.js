@@ -50,11 +50,11 @@ class Spinner extends Component {
                                 </div>
 
                                 <div className="text-4xl leading-tight mb-3">
-                                    Carregando mapa cicloviário de <b>{city}</b>.
+                                    Carregando mapa cicloviário de <b>{city}</b>
                                 </div>
 
                                 <div className="text-base text-gray-200">
-                                    Estamos acessando diretamente os dados mais atualizados do OpenStreetMap. Isso pode levar algumas dezenas de segundos, a depender do tamanho da cidade.
+                                    Baixando dados atualizados do OpenStreetMap. Dependendo do tamanho da cidade, isso pode levar alguns segundos ou até mais de um minuto.
                                 </div>
                             </div>
 
