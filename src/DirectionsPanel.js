@@ -38,7 +38,7 @@ class DirectionsPanel extends Component {
             toGeocoderAttached: false,
             hoveredRouteIndex: null, // Added for hover state
             focusedInput: null, // 'from' or 'to' or null
-            selectedProvider: 'mapbox' // Current directions provider
+            selectedProvider: 'graphhopper' // Current directions provider
         };
 
         // Custom draggable markers
@@ -788,19 +788,19 @@ class DirectionsPanel extends Component {
                             <Button.Group size="small" className="w-full">
                                 <Button
                                     ghost
-                                    type={this.state.selectedProvider === 'mapbox' ? 'primary' : 'default'}
-                                    onClick={() => this.handleProviderChange('mapbox')}
-                                    className="flex-1"
-                                >
-                                    Mapbox
-                                </Button>
-                                <Button
-                                    ghost
                                     type={this.state.selectedProvider === 'graphhopper' ? 'primary' : 'default'}
                                     onClick={() => this.handleProviderChange('graphhopper')}
                                     className="flex-1"
                                 >
                                     GraphHopper
+                                </Button>
+                                <Button
+                                    ghost
+                                    type={this.state.selectedProvider === 'mapbox' ? 'primary' : 'default'}
+                                    onClick={() => this.handleProviderChange('mapbox')}
+                                    className="flex-1"
+                                >
+                                    Mapbox
                                 </Button>
                                 {/* <Button
                                     ghost
