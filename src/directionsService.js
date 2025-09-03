@@ -166,11 +166,11 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
                 points_encoded: 'false',
                 calc_points: 'true',
                 algorithm: 'alternative_route',
-                'alternative_route.max_paths': 4,
+                'alternative_route.max_paths': 5,
                 // Sets the factor by which the alternatives routes can be longer than the optimal route. Increasing can lead to worse alternatives. Default: 1.4
-                'alternative_route.max_weight_factor': 2,
-                // If algorithm=alternative_route, this parameter specifies how similar an alternative route can be to the optimal route. Increasing can lead to worse alternatives. Default:0.6
-                'alternative_route.max_share_factor': 0.8,
+                'alternative_route.max_weight_factor': 2.5,
+                // How similar an alternative route can be to the optimal route. Increasing can lead to worse alternatives. Default:0.6
+                'alternative_route.max_share_factor': 0.5,
             });
             
             // Add multiple points using append (GraphHopper expects multiple 'point' parameters)
