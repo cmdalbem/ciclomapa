@@ -19,8 +19,19 @@ export const AREA_ID_OVERRIDES = {
 
 // Mapbox
 
-export const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoiY21kYWxiZW0iLCJhIjoiY2pnbXhjZnplMDJ6MjMzbnk0OGthZGE1ayJ9.n1flNO8ndRYKQcR9wNIT9w';
+export const MAPBOX_ACCESS_TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
 export const DEFAULT_MAPBOX_STYLE = 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm';
+
+
+// OpenRouteService
+
+export const OPENROUTESERVICE_API_KEY = process.env.REACT_APP_OPENROUTESERVICE_API_KEY;
+
+
+// GraphHopper
+
+export const GRAPHHOPPER_API_KEY = process.env.REACT_APP_GRAPHHOPPER_API_KEY;
+
 
 
 // Layers
