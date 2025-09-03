@@ -813,7 +813,7 @@ class DirectionsPanel extends Component {
                     `}
                 >
                     <div className="p-4">
-                        <div className="flex justify-between mb-2">
+                        <div id="directionsPanel--header" className="flex justify-between mb-2">
                             <h3 className="text-lg font-semibold flex items-center">
                                 <IconRoute className="mr-2" />
                                 Rotas
