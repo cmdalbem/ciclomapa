@@ -899,7 +899,7 @@ class Map extends Component {
             map.getSource('directions-route').setData(allRoutes);
             
             if (directions.bbox) { 
-                map.fitBounds(directions.bbox, { padding: 50, duration: 1000 }); 
+                map.fitBounds(directions.bbox, { padding: 200, duration: 2000 }); 
             }
         } else {
             // Clear the directions by setting empty data
