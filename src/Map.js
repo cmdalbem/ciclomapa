@@ -744,6 +744,48 @@ class Map extends Component {
             },
             filter: ['==', '$type', 'LineString']
         }, layerUnderneathName);
+
+        // Add click event listener for directions routes
+        map.on('click', 'directions-route', (e) => {
+            if (e.features && e.features.length > 0) {
+                const routeIndex = e.features[0].properties.routeIndex;
+                // Call the parent component's route selection handler
+                if (this.props.onRouteSelected) {
+                    this.props.onRouteSelected(routeIndex);
+                }
+            }
+        });
+
+        // Track currently hovered route
+        this.currentHoveredRoute = null;
+
+        // Change cursor and add hover effects
+        map.on('mouseenter', 'directions-route', (e) => {
+            map.getCanvas().style.cursor = 'pointer';
+            
+            // Set hover state on the feature
+            if (e.features && e.features.length > 0) {
+                const routeIndex = e.features[0].properties.routeIndex;
+                this.currentHoveredRoute = routeIndex;
+                map.setFeatureState(
+                    { source: 'directions-route', id: routeIndex },
+                    { hover: true }
+                );
+            }
+        });
+
+        map.on('mouseleave', 'directions-route', (e) => {
+            map.getCanvas().style.cursor = '';
+            
+            // Clear hover state using tracked route index
+            if (this.currentHoveredRoute !== null) {
+                map.setFeatureState(
+                    { source: 'directions-route', id: this.currentHoveredRoute },
+                    { hover: false }
+                );
+                this.currentHoveredRoute = null;
+            }
+        });
     }
 
     componentDidUpdate(prevProps) {
@@ -804,6 +846,11 @@ class Map extends Component {
         if (this.props.directions !== prevProps.directions) {
             this.updateDirectionsLayer(this.props.directions);
         }
+
+        // Handle selected route changes
+        if (this.props.selectedRouteIndex !== prevProps.selectedRouteIndex) {
+            this.updateSelectedRoute(this.props.selectedRouteIndex);
+        }
     }
 
     updateDirectionsLayer(directions) {
@@ -843,6 +890,45 @@ class Map extends Component {
             // Clear the directions by setting empty data
             map.getSource('directions-route').setData({ type: 'FeatureCollection', features: [] });
         }
+    }
+
+    updateSelectedRoute(selectedRouteIndex) {
+        const map = this.map;
+        if (!map || !map.getSource('directions-route')) return;
+
+        // Clear all selected and hover states
+        const features = map.querySourceFeatures('directions-route');
+        features.forEach((feature, index) => {
+            map.setFeatureState(
+                { source: 'directions-route', id: index },
+                { selected: false, hover: false }
+            );
+        });
+
+        // Set the selected route
+        if (selectedRouteIndex !== null && selectedRouteIndex !== undefined) {
+            map.setFeatureState(
+                { source: 'directions-route', id: selectedRouteIndex },
+                { selected: true }
+            );
+        }
+    }
+
+    clearAllHoverStates() {
+        const map = this.map;
+        if (!map || !map.getSource('directions-route')) return;
+
+        // Clear all hover states
+        const features = map.querySourceFeatures('directions-route');
+        features.forEach((feature, index) => {
+            map.setFeatureState(
+                { source: 'directions-route', id: index },
+                { hover: false }
+            );
+        });
+        
+        // Reset tracking variable
+        this.currentHoveredRoute = null;
     }
 
     componentDidMount() {
