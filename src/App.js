@@ -68,6 +68,7 @@ class App extends Component {
         this.onDirectionsCalculated = this.onDirectionsCalculated.bind(this);
         this.onDirectionsCleared = this.onDirectionsCleared.bind(this);
         this.onRouteSelected = this.onRouteSelected.bind(this);
+        this.onRouteHovered = this.onRouteHovered.bind(this);
         this.setMapRef = this.setMapRef.bind(this);
 
         const urlParams = this.getParamsFromURL();
@@ -94,6 +95,7 @@ class App extends Component {
             lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
             directions: null,
             selectedRouteIndex: null,
+            hoveredRouteIndex: null,
             map: null
         };
 
@@ -541,12 +543,16 @@ class App extends Component {
     }
 
     onDirectionsCleared() {
-        this.setState({ directions: null, selectedRouteIndex: null });
+        this.setState({ directions: null, selectedRouteIndex: null, hoveredRouteIndex: null });
         console.log('Directions cleared from App');
     }
 
     onRouteSelected(routeIndex) {
         this.setState({ selectedRouteIndex: routeIndex });
+    }
+
+    onRouteHovered(routeIndex) {
+        this.setState({ hoveredRouteIndex: routeIndex });
     }
 
     setMapRef(map) {
@@ -598,7 +604,9 @@ class App extends Component {
                             debugMode={this.state.debugMode}
                             directions={this.state.directions}
                             selectedRouteIndex={this.state.selectedRouteIndex}
+                            hoveredRouteIndex={this.state.hoveredRouteIndex}
                             onRouteSelected={this.onRouteSelected}
+                            onRouteHovered={this.onRouteHovered}
                             setMapRef={this.setMapRef}
                         />
                         
@@ -649,7 +657,9 @@ class App extends Component {
                         onDirectionsCalculated={this.onDirectionsCalculated}
                         onDirectionsCleared={this.onDirectionsCleared}
                         selectedRouteIndex={this.state.selectedRouteIndex}
+                        hoveredRouteIndex={this.state.hoveredRouteIndex}
                         onRouteSelected={this.onRouteSelected}
+                        onRouteHovered={this.onRouteHovered}
                         map={this.state.map}
                     />
                 }

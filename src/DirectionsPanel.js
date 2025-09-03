@@ -362,33 +362,14 @@ class DirectionsPanel extends Component {
     }
 
     handleRouteHover(routeIndex) {
-        this.setState({ hoveredRouteIndex: routeIndex });
-        if (this.props.map) {
-            if (this.state.directions && this.state.directions.routes) {
-                this.state.directions.routes.forEach((route, index) => {
-                    this.props.map.setFeatureState(
-                        { source: 'directions-route', id: index },
-                        { hover: false }
-                    );
-                });
-            }
-            this.props.map.setFeatureState(
-                { source: 'directions-route', id: routeIndex },
-                { hover: true }
-            );
-        } else {
+        if (this.props.onRouteHovered) {
+            this.props.onRouteHovered(routeIndex);
         }
     }
 
     handleRouteLeave() {
-        this.setState({ hoveredRouteIndex: null });
-        if (this.props.map && this.state.directions && this.state.directions.routes) {
-            this.state.directions.routes.forEach((route, index) => {
-                this.props.map.setFeatureState(
-                    { source: 'directions-route', id: index },
-                    { hover: false }
-                );
-            });
+        if (this.props.onRouteHovered) {
+            this.props.onRouteHovered(null);
         }
     }
 
@@ -767,7 +748,7 @@ class DirectionsPanel extends Component {
                             <h3 className="text-lg font-semibold flex items-center">
                                 <IconRoute className="mr-2" />
                                 Rotas
-                                <span className="bg-white opacity-75 ml-2 px-1 py-0 rounded-full text-black text-xs">
+                                <span className="bg-white opacity-75 ml-2 px-1 py-0 rounded-full text-black text-xs tracking-wider" style={{fontSize: 10}}>
                                     BETA
                                 </span>
                             </h3>
@@ -859,8 +840,10 @@ class DirectionsPanel extends Component {
                                     {directions.routes && directions.routes.map((route, index) => (
                                         <div
                                             key={index}
-                                            className={`rounded-lg p-2 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors ${
+                                            className={`rounded-lg p-2 cursor-pointer transition-colors ${
                                                 this.props.selectedRouteIndex === index ? 'bg-white bg-opacity-20 border-opacity-60' : ''
+                                            } ${
+                                                this.props.hoveredRouteIndex === index ? 'bg-white bg-opacity-10' : ''
                                             }`}
                                             onMouseEnter={() => this.handleRouteHover(index)}
                                             onMouseLeave={this.handleRouteLeave}
