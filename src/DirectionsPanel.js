@@ -809,7 +809,7 @@ class DirectionsPanel extends Component {
                     id="directionsPanel"
                     className={`
                         fixed text-white cursor-pointer
-                        ${IS_MOBILE && this.state.collapsed ? 'hidden' : ''}
+                        ${this.state.collapsed ? 'hidden' : ''}
                     `}
                 >
                     <div className="p-4">
@@ -832,14 +832,12 @@ class DirectionsPanel extends Component {
                                         Limpar
                                     </Button>
                                 )}
-                                {IS_MOBILE && (
-                                    <Button
-                                        onClick={this.toggleCollapse}
-                                        type="link" 
-                                        size="small"
-                                        icon={<IconClose />}
-                                    />
-                                )}
+                                <Button
+                                    onClick={this.toggleCollapse}
+                                    type="link" 
+                                    size="small"
+                                    icon={<IconClose />}
+                                />
                             </div>
                         </div>
 
@@ -914,7 +912,7 @@ class DirectionsPanel extends Component {
                                             onMouseLeave={this.handleRouteLeave}
                                             onClick={() => this.handleRouteClick(index)}
                                         >
-                                            <div className="flex justify-between mb-2">
+                                            <div id="directionsPanel--header"className="flex justify-between mb-2">
                                                 <div className="flex">
                                                     <IconBike className="mt-1 mr-3" />
                                                     <div className="flex flex-col flex-end">
