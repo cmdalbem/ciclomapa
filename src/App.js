@@ -45,6 +45,7 @@ import {
 } from './constants.js'
 
 import './App.less';
+import './antd.light.css';
 
 class App extends Component {
     geoJson;
@@ -70,6 +71,7 @@ class App extends Component {
         this.onRouteSelected = this.onRouteSelected.bind(this);
         this.onRouteHovered = this.onRouteHovered.bind(this);
         this.setMapRef = this.setMapRef.bind(this);
+        this.toggleTheme = this.toggleTheme.bind(this);
 
         const urlParams = this.getParamsFromURL();
         
@@ -85,7 +87,9 @@ class App extends Component {
             geoJson: null,
             debugMode: urlParams.debug || false,
             loading: false,
-            mapStyle: DEFAULT_MAPBOX_STYLE,
+            mapStyle: prev.isDarkMode !== undefined ? 
+                (prev.isDarkMode ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb') :
+                DEFAULT_MAPBOX_STYLE,
             layers: this.initLayers(prev.layersStates, urlParams.debug || false),
             lengths: {},
             embedMode: urlParams.embed,
@@ -96,7 +100,8 @@ class App extends Component {
             directions: null,
             selectedRouteIndex: null,
             hoveredRouteIndex: null,
-            map: null
+            map: null,
+            isDarkMode: prev.isDarkMode !== undefined ? prev.isDarkMode : true
         };
 
         if (this.state.area) {
@@ -106,6 +111,22 @@ class App extends Component {
 
     onChangeStrategy(event) {
         this.setState({ lengthCalculationStrategy: event.target.value });
+    }
+
+    toggleTheme() {
+        const newTheme = !this.state.isDarkMode;
+        this.setState({ isDarkMode: newTheme });
+        
+        // Apply theme class to body
+        document.body.className = newTheme ? 'theme-dark' : 'theme-light';
+        
+        // Update map style if default style is selected (not satellite)
+        if (!this.state.showSatellite) {
+            const newMapStyle = newTheme 
+                ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
+                : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'; // Light style
+            this.setState({ mapStyle: newMapStyle });
+        }
     }
 
     toggleSidebar(state) {
@@ -159,6 +180,7 @@ class App extends Component {
                 lat: this.state.lat,
                 isSidebarOpen: this.state.isSidebarOpen,
                 layersStates: layersStates,
+                isDarkMode: this.state.isDarkMode,
             }
 
             let str = JSON.stringify(state);
@@ -371,6 +393,12 @@ class App extends Component {
         this.setState({ mapStyle: newMapStyle});
     }
 
+    getDefaultMapStyle() {
+        return this.state.isDarkMode 
+            ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
+            : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'; // Light style
+    }
+
     onMapShowSatelliteChanged(showSatellite) {
         this.setState({ showSatellite: showSatellite });
     }
@@ -484,6 +512,9 @@ class App extends Component {
     }
 
     componentDidMount() {
+        // Initialize theme
+        document.body.className = this.state.isDarkMode ? 'theme-dark' : 'theme-light';
+
         if (!this.state.embedMode) {
             get('hasSeenWelcomeMsg')
                 .then(data => {
@@ -585,6 +616,8 @@ class App extends Component {
                             toggleSidebar={this.toggleSidebar}
                             embedMode={this.state.embedMode}
                             openAboutModal={this.openAboutModal}
+                            isDarkMode={this.state.isDarkMode}
+                            toggleTheme={this.toggleTheme}
                         />
 
                         <Map
@@ -616,6 +649,7 @@ class App extends Component {
                                 showSatellite={this.state.showSatellite}
                                 onMapStyleChange={this.onMapStyleChange}
                                 onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
+                                isDarkMode={this.state.isDarkMode}
                             />
                         }
 

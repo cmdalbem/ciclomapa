@@ -1,10 +1,13 @@
-// @import './theme.less';
+// Import dark theme by default (existing behavior)
 @import './antd.customize.less';
 
 body {
     margin: 0;
     padding: 0;
+    transition: background-color 0.3s ease;
+}
 
+.theme-dark body {
     background: #211f1c;
 }
 
@@ -20,9 +23,17 @@ body {
     right: 0;
     left: 0;
     pointer-events: none;
+    transition: box-shadow 0.3s ease;
     
     // background: linear-gradient(90deg, #211f1c 0%, transparent 30%, transparent 70%, #282622 100%);
     // background: radial-gradient(circle, transparent 60%, #211f1c 100%);
+}
+
+.theme-light #gradient-backdrop {
+    box-shadow: inset 0px 60px 100px 0px #ffffff;
+}
+
+.theme-dark #gradient-backdrop {
     box-shadow: inset 0px 60px 100px 0px #211f1c;
 }
 

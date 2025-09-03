@@ -27,6 +27,8 @@ import {
     // HiChartPie as IconAnalytics,
     HiOutlineOfficeBuilding as IconCity,
     HiChatAlt as IconComment,
+    HiSun as IconSun,
+    HiMoon as IconMoon,
 } from "react-icons/hi"
 
 import { IconContext } from "react-icons";
@@ -112,7 +114,9 @@ class TopBar extends Component {
             lastUpdate,
             forceUpdate,
             downloadData,
-            embedMode
+            embedMode,
+            isDarkMode,
+            toggleTheme
         } = this.props;
 
         const parts = title.split(',');
@@ -225,7 +229,11 @@ class TopBar extends Component {
                         <div className="nav-links font-white">
                             {
                                 !embedMode ? <div className="hidden sm:block">
-                                    <Button className="ml-2"
+                                    <Button type="link" className="" shape="circle" onClick={toggleTheme}>
+                                        {isDarkMode ? <IconSun /> : <IconMoon />}
+                                    </Button>
+
+                                    <Button className="ml-1"
                                         type="link"
                                         onClick={this.props.openAboutModal}
                                     >
@@ -233,19 +241,19 @@ class TopBar extends Component {
                                     </Button>
 
                                     <Dropdown overlay={collaborateMenu}>
-                                        <Button className="ml-2">
+                                        <Button className="ml-1">
                                             <span className="mr-2"> Colaborar </span>
                                             <IconCaret className="text-green-300" />
                                         </Button>
                                     </Dropdown>
                                     
-                                    <Button className="ml-2" onClick={downloadData}>
+                                    <Button className="ml-1" onClick={downloadData}>
                                         <IconDownload /> Dados
                                     </Button>
 
                                     {
                                         !this.props.isSidebarOpen &&
-                                        <Button className="ml-2" onClick={() => this.props.toggleSidebar(true)}>
+                                        <Button className="ml-1" onClick={() => this.props.toggleSidebar(true)}>
                                             <IconAnalytics/> Métricas
                                         </Button>
                                     }
