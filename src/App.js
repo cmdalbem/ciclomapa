@@ -23,6 +23,7 @@ import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
 import TopBar from './TopBar.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
+import DirectionsPanel from './DirectionsPanel.js'
 import AnalyticsSidebar from './AnalyticsSidebar.js'
 import OSMController from './OSMController.js'
 import Storage from './Storage.js'
@@ -64,6 +65,11 @@ class App extends Component {
         this.openAboutModal = this.openAboutModal.bind(this);
         this.closeAboutModal = this.closeAboutModal.bind(this);
         this.onChangeStrategy = this.onChangeStrategy.bind(this);
+        this.onDirectionsCalculated = this.onDirectionsCalculated.bind(this);
+        this.onDirectionsCleared = this.onDirectionsCleared.bind(this);
+        this.onRouteSelected = this.onRouteSelected.bind(this);
+        this.onRouteHovered = this.onRouteHovered.bind(this);
+        this.setMapRef = this.setMapRef.bind(this);
 
         const urlParams = this.getParamsFromURL();
         
@@ -86,7 +92,11 @@ class App extends Component {
             isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : !IS_PROD,
             hideUI: !urlParams.embed,
             aboutModal: false,
-            lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES
+            lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
+            directions: null,
+            selectedRouteIndex: null,
+            hoveredRouteIndex: null,
+            map: null
         };
 
         if (this.state.area) {
@@ -495,13 +505,13 @@ class App extends Component {
             this.saveStateToLocalStorage();
         });
 
-        if (!this.state.debugMode) {
-            const emptyFunc = () => {};
-            console.log = emptyFunc;
-            console.debug = emptyFunc;
-            console.warn = emptyFunc;
-            console.error = emptyFunc;
-        }
+        // if (!this.state.debugMode) {
+        //     const emptyFunc = () => {};
+        //     console.log = emptyFunc;
+        //     console.debug = emptyFunc;
+        //     console.warn = emptyFunc;
+        //     console.error = emptyFunc;
+        // }
     }
 
     onRouteChanged() {
@@ -525,6 +535,28 @@ class App extends Component {
             error: false,
             loading: false
         });
+    }
+
+    onDirectionsCalculated(directions) {
+        this.setState({ directions });
+        console.log('Directions received in App:', directions);
+    }
+
+    onDirectionsCleared() {
+        this.setState({ directions: null, selectedRouteIndex: null, hoveredRouteIndex: null });
+        console.log('Directions cleared from App');
+    }
+
+    onRouteSelected(routeIndex) {
+        this.setState({ selectedRouteIndex: routeIndex });
+    }
+
+    onRouteHovered(routeIndex) {
+        this.setState({ hoveredRouteIndex: routeIndex });
+    }
+
+    setMapRef(map) {
+        this.setState({ map });
     }
 
     render() {
@@ -570,6 +602,12 @@ class App extends Component {
                             isSidebarOpen={this.state.isSidebarOpen}
                             embedMode={this.state.embedMode}
                             debugMode={this.state.debugMode}
+                            directions={this.state.directions}
+                            selectedRouteIndex={this.state.selectedRouteIndex}
+                            hoveredRouteIndex={this.state.hoveredRouteIndex}
+                            onRouteSelected={this.onRouteSelected}
+                            onRouteHovered={this.onRouteHovered}
+                            setMapRef={this.setMapRef}
                         />
                         
                         {
@@ -611,6 +649,17 @@ class App extends Component {
                     lengths={this.state.lengths}
                     onLayersChange={this.onLayersChange}
                     embedMode={this.state.embedMode}
+                />
+
+                <DirectionsPanel
+                    embedMode={this.state.embedMode}
+                    onDirectionsCalculated={this.onDirectionsCalculated}
+                    onDirectionsCleared={this.onDirectionsCleared}
+                    selectedRouteIndex={this.state.selectedRouteIndex}
+                    hoveredRouteIndex={this.state.hoveredRouteIndex}
+                    onRouteSelected={this.onRouteSelected}
+                    onRouteHovered={this.onRouteHovered}
+                    map={this.state.map}
                 />
 
                 <AboutModal
