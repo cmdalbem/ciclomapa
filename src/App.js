@@ -67,6 +67,7 @@ class App extends Component {
         this.onChangeStrategy = this.onChangeStrategy.bind(this);
         this.onDirectionsCalculated = this.onDirectionsCalculated.bind(this);
         this.onDirectionsCleared = this.onDirectionsCleared.bind(this);
+        this.onRouteSelected = this.onRouteSelected.bind(this);
         this.setMapRef = this.setMapRef.bind(this);
 
         const urlParams = this.getParamsFromURL();
@@ -92,6 +93,7 @@ class App extends Component {
             aboutModal: false,
             lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
             directions: null,
+            selectedRouteIndex: null,
             map: null
         };
 
@@ -539,8 +541,12 @@ class App extends Component {
     }
 
     onDirectionsCleared() {
-        this.setState({ directions: null });
+        this.setState({ directions: null, selectedRouteIndex: null });
         console.log('Directions cleared from App');
+    }
+
+    onRouteSelected(routeIndex) {
+        this.setState({ selectedRouteIndex: routeIndex });
     }
 
     setMapRef(map) {
@@ -591,6 +597,8 @@ class App extends Component {
                             embedMode={this.state.embedMode}
                             debugMode={this.state.debugMode}
                             directions={this.state.directions}
+                            selectedRouteIndex={this.state.selectedRouteIndex}
+                            onRouteSelected={this.onRouteSelected}
                             setMapRef={this.setMapRef}
                         />
                         
@@ -640,6 +648,8 @@ class App extends Component {
                         embedMode={this.state.embedMode}
                         onDirectionsCalculated={this.onDirectionsCalculated}
                         onDirectionsCleared={this.onDirectionsCleared}
+                        selectedRouteIndex={this.state.selectedRouteIndex}
+                        onRouteSelected={this.onRouteSelected}
                         map={this.state.map}
                     />
                 }
