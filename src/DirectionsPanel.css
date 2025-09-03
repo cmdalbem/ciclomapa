@@ -81,7 +81,7 @@
     #directionsPanel {
         left: 8px;
         right: 8px;
-        top: 80px;
+        top: 32px;
         margin: 0 auto;
         width: calc(100% - 16px);
         /* max-width: 90%; */
@@ -105,10 +105,14 @@
             overflow: scroll;
             height: 96px;
         }
+
+        #directionsPanel--header {
+            display: none;
+        }
     }
 
     #directionsPanelMobileButton {
-        z-index: 1000;
+        z-index: 2;
     }
 
     .directions-panel-mobile-button {
