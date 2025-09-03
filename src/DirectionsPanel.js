@@ -607,18 +607,21 @@ class DirectionsPanel extends Component {
     handleInputBlur(inputType) {
         console.debug(`Input blurred: ${inputType}, current focused: ${this.state.focusedInput}`);
         
-        // // Only clear focus if it's the same input that's being blurred
-        // if (this.state.focusedInput === inputType) {
-        //     this.setState({ focusedInput: null });
-        //     console.debug('Focus cleared, resetting cursor');
-            
-        //     // Reset cursor style
-        //     if (this.props.map) {
-        //         this.props.map.getCanvas().style.cursor = '';
-        //     }
-        // } else {
-        //     console.debug('Blur ignored - different input is focused');
-        // }
+        // Only clear focus if it's the same input that's being blurred
+        if (this.state.focusedInput === inputType) {
+            // Delay to make sure that if the next click was on the map, it'll set the point
+            setTimeout(() => {
+                this.setState({ focusedInput: null });
+                console.debug('Focus cleared, resetting cursor');
+                
+                // Reset cursor style
+                if (this.props.map) {
+                    this.props.map.getCanvas().style.cursor = '';
+                }
+            }, 500);
+        } else {
+            console.debug('Blur ignored - different input is focused');
+        }
 
         if (this[`${inputType}GeocoderElement`]) {
             this[`${inputType}GeocoderElement`].querySelector('input').placeholder = inputType === 'from' ? 'Origem' : 'Destino';
