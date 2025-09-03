@@ -48,6 +48,9 @@ class DirectionsPanel extends Component {
         // Direct event listeners for input elements
         this.fromInputListeners = null;
         this.toInputListeners = null;
+        
+        // Timeout reference for blur handling
+        this.blurTimeout = null;
 
         this.toggleCollapse = this.toggleCollapse.bind(this);
         this.calculateDirections = this.calculateDirections.bind(this);
@@ -92,6 +95,11 @@ class DirectionsPanel extends Component {
     componentWillUnmount() {
         if (this.initGeocodersInterval) {
             clearInterval(this.initGeocodersInterval);
+        }
+        // Clean up blur timeout
+        if (this.blurTimeout) {
+            clearTimeout(this.blurTimeout);
+            this.blurTimeout = null;
         }
         // Clean up geocoders when component unmounts
         this.cleanupGeocoders();
@@ -156,6 +164,26 @@ class DirectionsPanel extends Component {
             
             this.setState({ fromPoint: result }, () => {
                 this.calculateDirections();
+                
+                // Auto-focus destination input if no destination is set yet
+                if (!this.state.toPoint && this.toGeocoderElement) {
+                    const destinationInput = this.toGeocoderElement.querySelector('input');
+                    if (destinationInput) {
+                        // Clear any existing blur timeout to prevent it from overriding our focus
+                        if (this.blurTimeout) {
+                            clearTimeout(this.blurTimeout);
+                            this.blurTimeout = null;
+                        }
+                        
+                        // Small delay to ensure the state update is complete
+                        setTimeout(() => {
+                            destinationInput.focus();
+                            // Set focusedInput state to 'to' so map clicks work for destination
+                            this.setState({ focusedInput: 'to' });
+                            console.debug('Auto-focused destination input after origin was set');
+                        }, 100);
+                    }
+                }
             });
         });
 
@@ -601,10 +629,16 @@ class DirectionsPanel extends Component {
     handleInputBlur(inputType) {
         console.debug(`Input blurred: ${inputType}, current focused: ${this.state.focusedInput}`);
         
+        // Clear any existing blur timeout
+        if (this.blurTimeout) {
+            clearTimeout(this.blurTimeout);
+            this.blurTimeout = null;
+        }
+        
         // Only clear focus if it's the same input that's being blurred
         if (this.state.focusedInput === inputType) {
             // Delay to make sure that if the next click was on the map, it'll set the point
-            setTimeout(() => {
+            this.blurTimeout = setTimeout(() => {
                 this.setState({ focusedInput: null });
                 console.debug('Focus cleared, resetting cursor');
                 
@@ -612,6 +646,7 @@ class DirectionsPanel extends Component {
                 if (this.props.map) {
                     this.props.map.getCanvas().style.cursor = '';
                 }
+                this.blurTimeout = null;
             }, 500);
         } else {
             console.debug('Blur ignored - different input is focused');
@@ -659,6 +694,26 @@ class DirectionsPanel extends Component {
             this.setState({ fromPoint: newPoint }, () => {
                 this.reverseGeocode(e.lngLat, 'from');
                 this.calculateDirections();
+                
+                // Auto-focus destination input if no destination is set yet
+                if (!this.state.toPoint && this.toGeocoderElement) {
+                    const destinationInput = this.toGeocoderElement.querySelector('input');
+                    if (destinationInput) {
+                        // Clear any existing blur timeout to prevent it from overriding our focus
+                        if (this.blurTimeout) {
+                            clearTimeout(this.blurTimeout);
+                            this.blurTimeout = null;
+                        }
+                        
+                        // Small delay to ensure the state update is complete
+                        setTimeout(() => {
+                            destinationInput.focus();
+                            // Set focusedInput state to 'to' so map clicks work for destination
+                            this.setState({ focusedInput: 'to' });
+                            console.debug('Auto-focused destination input after origin was set via map click');
+                        }, 100);
+                    }
+                }
             });
         } else if (this.state.focusedInput === 'to') {
             console.debug('Setting TO point via map click');
@@ -778,11 +833,10 @@ class DirectionsPanel extends Component {
                                     key: 'mapbox',
                                     label: 'Mapbox',
                                 },
-                                // {
-                                //     key: 'openrouteservice',
-                                //     label: 'OpenRouteService',
-                                //     disabled: true,
-                                // }
+                                {
+                                    key: 'openrouteservice',
+                                    label: 'OpenRouteService',
+                                }
                             ]}
                         />
 
@@ -844,7 +898,7 @@ class DirectionsPanel extends Component {
                                                 <div className="flex">
                                                     <IconBike className="mt-1 mr-3" />
                                                     <div className="flex flex-col flex-end">
-                                                        <span className="directions--legLabel text-sm font-bold mb-1">
+                                                        <span className="directions--legLabel text-sm mb-1">
                                                             {
                                                             route.legs && route.legs.length > 0 ?
                                                                 route.legs[0].summary
@@ -852,7 +906,7 @@ class DirectionsPanel extends Component {
                                                             }
                                                         </span>
                                                         {(route.ascend !== undefined || route.descend !== undefined) && (
-                                                            <span className="flex flex-row font-normal items-center text-gray-300">
+                                                            <span className="flex flex-row font-normal items-center text-gray-400">
                                                                 {route.ascend !== undefined && 
                                                                     <span className="flex items-center mr-2">
                                                                         <IconTrendingUp className="mr-1"/>{Math.round(route.ascend)}m
