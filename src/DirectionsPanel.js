@@ -856,10 +856,6 @@ class DirectionsPanel extends Component {
                                 {
                                     key: 'mapbox',
                                     label: 'Mapbox',
-                                },
-                                {
-                                    key: 'openrouteservice',
-                                    label: 'OpenRouteService',
                                 }
                             ]}
                         />
