@@ -82,9 +82,7 @@
         left: 8px;
         right: 8px;
         top: 32px;
-        margin: 0 auto;
         width: calc(100% - 16px);
-        /* max-width: 90%; */
 
         .mapboxgl-ctrl-geocoder--input {
             font-size: 14px;
