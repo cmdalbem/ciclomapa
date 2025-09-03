@@ -12,7 +12,7 @@ import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import mapboxgl from 'mapbox-gl';
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
-import { testMapboxDirections } from './testDirections.js';
+import directionsService from './directionsService.js';
 import './DirectionsPanel.css';
 
 import {
@@ -36,7 +36,8 @@ class DirectionsPanel extends Component {
             toGeocoderAttached: false,
             hoveredRouteIndex: null, // Added for hover state
             selectedRouteIndex: null, // Added for selection state
-            focusedInput: null // 'from' or 'to' or null
+            focusedInput: null, // 'from' or 'to' or null
+            selectedProvider: 'mapbox' // Current directions provider
         };
 
         // Custom draggable markers
@@ -63,6 +64,7 @@ class DirectionsPanel extends Component {
         this.handleInputBlur = this.handleInputBlur.bind(this);
         this.handleMapClick = this.handleMapClick.bind(this);
         this.attachGeocoderToDOM = this.attachGeocoderToDOM.bind(this);
+        this.handleProviderChange = this.handleProviderChange.bind(this);
     }
 
     componentDidMount() {
@@ -275,6 +277,23 @@ class DirectionsPanel extends Component {
         });
     }
 
+    handleProviderChange(provider) {
+        this.setState({ selectedProvider: provider });
+        
+        // If we have origin and destination points, recalculate with new provider
+        if (this.state.fromPoint && this.state.toPoint) {
+            // Clear current directions and recalculate with new provider
+            this.setState({ 
+                directions: null, 
+                error: null,
+                selectedRouteIndex: null 
+            }, () => {
+                // Recalculate directions with the new provider
+                this.calculateDirections();
+            });
+        }
+    }
+
     async calculateDirections() {
         if (this.state.fromPoint && this.state.toPoint) {
             this.setState({ loading: true, error: null, directions: null });
@@ -285,9 +304,12 @@ class DirectionsPanel extends Component {
                 const fromCoords = this.state.fromPoint.result.center;
                 const toCoords = this.state.toPoint.result.center;
                 
-                console.debug('Calculating directions from:', fromCoords, 'to:', toCoords);
+                console.debug('Calculating directions from:', fromCoords, 'to:', toCoords, 'using provider:', this.state.selectedProvider);
                 
-                const directions = await testMapboxDirections(fromCoords, toCoords);
+                // Switch to the selected provider and get directions
+                directionsService.setProvider(this.state.selectedProvider);
+                const directions = await directionsService.getCyclingDirections(fromCoords, toCoords);
+                
                 this.setState({ 
                     directions, 
                     loading: false 
@@ -773,6 +795,37 @@ class DirectionsPanel extends Component {
                             )}
                         </div>
 
+                        {/* Provider Selector */}
+                        <div className="mb-3">
+                            <Button.Group size="small" className="w-full">
+                                <Button
+                                    ghost
+                                    type={this.state.selectedProvider === 'mapbox' ? 'primary' : 'default'}
+                                    onClick={() => this.handleProviderChange('mapbox')}
+                                    className="flex-1"
+                                >
+                                    Mapbox
+                                </Button>
+                                <Button
+                                    ghost
+                                    type={this.state.selectedProvider === 'graphhopper' ? 'primary' : 'default'}
+                                    onClick={() => this.handleProviderChange('graphhopper')}
+                                    className="flex-1"
+                                >
+                                    GraphHopper
+                                </Button>
+                                {/* <Button
+                                    ghost
+                                    type={this.state.selectedProvider === 'openrouteservice' ? 'primary' : 'default'}
+                                    onClick={() => this.handleProviderChange('openrouteservice')}
+                                    className="flex-1"
+                                    disabled={true}
+                                >
+                                    OpenRoute
+                                </Button> */}
+                            </Button.Group>
+                        </div>
+
                         <Space direction="vertical" size="small" className="w-full">
                             <div 
                                 id="fromGeocoder"
@@ -829,13 +882,21 @@ class DirectionsPanel extends Component {
                                                 <div className="flex">
                                                     <IconBike className="mt-1 mr-3" />
                                                     <span className="directions--legLabel text-sm font-medium align-left">
-                                                        {route.legs && route.legs.length > 0 && route.legs[0].summary}
+                                                        {
+                                                        route.legs && route.legs.length > 0 ?
+                                                            route.legs[0].summary
+                                                        : route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'
+                                                        }
                                                     </span>
                                                 </div>
                                                 <div className="flex flex-col flex-end">
-                                                    <span className="text-sm text-right">
-                                                        {route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'}
-                                                    </span>
+                                                    {
+                                                        route.legs && route.legs.length > 0 ?
+                                                            <span className="text-sm text-right">
+                                                                {route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'}
+                                                            </span>
+                                                            : <></>
+                                                    }
                                                     <span className="text-sm text-gray-300 text-right">
                                                         {route.distance ? `${(route.distance / 1000).toFixed(1)} km` : 'N/A'}
                                                     </span>
