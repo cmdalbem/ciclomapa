@@ -66,7 +66,7 @@ class LayersPanel extends Component {
                         <div
                             id="layersPanelMobileButton"
                             className={`
-                                p-4 border border-white border-opacity-20 rounded text-lg fixed
+                                p-4 border border-white border-opacity-20 rounded-full text-lg fixed
                                 ${this.state.collapsed ? 'text-gray-300' : 'text-gray-900 bg-gray-100'}`}
                             onClick={this.toggleCollapse}
                             style={{
@@ -82,14 +82,15 @@ class LayersPanel extends Component {
                     id="layersPanel"
                     className={`
                         fixed text-white 
-                        ${IS_MOBILE && 'rounded border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
+                        ${IS_MOBILE && 'rounded-2xl border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
                         ${IS_MOBILE && this.state.collapsed ? 'hidden ' : ''}
                         ${embedMode ? 'pointer-events-none ' : 'cursor-pointer '}
                     `}
                     style={{
                         bottom: IS_MOBILE ? 100 : 30,
                         left: 8,
-                        background: IS_MOBILE && '#1c1717'
+                        background: IS_MOBILE && '#1c1717',
+                        zIndex: IS_MOBILE ? 1000 : 1
                     }}
                     onMouseEnter={() => this.setState({hover: true})}
                     onMouseLeave={() => this.setState({hover: false})}

@@ -651,18 +651,16 @@ class App extends Component {
                     embedMode={this.state.embedMode}
                 />
 
-                { !IS_MOBILE &&
-                    <DirectionsPanel
-                        embedMode={this.state.embedMode}
-                        onDirectionsCalculated={this.onDirectionsCalculated}
-                        onDirectionsCleared={this.onDirectionsCleared}
-                        selectedRouteIndex={this.state.selectedRouteIndex}
-                        hoveredRouteIndex={this.state.hoveredRouteIndex}
-                        onRouteSelected={this.onRouteSelected}
-                        onRouteHovered={this.onRouteHovered}
-                        map={this.state.map}
-                    />
-                }
+                <DirectionsPanel
+                    embedMode={this.state.embedMode}
+                    onDirectionsCalculated={this.onDirectionsCalculated}
+                    onDirectionsCleared={this.onDirectionsCleared}
+                    selectedRouteIndex={this.state.selectedRouteIndex}
+                    hoveredRouteIndex={this.state.hoveredRouteIndex}
+                    onRouteSelected={this.onRouteSelected}
+                    onRouteHovered={this.onRouteHovered}
+                    map={this.state.map}
+                />
 
                 <AboutModal
                     visible={this.state.aboutModal}

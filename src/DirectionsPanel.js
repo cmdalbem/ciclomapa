@@ -19,7 +19,8 @@ import './DirectionsPanel.css';
 
 import {
     MAPBOX_ACCESS_TOKEN,
-    IS_PROD
+    IS_PROD,
+    IS_MOBILE
 } from './constants.js'
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
@@ -28,7 +29,7 @@ class DirectionsPanel extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            collapsed: false,
+            collapsed: IS_MOBILE, // Start collapsed on mobile
             fromPoint: null,
             toPoint: null,
             directions: null,
@@ -794,9 +795,22 @@ class DirectionsPanel extends Component {
         
         return (
             <>
+                {
+                    IS_MOBILE &&
+                        <div
+                            id="directionsPanelMobileButton"
+                            className={`directions-panel-mobile-button ${this.state.collapsed ? 'collapsed' : 'expanded'}`}
+                            onClick={this.toggleCollapse}
+                        >
+                            <IconRoute/>
+                        </div>
+                }
                 <div
                     id="directionsPanel"
-                    className="fixed text-white cursor-pointer"
+                    className={`
+                        fixed text-white cursor-pointer
+                        ${IS_MOBILE && this.state.collapsed ? 'hidden' : ''}
+                    `}
                 >
                     <div className="p-4">
                         <div className="flex justify-between mb-2">
@@ -808,15 +822,25 @@ class DirectionsPanel extends Component {
                                 </span>
                             </h3>
 
-                            {directions && (
-                                <Button
+                            <div className="flex gap-2">
+                                {directions && (
+                                    <Button
                                     onClick={this.clearDirections}
                                     type="text" 
                                     size="small" 
-                                >
-                                    Limpar
-                                </Button>
-                            )}
+                                    >
+                                        Limpar
+                                    </Button>
+                                )}
+                                {IS_MOBILE && (
+                                    <Button
+                                        onClick={this.toggleCollapse}
+                                        type="link" 
+                                        size="small"
+                                        icon={<IconClose />}
+                                    />
+                                )}
+                            </div>
                         </div>
 
                         {/* Provider Selector */}
@@ -880,7 +904,7 @@ class DirectionsPanel extends Component {
                         )}
 
                         {directions && (
-                            <div className="mt-5">
+                            <div id="directionsPanel--results" className="mt-5">
                                 <div className="space-y-1">
                                     {directions.routes && directions.routes.map((route, index) => (
                                         <div
