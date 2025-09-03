@@ -14,4 +14,17 @@ module.exports = {
             },
         },
     ],
+    devServer: {
+        proxy: {
+            '/api/openrouteservice': {
+                target: 'https://api.openrouteservice.org',
+                changeOrigin: true,
+                pathRewrite: {
+                    '^/api/openrouteservice': ''
+                },
+                secure: true,
+                logLevel: 'debug'
+            }
+        }
+    }
 };

@@ -43,7 +43,6 @@ class DirectionsProvider {
     }
 }
 
-// Mapbox Directions API provider
 class MapboxDirectionsProvider extends DirectionsProvider {
     constructor(config = {}) {
         super(config);
@@ -82,37 +81,57 @@ class MapboxDirectionsProvider extends DirectionsProvider {
     }
 }
 
-// OpenRouteService provider (example of another provider)
 class OpenRouteServiceProvider extends DirectionsProvider {
     constructor(config = {}) {
         super(config);
         this.apiKey = OPENROUTESERVICE_API_KEY;
-        this.baseUrl = config.baseUrl || 'https://api.openrouteservice.org/v2/directions';
+        // Use proxy in development, direct API in production
+        this.baseUrl = config.baseUrl || (process.env.NODE_ENV === 'development' 
+            ? '/api/openrouteservice/v2/directions' 
+            : 'https://api.openrouteservice.org/v2/directions');
     }
 
-    async getDirections(from, to, options = {}) {
+    async getDirections(from, to) {
         const fromCoords = this.normalizeCoordinates(from);
         const toCoords = this.normalizeCoordinates(to);
 
+        if (!this.apiKey) {
+            throw new Error('OpenRouteService API key is required');
+        }
+
         try {
-            const response = await fetch(`${this.baseUrl}/cycling-regular`, {
+            // OpenRouteService expects API key as query parameter, not in Authorization header
+            const url = `${this.baseUrl}/cycling-regular/geojson?api_key=${this.apiKey}`;
+            
+            const requestBody = {
+                coordinates: [fromCoords, toCoords],
+                format: 'geojson',
+                alternative_routes: {
+                    target_count: 3,
+                    weight_factor: 2.5,
+                    share_factor: 0.5
+                },
+                // elevation: true,
+                instructions: false,
+                extra_info: ['steepness']
+            };
+            
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Authorization': this.apiKey,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    coordinates: [fromCoords, toCoords],
-                    format: 'geojson',
-                    options: {
-                        avoid_features: options.avoidFeatures || [],
-                        profile_params: options.profileParams || {}
-                    }
-                })
+                body: JSON.stringify(requestBody)
             });
 
             if (!response.ok) {
-                throw new Error(`Erro ao calcular rota: ${response.statusText}`);
+                const errorText = await response.text();
+                console.error('OpenRouteService API error response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorText
+                });
+                throw new Error(`Erro ao calcular rota: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
@@ -138,7 +157,6 @@ class OpenRouteServiceProvider extends DirectionsProvider {
     }
 }
 
-// GraphHopper Directions API provider
 class GraphHopperDirectionsProvider extends DirectionsProvider {
     constructor(config = {}) {
         super(config);
@@ -155,8 +173,6 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
         }
 
         try {
-            // GraphHopper uses GET requests with query parameters
-            // Format: point=lat,lng (GraphHopper GET expects lat,lng)
             const params = new URLSearchParams({
                 key: this.apiKey,
                 vehicle: this.getGraphHopperProfile(options.profile || 'cycling'),
@@ -168,9 +184,9 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
                 algorithm: 'alternative_route',
                 'alternative_route.max_paths': 5,
                 // Sets the factor by which the alternatives routes can be longer than the optimal route. Increasing can lead to worse alternatives. Default: 1.4
-                'alternative_route.max_weight_factor': 2.5,
-                // How similar an alternative route can be to the optimal route. Increasing can lead to worse alternatives. Default:0.6
-                'alternative_route.max_share_factor': 0.5,
+                'alternative_route.max_weight_factor': 3,
+                // How similar an alternative route can be to the optimal route. Increasing can lead to worse alternatives. Default: 0.6
+                'alternative_route.max_share_factor': 0.7,
             });
             
             // Add multiple points using append (GraphHopper expects multiple 'point' parameters)
