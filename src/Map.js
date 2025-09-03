@@ -771,6 +771,11 @@ class Map extends Component {
                     { source: 'directions-route', id: routeIndex },
                     { hover: true }
                 );
+                
+                // Notify parent component about hover
+                if (this.props.onRouteHovered) {
+                    this.props.onRouteHovered(routeIndex);
+                }
             }
         });
 
@@ -784,6 +789,11 @@ class Map extends Component {
                     { hover: false }
                 );
                 this.currentHoveredRoute = null;
+                
+                // Notify parent component to clear hover
+                if (this.props.onRouteHovered) {
+                    this.props.onRouteHovered(null);
+                }
             }
         });
     }
@@ -850,6 +860,11 @@ class Map extends Component {
         // Handle selected route changes
         if (this.props.selectedRouteIndex !== prevProps.selectedRouteIndex) {
             this.updateSelectedRoute(this.props.selectedRouteIndex);
+        }
+
+        // Handle hovered route changes
+        if (this.props.hoveredRouteIndex !== prevProps.hoveredRouteIndex) {
+            this.updateHoveredRoute(this.props.hoveredRouteIndex);
         }
     }
 
@@ -929,6 +944,28 @@ class Map extends Component {
         
         // Reset tracking variable
         this.currentHoveredRoute = null;
+    }
+
+    updateHoveredRoute(hoveredRouteIndex) {
+        const map = this.map;
+        if (!map || !map.getSource('directions-route')) return;
+
+        // Clear all hover states first
+        const features = map.querySourceFeatures('directions-route');
+        features.forEach((feature, index) => {
+            map.setFeatureState(
+                { source: 'directions-route', id: index },
+                { hover: false }
+            );
+        });
+
+        // Set hover state for the specified route
+        if (hoveredRouteIndex !== null && hoveredRouteIndex !== undefined) {
+            map.setFeatureState(
+                { source: 'directions-route', id: hoveredRouteIndex },
+                { hover: true }
+            );
+        }
     }
 
     componentDidMount() {
