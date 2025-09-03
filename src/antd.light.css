@@ -1,0 +1,407 @@
+/* Light theme CSS - overrides for Ant Design dark theme */
+
+.theme-light body {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-layout {
+  background: #ffffff !important;
+}
+
+.theme-light .ant-layout-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.theme-light .ant-layout-sider {
+  background: #ffffff !important;
+}
+
+.theme-light .ant-menu {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-menu-item {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-menu-item:hover {
+  background-color: #f5f5f5 !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-btn {
+  background: #ffffff !important;
+  border-color: #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-btn:hover {
+  background: #f5f5f5 !important;
+  border-color: #40a9ff !important;
+  color: #40a9ff !important;
+}
+
+.theme-light .ant-btn-primary {
+  background: #4EA76F !important;
+  border-color: #4EA76F !important;
+  color: #ffffff !important;
+}
+
+.theme-light .ant-btn-primary:hover {
+  background: #3d8a5a !important;
+  border-color: #3d8a5a !important;
+}
+
+.theme-light .ant-popover-inner {
+  background: #ffffff !important;
+  border: 1px solid #d9d9d9 !important;
+}
+
+.theme-light .ant-popover-arrow {
+  border-color: #d9d9d9 !important;
+}
+
+.theme-light .ant-dropdown {
+  background: #ffffff !important;
+  border: 1px solid #d9d9d9 !important;
+}
+
+.theme-light .ant-dropdown-menu {
+  background: #ffffff !important;
+}
+
+.theme-light .ant-dropdown-menu-item {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-dropdown-menu-item:hover {
+  background: #f5f5f5 !important;
+}
+
+.theme-light .ant-modal-content {
+  background: #ffffff !important;
+}
+
+.theme-light .ant-modal-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.theme-light .ant-modal-title {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-input {
+  background: #ffffff !important;
+  border-color: #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-input:focus {
+  border-color: #4EA76F !important;
+  box-shadow: 0 0 0 2px rgba(78, 167, 111, 0.2) !important;
+}
+
+.theme-light .ant-select-selector {
+  background: #ffffff !important;
+  border-color: #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-select-selection-item {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-select-dropdown {
+  background: #ffffff !important;
+  border: 1px solid #d9d9d9 !important;
+}
+
+.theme-light .ant-select-item {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-select-item:hover {
+  background: #f5f5f5 !important;
+}
+
+.theme-light .ant-select-item-option-selected {
+  background: #e6f7ff !important;
+  color: #4EA76F !important;
+}
+
+.theme-light .ant-tooltip-inner {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  border: 1px solid #d9d9d9 !important;
+}
+
+.theme-light .ant-tooltip-arrow {
+  border-color: #d9d9d9 !important;
+}
+
+.theme-light .ant-notification-notice {
+  background: #ffffff !important;
+  border: 1px solid #d9d9d9 !important;
+}
+
+.theme-light .ant-notification-notice-message {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-notification-notice-description {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+.theme-light #gradient-backdrop {
+  /* box-shadow: inset 0px 60px 100px 0px #ffffff !important; */
+  display: none !important;
+}
+
+.theme-light #backdrop {
+  background: #ffffff !important;
+}
+
+/* Tailwind CSS overrides for light mode */
+.theme-light .text-white {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .text-green-300 {
+  color: #4EA76F !important;
+}
+
+.theme-light .bg-yellow-300 {
+  background-color: #fef3c7 !important;
+}
+
+.theme-light .text-black {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .hover\:text-white:hover {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .opacity-50 {
+  opacity: 0.5 !important;
+}
+
+.theme-light .opacity-25 {
+  opacity: 0.25 !important;
+}
+
+.theme-light .opacity-100 {
+  opacity: 1 !important;
+}
+
+.theme-light .hover\:opacity-100:hover {
+  opacity: 1 !important;
+}
+
+/* Override any other common Tailwind classes that might need light mode variants */
+.theme-light .border-gray-200 {
+  border-color: #e5e7eb !important;
+}
+
+.theme-light .border-gray-300 {
+  border-color: #d1d5db !important;
+}
+
+.theme-light .bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+.theme-light .bg-gray-100 {
+  background-color: #f3f4f6 !important;
+}
+
+.theme-light .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+.theme-light .text-gray-700 {
+  color: #374151 !important;
+}
+
+.theme-light .text-gray-800 {
+  color: #1f2937 !important;
+}
+
+.theme-light .text-gray-900 {
+  color: #111827 !important;
+}
+
+/* Map-specific light mode overrides */
+.theme-light .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group,
+.theme-light .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder--input {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+.theme-light .mapboxgl-ctrl-group button {
+  filter: none !important;
+}
+
+.theme-light .mapboxgl-ctrl-icon.mapboxgl-ctrl-zoom-in,
+.theme-light .mapboxgl-ctrl-icon.mapboxgl-ctrl-zoom-out,
+.theme-light .mapboxgl-ctrl-icon.mapboxgl-ctrl-geolocate::before {
+  filter: none !important;
+}
+
+.theme-light .mapboxgl-ctrl-attrib a {
+  color: rgba(0, 0, 0, 0.2) !important;
+}
+
+.theme-light .mapboxgl-ctrl-logo {
+  opacity: 0.2 !important;
+}
+
+.theme-light .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder--icon-search {
+  opacity: 0.3 !important;
+}
+
+/* MapStyleSwitcher light mode overrides */
+.theme-light .switcher-bar > div {
+  background: #f3f4f6 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.theme-light .switcher-bar > div:hover {
+  box-shadow: 0px 2px 7px rgba(0, 0, 0, 0.1) !important;
+}
+
+.theme-light .switcher-bar > div.selected {
+  border: 2px solid #4EA76F !important;
+}
+
+/* DirectionsPanel light mode overrides */
+.theme-light #directionsPanel {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.theme-light #directionsPanel .mapboxgl-ctrl-geocoder.mapboxgl-ctrl {
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+.theme-light #directionsPanel .mapboxgl-ctrl-geocoder--input {
+  color: rgba(0, 0, 0, 0.85) !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+.theme-light .custom-marker {
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  background-color: #ffffff !important;
+}
+
+.theme-light .directions-panel-mobile-button {
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+.theme-light .directions-panel-mobile-button.collapsed {
+  color: #6b7280 !important;
+  background: #ffffff !important;
+}
+
+.theme-light .directions-panel-mobile-button.expanded {
+  color: #111827 !important;
+  background: #f3f4f6 !important;
+}
+
+/* MapPopups light mode overrides */
+.theme-light .mapboxgl-popup-content {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1) !important;
+}
+
+.theme-light .mapboxgl-popup-close-button {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+.theme-light .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+  border-top-color: #ffffff !important;
+}
+
+.theme-light .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
+  border-bottom-color: #ffffff !important;
+}
+
+/* Keep the colored popups as they are - they work well in both themes */
+
+/* Mapbox GL JS global overrides for light mode */
+.theme-light .mapboxgl-ctrl-geocoder {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--input {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--input::placeholder {
+  color: rgba(0, 0, 0, 0.3) !important;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--button {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--button:hover {
+  background: #f5f5f5 !important;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--suggestion {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--suggestion:hover {
+  background: #f5f5f5 !important;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--suggestion--title {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--suggestion--address {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+/* Additional global overrides for any remaining dark styles */
+.theme-light {
+  /* Ensure all text is dark in light mode */
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light * {
+  /* Override any remaining dark text colors */
+  color: inherit;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--icon {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--icon-close {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--icon-search {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+.theme-light .mapboxgl-ctrl-geocoder--icon-geolocate {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
