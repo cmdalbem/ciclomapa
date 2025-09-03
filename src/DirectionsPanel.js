@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Button, Input, Space, Divider } from 'antd';
+import { Button, Input, Space, Divider, Tabs } from 'antd';
 import { 
     HiOutlineMap as IconMap,
     HiOutlineLocationMarker as IconLocation,
@@ -765,35 +765,26 @@ class DirectionsPanel extends Component {
                         </div>
 
                         {/* Provider Selector */}
-                        <div className="mb-3">
-                            <Button.Group size="small" className="w-full">
-                                <Button
-                                    ghost
-                                    type={this.state.selectedProvider === 'graphhopper' ? 'primary' : 'default'}
-                                    onClick={() => this.handleProviderChange('graphhopper')}
-                                    className="flex-1"
-                                >
-                                    GraphHopper
-                                </Button>
-                                <Button
-                                    ghost
-                                    type={this.state.selectedProvider === 'mapbox' ? 'primary' : 'default'}
-                                    onClick={() => this.handleProviderChange('mapbox')}
-                                    className="flex-1"
-                                >
-                                    Mapbox
-                                </Button>
-                                {/* <Button
-                                    ghost
-                                    type={this.state.selectedProvider === 'openrouteservice' ? 'primary' : 'default'}
-                                    onClick={() => this.handleProviderChange('openrouteservice')}
-                                    className="flex-1"
-                                    disabled={true}
-                                >
-                                    OpenRoute
-                                </Button> */}
-                            </Button.Group>
-                        </div>
+                        <Tabs
+                            size="small"
+                            activeKey={this.state.selectedProvider}
+                            onChange={this.handleProviderChange}
+                            items={[
+                                {
+                                    key: 'graphhopper',
+                                    label: 'GraphHopper',
+                                },
+                                {
+                                    key: 'mapbox',
+                                    label: 'Mapbox',
+                                },
+                                // {
+                                //     key: 'openrouteservice',
+                                //     label: 'OpenRouteService',
+                                //     disabled: true,
+                                // }
+                            ]}
+                        />
 
                         <Space direction="vertical" size="small" className="w-full">
                             <div 
@@ -897,6 +888,13 @@ class DirectionsPanel extends Component {
                                             )}
                                         </div>
                                     ))}
+                                </div>
+                                
+                                {/* Disclaimer */}
+                                <div className="mt-3 p-2 text-gray-400 text-xs">
+                                    <span>
+                                        As rotas são sugestões automáticas. Sempre verifique as condições das vias, sinalização e segurança antes de pedalar :)
+                                    </span>
                                 </div>
                             </div>
                         )}
