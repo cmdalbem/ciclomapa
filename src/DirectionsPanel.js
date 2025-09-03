@@ -4,7 +4,9 @@ import {
     HiOutlineMap as IconMap,
     HiOutlineLocationMarker as IconLocation,
     HiOutlineArrowRight as IconArrow,
-    HiOutlineX as IconClose
+    HiOutlineX as IconClose,
+    HiOutlineTrendingUp as IconTrendingUp,
+    HiOutlineTrendingDown as IconTrendingDown
 } from "react-icons/hi";
 import { LuBike as IconBike, LuRoute as IconRoute } from "react-icons/lu";
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
@@ -35,7 +37,6 @@ class DirectionsPanel extends Component {
             fromGeocoderAttached: false,
             toGeocoderAttached: false,
             hoveredRouteIndex: null, // Added for hover state
-            selectedRouteIndex: null, // Added for selection state
             focusedInput: null, // 'from' or 'to' or null
             selectedProvider: 'mapbox' // Current directions provider
         };
@@ -285,10 +286,12 @@ class DirectionsPanel extends Component {
             // Clear current directions and recalculate with new provider
             this.setState({ 
                 directions: null, 
-                error: null,
-                selectedRouteIndex: null 
+                error: null
             }, () => {
-                // Recalculate directions with the new provider
+                // Clear selected route and recalculate directions with the new provider
+                if (this.props.onRouteSelected) {
+                    this.props.onRouteSelected(null);
+                }
                 this.calculateDirections();
             });
         }
@@ -336,9 +339,12 @@ class DirectionsPanel extends Component {
             directions: null, 
             error: null,
             fromPoint: null,
-            toPoint: null,
-            selectedRouteIndex: null
+            toPoint: null
         });
+        // Clear selected route in parent
+        if (this.props.onRouteSelected) {
+            this.props.onRouteSelected(null);
+        }
         
         // Clean up geocoders properly
         this.cleanupGeocoders();
@@ -350,8 +356,9 @@ class DirectionsPanel extends Component {
     }
 
     selectRoute(index) {
-        // No longer needed since we show all routes
-        console.debug('Route selection disabled - showing all routes');
+        if (this.props.onRouteSelected) {
+            this.props.onRouteSelected(index);
+        }
     }
 
     handleRouteHover(routeIndex) {
@@ -387,23 +394,7 @@ class DirectionsPanel extends Component {
 
     handleRouteClick(routeIndex) {
         console.debug('Route clicked:', routeIndex);
-        this.setState({ selectedRouteIndex: routeIndex });
-        
-        if (this.props.map && this.state.directions && this.state.directions.routes) {
-            // Clear selection state on all routes first
-            this.state.directions.routes.forEach((route, index) => {
-                this.props.map.setFeatureState(
-                    { source: 'directions-route', id: index },
-                    { selected: false }
-                );
-            });
-            
-            // Set selection state on the clicked route
-            this.props.map.setFeatureState(
-                { source: 'directions-route', id: routeIndex },
-                { selected: true }
-            );
-        }
+        this.selectRoute(routeIndex);
     }
 
     createCustomMarker(coordinates, type) {
@@ -776,10 +767,7 @@ class DirectionsPanel extends Component {
                             <h3 className="text-lg font-semibold flex items-center">
                                 <IconRoute className="mr-2" />
                                 Rotas
-                                <span 
-                                    className="bg-white opacity-75 ml-2 px-1 py-0 rounded-full text-black text-xs"
-                                    style={{fontSize: 10}}
-                                >
+                                <span className="bg-white opacity-75 ml-2 px-1 py-0 rounded-full text-black text-xs">
                                     BETA
                                 </span>
                             </h3>
@@ -872,7 +860,7 @@ class DirectionsPanel extends Component {
                                         <div
                                             key={index}
                                             className={`rounded-lg p-2 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors ${
-                                                this.state.selectedRouteIndex === index ? 'bg-white bg-opacity-20 border-opacity-60' : ''
+                                                this.props.selectedRouteIndex === index ? 'bg-white bg-opacity-20 border-opacity-60' : ''
                                             }`}
                                             onMouseEnter={() => this.handleRouteHover(index)}
                                             onMouseLeave={this.handleRouteLeave}
@@ -881,22 +869,34 @@ class DirectionsPanel extends Component {
                                             <div className="flex justify-between mb-2">
                                                 <div className="flex">
                                                     <IconBike className="mt-1 mr-3" />
-                                                    <span className="directions--legLabel text-sm font-medium align-left">
-                                                        {
-                                                        route.legs && route.legs.length > 0 ?
-                                                            route.legs[0].summary
-                                                        : route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'
-                                                        }
-                                                    </span>
+                                                    <div className="flex flex-col flex-end">
+                                                        <span className="directions--legLabel text-sm font-bold mb-1">
+                                                            {
+                                                            route.legs && route.legs.length > 0 ?
+                                                                route.legs[0].summary
+                                                            : `Opção ${index + 1}`
+                                                            }
+                                                        </span>
+                                                        {(route.ascend !== undefined || route.descend !== undefined) && (
+                                                            <span className="flex flex-row font-normal items-center text-gray-300">
+                                                                {route.ascend !== undefined && 
+                                                                    <span className="flex items-center mr-2">
+                                                                        <IconTrendingUp className="mr-1"/>{Math.round(route.ascend)}m
+                                                                    </span>
+                                                                }
+                                                                {route.descend !== undefined && 
+                                                                    <span className="flex items-center">
+                                                                        <IconTrendingDown className="mr-1"/>{Math.round(route.descend)}m
+                                                                    </span>
+                                                                }
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <div className="flex flex-col flex-end">
-                                                    {
-                                                        route.legs && route.legs.length > 0 ?
-                                                            <span className="text-sm text-right">
-                                                                {route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'}
-                                                            </span>
-                                                            : <></>
-                                                    }
+                                                    <span className="text-sm text-right mb-1">
+                                                        {route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'}
+                                                    </span>
                                                     <span className="text-sm text-gray-300 text-right">
                                                         {route.distance ? `${(route.distance / 1000).toFixed(1)} km` : 'N/A'}
                                                     </span>

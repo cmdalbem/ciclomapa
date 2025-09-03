@@ -162,7 +162,7 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
                 vehicle: this.getGraphHopperProfile(options.profile || 'cycling'),
                 type: 'json',
                 instructions: 'false',
-                elevation: 'false',
+                elevation: 'true',
                 points_encoded: 'false',
                 calc_points: 'true',
                 algorithm: 'alternative_route',
@@ -233,15 +233,25 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
             throw new Error('Não foram encontradas rotas');
         }
 
-        const routes = data.paths.map(path => ({
-            geometry: {
-                type: 'LineString',
-                coordinates: path.points.coordinates // Already in [lng, lat] format from GraphHopper
-            },
-            distance: path.distance,
-            duration: path.time / 1000, // Convert from milliseconds to seconds
-            weight: path.time / 1000
-        }));
+        const routes = data.paths.map(path => {
+            const route = {
+                geometry: {
+                    type: 'LineString',
+                    coordinates: path.points.coordinates // Already in [lng, lat] format from GraphHopper
+                },
+                distance: path.distance,
+                duration: path.time / 1000, // Convert from milliseconds to seconds
+                weight: path.time / 1000
+            };
+
+            // Add elevation data if available
+            if (path.ascend !== undefined && path.descend !== undefined) {
+                route.ascend = path.ascend;
+                route.descend = path.descend;
+            }
+
+            return route;
+        });
 
         // Calculate bounding box from all route coordinates
         const bbox = this.calculateBbox(routes);
