@@ -231,7 +231,7 @@ class TopBar extends Component {
                         <div className="nav-links font-white">
                             {
                                 !embedMode ? <div className="hidden sm:block">
-                                    <Button type="link" className="" shape="circle" onClick={toggleTheme}>
+                                    <Button type="link" className="" shape="circle" onClick={() => toggleTheme()}>
                                         {isDarkMode ? <IconSun /> : <IconMoon />}
                                     </Button>
 
