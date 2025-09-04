@@ -52,6 +52,17 @@ class App extends Component {
     storage = new Storage();
     osmController = OSMController;
 
+    // Detect system theme preference
+    getSystemThemePreference() {
+        if (window.matchMedia) {
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            console.log('System theme preference detected:', isDark ? 'dark' : 'light');
+            return isDark;
+        }
+        console.log('matchMedia not supported, defaulting to light mode');
+        return false; // Light mode as fallback
+    }
+
     constructor(props) {
         super(props);
         this.updateData = this.updateData.bind(this);
@@ -75,7 +86,13 @@ class App extends Component {
 
         const urlParams = this.getParamsFromURL();
         
-        const prev = urlParams.embed ? {} : this.getStateFromLocalStorage() || {};
+        const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
+        console.log('Previous saved state:', prev);
+        
+        // Use saved theme preference or fall back to system preference
+        const systemThemePreference = this.getSystemThemePreference();
+        const isDarkMode = prev.isDarkMode !== undefined ? prev.isDarkMode : systemThemePreference;
+        console.log('Final theme decision:', isDarkMode ? 'dark' : 'light', '(saved:', prev.isDarkMode, ', system:', systemThemePreference, ')');
 
         this.state = {
             area: prev.area || '',
@@ -87,9 +104,9 @@ class App extends Component {
             geoJson: null,
             debugMode: urlParams.debug || false,
             loading: false,
-            mapStyle: prev.isDarkMode !== undefined ? 
-                (prev.isDarkMode ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb') :
-                DEFAULT_MAPBOX_STYLE,
+            mapStyle: isDarkMode ? 
+                'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' : 
+                'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb',
             layers: this.initLayers(prev.layersStates, urlParams.debug || false),
             lengths: {},
             embedMode: urlParams.embed,
@@ -101,7 +118,7 @@ class App extends Component {
             selectedRouteIndex: null,
             hoveredRouteIndex: null,
             map: null,
-            isDarkMode: prev.isDarkMode !== undefined ? prev.isDarkMode : true
+            isDarkMode: isDarkMode
         };
 
         if (this.state.area) {
@@ -162,7 +179,7 @@ class App extends Component {
     getStateFromLocalStorage() {
         const savedState = JSON.parse(window.localStorage.getItem('appstate'));
         console.debug('Retrived saved state from local storage:', savedState);
-        return savedState;
+        return savedState || {};
     }
 
     saveStateToLocalStorage() {
@@ -515,6 +532,33 @@ class App extends Component {
         // Initialize theme
         document.body.className = this.state.isDarkMode ? 'theme-dark' : 'theme-light';
 
+        // Listen for system theme changes
+        if (window.matchMedia) {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            const handleThemeChange = (e) => {
+                // Only update if user hasn't manually set a preference (no saved state)
+                const prev = this.getStateFromLocalStorage() || {};
+                if (prev.isDarkMode === undefined) {
+                    const newTheme = e.matches;
+                    this.setState({ isDarkMode: newTheme });
+                    document.body.className = newTheme ? 'theme-dark' : 'theme-light';
+                    
+                    // Update map style if default style is selected (not satellite)
+                    if (!this.state.showSatellite) {
+                        const newMapStyle = newTheme 
+                            ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
+                            : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'; // Light style
+                        this.setState({ mapStyle: newMapStyle });
+                    }
+                }
+            };
+            
+            mediaQuery.addEventListener('change', handleThemeChange);
+            
+            // Store the listener reference for cleanup
+            this.themeChangeListener = handleThemeChange;
+        }
+
         if (!this.state.embedMode) {
             get('hasSeenWelcomeMsg')
                 .then(data => {
@@ -543,6 +587,14 @@ class App extends Component {
         //     console.warn = emptyFunc;
         //     console.error = emptyFunc;
         // }
+    }
+
+    componentWillUnmount() {
+        // Clean up theme change listener
+        if (this.themeChangeListener && window.matchMedia) {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            mediaQuery.removeEventListener('change', this.themeChangeListener);
+        }
     }
 
     onRouteChanged() {
