@@ -83,6 +83,7 @@ class App extends Component {
         this.onRouteHovered = this.onRouteHovered.bind(this);
         this.setMapRef = this.setMapRef.bind(this);
         this.toggleTheme = this.toggleTheme.bind(this);
+        this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
 
         const urlParams = this.getParamsFromURL();
         
@@ -118,7 +119,8 @@ class App extends Component {
             selectedRouteIndex: null,
             hoveredRouteIndex: null,
             map: null,
-            isDarkMode: isDarkMode
+            isDarkMode: isDarkMode,
+            mapKey: 0,
         };
 
         if (this.state.area) {
@@ -132,18 +134,23 @@ class App extends Component {
 
     toggleTheme() {
         const newTheme = !this.state.isDarkMode;
-        this.setState({ isDarkMode: newTheme });
         
         // Apply theme class to body
         document.body.className = newTheme ? 'theme-dark' : 'theme-light';
         
-        // Update map style if default style is selected (not satellite)
-        if (!this.state.showSatellite) {
-            const newMapStyle = newTheme 
-                ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
-                : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'; // Light style
-            this.setState({ mapStyle: newMapStyle });
-        }
+        // // Update map style if default style is selected (not satellite)
+        // if (!this.state.showSatellite) {
+        //     const newMapStyle = newTheme 
+        //         ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
+        //         : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'; // Light style
+        //     this.setState({ mapStyle: newMapStyle });
+        // }
+
+        this.setState({ isDarkMode: newTheme },() => {
+            // TEMP while we don't update everything dynamically
+            // window.location.reload();
+            this.forceMapReinitialization();
+        });
     }
 
     toggleSidebar(state) {
@@ -536,23 +543,9 @@ class App extends Component {
         if (window.matchMedia) {
             const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
             const handleThemeChange = (e) => {
-                // Only update if user hasn't manually set a preference (no saved state)
-                const prev = this.getStateFromLocalStorage() || {};
-                if (prev.isDarkMode === undefined) {
-                    const newTheme = e.matches;
-                    this.setState({ isDarkMode: newTheme });
-                    document.body.className = newTheme ? 'theme-dark' : 'theme-light';
-                    
-                    // Update map style if default style is selected (not satellite)
-                    if (!this.state.showSatellite) {
-                        const newMapStyle = newTheme 
-                            ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
-                            : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'; // Light style
-                        this.setState({ mapStyle: newMapStyle });
-                    }
-                }
+                const newTheme = e.matches;
+                this.toggleTheme(newTheme);
             };
-            
             mediaQuery.addEventListener('change', handleThemeChange);
             
             // Store the listener reference for cleanup
@@ -642,6 +635,12 @@ class App extends Component {
         this.setState({ map });
     }
 
+    forceMapReinitialization() {
+        this.setState(prevState => ({
+            mapKey: prevState.mapKey + 1
+        }));
+    }
+
     render() {
         return (
             <div id="ciclomapa" className={this.state.hideUI ? "hideUI" : ""}>
@@ -673,6 +672,7 @@ class App extends Component {
                         />
 
                         <Map
+                            key={this.state.mapKey}
                             ref={(map) => { window.map = map }}
                             data={this.state.geoJson}
                             layers={this.state.layers}

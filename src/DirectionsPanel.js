@@ -619,12 +619,6 @@ class DirectionsPanel extends Component {
         if (this[`${inputType}GeocoderElement`]) {
             this[`${inputType}GeocoderElement`].querySelector('input').placeholder = 'Digite ou clique no mapa';
         }
-        
-        // Update cursor style to indicate map clicking is active
-        // if (this.props.map) {
-        //     this.props.map.getCanvas().style.cursor = 'crosshair';
-        //     console.debug('Map cursor changed to crosshair');
-        // }
     }
 
     handleInputBlur(inputType) {
@@ -643,18 +637,14 @@ class DirectionsPanel extends Component {
                 this.setState({ focusedInput: null });
                 console.debug('Focus cleared, resetting cursor');
                 
-                // Reset cursor style
-                if (this.props.map) {
-                    this.props.map.getCanvas().style.cursor = '';
-                }
                 this.blurTimeout = null;
+
+                if (this[`${inputType}GeocoderElement`]) {
+                    this[`${inputType}GeocoderElement`].querySelector('input').placeholder = inputType === 'from' ? 'Origem' : 'Destino';
+                }
             }, 500);
         } else {
             console.debug('Blur ignored - different input is focused');
-        }
-
-        if (this[`${inputType}GeocoderElement`]) {
-            this[`${inputType}GeocoderElement`].querySelector('input').placeholder = inputType === 'from' ? 'Origem' : 'Destino';
         }
     }
 

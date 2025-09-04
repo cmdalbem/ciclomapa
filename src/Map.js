@@ -267,7 +267,7 @@ class Map extends Component {
             }
         };
 
-        // Create dark mode layer
+        // Create POI layer
         this.map.addLayer({
             ...baseLayerConfig,
             'id': l.id,
@@ -277,35 +277,14 @@ class Map extends Component {
                 'icon-image': [
                     'step',
                     ['zoom'],
-                    `${l.icon}-mini`,
+                    this.props.isDarkMode ? `${l.icon}-mini` : `${l.icon}-mini--light`,
                     POI_ZOOM_THRESHOLD,
                     l.icon
                 ],
             },
             'paint': {
                 ...baseLayerConfig.paint,
-                'text-halo-color': '#1c1a17',
-            }
-        });
-
-        // Create light mode layer
-        this.map.addLayer({
-            ...baseLayerConfig,
-            'id': `${l.id}--light`,
-            "name": `${l.name} (Light)`,
-            'layout': {
-                ...baseLayerConfig.layout,
-                'icon-image': [
-                    'step',
-                    ['zoom'],
-                    `${l.icon}-mini--light`,
-                    POI_ZOOM_THRESHOLD,
-                    l.icon
-                ],
-            },
-            'paint': {
-                ...baseLayerConfig.paint,
-                'text-halo-color': '#FFFFFF',
+                'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#ffffff',
             }
         });
 
@@ -349,44 +328,6 @@ class Map extends Component {
             }
         });
 
-        // Interactions for light mode layer
-        this.map.on('mouseenter', `${l.id}--light`, e => {
-            if (e.features.length > 0 && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
-                this.map.getCanvas().style.cursor = 'pointer';
-
-                if (this.hoveredPOI) {
-                    this.map.setFeatureState({
-                        source: 'osm',
-                        id: this.hoveredPOI },
-                        { hover: false });
-                }
-                this.hoveredPOI = e.features[0].id;
-                this.map.setFeatureState({
-                    source: 'osm',
-                    id: this.hoveredPOI },
-                    { hover: true });
-            }
-            e.originalEvent.preventDefault();
-        });
-
-        this.map.on('mouseleave', `${l.id}--light`, e => {
-            if (this.hoveredPOI && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
-                this.map.getCanvas().style.cursor = '';
-
-                this.map.setFeatureState({
-                    source: 'osm',
-                    id: this.hoveredPOI },
-                    { hover: false });
-            }
-            this.hoveredPOI = null;
-        });
-
-        this.map.on('click', `${l.id}--light`, e => {
-            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
-                this.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
-                e.originalEvent.preventDefault();
-            }
-        });
     }
 
     addLayerWay(l) {
@@ -779,7 +720,7 @@ class Map extends Component {
             source: 'directions-route',
             layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: {
-                'line-color': 'white',
+                'line-color': this.props.isDarkMode ? '#ffffff' : '#000000',
                 'line-opacity': [
                     'case',
                     ['boolean', ['feature-state', 'selected'], false],
@@ -809,8 +750,8 @@ class Map extends Component {
                 'line-color': [
                     'case',
                     ['boolean', ['feature-state', 'selected'], false],
-                        '#2d2e30', // Selected color = street color
-                        '#1c1a17' // Default color = map color (darker, for better contrast)
+                        this.props.isDarkMode ? '#2d2e30' : '#E8E6E3', // Selected color = street color
+                        this.props.isDarkMode ? '#1c1a17' : '#ffffff'  // Default color = map color (for better contrast)
                 ],
                 "line-width": [
                     "interpolate",
@@ -900,10 +841,6 @@ class Map extends Component {
                 this.props.showSatellite ? 'visible' : 'none');
         }
 
-        // Handle theme changes for POI icons
-        if (this.props.isDarkMode !== prevProps.isDarkMode) {
-            this.updatePOIIcons();
-        }
 
         // if (this.props.zoom !== prevProps.zoom) {
         //     map.setZoom(this.props.zoom);
@@ -927,15 +864,11 @@ class Map extends Component {
                             map.setLayoutProperty(l.id+'--border', 'visibility', status);
                         }
                     } else if (l.type === 'poi') {
-                        // Handle POI layers - show/hide based on both isActive and theme
-                        const darkModeStatus = l.isActive && this.props.isDarkMode ? 'visible' : 'none';
-                        const lightModeStatus = l.isActive && !this.props.isDarkMode ? 'visible' : 'none';
+                        // Handle POI layers - show/hide based on isActive only
+                        const status = l.isActive ? 'visible' : 'none';
                         
                         if (map.getLayer(l.id)) {
-                            map.setLayoutProperty(l.id, 'visibility', darkModeStatus);
-                        }
-                        if (map.getLayer(`${l.id}--light`)) {
-                            map.setLayoutProperty(`${l.id}--light`, 'visibility', lightModeStatus);
+                            map.setLayoutProperty(l.id, 'visibility', status);
                         }
                     }
                 }
@@ -1193,26 +1126,6 @@ class Map extends Component {
         });
     }
 
-    updatePOIIcons() {
-        const map = this.map;
-        if (!map) return;
-
-        console.debug('Updating POI icons for theme:', this.props.isDarkMode ? 'dark' : 'light');
-
-        // Show/hide appropriate layers based on theme
-        this.props.layers.forEach(layer => {
-            if (layer.type === 'poi') {
-                // Show dark mode layer, hide light mode layer
-                if (map.getLayer(layer.id)) {
-                    map.setLayoutProperty(layer.id, 'visibility', this.props.isDarkMode ? 'visible' : 'none');
-                }
-                // Show light mode layer, hide dark mode layer
-                if (map.getLayer(`${layer.id}--light`)) {
-                    map.setLayoutProperty(`${layer.id}--light`, 'visibility', this.props.isDarkMode ? 'none' : 'visible');
-                }
-            }
-        });
-    }
 
     initLayers() {
         this.initDirectionsLayers();
@@ -1222,8 +1135,6 @@ class Map extends Component {
             this.addCommentsLayers();
         }
 
-        // Set initial feature state for theme
-        this.updatePOIIcons();
 
         this.onMapMoved();
 
