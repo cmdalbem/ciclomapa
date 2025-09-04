@@ -290,7 +290,7 @@
 }
 
 /* MapPopups light mode overrides */
-.theme-light .mapboxgl-popup-content {
+/* .theme-light .mapboxgl-popup-content {
   background: #ffffff !important;
   color: rgba(0, 0, 0, 0.85) !important;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1) !important;
@@ -306,7 +306,7 @@
 
 .theme-light .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
   border-bottom-color: #ffffff !important;
-}
+} */
 
 /* Keep the colored popups as they are - they work well in both themes */
 

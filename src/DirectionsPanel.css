@@ -101,7 +101,7 @@
     #directionsPanel {
         left: 8px;
         right: 8px;
-        top: 32px;
+        top: 8px;
         width: calc(100% - 16px);
 
         .mapboxgl-ctrl-geocoder--input {
