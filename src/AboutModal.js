@@ -24,7 +24,7 @@ class AboutModal extends Component {
                 }}
             >
                 <div className="relative max-w-lg p-4 sm:p-0">
-                    <div className="text-lg tracking-wide">
+                    <div className="text-small md:text-lg tracking-wide">
                         <img className="h-12 mb-8" src="logo.svg" alt="CicloMapa"></img>
 
                         <div className="mb-8">
@@ -44,7 +44,7 @@ class AboutModal extends Component {
                         <div className="mt-16">
                             <div className="flex items-start justify-between opacity-80">
                                 <div className="w-8/12">
-                                    <div className='flex h-10 flex-col sm:flex-row mb-6'>
+                                    <div className='flex h-10 flex-row mb-6'>
                                         <a className="h-full mr-4"
                                             href="https://www.uniaodeciclistas.org.br/"
                                             arget="_BLANK" rel="noopener noreferrer"
@@ -63,7 +63,7 @@ class AboutModal extends Component {
                                         Design & desenvolvimento por  <a className="underline" href="https://www.cristianodalbem.com/" target="_BLANK" rel="noopener noreferrer" > Cristiano Dalbem </a>
                                     </p>
 
-                                    <div className='flex h-10 flex-col sm:flex-row'>
+                                    <div className='flex h-10 flex-row'>
                                         <a className="h-full"
                                             href="https://www.gov.br/cidades/pt-br/acesso-a-informacao/acoes-e-programas/mobilidade-urbana/programa-bicicleta-brasil/premio-bicicleta-brasil/"
                                             target="_BLANK" rel="noopener noreferrer"

@@ -76,10 +76,12 @@ body.theme-dark .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder--input {
   max-width: none;
   z-index: 3;
   border-radius: 32px;
+  visibility: hidden;
+}
+
+body.theme-dark .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
   box-shadow: 0 16px 50px 0px rgba(0, 0, 0, 0.3), 0 10px 7px -8px rgba(0, 0, 0, 0.2);
   /* box-shadow: 0 16px 50px 0px rgba(250, 250, 250, 0.1), 0 10px 7px -8px rgba(250, 250, 250, 0.5); */
-
-  visibility: hidden;
 }
 
 body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
