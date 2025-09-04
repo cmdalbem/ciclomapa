@@ -1,6 +1,5 @@
 #directionsPanel {
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     /* box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); */
     z-index: 1;
@@ -35,17 +34,15 @@
 
 .theme-light {
     #directionsPanel {
-        background: rgba(255, 255, 255, 0.4);
-    }
-
-    .mapboxgl-ctrl-geocoder--input {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(237, 237, 237, 0.4);
+        border: 1px solid rgba(0, 0, 0, 0.1);
     }
 }
 
 .theme-dark {
     #directionsPanel {
         background: rgba(28, 23, 23, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .mapboxgl-ctrl-geocoder--input {
@@ -97,6 +94,7 @@
     opacity: 0.5;
 }
 
+/* Mobile */
 @media (min-width: 320px) and (max-width: 480px) {
     #directionsPanel {
         left: 8px;
@@ -124,9 +122,9 @@
             height: 96px;
         }
 
-        #directionsPanel--header {
+        /* #directionsPanel--header {
             display: none;
-        }
+        } */
     }
 
     #directionsPanelMobileButton {
