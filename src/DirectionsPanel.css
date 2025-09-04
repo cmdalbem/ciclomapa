@@ -1,5 +1,4 @@
 #directionsPanel {
-    background: rgba(28, 23, 23, 0.2);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
@@ -18,27 +17,48 @@
     .mapboxgl-ctrl-geocoder {
         width: 100%;
         max-width: none;
+        box-shadow: none;
     }
     
     .mapboxgl-ctrl-geocoder.mapboxgl-ctrl {
-        background: rgba(28, 23, 23, 0.5);
         border-radius: 8px;
-
-        .mapboxgl-ctrl-geocoder--button {
-            background: none !important;
-        }
     }
     
     .mapboxgl-ctrl-geocoder--input {
-        /* background: #1c1717; */
-        color: white;
         border-radius: 8px;
-        /* border: 1px solid rgba(255, 255, 255, 0.2); */
-        background: rgba(255, 255, 255, 0.1);
     }
     
     .directions--legLabel {
         max-width: 14rem;
+    }
+}
+
+.theme-light {
+    #directionsPanel {
+        background: rgba(255, 255, 255, 0.4);
+    }
+
+    .mapboxgl-ctrl-geocoder--input {
+        background: rgba(255, 255, 255, 0.1);
+    }
+}
+
+.theme-dark {
+    #directionsPanel {
+        background: rgba(28, 23, 23, 0.2);
+    }
+
+    .mapboxgl-ctrl-geocoder--input {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+
+    .mapboxgl-ctrl-geocoder.mapboxgl-ctrl {
+        background: rgba(28, 23, 23, 0.5);
+
+        .mapboxgl-ctrl-geocoder--button {
+            background: none !important;
+        }
     }
 }
 

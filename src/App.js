@@ -635,6 +635,7 @@ class App extends Component {
                             isSidebarOpen={this.state.isSidebarOpen}
                             embedMode={this.state.embedMode}
                             debugMode={this.state.debugMode}
+                            isDarkMode={this.state.isDarkMode}
                             directions={this.state.directions}
                             selectedRouteIndex={this.state.selectedRouteIndex}
                             hoveredRouteIndex={this.state.hoveredRouteIndex}

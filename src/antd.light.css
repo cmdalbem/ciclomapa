@@ -32,25 +32,24 @@
   color: rgba(0, 0, 0, 0.85) !important;
 }
 
-.theme-light .ant-btn {
+.theme-light .ant-btn:not(.ant-btn-text) {
   background: #ffffff !important;
-  border-color: #d9d9d9 !important;
   color: rgba(0, 0, 0, 0.85) !important;
 }
 
-.theme-light .ant-btn:hover {
+.theme-light .ant-btn:hover:not(.ant-btn-text) {
   background: #f5f5f5 !important;
   border-color: #40a9ff !important;
   color: #40a9ff !important;
 }
 
-.theme-light .ant-btn-primary {
+.theme-light .ant-btn-primary:not(.ant-btn-text) {
   background: #4EA76F !important;
   border-color: #4EA76F !important;
   color: #ffffff !important;
 }
 
-.theme-light .ant-btn-primary:hover {
+.theme-light .ant-btn-primary:hover:not(.ant-btn-text) {
   background: #3d8a5a !important;
   border-color: #3d8a5a !important;
 }
@@ -178,12 +177,20 @@
   background-color: #fef3c7 !important;
 }
 
-.theme-light .text-black {
-  color: rgba(0, 0, 0, 0.85) !important;
+.theme-light .bg-white {
+  background-color: rgba(0,0,0,var(--tw-bg-opacity)) !important;
 }
 
-.theme-light .hover\:text-white:hover {
-  color: rgba(0, 0, 0, 0.85) !important;
+.theme-light .bg-black {
+  background-color: rgba(255,255,255,var(--tw-bg-opacity)) !important;
+}
+
+.theme-light .text-black {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.theme-light .hover:text-white:hover {
+  color: rgba(255, 255, 255, 0.85) !important;
 }
 
 .theme-light .opacity-50 {
@@ -236,13 +243,6 @@
 }
 
 /* Map-specific light mode overrides */
-.theme-light .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group,
-.theme-light .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder--input {
-  background: #ffffff !important;
-  color: rgba(0, 0, 0, 0.85) !important;
-  border: 1px solid rgba(0, 0, 0, 0.2) !important;
-}
-
 .theme-light .mapboxgl-ctrl-group button {
   filter: none !important;
 }
@@ -280,20 +280,6 @@
 }
 
 /* DirectionsPanel light mode overrides */
-.theme-light #directionsPanel {
-  background: rgba(255, 255, 255, 0.2) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-}
-
-.theme-light #directionsPanel .mapboxgl-ctrl-geocoder.mapboxgl-ctrl {
-  background: rgba(255, 255, 255, 0.5) !important;
-}
-
-.theme-light #directionsPanel .mapboxgl-ctrl-geocoder--input {
-  color: rgba(0, 0, 0, 0.85) !important;
-  background: rgba(0, 0, 0, 0.1) !important;
-}
-
 .theme-light .custom-marker {
   border: 1px solid rgba(0, 0, 0, 0.2) !important;
   color: rgba(0, 0, 0, 0.85) !important;
@@ -335,50 +321,6 @@
 
 /* Keep the colored popups as they are - they work well in both themes */
 
-/* Mapbox GL JS global overrides for light mode */
-.theme-light .mapboxgl-ctrl-geocoder {
-  background: #ffffff !important;
-  color: rgba(0, 0, 0, 0.85) !important;
-  border: 1px solid rgba(0, 0, 0, 0.2) !important;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--input {
-  background: #ffffff !important;
-  color: rgba(0, 0, 0, 0.85) !important;
-  border: 1px solid rgba(0, 0, 0, 0.2) !important;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--input::placeholder {
-  color: rgba(0, 0, 0, 0.3) !important;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--button {
-  background: #ffffff !important;
-  color: rgba(0, 0, 0, 0.65) !important;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--button:hover {
-  background: #f5f5f5 !important;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--suggestion {
-  background: #ffffff !important;
-  color: rgba(0, 0, 0, 0.85) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--suggestion:hover {
-  background: #f5f5f5 !important;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--suggestion--title {
-  color: rgba(0, 0, 0, 0.85) !important;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--suggestion--address {
-  color: rgba(0, 0, 0, 0.65) !important;
-}
-
 /* Additional global overrides for any remaining dark styles */
 .theme-light {
   /* Ensure all text is dark in light mode */
@@ -388,20 +330,4 @@
 .theme-light * {
   /* Override any remaining dark text colors */
   color: inherit;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--icon {
-  color: rgba(0, 0, 0, 0.65) !important;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--icon-close {
-  color: rgba(0, 0, 0, 0.65) !important;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--icon-search {
-  color: rgba(0, 0, 0, 0.65) !important;
-}
-
-.theme-light .mapboxgl-ctrl-geocoder--icon-geolocate {
-  color: rgba(0, 0, 0, 0.65) !important;
 }

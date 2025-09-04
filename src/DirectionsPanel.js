@@ -834,7 +834,7 @@ class DirectionsPanel extends Component {
                                 )}
                                 <Button
                                     onClick={this.toggleCollapse}
-                                    type="link" 
+                                    type="text" 
                                     size="small"
                                     icon={<IconClose />}
                                 />

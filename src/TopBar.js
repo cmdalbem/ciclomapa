@@ -44,6 +44,7 @@ import {
 } from './constants'
 
 import EditModal from './EditModal.js'
+import Logo from './Logo.js'
 
 import './TopBar.css'
 
@@ -165,7 +166,7 @@ class TopBar extends Component {
                         {
                             !IS_MOBILE &&
                             <a href="/" className={embedMode ? 'opacity-25' : ''}>
-                                <img src="logo.svg" alt="CicloMapa"></img>
+                                <Logo />
                             </a>
                         }
 

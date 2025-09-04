@@ -36,24 +36,30 @@ import commentIcon from './img/icons/poi-comment.png';
 import bikeparkingIcon from './img/icons/poi-bikeparking.png';
 import bikeparkingIcon2x from './img/icons/poi-bikeparking@2x.png';
 import bikeparkingIconMini from './img/icons/poi-bikeparking-mini.png';
+import bikeparkingIconMiniLight from './img/icons/poi-bikeparking-mini--light.png';
 import bikeshopIcon from './img/icons/poi-bikeshop.png';
 import bikeshopIcon2x from './img/icons/poi-bikeshop@2x.png';
 import bikeshopIconMini from './img/icons/poi-bikeshop-mini.png';
+import bikeshopIconMiniLight from './img/icons/poi-bikeshop-mini--light.png';
 import bikerentalIcon from './img/icons/poi-bikerental.png';
 import bikerentalIcon2x from './img/icons/poi-bikerental@2x.png';
 import bikerentalIconMini from './img/icons/poi-bikerental-mini.png';
+import bikerentalIconMiniLight from './img/icons/poi-bikerental-mini--light.png';
 
 const iconsMap = {
     "poi-comment": commentIcon,
     "poi-bikeparking": bikeparkingIcon,
     "poi-bikeparking-2x": bikeparkingIcon2x,
     "poi-bikeparking-mini": bikeparkingIconMini,
+    "poi-bikeparking-mini--light": bikeparkingIconMiniLight,
     "poi-bikeshop": bikeshopIcon,
     "poi-bikeshop-2x": bikeshopIcon2x,
     "poi-bikeshop-mini": bikeshopIconMini,
+    "poi-bikeshop-mini--light": bikeshopIconMiniLight,
     "poi-rental": bikerentalIcon,
     "poi-rental-2x": bikerentalIcon2x,
     "poi-rental-mini": bikerentalIconMini,
+    "poi-rental-mini--light": bikerentalIconMiniLight,
 }
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
@@ -211,12 +217,11 @@ class Map extends Component {
     addLayerPoi(l) {
         const filters = this.convertFilterToMapboxFilter(l);
 
-        this.map.addLayer({
-            'id': l.id,
+        // Base layer configuration
+        const baseLayerConfig = {
             'type': 'symbol',
             'source': 'osm',
             "filter": filters,
-            "name": l.name,
             "description": l.description,
             'layout': {
                 'text-field': [ 'step', ['zoom'], '', POI_ZOOM_THRESHOLD, ['get', 'name'], ],
@@ -238,13 +243,6 @@ class Map extends Component {
                     POI_ZOOM_THRESHOLD,
                     true
                 ],
-                'icon-image': [
-                    'step',
-                    ['zoom'],
-                    `${l.icon}-mini`,
-                    POI_ZOOM_THRESHOLD,
-                    l.icon
-                ],
                 'icon-size': [
                     "interpolate",
                         ["exponential", 1.5],
@@ -256,7 +254,6 @@ class Map extends Component {
             'paint': {
                 'text-color': l.style.textColor || 'white',
                 'text-halo-width': 1,
-                'text-halo-color': '#1c1a17',
                 'text-opacity': ['case',
                     ['boolean', ['feature-state', 'hover'], false],
                     .8,
@@ -267,6 +264,48 @@ class Map extends Component {
                     .8,
                     1
                 ]
+            }
+        };
+
+        // Create dark mode layer
+        this.map.addLayer({
+            ...baseLayerConfig,
+            'id': l.id,
+            "name": l.name,
+            'layout': {
+                ...baseLayerConfig.layout,
+                'icon-image': [
+                    'step',
+                    ['zoom'],
+                    `${l.icon}-mini`,
+                    POI_ZOOM_THRESHOLD,
+                    l.icon
+                ],
+            },
+            'paint': {
+                ...baseLayerConfig.paint,
+                'text-halo-color': '#1c1a17',
+            }
+        });
+
+        // Create light mode layer
+        this.map.addLayer({
+            ...baseLayerConfig,
+            'id': `${l.id}--light`,
+            "name": `${l.name} (Light)`,
+            'layout': {
+                ...baseLayerConfig.layout,
+                'icon-image': [
+                    'step',
+                    ['zoom'],
+                    `${l.icon}-mini--light`,
+                    POI_ZOOM_THRESHOLD,
+                    l.icon
+                ],
+            },
+            'paint': {
+                ...baseLayerConfig.paint,
+                'text-halo-color': '#EDEEED',
             }
         });
 
@@ -304,6 +343,45 @@ class Map extends Component {
         });
 
         this.map.on('click', l.id, e => {
+            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
+                this.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
+                e.originalEvent.preventDefault();
+            }
+        });
+
+        // Interactions for light mode layer
+        this.map.on('mouseenter', `${l.id}--light`, e => {
+            if (e.features.length > 0 && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
+                this.map.getCanvas().style.cursor = 'pointer';
+
+                if (this.hoveredPOI) {
+                    this.map.setFeatureState({
+                        source: 'osm',
+                        id: this.hoveredPOI },
+                        { hover: false });
+                }
+                this.hoveredPOI = e.features[0].id;
+                this.map.setFeatureState({
+                    source: 'osm',
+                    id: this.hoveredPOI },
+                    { hover: true });
+            }
+            e.originalEvent.preventDefault();
+        });
+
+        this.map.on('mouseleave', `${l.id}--light`, e => {
+            if (this.hoveredPOI && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
+                this.map.getCanvas().style.cursor = '';
+
+                this.map.setFeatureState({
+                    source: 'osm',
+                    id: this.hoveredPOI },
+                    { hover: false });
+            }
+            this.hoveredPOI = null;
+        });
+
+        this.map.on('click', `${l.id}--light`, e => {
             if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
                 this.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
                 e.originalEvent.preventDefault();
@@ -822,6 +900,11 @@ class Map extends Component {
                 this.props.showSatellite ? 'visible' : 'none');
         }
 
+        // Handle theme changes for POI icons
+        if (this.props.isDarkMode !== prevProps.isDarkMode) {
+            this.updatePOIIcons();
+        }
+
         // if (this.props.zoom !== prevProps.zoom) {
         //     map.setZoom(this.props.zoom);
         // }
@@ -1059,9 +1142,9 @@ class Map extends Component {
             this.map.addControl(geolocate, 'bottom-right');
             
             
-            this.map.addControl(new mapboxgl.FullscreenControl({
-                container: document.querySelector('body')
-            }), 'bottom-right');
+            // this.map.addControl(new mapboxgl.FullscreenControl({
+            //     container: document.querySelector('body')
+            // }), 'bottom-right');
         }
 
         this.loadImages();
@@ -1080,16 +1163,43 @@ class Map extends Component {
     }
 
     loadImages() {
-        this.map.loadImage( commentIcon, (error, image) => {
-            if (error) throw error;
-            this.map.addImage('commentIcon', image);
-        }); 
-
-        Object.keys(iconsMap).forEach(key => {
-            this.map.loadImage( iconsMap[key], (error, image) => {
+        // Load comment icon if not already loaded
+        if (!this.map.hasImage('commentIcon')) {
+            this.map.loadImage( commentIcon, (error, image) => {
                 if (error) throw error;
-                this.map.addImage(key, image);
+                this.map.addImage('commentIcon', image);
             });
+        }
+
+        // Load all other icons if not already loaded
+        Object.keys(iconsMap).forEach(key => {
+            if (!this.map.hasImage(key)) {
+                this.map.loadImage( iconsMap[key], (error, image) => {
+                    if (error) throw error;
+                    this.map.addImage(key, image);
+                });
+            }
+        });
+    }
+
+    updatePOIIcons() {
+        const map = this.map;
+        if (!map) return;
+
+        console.debug('Updating POI icons for theme:', this.props.isDarkMode ? 'dark' : 'light');
+
+        // Show/hide appropriate layers based on theme
+        this.props.layers.forEach(layer => {
+            if (layer.type === 'poi') {
+                // Show dark mode layer, hide light mode layer
+                if (map.getLayer(layer.id)) {
+                    map.setLayoutProperty(layer.id, 'visibility', this.props.isDarkMode ? 'visible' : 'none');
+                }
+                // Show light mode layer, hide dark mode layer
+                if (map.getLayer(`${layer.id}--light`)) {
+                    map.setLayoutProperty(`${layer.id}--light`, 'visibility', this.props.isDarkMode ? 'none' : 'visible');
+                }
+            }
         });
     }
 
@@ -1100,6 +1210,9 @@ class Map extends Component {
         if (ENABLE_COMMENTS) {
             this.addCommentsLayers();
         }
+
+        // Set initial feature state for theme
+        this.updatePOIIcons();
 
         this.onMapMoved();
 

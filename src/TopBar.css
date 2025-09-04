@@ -6,6 +6,21 @@
     width: auto;
 }
 
+/* Logo styling for light mode */
+.logo-svg {
+    transition: fill 0.3s ease;
+}
+
+.theme-dark .logo-svg {
+    fill: #B6F9D1;
+    stroke: #B6F9D1;
+}
+
+.theme-light .logo-svg {
+    fill: #22C55E;
+    stroke: #22C55E;
+}
+
 @media (min-width: 1400px) {
     .city-picker {
         position: fixed;
