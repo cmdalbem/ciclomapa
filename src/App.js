@@ -90,10 +90,9 @@ class App extends Component {
         const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
         console.log('Previous saved state:', prev);
         
-        // Use saved theme preference or fall back to system preference
-        const systemThemePreference = this.getSystemThemePreference();
-        const isDarkMode = prev.isDarkMode !== undefined ? prev.isDarkMode : systemThemePreference;
-        console.log('Final theme decision:', isDarkMode ? 'dark' : 'light', '(saved:', prev.isDarkMode, ', system:', systemThemePreference, ')');
+        // Use system theme preference only
+        const isDarkMode = this.getSystemThemePreference();
+        console.log('Theme preference:', isDarkMode ? 'dark' : 'light', '(system preference)');
 
         this.state = {
             area: prev.area || '',
@@ -132,9 +131,17 @@ class App extends Component {
         this.setState({ lengthCalculationStrategy: event.target.value });
     }
 
-    toggleTheme() {
-        const newTheme = !this.state.isDarkMode;
-        
+    toggleTheme(newTheme) {
+        const currentTheme = this.state.isDarkMode;
+
+        if (newTheme !== undefined && newTheme === currentTheme) {
+            return;
+        }
+
+        if (newTheme === undefined) {
+            newTheme = !currentTheme;
+        }
+
         // Apply theme class to body
         document.body.className = newTheme ? 'theme-dark' : 'theme-light';
         
@@ -204,7 +211,6 @@ class App extends Component {
                 lat: this.state.lat,
                 isSidebarOpen: this.state.isSidebarOpen,
                 layersStates: layersStates,
-                isDarkMode: this.state.isDarkMode,
             }
 
             let str = JSON.stringify(state);
