@@ -1,9 +1,11 @@
 .react-icon {
     display: inline-block;
-    margin-right: 4px;
     font-size: 1em;
     height: 1em;
     width: auto;
+}
+.react-icon:not(:only-child) {
+    margin-right: 4px;
 }
 
 /* Logo styling for light mode */

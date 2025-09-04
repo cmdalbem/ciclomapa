@@ -3,8 +3,9 @@
   to { opacity: .8; transform: translateY(-30%);}
 }
 
+.mapboxgl-canvas,
 .mapboxgl-map {
-  width: 100%;
+  width: 100% !important;
   /* height: calc(100vh - 64px); */
   height: 100vh;
 }

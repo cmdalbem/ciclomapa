@@ -155,11 +155,6 @@
   color: rgba(0, 0, 0, 0.65) !important;
 }
 
-.theme-light #gradient-backdrop {
-  /* box-shadow: inset 0px 60px 100px 0px #ffffff !important; */
-  display: none !important;
-}
-
 .theme-light #backdrop {
   background: #ffffff !important;
 }
@@ -171,10 +166,6 @@
 
 .theme-light .text-green-300 {
   color: #4EA76F !important;
-}
-
-.theme-light .bg-yellow-300 {
-  background-color: #fef3c7 !important;
 }
 
 .theme-light .bg-white {
@@ -286,15 +277,13 @@
   background-color: #ffffff !important;
 }
 
-.theme-light .directions-panel-mobile-button {
-  border: 1px solid rgba(0, 0, 0, 0.2) !important;
-}
-
+.theme-light #layersPanelMobileButton.collapsed,
 .theme-light .directions-panel-mobile-button.collapsed {
-  color: #6b7280 !important;
+  color: black !important;
   background: #ffffff !important;
 }
 
+.theme-light #layersPanelMobileButton.expanded,
 .theme-light .directions-panel-mobile-button.expanded {
   color: #111827 !important;
   background: #f3f4f6 !important;
