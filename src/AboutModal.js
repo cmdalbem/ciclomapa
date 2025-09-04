@@ -18,7 +18,10 @@ class AboutModal extends Component {
                     fixed top-0 bottom-0 left-0 right-0 z-10 flex justify-center items-center
                     ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-500
                 `}
-                style={{ background: 'rgba(37,32,29,0.9)' }}
+                style={{
+                    background: 'rgba(37,32,29,0.9)',
+                    color: 'white'
+                }}
             >
                 <div className="relative max-w-lg p-4 sm:p-0">
                     <div className="text-lg tracking-wide">

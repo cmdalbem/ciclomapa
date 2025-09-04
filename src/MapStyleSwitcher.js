@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 
-import normal from './img/normal.png';
+import dark from './img/dark.png';
 import satellite from './img/satelite.png';
 import light from './img/light.png';
 
@@ -15,7 +15,7 @@ class MapStyleSwitcher extends Component {
         return [
             {
                 name: 'default',
-                img: normal,
+                img: isDarkMode ? dark : light,
                 url: isDarkMode 
                     ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
                     : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb' // Light style
