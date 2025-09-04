@@ -122,9 +122,9 @@
             height: 96px;
         }
 
-        /* #directionsPanel--header {
+        #directionsPanel--header {
             display: none;
-        } */
+        }
     }
 
     #directionsPanelMobileButton {

@@ -94,7 +94,7 @@
     transform: none !important;
     top: unset;
     z-index: 10;
-    box-shadow: 0 -8px 30px #1c1a17;
+    /* box-shadow: 0 -8px 30px #1c1a17; */
   }
 
   /* .mapboxgl-popup-content .-mb-2.mt-10 {
