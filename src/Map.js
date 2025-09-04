@@ -626,9 +626,9 @@ class Map extends Component {
     initGeojsonLayers(layers) {
         const map = this.map;
 
-        if (map.getLayer('satellite')) {
+        if (map.getLayer('mapbox-satellite')) {
             map.setLayoutProperty(
-                'satellite',
+                'mapbox-satellite',
                 'visibility',
                 this.props.showSatellite ? 'visible' : 'none');
         }
@@ -836,7 +836,7 @@ class Map extends Component {
 
         if (this.props.showSatellite !== prevProps.showSatellite) {
             map.setLayoutProperty(
-                'satellite',
+                'mapbox-satellite',
                 'visibility',
                 this.props.showSatellite ? 'visible' : 'none');
         }
