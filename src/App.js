@@ -595,8 +595,8 @@ class App extends Component {
             <div id="ciclomapa" className={this.state.hideUI ? "hideUI" : ""}>
                 {
                     !IS_PROD &&
-                    <div className="flex w-full bg-yellow-300 text-black items-center justify-center text-center text-xs py-1">
-                        Você está em um <b className="ml-1">ambiente de teste</b>. Pode futricar à vontade! ;)
+                    <div className="fixed bottom-0 left-0 right-0 z-10 flex bg-yellow-300 text-black items-center justify-center text-center text-xs py-1">
+                        Você está em um <b className="ml-1">ambiente de teste</b>, pode futricar à vontade! ;)
                     </div>
                 } 
                 

@@ -305,7 +305,7 @@ class Map extends Component {
             },
             'paint': {
                 ...baseLayerConfig.paint,
-                'text-halo-color': '#EDEEED',
+                'text-halo-color': '#FFFFFF',
             }
         });
 
@@ -925,6 +925,17 @@ class Map extends Component {
                         map.setLayoutProperty(l.id+'--interactive', 'visibility', status);
                         if (l.style.borderColor) {
                             map.setLayoutProperty(l.id+'--border', 'visibility', status);
+                        }
+                    } else if (l.type === 'poi') {
+                        // Handle POI layers - show/hide based on both isActive and theme
+                        const darkModeStatus = l.isActive && this.props.isDarkMode ? 'visible' : 'none';
+                        const lightModeStatus = l.isActive && !this.props.isDarkMode ? 'visible' : 'none';
+                        
+                        if (map.getLayer(l.id)) {
+                            map.setLayoutProperty(l.id, 'visibility', darkModeStatus);
+                        }
+                        if (map.getLayer(`${l.id}--light`)) {
+                            map.setLayoutProperty(`${l.id}--light`, 'visibility', lightModeStatus);
                         }
                     }
                 }
