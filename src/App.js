@@ -131,29 +131,29 @@ class App extends Component {
         this.setState({ lengthCalculationStrategy: event.target.value });
     }
 
-    toggleTheme(newTheme) {
-        const currentTheme = this.state.isDarkMode;
+    toggleTheme(newIsDark) {
+        const currentIsDark = this.state.isDarkMode;
 
-        if (newTheme !== undefined && newTheme === currentTheme) {
+        if (newIsDark !== undefined && newIsDark === currentIsDark) {
             return;
         }
 
-        if (newTheme === undefined) {
-            newTheme = !currentTheme;
+        if (newIsDark === undefined) {
+            newIsDark = !currentIsDark;
         }
 
         // Apply theme class to body
-        document.body.className = newTheme ? 'theme-dark' : 'theme-light';
-        
+        document.body.className = newIsDark ? 'theme-dark' : 'theme-light';
+         
         // // Update map style if default style is selected (not satellite)
         // if (!this.state.showSatellite) {
-        //     const newMapStyle = newTheme 
+        //     const newMapStyle = newIsDark 
         //         ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
         //         : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'; // Light style
         //     this.setState({ mapStyle: newMapStyle });
         // }
 
-        this.setState({ isDarkMode: newTheme },() => {
+        this.setState({ isDarkMode: newIsDark },() => {
             // TEMP while we don't update everything dynamically
             // window.location.reload();
             this.forceMapReinitialization();
