@@ -40,7 +40,7 @@ export const DEFAULT_BORDER_WIDTH = 3;
 export const DEFAULT_LINE_WIDTH_MULTIPLIER = 2;
 export const LINE_WIDTH_MULTIPLIER_HOVER = 3;
 
-export const DIRECTIONS_LINE_WIDTH = 22;
+export const DIRECTIONS_LINE_WIDTH = 24;
 export const DIRECTIONS_LINE_BORDER_WIDTH = 6;
 
 // Map

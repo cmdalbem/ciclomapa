@@ -720,15 +720,15 @@ class Map extends Component {
             source: 'directions-route',
             layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: {
-                'line-color': this.props.isDarkMode ? '#ffffff' : '#000000',
-                'line-opacity': [
+                // 'line-color': this.props.isDarkMode ? '#ffffff' : '#211F1C',
+                'line-color': [
                     'case',
                     ['boolean', ['feature-state', 'selected'], false],
-                        1,
+                        this.props.isDarkMode ? '#ffffff' : '#211F1C',
                     ['case',
                         ['boolean', ['feature-state', 'hover'], false],
-                            0.8,
-                            0.3
+                            this.props.isDarkMode ? '#ffffff' : '#211F1C', // On hover
+                            this.props.isDarkMode ? '#999999' : '#ACAAA7', // Default
                     ]
                 ],
                 "line-width": [
@@ -750,8 +750,8 @@ class Map extends Component {
                 'line-color': [
                     'case',
                     ['boolean', ['feature-state', 'selected'], false],
-                        this.props.isDarkMode ? '#2d2e30' : '#E8E6E3', // Selected color = street color
-                        this.props.isDarkMode ? '#1c1a17' : '#ffffff'  // Default color = map color (for better contrast)
+                        this.props.isDarkMode ? '#2d2e30' : '#FFFFFF', // Selected color = street color
+                        this.props.isDarkMode ? '#1c1a17' : '#FAFAFA'  // Default color = map color (for better contrast)
                 ],
                 "line-width": [
                     "interpolate",
