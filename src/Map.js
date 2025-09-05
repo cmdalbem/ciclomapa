@@ -593,9 +593,9 @@ class Map extends Component {
                         4, 1,
                         11, 0
                 ],
-                'text-color': '#B6F9D1',
+                'text-color': this.props.isDarkMode ? '#B6F9D1' : '#059669',
                 'text-halo-width': 1,
-                'text-halo-color': '#1c1a17',
+                'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#FFFFFF',
             }
         });
 
