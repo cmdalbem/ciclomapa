@@ -822,12 +822,13 @@ class DirectionsPanel extends Component {
                                         Limpar
                                     </Button>
                                 )}
-                                <Button
+                                {/* Put this back after we have a trigger to open the panel */}
+                                {/* <Button
                                     onClick={this.toggleCollapse}
                                     type="text" 
                                     size="small"
                                     icon={<IconClose />}
-                                />
+                                /> */}
                             </div>
                         </div>
 
