@@ -84,6 +84,7 @@ class App extends Component {
         this.setMapRef = this.setMapRef.bind(this);
         this.toggleTheme = this.toggleTheme.bind(this);
         this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
+        this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
 
         const urlParams = this.getParamsFromURL();
         
@@ -153,7 +154,7 @@ class App extends Component {
         //     this.setState({ mapStyle: newMapStyle });
         // }
 
-        this.setState({ isDarkMode: newIsDark },() => {
+        this.setState({ isDarkMode: newIsDark }, () => {
             // TEMP while we don't update everything dynamically
             // window.location.reload();
             this.forceMapReinitialization();
@@ -473,6 +474,14 @@ class App extends Component {
                 city_name: this.state.area
             });
 
+            // Clear directions using the panel's clear method for complete cleanup
+            if (this.directionsPanel && this.directionsPanel.clearDirections) {
+                this.directionsPanel.clearDirections();
+            } else {
+                // Fallback to just clearing state if panel not available
+                this.onDirectionsCleared();
+            }
+
             this.updateData();
 
             // Only redo the query if we need new data
@@ -641,6 +650,10 @@ class App extends Component {
         this.setState({ map });
     }
 
+    setDirectionsPanelRef(directionsPanel) {
+        this.directionsPanel = directionsPanel;
+    }
+
     forceMapReinitialization() {
         this.setState(prevState => ({
             mapKey: prevState.mapKey + 1
@@ -745,6 +758,7 @@ class App extends Component {
                 />
 
                 <DirectionsPanel
+                    ref={this.setDirectionsPanelRef}
                     embedMode={this.state.embedMode}
                     onDirectionsCalculated={this.onDirectionsCalculated}
                     onDirectionsCleared={this.onDirectionsCleared}

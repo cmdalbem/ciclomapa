@@ -70,6 +70,7 @@ class DirectionsPanel extends Component {
         this.handleMapClick = this.handleMapClick.bind(this);
         this.attachGeocoderToDOM = this.attachGeocoderToDOM.bind(this);
         this.handleProviderChange = this.handleProviderChange.bind(this);
+        this.reattachMarkers = this.reattachMarkers.bind(this);
     }
 
     componentDidMount() {
@@ -90,6 +91,12 @@ class DirectionsPanel extends Component {
             console.debug('Map became available, initializing geocoders');
             this.initGeocoders();
             this.setupMapClickListener();
+        }
+        
+        // If map reference changed (e.g., style change), reattach markers
+        if (this.props.map && prevProps.map && this.props.map !== prevProps.map) {
+            console.debug('Map reference changed, reattaching markers');
+            this.reattachMarkers();
         }
     }
 
@@ -523,6 +530,18 @@ class DirectionsPanel extends Component {
             });
     }
 
+    reattachMarkers() {
+        if (!this.props.map) return;
+
+        // Reattach existing markers to the new map instance
+        if (this.fromMarker) {
+            this.fromMarker.addTo(this.props.map);
+        }
+        if (this.toMarker) {
+            this.toMarker.addTo(this.props.map);
+        }
+    }
+
     setDefaultPositions() {
         // Only set default positions if no points are already set
         if (this.state.fromPoint || this.state.toPoint) {
@@ -803,7 +822,7 @@ class DirectionsPanel extends Component {
                     `}
                 >
                     <div className="p-4">
-                        <div id="directionsPanel--header" className="flex justify-between mb-2">
+                        <div id="directionsPanel--header" className="flex justify-between">
                             <h3 className="text-lg font-semibold flex items-center">
                                 <IconRoute className="mr-2" />
                                 Rotas
@@ -833,7 +852,7 @@ class DirectionsPanel extends Component {
                         </div>
 
                         {/* Provider Selector */}
-                        <Tabs
+                        {/* <Tabs
                             size="small"
                             activeKey={this.state.selectedProvider}
                             onChange={this.handleProviderChange}
@@ -847,7 +866,7 @@ class DirectionsPanel extends Component {
                                     label: 'Mapbox',
                                 }
                             ]}
-                        />
+                        /> */}
 
                         <Space direction="vertical" size="small" className="w-full">
                             <div 
@@ -903,7 +922,7 @@ class DirectionsPanel extends Component {
                                             onMouseLeave={this.handleRouteLeave}
                                             onClick={() => this.handleRouteClick(index)}
                                         >
-                                            <div id="directionsPanel--header"className="flex justify-between mb-2">
+                                            <div className="flex justify-between">
                                                 <div className="flex">
                                                     <IconBike className="mt-1 mr-3" />
                                                     <div className="flex flex-col flex-end">
@@ -939,6 +958,7 @@ class DirectionsPanel extends Component {
                                                     </span>
                                                 </div>
                                             </div>
+
                                             {route.legs && route.legs[0] && (
                                                 <div className="text-xs text-gray-400 space-y-1">
                                                     {route.legs[0].steps && route.legs[0].steps.length > 0 && (

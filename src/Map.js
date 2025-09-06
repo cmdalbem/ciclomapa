@@ -728,9 +728,9 @@ class Map extends Component {
                     ['case',
                         ['boolean', ['feature-state', 'hover'], false],
                             this.props.isDarkMode ? '#ffffff' : '#211F1C', // On hover
-                            this.props.isDarkMode ? '#999999' : '#ACAAA7', // Default
+                            this.props.isDarkMode ? '#999999' : '#71716F', // Default
                     ]
-                ],
+                ], 
                 "line-width": [
                     "interpolate",
                         ["exponential", 1.5],
@@ -1135,6 +1135,18 @@ class Map extends Component {
             this.addCommentsLayers();
         }
 
+        // Restore current directions if they exist
+        if (this.props.directions) {
+            this.updateDirectionsLayer(this.props.directions);
+            
+            // Restore selected and hovered route states
+            if (this.props.selectedRouteIndex !== null && this.props.selectedRouteIndex !== undefined) {
+                this.updateSelectedRoute(this.props.selectedRouteIndex);
+            }
+            if (this.props.hoveredRouteIndex !== null && this.props.hoveredRouteIndex !== undefined) {
+                this.updateHoveredRoute(this.props.hoveredRouteIndex);
+            }
+        }
 
         this.onMapMoved();
 
