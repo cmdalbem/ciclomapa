@@ -38,10 +38,13 @@ export const GRAPHHOPPER_API_KEY = process.env.REACT_APP_GRAPHHOPPER_API_KEY;
 
 export const DEFAULT_BORDER_WIDTH = 3;
 export const DEFAULT_LINE_WIDTH_MULTIPLIER = 2;
-export const LINE_WIDTH_MULTIPLIER_HOVER = 3;
+export const LINE_WIDTH_MULTIPLIER_HOVER = 2;
 
 export const DIRECTIONS_LINE_WIDTH = 24;
-export const DIRECTIONS_LINE_BORDER_WIDTH = 6;
+export const DIRECTIONS_LINE_BORDER_WIDTH = 4;
+
+export const ROUTES_ACTIVE_OPACITY = 0.5;
+
 
 // Map
 
