@@ -999,10 +999,10 @@ class Map extends Component {
 
         // Update the existing layers' data
         if (directions && directions.routes && directions.routes.length > 0) {
-            // Create a combined GeoJSON with all routes (inverted so first routes are added last)
+            // Create a combined GeoJSON with all routes
             const allRoutes = {
                 type: 'FeatureCollection',
-                features: directions.routes.slice().reverse().map((route, index) => ({
+                features: directions.routes.map((route, index) => ({
                     type: 'Feature',
                     id: index, // Add explicit ID for feature state
                     properties: { 
