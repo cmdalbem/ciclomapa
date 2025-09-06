@@ -4,8 +4,8 @@
     /* box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); */
     z-index: 1;
     position: absolute;
-    top: 90px;  
-    left: 24px;
+    top: 64px;  
+    left: 8px;
     width: 400px;
 
     #fromGeocoder {

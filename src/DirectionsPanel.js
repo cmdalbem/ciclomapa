@@ -351,7 +351,7 @@ class DirectionsPanel extends Component {
                 
                 this.setState({ 
                     directions, 
-                    loading: false 
+                    loading: false
                 });
                 
                 // Pass the directions data to the parent component
@@ -801,6 +801,7 @@ class DirectionsPanel extends Component {
 
     render() {
         const { directions, loading, error } = this.state;
+        const { routeCoverageData, selectedRouteIndex } = this.props;
         
         return (
             <>
@@ -910,67 +911,104 @@ class DirectionsPanel extends Component {
                         {directions && (
                             <div id="directionsPanel--results" className="mt-5">
                                 <div className="space-y-1">
-                                    {directions.routes && directions.routes.map((route, index) => (
-                                        <div
-                                            key={index}
-                                            className={`rounded-lg p-2 cursor-pointer transition-colors ${
-                                                this.props.selectedRouteIndex === index ? 'bg-white bg-opacity-20 border-opacity-60' : ''
-                                            } ${
-                                                this.props.hoveredRouteIndex === index ? 'bg-white bg-opacity-10' : ''
-                                            }`}
-                                            onMouseEnter={() => this.handleRouteHover(index)}
-                                            onMouseLeave={this.handleRouteLeave}
-                                            onClick={() => this.handleRouteClick(index)}
-                                        >
-                                            <div className="flex justify-between">
-                                                <div className="flex">
-                                                    <IconBike className="mt-1 mr-3" />
-                                                    <div className="flex flex-col flex-end">
-                                                        <span className="directions--legLabel text-sm mb-1">
-                                                            {
-                                                            route.legs && route.legs.length > 0 ?
-                                                                route.legs[0].summary
-                                                            : `Opção ${index + 1}`
-                                                            }
-                                                        </span>
-                                                        {(route.ascend !== undefined || route.descend !== undefined) && (
-                                                            <span className="flex flex-row font-normal items-center text-gray-400">
-                                                                {route.ascend !== undefined && 
-                                                                    <span className="flex items-center mr-2">
-                                                                        <IconTrendingUp className="mr-1"/>{Math.round(route.ascend)}m
-                                                                    </span>
+                                    {directions.routes && directions.routes.map((route, index) => {
+                                        let coveragePercentage;
+                                        if (routeCoverageData && routeCoverageData[index] && routeCoverageData[index].coverage !== null) {
+                                            coveragePercentage = routeCoverageData[index].coverage.toFixed(1);
+                                        }
+                                        let coveragePercentageClass;
+                                        if (coveragePercentage < 50) {
+                                            coveragePercentageClass = 'bg-red-600';
+                                        } else if (coveragePercentage < 75) {
+                                            coveragePercentageClass = 'bg-yellow-600';
+                                        } else {
+                                            coveragePercentageClass = 'bg-green-600';
+                                        }
+
+                                        
+                                        return (
+                                            <div
+                                                key={index}
+                                                className={`rounded-lg p-2 cursor-pointer transition-colors ${
+                                                    this.props.selectedRouteIndex === index ? 'bg-white bg-opacity-20 border-opacity-60' : ''
+                                                } ${
+                                                    this.props.hoveredRouteIndex === index ? 'bg-white bg-opacity-10' : ''
+                                                }`}
+                                                onMouseEnter={() => this.handleRouteHover(index)}
+                                                onMouseLeave={this.handleRouteLeave}
+                                                onClick={() => this.handleRouteClick(index)}
+                                            >
+                                                {/* Route alternative summary */}
+                                                <div className="flex justify-between">
+                                                    {/* 1st column */}
+                                                    <div className="flex">
+                                                        <IconBike className="mt-1 mr-3" />
+                                                        <div className="flex flex-col flex-end">
+                                                            <span className="directions--legLabel text-sm mb-1">
+                                                                {
+                                                                route.legs && route.legs.length > 0 ?
+                                                                    route.legs[0].summary
+                                                                : `Opção ${index + 1}`
                                                                 }
-                                                                {route.descend !== undefined && 
-                                                                    <span className="flex items-center">
-                                                                        <IconTrendingDown className="mr-1"/>{Math.round(route.descend)}m
+
+                                                                {coveragePercentage && (
+                                                                    <span className={`${coveragePercentageClass} ml-2 px-1 py-0 rounded-full text-xs`} style={{color: 'white'}}>
+                                                                        {coveragePercentage}%
                                                                     </span>
-                                                                }
+                                                                )}
                                                             </span>
-                                                        )}
+                                                            {(route.ascend !== undefined || route.descend !== undefined) && (
+                                                                <span className="flex flex-row font-normal items-center text-gray-400">
+                                                                    {route.ascend !== undefined && 
+                                                                        <span className="flex items-center mr-2">
+                                                                            <IconTrendingUp className="mr-1"/>{Math.round(route.ascend)}m
+                                                                        </span>
+                                                                    }
+                                                                    {route.descend !== undefined && 
+                                                                        <span className="flex items-center">
+                                                                            <IconTrendingDown className="mr-1"/>{Math.round(route.descend)}m
+                                                                        </span>
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 2nd column */}
+                                                    <div className="flex flex-col flex-end">
+                                                        <span className="text-sm text-right mb-1">
+                                                            {route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'}
+                                                        </span>
+                                                        <span className="text-sm text-gray-300 text-right">
+                                                            {route.distance ? `${(route.distance / 1000).toFixed(1)} km` : 'N/A'}
+                                                        </span>
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col flex-end">
-                                                    <span className="text-sm text-right mb-1">
-                                                        {route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'}
-                                                    </span>
-                                                    <span className="text-sm text-gray-300 text-right">
-                                                        {route.distance ? `${(route.distance / 1000).toFixed(1)} km` : 'N/A'}
-                                                    </span>
-                                                </div>
-                                            </div>
 
-                                            {route.legs && route.legs[0] && (
-                                                <div className="text-xs text-gray-400 space-y-1">
-                                                    {route.legs[0].steps && route.legs[0].steps.length > 0 && (
-                                                        <div className="flex">
-                                                            <span className="mr-2">🚴</span>
-                                                            <span>{route.legs[0].steps.length} etapas</span>
+                                                {/* {route.legs && route.legs[0] && (
+                                                    <div className="text-xs text-gray-400 space-y-1">
+                                                        {route.legs[0].steps && route.legs[0].steps.length > 0 && (
+                                                            <div className="flex">
+                                                                <span className="mr-2">🚴</span>
+                                                                <span>{route.legs[0].steps.length} etapas</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )} */}
+
+                                                {/* {routeCoverageData && routeCoverageData[index] && routeCoverageData[index].coverage !== null && (
+                                                    <div className="mt-2 p-2 bg-green-600 bg-opacity-20 border border-green-500 rounded text-green-200 text-xs">
+                                                        <div className="flex items-center">
+                                                            <span className="mr-2">🚴‍♀️</span>
+                                                            <span>
+                                                                <strong>{routeCoverageData[index].coverage.toFixed(1)}%</strong> da rota utiliza ciclovias, ciclofaixas ou ciclorrotas
+                                                            </span>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                                    </div>
+                                                )} */}
+                                            </div>
+                                        )
+                                    })}
                                 </div>
                                 
                                 {/* Disclaimer */}
