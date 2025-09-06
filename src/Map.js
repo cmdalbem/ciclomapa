@@ -18,6 +18,7 @@ import {
     COMMENTS_ZOOM_THRESHOLD,
     DIRECTIONS_LINE_WIDTH,
     DIRECTIONS_LINE_BORDER_WIDTH,
+    ROUTES_ACTIVE_OPACITY,
 } from './constants.js'
 
 import Analytics from './Analytics.js'
@@ -255,14 +256,22 @@ class Map extends Component {
                 'text-color': l.style.textColor || 'white',
                 'text-halo-width': 1,
                 'text-opacity': ['case',
-                    ['boolean', ['feature-state', 'hover'], false],
-                    .8,
-                    1
+                    ['boolean', ['feature-state', 'routes-active'], false],
+                    ROUTES_ACTIVE_OPACITY,
+                    ['case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        .8,
+                        1
+                    ]
                 ],
                 'icon-opacity': ['case',
-                    ['boolean', ['feature-state', 'hover'], false],
-                    .8,
-                    1
+                    ['boolean', ['feature-state', 'routes-active'], false],
+                    ROUTES_ACTIVE_OPACITY,
+                    ['case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        .8,
+                        1
+                    ]
                 ]
             }
         };
@@ -362,6 +371,12 @@ class Map extends Component {
                 "filter": filters,
                 "paint": {
                     "line-color": l.style.borderColor,
+                    "line-opacity": [
+                        "case",
+                        ["boolean", ["feature-state", "routes-active"], false],
+                        ROUTES_ACTIVE_OPACITY,
+                        1.0
+                    ],
                     "line-width": [
                         "interpolate",
                             ["exponential", 1.5],
@@ -388,6 +403,12 @@ class Map extends Component {
                 "filter": filters,
                 "paint": {
                     "line-color": l.style.lineColor,
+                    "line-opacity": [
+                        "case",
+                        ["boolean", ["feature-state", "routes-active"], false],
+                        ROUTES_ACTIVE_OPACITY,
+                        1.0
+                    ],
                     "line-width": [
                         "interpolate",
                             ["exponential", 1.5],
@@ -417,6 +438,12 @@ class Map extends Component {
                 "filter": filters,
                 "paint": {
                     "line-color": l.style.lineColor,
+                    "line-opacity": [
+                        "case",
+                        ["boolean", ["feature-state", "routes-active"], false],
+                        ROUTES_ACTIVE_OPACITY,
+                        1.0
+                    ],
                     "line-width": [
                         "interpolate",
                             ["exponential", 1.5],
@@ -941,6 +968,7 @@ class Map extends Component {
         // Handle directions changes
         if (this.props.directions !== prevProps.directions) {
             this.updateDirectionsLayer(this.props.directions);
+            this.updateCyclablePathsOpacity();
         }
 
         // Handle route coverage data changes (for showing all route overlaps)
@@ -971,10 +999,10 @@ class Map extends Component {
 
         // Update the existing layers' data
         if (directions && directions.routes && directions.routes.length > 0) {
-            // Create a combined GeoJSON with all routes
+            // Create a combined GeoJSON with all routes (inverted so first routes are added last)
             const allRoutes = {
                 type: 'FeatureCollection',
-                features: directions.routes.map((route, index) => ({
+                features: directions.routes.slice().reverse().map((route, index) => ({
                     type: 'Feature',
                     id: index, // Add explicit ID for feature state
                     properties: { 
@@ -1100,6 +1128,27 @@ class Map extends Component {
                 { hover: true }
             );
         }
+    }
+
+    updateCyclablePathsOpacity() {
+        const map = this.map;
+        if (!map) return;
+
+        // Check if there are active directions/routes
+        const hasRoutes = this.props.directions && 
+                         this.props.directions.routes && 
+                         this.props.directions.routes.length > 0;
+
+        // Get all features from the OSM source
+        const features = map.querySourceFeatures('osm');
+        
+        // Set feature state for all features in the OSM source
+        features.forEach(feature => {
+            map.setFeatureState(
+                { source: 'osm', id: feature.id },
+                { 'routes-active': hasRoutes }
+            );
+        });
     }
 
     componentDidMount() {
@@ -1263,6 +1312,9 @@ class Map extends Component {
         }
 
         this.onMapMoved();
+
+        // Set initial cyclable paths opacity based on current directions state
+        this.updateCyclablePathsOpacity();
 
         this.map.on('moveend', this.onMapMoved);
     }
