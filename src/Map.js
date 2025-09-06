@@ -653,8 +653,6 @@ class Map extends Component {
                 "generateId": true
             });
 
-
-
             // layers.json is ordered from most to least important, but we 
             //   want the most important ones to be on top so we add in reverse.
             // Slice is used here to don't destructively reverse the original array.
@@ -704,7 +702,6 @@ class Map extends Component {
 
     initDirectionsLayers() {
         const map = this.map;
-        const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
         if (!map) return;
 
         map.addSource("directions-route", {
@@ -713,6 +710,28 @@ class Map extends Component {
                 'type': 'FeatureCollection',
                 'features': []
             }
+        });
+
+        // The directions route is made of 3 layers:
+        // 1. A white "padding" layer to improve contrast (directions-route-padding)
+        // 2. A black border layer (directions-route--border)
+        // 3. The main route background layer (directions-route)
+        map.addLayer({
+            id: 'directions-route-padding',
+            type: 'line',
+            source: 'directions-route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': this.props.isDarkMode ? '#2d2e30' : '#FFFFFF',
+                "line-width": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, Math.max(1, (DIRECTIONS_LINE_WIDTH+DIRECTIONS_LINE_BORDER_WIDTH*2)/4),
+                        18, (DIRECTIONS_LINE_WIDTH+DIRECTIONS_LINE_BORDER_WIDTH*2) * DEFAULT_LINE_WIDTH_MULTIPLIER
+                ]
+            },
+            filter: ['==', '$type', 'LineString']
         });
         map.addLayer({
             id: 'directions-route--border',
@@ -740,7 +759,7 @@ class Map extends Component {
                 ]
             },
             filter: ['==', '$type', 'LineString']
-        }, layerUnderneathName);
+        });
         map.addLayer({
             id: 'directions-route',
             type: 'line',
@@ -762,9 +781,8 @@ class Map extends Component {
                 ]
             },
             filter: ['==', '$type', 'LineString']
-        }, layerUnderneathName);
+        });
 
-        // Add click event listener for directions routes
         map.on('click', 'directions-route', (e) => {
             if (e.features && e.features.length > 0) {
                 const routeIndex = e.features[0].properties.routeIndex;
@@ -814,6 +832,47 @@ class Map extends Component {
                     this.props.onRouteHovered(null);
                 }
             }
+        });
+    }
+
+    initOverlappingCyclepathsLayer() {
+        const map = this.map;
+        // const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
+        if (!map) return;
+
+        map.addSource("overlapping-cyclepaths", {
+            "type": "geojson",
+            "data": {
+                'type': 'FeatureCollection',
+                'features': []
+            }
+        });
+        
+        map.addLayer({
+            id: 'overlapping-cyclepaths',
+            type: 'line',
+            source: 'overlapping-cyclepaths',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': [
+                    'case',
+                    ['==', ['get', 'type'], 'Ciclovia'], '#059669',
+                    ['==', ['get', 'type'], 'Ciclofaixa'], '#A1C181',
+                    ['==', ['get', 'type'], 'Ciclorrota'], '#E9C46A',
+                    ['==', ['get', 'type'], 'Calçada compartilhada'], '#E76F51',
+                    '#00ff00' // Default fallback color
+                ],
+                'line-width': [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        6, 2,
+                        18, 8
+                ],
+                'line-opacity': 0.8
+            },
+            filter: ['==', '$type', 'LineString']
+        // }, layerUnderneathName);
         });
     }
 
@@ -884,6 +943,11 @@ class Map extends Component {
             this.updateDirectionsLayer(this.props.directions);
         }
 
+        // Handle route coverage data changes (for showing all route overlaps)
+        if (this.props.routeCoverageData !== prevProps.routeCoverageData) {
+            this.updateOverlappingCyclepathsLayer(this.props.routeCoverageData);
+        }
+
         // Handle selected route changes
         if (this.props.selectedRouteIndex !== prevProps.selectedRouteIndex) {
             this.updateSelectedRoute(this.props.selectedRouteIndex);
@@ -932,6 +996,49 @@ class Map extends Component {
             // Clear the directions by setting empty data
             map.getSource('directions-route').setData({ type: 'FeatureCollection', features: [] });
         }
+    }
+
+    updateOverlappingCyclepathsLayer(routeCoverageData) {
+        const map = this.map;
+        if (!map) return;
+
+        // Check if overlapping cyclepaths source exists (it might not be initialized yet)
+        if (!map.getSource('overlapping-cyclepaths')) {
+            console.warn('Overlapping cyclepaths source not yet initialized, skipping update');
+            return;
+        }
+
+        let allOverlappingCyclepaths = [];
+        let featureId = 0;
+
+        if (routeCoverageData && routeCoverageData.length > 0) {
+            // Process routeCoverageData array
+            routeCoverageData.forEach((routeData, routeIndex) => {
+                if (routeData && routeData.overlappingCyclepaths && routeData.overlappingCyclepaths.length > 0) {
+                    routeData.overlappingCyclepaths.forEach((segment) => {
+                        allOverlappingCyclepaths.push({
+                            type: 'Feature',
+                            id: featureId++,
+                            properties: {
+                                ...segment.properties,
+                                routeIndex: routeIndex,
+                                // Use debug_cyclepath_type for styling since these are overlap segments
+                                type: segment.properties.debug_cyclepath_type || 'Unknown'
+                            },
+                            geometry: segment.geometry
+                        });
+                    });
+                }
+            });
+        }
+
+        const cyclepathsGeoJSON = {
+            type: 'FeatureCollection',
+            features: allOverlappingCyclepaths
+        };
+        
+        // Update the overlapping cyclepaths layer
+        map.getSource('overlapping-cyclepaths').setData(cyclepathsGeoJSON);
     }
 
     updateSelectedRoute(selectedRouteIndex) {
@@ -1128,8 +1235,10 @@ class Map extends Component {
 
 
     initLayers() {
-        this.initDirectionsLayers();
+        // The order in which layers are initialized will define their paint order
         this.initGeojsonLayers(this.props.layers);
+        this.initDirectionsLayers();
+        this.initOverlappingCyclepathsLayer();
             
         if (ENABLE_COMMENTS) {
             this.addCommentsLayers();
@@ -1146,6 +1255,11 @@ class Map extends Component {
             if (this.props.hoveredRouteIndex !== null && this.props.hoveredRouteIndex !== undefined) {
                 this.updateHoveredRoute(this.props.hoveredRouteIndex);
             }
+        }
+
+        // Restore overlapping cyclepaths if they exist
+        if (this.props.routeCoverageData && this.props.routeCoverageData.length > 0) {
+            this.updateOverlappingCyclepathsLayer(this.props.routeCoverageData);
         }
 
         this.onMapMoved();

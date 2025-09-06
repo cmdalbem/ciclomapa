@@ -5,6 +5,7 @@ import skmeans from 'skmeans';
 
 import turfLength from '@turf/length';
 import turfDistance from '@turf/distance';
+import turfLineOverlap from '@turf/line-overlap';
 
 
 // 0 = all segments have exactly the same angle
@@ -442,4 +443,93 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
     });
 
     return lengths;
+}
+
+/**
+ * Calculate the percentage of a route that is covered by cyclepaths
+ * @param {Object} route - GeoJSON LineString representing the route
+ * @param {Object} geoJson - GeoJSON FeatureCollection containing all cyclepath data
+ * @param {Array} layers - Array of layer definitions from layers.json
+ * @returns {Object} - { coverage: number, overlappingCyclepaths: Array }
+ */
+export function calculateCyclepathCoverage(route, geoJson, layers) {
+    if (!route || !geoJson || !layers) {
+        console.error('Missing data for cyclepath coverage calculation:', { route: !!route, geoJson: !!geoJson, layers: !!layers });
+        return { coverage: 0, overlappingCyclepaths: [] };
+    }
+
+    // Get cyclepath layer names from layers.json
+    // Only consider layers that are ACTUAL cycling infrastructure!
+    const cyclepathLayerNames = layers
+        .filter(layer => 
+            layer.name === 'Ciclovia' || 
+            layer.name === 'Ciclofaixa' || 
+            layer.name === 'Ciclorrota' ||
+            layer.name === 'Calçada compartilhada'
+        )
+        .map(layer => layer.name);
+
+    if (cyclepathLayerNames.length === 0) {
+        console.error('No cyclepath layer names found');
+        return { coverage: 0, overlappingCyclepaths: [] };
+    }
+
+    // Filter cyclepath features from geoJson (data is already processed)
+    const cyclepathFeatures = geoJson.features.filter(feature => 
+        feature.properties && 
+        feature.properties.type && 
+        cyclepathLayerNames.includes(feature.properties.type) &&
+        feature.geometry && 
+        feature.geometry.type === 'LineString'
+    );
+
+    if (cyclepathFeatures.length === 0) {
+        console.error('No cyclepath features found after filtering');
+        return { coverage: 0, overlappingCyclepaths: [] };
+    }
+
+    let totalOverlapLength = 0;
+    const overlapSegments = [];
+
+    // Calculate total route length
+    const routeLength = turfLength(route, { units: 'kilometers' });
+    if (routeLength === 0) {
+        return { coverage: 0, overlappingCyclepaths: [] };
+    }
+
+    // Check overlap with each cyclepath
+    cyclepathFeatures.forEach((cyclepath, index) => {
+        try {
+            const overlap = turfLineOverlap(route, cyclepath, { tolerance: 0.001 });
+            
+            if (overlap && overlap.features && overlap.features.length > 0) {
+                overlap.features.forEach((segment, segIndex) => {
+                    const segmentLength = turfLength(segment, { units: 'kilometers' });
+                    totalOverlapLength += segmentLength;
+                    
+                    // Store overlap segment for debug visualization
+                    overlapSegments.push({
+                        ...segment,
+                        properties: {
+                            debug_cyclepath_index: index,
+                            debug_cyclepath_name: cyclepath.properties.name || cyclepath.properties.ref || 'Unnamed',
+                            debug_cyclepath_type: cyclepath.properties.type,
+                            debug_segment_index: segIndex,
+                            debug_segment_length_km: segmentLength
+                        }
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('Error calculating overlap with cyclepath:', error);
+        }
+    });
+
+    // Calculate coverage percentage
+    const coveragePercentage = (totalOverlapLength / routeLength) * 100;
+    
+    return {
+        coverage: Math.min(Math.max(coveragePercentage, 0), 100), // Clamp between 0 and 100
+        overlappingCyclepaths: overlapSegments // Return the overlap segments instead of full cyclepaths
+    };
 }
