@@ -5,7 +5,7 @@
     z-index: 1;
     position: absolute;
     top: 64px;  
-    left: 8px;
+    left: 24px;
     width: 400px;
 
     #fromGeocoder {

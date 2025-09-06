@@ -14,7 +14,6 @@ import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import mapboxgl from 'mapbox-gl';
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
-import directionsService from './directionsService.js';
 import './DirectionsPanel.css';
 
 import {
@@ -32,12 +31,8 @@ class DirectionsPanel extends Component {
             collapsed: IS_MOBILE, // Start collapsed on mobile
             fromPoint: null,
             toPoint: null,
-            directions: null,
-            loading: false,
-            error: null,
             fromGeocoderAttached: false,
             toGeocoderAttached: false,
-            hoveredRouteIndex: null, // Added for hover state
             focusedInput: null, // 'from' or 'to' or null
             selectedProvider: 'graphhopper' // Current directions provider
         };
@@ -54,7 +49,6 @@ class DirectionsPanel extends Component {
         this.blurTimeout = null;
 
         this.toggleCollapse = this.toggleCollapse.bind(this);
-        this.calculateDirections = this.calculateDirections.bind(this);
         this.clearDirections = this.clearDirections.bind(this);
         this.selectRoute = this.selectRoute.bind(this);
         this.handleRouteHover = this.handleRouteHover.bind(this);
@@ -69,7 +63,6 @@ class DirectionsPanel extends Component {
         this.handleInputBlur = this.handleInputBlur.bind(this);
         this.handleMapClick = this.handleMapClick.bind(this);
         this.attachGeocoderToDOM = this.attachGeocoderToDOM.bind(this);
-        this.handleProviderChange = this.handleProviderChange.bind(this);
         this.reattachMarkers = this.reattachMarkers.bind(this);
     }
 
@@ -171,7 +164,7 @@ class DirectionsPanel extends Component {
             });
             
             this.setState({ fromPoint: result }, () => {
-                this.calculateDirections();
+                this.requestDirectionsCalculation();
                 
                 // Auto-focus destination input if no destination is set yet
                 if (!this.state.toPoint && this.toGeocoderElement) {
@@ -216,7 +209,7 @@ class DirectionsPanel extends Component {
             });
             
             this.setState({ toPoint: result }, () => {
-                this.calculateDirections();
+                this.requestDirectionsCalculation();
             });
         });
 
@@ -314,73 +307,22 @@ class DirectionsPanel extends Component {
         });
     }
 
-    handleProviderChange(provider) {
-        this.setState({ selectedProvider: provider });
-        
-        // If we have origin and destination points, recalculate with new provider
-        if (this.state.fromPoint && this.state.toPoint) {
-            // Clear current directions and recalculate with new provider
-            this.setState({ 
-                directions: null, 
-                error: null
-            }, () => {
-                // Clear selected route and recalculate directions with the new provider
-                if (this.props.onRouteSelected) {
-                    this.props.onRouteSelected(null);
-                }
-                this.calculateDirections();
-            });
-        }
-    }
 
-    async calculateDirections() {
-        if (this.state.fromPoint && this.state.toPoint) {
-            this.setState({ loading: true, error: null, directions: null });
-
-            try {
-                // Extract coordinates from geocoder results
-                // Mapbox geocoder returns [longitude, latitude] which is what we need
-                const fromCoords = this.state.fromPoint.result.center;
-                const toCoords = this.state.toPoint.result.center;
-                
-                console.debug('Calculating directions from:', fromCoords, 'to:', toCoords, 'using provider:', this.state.selectedProvider);
-                
-                // Switch to the selected provider and get directions
-                directionsService.setProvider(this.state.selectedProvider);
-                const directions = await directionsService.getCyclingDirections(fromCoords, toCoords);
-                
-                this.setState({ 
-                    directions, 
-                    loading: false
-                });
-                
-                // Pass the directions data to the parent component
-                if (this.props.onDirectionsCalculated) {
-                    this.props.onDirectionsCalculated(directions);
-                }
-                
-                console.debug('Directions calculated:', directions);
-            } catch (error) {
-                this.setState({ 
-                    error: error.message, 
-                    loading: false 
-                });
-                console.error('Directions error:', error);
-            }
+    requestDirectionsCalculation() {
+        if (this.state.fromPoint && this.state.toPoint && this.props.onCalculateDirections) {
+            const fromCoords = this.state.fromPoint.result.center;
+            const toCoords = this.state.toPoint.result.center;
+            
+            console.debug('Requesting directions calculation from:', fromCoords, 'to:', toCoords);
+            this.props.onCalculateDirections(fromCoords, toCoords, this.state.selectedProvider);
         }
     }
 
     clearDirections() {
         this.setState({ 
-            directions: null, 
-            error: null,
             fromPoint: null,
             toPoint: null
         });
-        // Clear selected route in parent
-        if (this.props.onRouteSelected) {
-            this.props.onRouteSelected(null);
-        }
         
         // Clean up geocoders properly
         this.cleanupGeocoders();
@@ -460,12 +402,12 @@ class DirectionsPanel extends Component {
         if (type === 'from') {
             this.setState({ fromPoint: newPoint }, () => {
                 this.reverseGeocode(coordinates, 'from');
-                this.calculateDirections();
+                this.requestDirectionsCalculation();
             });
         } else {
             this.setState({ toPoint: newPoint }, () => {
                 this.reverseGeocode(coordinates, 'to');
-                this.calculateDirections();
+                this.requestDirectionsCalculation();
             });
         }
     }
@@ -542,6 +484,7 @@ class DirectionsPanel extends Component {
         }
     }
 
+
     setDefaultPositions() {
         // Only set default positions if no points are already set
         if (this.state.fromPoint || this.state.toPoint) {
@@ -596,8 +539,8 @@ class DirectionsPanel extends Component {
                 this.toGeocoder.setInput('Destino padrão');
             }
 
-            // Calculate directions with default positions
-            this.calculateDirections();
+            // Request directions calculation with default positions
+            this.requestDirectionsCalculation();
         });
     }
 
@@ -703,7 +646,7 @@ class DirectionsPanel extends Component {
             
             this.setState({ fromPoint: newPoint }, () => {
                 this.reverseGeocode(e.lngLat, 'from');
-                this.calculateDirections();
+                this.requestDirectionsCalculation();
                 
                 // Auto-focus destination input if no destination is set yet
                 if (!this.state.toPoint && this.toGeocoderElement) {
@@ -743,7 +686,7 @@ class DirectionsPanel extends Component {
             
             this.setState({ toPoint: newPoint }, () => {
                 this.reverseGeocode(e.lngLat, 'to');
-                this.calculateDirections();
+                this.requestDirectionsCalculation();
             });
         }
         
@@ -800,7 +743,7 @@ class DirectionsPanel extends Component {
     }
 
     render() {
-        const { directions, loading, error } = this.state;
+        const { directions, directionsLoading, directionsError } = this.props;
         const { routeCoverageData, selectedRouteIndex } = this.props;
         
         return (
@@ -824,10 +767,10 @@ class DirectionsPanel extends Component {
                 >
                     <div className="p-4">
                         <div id="directionsPanel--header" className="flex justify-between">
-                            <h3 className="text-lg font-semibold flex items-center">
+                            <h3 className=" font-semibold flex items-center">
                                 <IconRoute className="mr-2" />
                                 Rotas
-                                <span className="bg-white opacity-75 ml-2 px-1 py-0 rounded-full text-black text-xs tracking-wider" style={{fontSize: 10}}>
+                                <span className="bg-white opacity-75 ml-1 px-1 py-0 rounded-full text-black text-xs leading-normal tracking-wider" style={{fontSize: 10}}>
                                     BETA
                                 </span>
                             </h3>
@@ -895,16 +838,16 @@ class DirectionsPanel extends Component {
                             </Button> */}
                         </Space>
 
-                        {/* {loading && (
-                            <div className="mt-3 p-2 bg-blue-600 bg-opacity-20 border border-blue-500 rounded text-blue-200 text-sm flex items-center">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-200 mr-2"></div>
-                                Recalculando rota...
+                        {directionsLoading && (
+                            <div className="mt-3 p-2 text-gray-300 text-sm flex items-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-300 mr-2"></div>
+                                Calculando rotas...
                             </div>
-                        )} */}
+                        )}
 
-                        {error && (
+                        {directionsError && (
                             <div className="mt-3 p-2 bg-red-600 bg-opacity-20 border border-red-500 rounded text-red-200 text-sm">
-                                Erro: {error}
+                                Erro: {directionsError}
                             </div>
                         )}
 
@@ -912,10 +855,10 @@ class DirectionsPanel extends Component {
                             <div id="directionsPanel--results" className="mt-5">
                                 <div className="space-y-1">
                                     {directions.routes && directions.routes.map((route, index) => {
-                                        let coveragePercentage;
-                                        if (routeCoverageData && routeCoverageData[index] && routeCoverageData[index].coverage !== null) {
-                                            coveragePercentage = routeCoverageData[index].coverage.toFixed(1);
-                                        }
+                                        const coveragePercentage = routeCoverageData && routeCoverageData[index] && routeCoverageData[index].coverage !== null 
+                                            ? routeCoverageData[index].coverage.toFixed(1) 
+                                            : null;
+                                        
                                         let coveragePercentageClass;
                                         if (coveragePercentage < 50) {
                                             coveragePercentageClass = 'bg-red-600';
@@ -993,17 +936,6 @@ class DirectionsPanel extends Component {
                                                                 <span>{route.legs[0].steps.length} etapas</span>
                                                             </div>
                                                         )}
-                                                    </div>
-                                                )} */}
-
-                                                {/* {routeCoverageData && routeCoverageData[index] && routeCoverageData[index].coverage !== null && (
-                                                    <div className="mt-2 p-2 bg-green-600 bg-opacity-20 border border-green-500 rounded text-green-200 text-xs">
-                                                        <div className="flex items-center">
-                                                            <span className="mr-2">🚴‍♀️</span>
-                                                            <span>
-                                                                <strong>{routeCoverageData[index].coverage.toFixed(1)}%</strong> da rota utiliza ciclovias, ciclofaixas ou ciclorrotas
-                                                            </span>
-                                                        </div>
                                                     </div>
                                                 )} */}
                                             </div>

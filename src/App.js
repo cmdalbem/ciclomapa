@@ -28,7 +28,8 @@ import AnalyticsSidebar from './AnalyticsSidebar.js'
 import OSMController from './OSMController.js'
 import Storage from './Storage.js'
 import { downloadObjectAsJson } from './utils.js'
-import { computeTypologies, cleanUpOSMTags, calculateLayersLengths, calculateCyclepathCoverage } from './geojsonUtils.js'
+import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './geojsonUtils.js'
+import DirectionsManager from './DirectionsManager.js'
 import {
     DEFAULT_LAT,
     DEFAULT_LNG,
@@ -77,6 +78,7 @@ class App extends Component {
         this.openAboutModal = this.openAboutModal.bind(this);
         this.closeAboutModal = this.closeAboutModal.bind(this);
         this.onChangeStrategy = this.onChangeStrategy.bind(this);
+        this.calculateDirections = this.calculateDirections.bind(this);
         this.onDirectionsCalculated = this.onDirectionsCalculated.bind(this);
         this.onDirectionsCleared = this.onDirectionsCleared.bind(this);
         this.onRouteSelected = this.onRouteSelected.bind(this);
@@ -122,6 +124,8 @@ class App extends Component {
             isDarkMode: isDarkMode,
             mapKey: 0,
             routeCoverageData: [],
+            directionsLoading: false,
+            directionsError: null,
         };
 
         if (this.state.area) {
@@ -629,49 +633,42 @@ class App extends Component {
         });
     }
 
-    onDirectionsCalculated(directions) {
-        // Calculate cyclepath coverage for all routes
-        let routeCoverageData = [];
-        
-        if (directions && directions.routes && directions.routes.length > 0 && this.state.geoJson && this.state.layers) {
-            console.debug('GeoJson features count:', this.state.geoJson.features ? this.state.geoJson.features.length : 'no features');
-            console.debug('Layers count:', this.state.layers ? this.state.layers.length : 'no layers');
-            
-            // Calculate coverage for each route
-            directions.routes.forEach((route, index) => {
-                console.debug(`Route ${index} geometry:`, route.geometry);
-                
-                if (route.geometry && route.geometry.type === 'LineString') {
-                    const coverageResult = calculateCyclepathCoverage(route.geometry, this.state.geoJson, this.state.layers);
-                    routeCoverageData[index] = {
-                        coverage: coverageResult.coverage,
-                        overlappingCyclepaths: coverageResult.overlappingCyclepaths
-                    };
-                    console.debug(`Route ${index} cyclepath coverage calculated:`, coverageResult.coverage + '%');
-                    console.debug(`Route ${index} overlap segments found:`, coverageResult.overlappingCyclepaths.length);
-                } else {
-                    routeCoverageData[index] = {
-                        coverage: 0,
-                        overlappingCyclepaths: []
-                    };
-                }
-            });
-            
-        } else {
-            console.error('Missing data for coverage calculation:', {
-                directions: !!directions,
-                routes: directions?.routes?.length || 0,
-                geoJson: !!this.state.geoJson,
-                layers: !!this.state.layers
-            });
-        }
-        
+    async calculateDirections(fromCoords, toCoords, provider = 'graphhopper') {
         this.setState({ 
-            directions,
-            routeCoverageData
+            directionsLoading: true, 
+            directionsError: null, 
+            directions: null,
+            routeCoverageData: []
         });
-        console.log('Directions received in App:', directions);
-        console.log('Route coverage data calculated in App:', routeCoverageData);
+
+        try {
+            const result = await DirectionsManager.calculateDirections(
+                fromCoords, 
+                toCoords, 
+                provider, 
+                this.state.geoJson, 
+                this.state.layers
+            );
+
+            this.setState({ 
+                directions: result.directions,
+                routeCoverageData: result.routeCoverageData,
+                directionsLoading: false
+            });
+            
+        } catch (error) {
+            this.setState({ 
+                directionsError: error.message, 
+                directionsLoading: false 
+            });
+            console.error('Directions error:', error);
+        }
+    }
+
+    onDirectionsCalculated(directions) {
+        // This method is now deprecated - directions are calculated directly in calculateDirections
+        // Keeping for backward compatibility if needed
+        console.warn('onDirectionsCalculated is deprecated - use calculateDirections instead');
     }
 
     onDirectionsCleared() {
@@ -686,7 +683,6 @@ class App extends Component {
 
     onRouteSelected(routeIndex) {
         this.setState({ selectedRouteIndex: routeIndex });
-        
     }
 
     onRouteHovered(routeIndex) {
@@ -808,8 +804,11 @@ class App extends Component {
                 <DirectionsPanel
                     ref={this.setDirectionsPanelRef}
                     embedMode={this.state.embedMode}
-                    onDirectionsCalculated={this.onDirectionsCalculated}
+                    directions={this.state.directions}
+                    directionsLoading={this.state.directionsLoading}
+                    directionsError={this.state.directionsError}
                     onDirectionsCleared={this.onDirectionsCleared}
+                    onCalculateDirections={this.calculateDirections}
                     selectedRouteIndex={this.state.selectedRouteIndex}
                     hoveredRouteIndex={this.state.hoveredRouteIndex}
                     onRouteSelected={this.onRouteSelected}
