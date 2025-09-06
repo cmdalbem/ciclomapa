@@ -27,6 +27,8 @@ import {
     // HiChartPie as IconAnalytics,
     HiOutlineOfficeBuilding as IconCity,
     HiChatAlt as IconComment,
+    HiSun as IconSun,
+    HiMoon as IconMoon,
 } from "react-icons/hi"
 
 import { IconContext } from "react-icons";
@@ -42,6 +44,7 @@ import {
 } from './constants'
 
 import EditModal from './EditModal.js'
+import Logo from './Logo.js'
 
 import './TopBar.css'
 
@@ -112,7 +115,9 @@ class TopBar extends Component {
             lastUpdate,
             forceUpdate,
             downloadData,
-            embedMode
+            embedMode,
+            isDarkMode,
+            toggleTheme
         } = this.props;
 
         const parts = title.split(',');
@@ -161,7 +166,7 @@ class TopBar extends Component {
                         {
                             !IS_MOBILE &&
                             <a href="/" className={embedMode ? 'opacity-25' : ''}>
-                                <img src="logo.svg" alt="CicloMapa"></img>
+                                <Logo />
                             </a>
                         }
 
@@ -171,6 +176,7 @@ class TopBar extends Component {
                                 <div className={`mb-1 sm:mb-1 ${IS_MOBILE && 'w-full'}`}>
                                     <Button
                                         block={IS_MOBILE}
+                                        size={IS_MOBILE ? "large" : "middle"}
                                         onClick={this.showCityPicker}
                                     >
                                         <h3 className="flex items-center justify-between">
@@ -225,6 +231,10 @@ class TopBar extends Component {
                         <div className="nav-links font-white">
                             {
                                 !embedMode ? <div className="hidden sm:block">
+                                    <Button type="link" className="" shape="circle" onClick={() => toggleTheme()}>
+                                        {isDarkMode ? <IconSun /> : <IconMoon />}
+                                    </Button>
+
                                     <Button className="ml-2"
                                         type="link"
                                         onClick={this.props.openAboutModal}

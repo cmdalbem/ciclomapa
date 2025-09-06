@@ -16,6 +16,8 @@ import {
     LINE_WIDTH_MULTIPLIER_HOVER,
     POI_ZOOM_THRESHOLD,
     COMMENTS_ZOOM_THRESHOLD,
+    DIRECTIONS_LINE_WIDTH,
+    DIRECTIONS_LINE_BORDER_WIDTH,
 } from './constants.js'
 
 import Analytics from './Analytics.js'
@@ -34,24 +36,30 @@ import commentIcon from './img/icons/poi-comment.png';
 import bikeparkingIcon from './img/icons/poi-bikeparking.png';
 import bikeparkingIcon2x from './img/icons/poi-bikeparking@2x.png';
 import bikeparkingIconMini from './img/icons/poi-bikeparking-mini.png';
+import bikeparkingIconMiniLight from './img/icons/poi-bikeparking-mini--light.png';
 import bikeshopIcon from './img/icons/poi-bikeshop.png';
 import bikeshopIcon2x from './img/icons/poi-bikeshop@2x.png';
 import bikeshopIconMini from './img/icons/poi-bikeshop-mini.png';
+import bikeshopIconMiniLight from './img/icons/poi-bikeshop-mini--light.png';
 import bikerentalIcon from './img/icons/poi-bikerental.png';
 import bikerentalIcon2x from './img/icons/poi-bikerental@2x.png';
 import bikerentalIconMini from './img/icons/poi-bikerental-mini.png';
+import bikerentalIconMiniLight from './img/icons/poi-bikerental-mini--light.png';
 
 const iconsMap = {
     "poi-comment": commentIcon,
     "poi-bikeparking": bikeparkingIcon,
     "poi-bikeparking-2x": bikeparkingIcon2x,
     "poi-bikeparking-mini": bikeparkingIconMini,
+    "poi-bikeparking-mini--light": bikeparkingIconMiniLight,
     "poi-bikeshop": bikeshopIcon,
     "poi-bikeshop-2x": bikeshopIcon2x,
     "poi-bikeshop-mini": bikeshopIconMini,
+    "poi-bikeshop-mini--light": bikeshopIconMiniLight,
     "poi-rental": bikerentalIcon,
     "poi-rental-2x": bikerentalIcon2x,
     "poi-rental-mini": bikerentalIconMini,
+    "poi-rental-mini--light": bikerentalIconMiniLight,
 }
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
@@ -209,12 +217,11 @@ class Map extends Component {
     addLayerPoi(l) {
         const filters = this.convertFilterToMapboxFilter(l);
 
-        this.map.addLayer({
-            'id': l.id,
+        // Base layer configuration
+        const baseLayerConfig = {
             'type': 'symbol',
             'source': 'osm',
             "filter": filters,
-            "name": l.name,
             "description": l.description,
             'layout': {
                 'text-field': [ 'step', ['zoom'], '', POI_ZOOM_THRESHOLD, ['get', 'name'], ],
@@ -236,13 +243,6 @@ class Map extends Component {
                     POI_ZOOM_THRESHOLD,
                     true
                 ],
-                'icon-image': [
-                    'step',
-                    ['zoom'],
-                    `${l.icon}-mini`,
-                    POI_ZOOM_THRESHOLD,
-                    l.icon
-                ],
                 'icon-size': [
                     "interpolate",
                         ["exponential", 1.5],
@@ -254,7 +254,6 @@ class Map extends Component {
             'paint': {
                 'text-color': l.style.textColor || 'white',
                 'text-halo-width': 1,
-                'text-halo-color': '#1c1a17',
                 'text-opacity': ['case',
                     ['boolean', ['feature-state', 'hover'], false],
                     .8,
@@ -265,6 +264,27 @@ class Map extends Component {
                     .8,
                     1
                 ]
+            }
+        };
+
+        // Create POI layer
+        this.map.addLayer({
+            ...baseLayerConfig,
+            'id': l.id,
+            "name": l.name,
+            'layout': {
+                ...baseLayerConfig.layout,
+                'icon-image': [
+                    'step',
+                    ['zoom'],
+                    this.props.isDarkMode ? `${l.icon}-mini` : `${l.icon}-mini--light`,
+                    POI_ZOOM_THRESHOLD,
+                    l.icon
+                ],
+            },
+            'paint': {
+                ...baseLayerConfig.paint,
+                'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#ffffff',
             }
         });
 
@@ -307,15 +327,14 @@ class Map extends Component {
                 e.originalEvent.preventDefault();
             }
         });
+
     }
 
     addLayerWay(l) {
         const filters = this.convertFilterToMapboxFilter(l);
-        const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
-
         const dashedLineStyle = { 'line-dasharray': [1, 1] };
-
-        
+        // Will be used as "beforeId" prop in AddLayer
+        const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
 
         this.map.addLayer({
             "id": l.id + '--interactive',
@@ -574,9 +593,9 @@ class Map extends Component {
                         4, 1,
                         11, 0
                 ],
-                'text-color': '#B6F9D1',
+                'text-color': this.props.isDarkMode ? '#B6F9D1' : '#059669',
                 'text-halo-width': 1,
-                'text-halo-color': '#1c1a17',
+                'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#FFFFFF',
             }
         });
 
@@ -602,12 +621,14 @@ class Map extends Component {
         });
     }
 
+    // Layers need to be initialized in the paint order
+    // Afterwards their data can be updated safely without messing up the order
     initGeojsonLayers(layers) {
         const map = this.map;
 
-        if (map.getLayer('satellite')) {
+        if (map.getLayer('mapbox-satellite')) {
             map.setLayoutProperty(
-                'satellite',
+                'mapbox-satellite',
                 'visibility',
                 this.props.showSatellite ? 'visible' : 'none');
         }
@@ -621,7 +642,8 @@ class Map extends Component {
                 },
                 "generateId": true
             });
-    
+
+            // Comments layer
             map.addSource("commentsSrc", {
                 "type": "geojson",
                 "data": {
@@ -630,7 +652,9 @@ class Map extends Component {
                 },
                 "generateId": true
             });
-    
+
+
+
             // layers.json is ordered from most to least important, but we 
             //   want the most important ones to be on top so we add in reverse.
             // Slice is used here to don't destructively reverse the original array.
@@ -678,6 +702,121 @@ class Map extends Component {
 
     }
 
+    initDirectionsLayers() {
+        const map = this.map;
+        const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
+        if (!map) return;
+
+        map.addSource("directions-route", {
+            "type": "geojson",
+            "data": {
+                'type': 'FeatureCollection',
+                'features': []
+            }
+        });
+        map.addLayer({
+            id: 'directions-route--border',
+            type: 'line',
+            source: 'directions-route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                // 'line-color': this.props.isDarkMode ? '#ffffff' : '#211F1C',
+                'line-color': [
+                    'case',
+                    ['boolean', ['feature-state', 'selected'], false],
+                        this.props.isDarkMode ? '#ffffff' : '#211F1C',
+                    ['case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                            this.props.isDarkMode ? '#ffffff' : '#211F1C', // On hover
+                            this.props.isDarkMode ? '#999999' : '#ACAAA7', // Default
+                    ]
+                ],
+                "line-width": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        6, Math.max(1, DIRECTIONS_LINE_WIDTH/4),
+                        18, DIRECTIONS_LINE_WIDTH * DEFAULT_LINE_WIDTH_MULTIPLIER
+                ]
+            },
+            filter: ['==', '$type', 'LineString']
+        }, layerUnderneathName);
+        map.addLayer({
+            id: 'directions-route',
+            type: 'line',
+            source: 'directions-route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': [
+                    'case',
+                    ['boolean', ['feature-state', 'selected'], false],
+                        this.props.isDarkMode ? '#2d2e30' : '#FFFFFF', // Selected color = street color
+                        this.props.isDarkMode ? '#1c1a17' : '#FAFAFA'  // Default color = map color (for better contrast)
+                ],
+                "line-width": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, Math.max(1, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH)/4),
+                        18, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH) * DEFAULT_LINE_WIDTH_MULTIPLIER
+                ]
+            },
+            filter: ['==', '$type', 'LineString']
+        }, layerUnderneathName);
+
+        // Add click event listener for directions routes
+        map.on('click', 'directions-route', (e) => {
+            if (e.features && e.features.length > 0) {
+                const routeIndex = e.features[0].properties.routeIndex;
+                // Call the parent component's route selection handler
+                if (this.props.onRouteSelected) {
+                    this.props.onRouteSelected(routeIndex);
+                }
+            }
+        });
+
+        // Track currently hovered route
+        this.currentHoveredRoute = null;
+
+        // Change cursor and add hover effects
+        map.on('mouseenter', 'directions-route', (e) => {
+            map.getCanvas().style.cursor = 'pointer';
+            
+            // Set hover state on the feature
+            if (e.features && e.features.length > 0) {
+                const routeIndex = e.features[0].properties.routeIndex;
+                this.currentHoveredRoute = routeIndex;
+                map.setFeatureState(
+                    { source: 'directions-route', id: routeIndex },
+                    { hover: true }
+                );
+                
+                // Notify parent component about hover
+                if (this.props.onRouteHovered) {
+                    this.props.onRouteHovered(routeIndex);
+                }
+            }
+        });
+
+        map.on('mouseleave', 'directions-route', (e) => {
+            map.getCanvas().style.cursor = '';
+            
+            // Clear hover state using tracked route index
+            if (this.currentHoveredRoute !== null) {
+                map.setFeatureState(
+                    { source: 'directions-route', id: this.currentHoveredRoute },
+                    { hover: false }
+                );
+                this.currentHoveredRoute = null;
+                
+                // Notify parent component to clear hover
+                if (this.props.onRouteHovered) {
+                    this.props.onRouteHovered(null);
+                }
+            }
+        });
+    }
+
     componentDidUpdate(prevProps) {
         const map = this.map;
 
@@ -697,10 +836,11 @@ class Map extends Component {
 
         if (this.props.showSatellite !== prevProps.showSatellite) {
             map.setLayoutProperty(
-                'satellite',
+                'mapbox-satellite',
                 'visibility',
                 this.props.showSatellite ? 'visible' : 'none');
         }
+
 
         // if (this.props.zoom !== prevProps.zoom) {
         //     map.setZoom(this.props.zoom);
@@ -723,6 +863,13 @@ class Map extends Component {
                         if (l.style.borderColor) {
                             map.setLayoutProperty(l.id+'--border', 'visibility', status);
                         }
+                    } else if (l.type === 'poi') {
+                        // Handle POI layers - show/hide based on isActive only
+                        const status = l.isActive ? 'visible' : 'none';
+                        
+                        if (map.getLayer(l.id)) {
+                            map.setLayoutProperty(l.id, 'visibility', status);
+                        }
                     }
                 }
             })
@@ -730,6 +877,121 @@ class Map extends Component {
 
         if (this.props.isSidebarOpen !== prevProps.isSidebarOpen) {
             map.resize();
+        }
+
+        // Handle directions changes
+        if (this.props.directions !== prevProps.directions) {
+            this.updateDirectionsLayer(this.props.directions);
+        }
+
+        // Handle selected route changes
+        if (this.props.selectedRouteIndex !== prevProps.selectedRouteIndex) {
+            this.updateSelectedRoute(this.props.selectedRouteIndex);
+        }
+
+        // Handle hovered route changes
+        if (this.props.hoveredRouteIndex !== prevProps.hoveredRouteIndex) {
+            this.updateHoveredRoute(this.props.hoveredRouteIndex);
+        }
+    }
+
+    updateDirectionsLayer(directions) {
+        const map = this.map;
+        if (!map) return;
+
+        // Check if directions sources exist (they might not be initialized yet)
+        if (!map.getSource('directions-route')) {
+            console.warn('Directions sources not yet initialized, skipping update');
+            return;
+        }
+
+        // Update the existing layers' data
+        if (directions && directions.routes && directions.routes.length > 0) {
+            // Create a combined GeoJSON with all routes
+            const allRoutes = {
+                type: 'FeatureCollection',
+                features: directions.routes.map((route, index) => ({
+                    type: 'Feature',
+                    id: index, // Add explicit ID for feature state
+                    properties: { 
+                        routeIndex: index,
+                        distance: route.distance,
+                        duration: route.duration
+                    },
+                    geometry: route.geometry
+                }))
+            };
+            
+            // Update the route layer with all routes
+            map.getSource('directions-route').setData(allRoutes);
+            
+            if (directions.bbox) { 
+                map.fitBounds(directions.bbox, { padding: 200, duration: 2000 }); 
+            }
+        } else {
+            // Clear the directions by setting empty data
+            map.getSource('directions-route').setData({ type: 'FeatureCollection', features: [] });
+        }
+    }
+
+    updateSelectedRoute(selectedRouteIndex) {
+        const map = this.map;
+        if (!map || !map.getSource('directions-route')) return;
+
+        // Clear all selected and hover states
+        const features = map.querySourceFeatures('directions-route');
+        features.forEach((feature, index) => {
+            map.setFeatureState(
+                { source: 'directions-route', id: index },
+                { selected: false, hover: false }
+            );
+        });
+
+        // Set the selected route
+        if (selectedRouteIndex !== null && selectedRouteIndex !== undefined) {
+            map.setFeatureState(
+                { source: 'directions-route', id: selectedRouteIndex },
+                { selected: true }
+            );
+        }
+    }
+
+    clearAllHoverStates() {
+        const map = this.map;
+        if (!map || !map.getSource('directions-route')) return;
+
+        // Clear all hover states
+        const features = map.querySourceFeatures('directions-route');
+        features.forEach((feature, index) => {
+            map.setFeatureState(
+                { source: 'directions-route', id: index },
+                { hover: false }
+            );
+        });
+        
+        // Reset tracking variable
+        this.currentHoveredRoute = null;
+    }
+
+    updateHoveredRoute(hoveredRouteIndex) {
+        const map = this.map;
+        if (!map || !map.getSource('directions-route')) return;
+
+        // Clear all hover states first
+        const features = map.querySourceFeatures('directions-route');
+        features.forEach((feature, index) => {
+            map.setFeatureState(
+                { source: 'directions-route', id: index },
+                { hover: false }
+            );
+        });
+
+        // Set hover state for the specified route
+        if (hoveredRouteIndex !== null && hoveredRouteIndex !== undefined) {
+            map.setFeatureState(
+                { source: 'directions-route', id: hoveredRouteIndex },
+                { hover: true }
+            );
         }
     }
 
@@ -745,6 +1007,11 @@ class Map extends Component {
         }).addControl(new mapboxgl.AttributionControl({
             compact: false
         }));
+
+        // Pass the map reference to the parent component
+        if (this.props.setMapRef) {
+            this.props.setMapRef(this.map);
+        }
 
         this.popups = new MapPopups(this.map, this.props.debugMode);
 
@@ -819,9 +1086,9 @@ class Map extends Component {
             this.map.addControl(geolocate, 'bottom-right');
             
             
-            this.map.addControl(new mapboxgl.FullscreenControl({
-                container: document.querySelector('body')
-            }), 'bottom-right');
+            // this.map.addControl(new mapboxgl.FullscreenControl({
+            //     container: document.querySelector('body')
+            // }), 'bottom-right');
         }
 
         this.loadImages();
@@ -840,25 +1107,34 @@ class Map extends Component {
     }
 
     loadImages() {
-        this.map.loadImage( commentIcon, (error, image) => {
-            if (error) throw error;
-            this.map.addImage('commentIcon', image);
-        }); 
-
-        Object.keys(iconsMap).forEach(key => {
-            this.map.loadImage( iconsMap[key], (error, image) => {
+        // Load comment icon if not already loaded
+        if (!this.map.hasImage('commentIcon')) {
+            this.map.loadImage( commentIcon, (error, image) => {
                 if (error) throw error;
-                this.map.addImage(key, image);
+                this.map.addImage('commentIcon', image);
             });
+        }
+
+        // Load all other icons if not already loaded
+        Object.keys(iconsMap).forEach(key => {
+            if (!this.map.hasImage(key)) {
+                this.map.loadImage( iconsMap[key], (error, image) => {
+                    if (error) throw error;
+                    this.map.addImage(key, image);
+                });
+            }
         });
     }
 
+
     initLayers() {
+        this.initDirectionsLayers();
         this.initGeojsonLayers(this.props.layers);
             
         if (ENABLE_COMMENTS) {
             this.addCommentsLayers();
         }
+
 
         this.onMapMoved();
 

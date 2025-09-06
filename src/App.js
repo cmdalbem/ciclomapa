@@ -23,6 +23,7 @@ import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
 import TopBar from './TopBar.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
+import DirectionsPanel from './DirectionsPanel.js'
 import AnalyticsSidebar from './AnalyticsSidebar.js'
 import OSMController from './OSMController.js'
 import Storage from './Storage.js'
@@ -44,11 +45,23 @@ import {
 } from './constants.js'
 
 import './App.less';
+import './antd.light.css';
 
 class App extends Component {
     geoJson;
     storage = new Storage();
     osmController = OSMController;
+
+    // Detect system theme preference
+    getSystemThemePreference() {
+        if (window.matchMedia) {
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            console.log('System theme preference detected:', isDark ? 'dark' : 'light');
+            return isDark;
+        }
+        console.log('matchMedia not supported, defaulting to light mode');
+        return false; // Light mode as fallback
+    }
 
     constructor(props) {
         super(props);
@@ -64,10 +77,22 @@ class App extends Component {
         this.openAboutModal = this.openAboutModal.bind(this);
         this.closeAboutModal = this.closeAboutModal.bind(this);
         this.onChangeStrategy = this.onChangeStrategy.bind(this);
+        this.onDirectionsCalculated = this.onDirectionsCalculated.bind(this);
+        this.onDirectionsCleared = this.onDirectionsCleared.bind(this);
+        this.onRouteSelected = this.onRouteSelected.bind(this);
+        this.onRouteHovered = this.onRouteHovered.bind(this);
+        this.setMapRef = this.setMapRef.bind(this);
+        this.toggleTheme = this.toggleTheme.bind(this);
+        this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
 
         const urlParams = this.getParamsFromURL();
         
-        const prev = urlParams.embed ? {} : this.getStateFromLocalStorage() || {};
+        const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
+        console.log('Previous saved state:', prev);
+        
+        // Use system theme preference only
+        const isDarkMode = this.getSystemThemePreference();
+        console.log('Theme preference:', isDarkMode ? 'dark' : 'light', '(system preference)');
 
         this.state = {
             area: prev.area || '',
@@ -79,14 +104,22 @@ class App extends Component {
             geoJson: null,
             debugMode: urlParams.debug || false,
             loading: false,
-            mapStyle: DEFAULT_MAPBOX_STYLE,
+            mapStyle: isDarkMode ? 
+                'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' : 
+                'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb',
             layers: this.initLayers(prev.layersStates, urlParams.debug || false),
             lengths: {},
             embedMode: urlParams.embed,
             isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : !IS_PROD,
             hideUI: !urlParams.embed,
             aboutModal: false,
-            lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES
+            lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
+            directions: null,
+            selectedRouteIndex: null,
+            hoveredRouteIndex: null,
+            map: null,
+            isDarkMode: isDarkMode,
+            mapKey: 0,
         };
 
         if (this.state.area) {
@@ -96,6 +129,35 @@ class App extends Component {
 
     onChangeStrategy(event) {
         this.setState({ lengthCalculationStrategy: event.target.value });
+    }
+
+    toggleTheme(newIsDark) {
+        const currentIsDark = this.state.isDarkMode;
+
+        if (newIsDark !== undefined && newIsDark === currentIsDark) {
+            return;
+        }
+
+        if (newIsDark === undefined) {
+            newIsDark = !currentIsDark;
+        }
+
+        // Apply theme class to body
+        document.body.className = newIsDark ? 'theme-dark' : 'theme-light';
+         
+        // // Update map style if default style is selected (not satellite)
+        // if (!this.state.showSatellite) {
+        //     const newMapStyle = newIsDark 
+        //         ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
+        //         : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'; // Light style
+        //     this.setState({ mapStyle: newMapStyle });
+        // }
+
+        this.setState({ isDarkMode: newIsDark },() => {
+            // TEMP while we don't update everything dynamically
+            // window.location.reload();
+            this.forceMapReinitialization();
+        });
     }
 
     toggleSidebar(state) {
@@ -131,7 +193,7 @@ class App extends Component {
     getStateFromLocalStorage() {
         const savedState = JSON.parse(window.localStorage.getItem('appstate'));
         console.debug('Retrived saved state from local storage:', savedState);
-        return savedState;
+        return savedState || {};
     }
 
     saveStateToLocalStorage() {
@@ -361,6 +423,12 @@ class App extends Component {
         this.setState({ mapStyle: newMapStyle});
     }
 
+    getDefaultMapStyle() {
+        return this.state.isDarkMode 
+            ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
+            : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'; // Light style
+    }
+
     onMapShowSatelliteChanged(showSatellite) {
         this.setState({ showSatellite: showSatellite });
     }
@@ -474,6 +542,22 @@ class App extends Component {
     }
 
     componentDidMount() {
+        // Initialize theme
+        document.body.className = this.state.isDarkMode ? 'theme-dark' : 'theme-light';
+
+        // Listen for system theme changes
+        if (window.matchMedia) {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            const handleThemeChange = (e) => {
+                const newTheme = e.matches;
+                this.toggleTheme(newTheme);
+            };
+            mediaQuery.addEventListener('change', handleThemeChange);
+            
+            // Store the listener reference for cleanup
+            this.themeChangeListener = handleThemeChange;
+        }
+
         if (!this.state.embedMode) {
             get('hasSeenWelcomeMsg')
                 .then(data => {
@@ -495,12 +579,20 @@ class App extends Component {
             this.saveStateToLocalStorage();
         });
 
-        if (!this.state.debugMode) {
-            const emptyFunc = () => {};
-            console.log = emptyFunc;
-            console.debug = emptyFunc;
-            console.warn = emptyFunc;
-            console.error = emptyFunc;
+        // if (!this.state.debugMode) {
+        //     const emptyFunc = () => {};
+        //     console.log = emptyFunc;
+        //     console.debug = emptyFunc;
+        //     console.warn = emptyFunc;
+        //     console.error = emptyFunc;
+        // }
+    }
+
+    componentWillUnmount() {
+        // Clean up theme change listener
+        if (this.themeChangeListener && window.matchMedia) {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            mediaQuery.removeEventListener('change', this.themeChangeListener);
         }
     }
 
@@ -527,13 +619,41 @@ class App extends Component {
         });
     }
 
+    onDirectionsCalculated(directions) {
+        this.setState({ directions });
+        console.log('Directions received in App:', directions);
+    }
+
+    onDirectionsCleared() {
+        this.setState({ directions: null, selectedRouteIndex: null, hoveredRouteIndex: null });
+        console.log('Directions cleared from App');
+    }
+
+    onRouteSelected(routeIndex) {
+        this.setState({ selectedRouteIndex: routeIndex });
+    }
+
+    onRouteHovered(routeIndex) {
+        this.setState({ hoveredRouteIndex: routeIndex });
+    }
+
+    setMapRef(map) {
+        this.setState({ map });
+    }
+
+    forceMapReinitialization() {
+        this.setState(prevState => ({
+            mapKey: prevState.mapKey + 1
+        }));
+    }
+
     render() {
         return (
             <div id="ciclomapa" className={this.state.hideUI ? "hideUI" : ""}>
                 {
                     !IS_PROD &&
-                    <div className="flex w-full bg-yellow-300 text-black items-center justify-center text-center text-xs py-1">
-                        Você está em um <b className="ml-1">ambiente de teste</b>. Pode futricar à vontade! ;)
+                    <div className="fixed bottom-0 left-0 right-0 z-10 flex bg-yellow-300 text-black items-center justify-center text-center text-xs py-1">
+                        Você está em um <b className="ml-1">ambiente de teste</b>, pode futricar à vontade! ;)
                     </div>
                 } 
                 
@@ -553,9 +673,12 @@ class App extends Component {
                             toggleSidebar={this.toggleSidebar}
                             embedMode={this.state.embedMode}
                             openAboutModal={this.openAboutModal}
+                            isDarkMode={this.state.isDarkMode}
+                            toggleTheme={this.toggleTheme}
                         />
 
                         <Map
+                            key={this.state.mapKey}
                             ref={(map) => { window.map = map }}
                             data={this.state.geoJson}
                             layers={this.state.layers}
@@ -570,6 +693,13 @@ class App extends Component {
                             isSidebarOpen={this.state.isSidebarOpen}
                             embedMode={this.state.embedMode}
                             debugMode={this.state.debugMode}
+                            isDarkMode={this.state.isDarkMode}
+                            directions={this.state.directions}
+                            selectedRouteIndex={this.state.selectedRouteIndex}
+                            hoveredRouteIndex={this.state.hoveredRouteIndex}
+                            onRouteSelected={this.onRouteSelected}
+                            onRouteHovered={this.onRouteHovered}
+                            setMapRef={this.setMapRef}
                         />
                         
                         {
@@ -578,6 +708,7 @@ class App extends Component {
                                 showSatellite={this.state.showSatellite}
                                 onMapStyleChange={this.onMapStyleChange}
                                 onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
+                                isDarkMode={this.state.isDarkMode}
                             />
                         }
 
@@ -611,6 +742,17 @@ class App extends Component {
                     lengths={this.state.lengths}
                     onLayersChange={this.onLayersChange}
                     embedMode={this.state.embedMode}
+                />
+
+                <DirectionsPanel
+                    embedMode={this.state.embedMode}
+                    onDirectionsCalculated={this.onDirectionsCalculated}
+                    onDirectionsCleared={this.onDirectionsCleared}
+                    selectedRouteIndex={this.state.selectedRouteIndex}
+                    hoveredRouteIndex={this.state.hoveredRouteIndex}
+                    onRouteSelected={this.onRouteSelected}
+                    onRouteHovered={this.onRouteHovered}
+                    map={this.state.map}
                 />
 
                 <AboutModal
