@@ -217,20 +217,46 @@
   background-color: #f3f4f6 !important;
 }
 
-.theme-light .text-gray-600 {
-  color: #4b5563 !important;
+
+
+.theme-light .text-gray-50 {
+  color: #111827 !important;
 }
 
-.theme-light .text-gray-700 {
-  color: #374151 !important;
-}
-
-.theme-light .text-gray-800 {
+.theme-light .text-gray-100 {
   color: #1f2937 !important;
 }
 
+.theme-light .text-gray-200 {
+  color: #374151 !important;
+}
+
+.theme-light .text-gray-300 {
+  color: #4b5563 !important;
+}
+
+.theme-light .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+.theme-light .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+.theme-light .text-gray-600 {
+  color: #d1d5db !important;
+}
+
+.theme-light .text-gray-700 {
+  color: #e5e7eb !important;
+}
+
+.theme-light .text-gray-800 {
+  color: #f3f4f6 !important;
+}
+
 .theme-light .text-gray-900 {
-  color: #111827 !important;
+  color: #f9fafb !important;
 }
 
 /* Map-specific light mode overrides */
