@@ -653,7 +653,8 @@ class App extends Component {
             this.setState({ 
                 directions: result.directions,
                 routeCoverageData: result.routeCoverageData,
-                directionsLoading: false
+                directionsLoading: false,
+                selectedRouteIndex: 0
             });
             
         } catch (error) {
