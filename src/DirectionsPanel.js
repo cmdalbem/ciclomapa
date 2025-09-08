@@ -2,10 +2,6 @@ import React, { Component } from 'react';
 import { useDirections } from './DirectionsContext.js';
 import { Button, Input, Space, Divider, Tabs } from 'antd';
 import { 
-    HiOutlineMap as IconMap,
-    HiOutlineLocationMarker as IconLocation,
-    HiOutlineArrowRight as IconArrow,
-    HiOutlineX as IconClose,
     HiOutlineTrendingUp as IconTrendingUp,
     HiOutlineTrendingDown as IconTrendingDown
 } from "react-icons/hi";
@@ -23,7 +19,7 @@ import {
     IS_MOBILE
 } from './constants.js'
 import DirectionsManager from './DirectionsManager.js'
-import { getRouteScore, getCoverageBreakdown, formatDistance, formatDuration } from './routeUtils.js'
+import { getRouteScore, getCoverageBreakdown, getCoverageBreakdownSimple, formatDistance, formatDuration } from './routeUtils.js'
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
@@ -704,6 +700,7 @@ class DirectionsPanel extends Component {
                                     {directions.routes && directions.routes.map((route, index) => {
                                         const { score: routeScore, cssClass: routeScoreClass } = getRouteScore(routeCoverageData, index);
                                         const coverageBreakdown = getCoverageBreakdown(routeCoverageData, index);
+                                        const coverageBreakdownSimple = getCoverageBreakdownSimple(routeCoverageData, index);
 
                                         return (
                                             <div
@@ -718,7 +715,7 @@ class DirectionsPanel extends Component {
                                                 onClick={() => this.handleRouteClick(index)}
                                             >
                                                 {/* Route alternative summary */}
-                                                <div className="flex justify-between">
+                                                <div className="flex justify-between gap-1">
                                                     {/* 1st column */}
                                                     <div className="flex">
                                                         {/* <IconBike className="mt-1 mr-3" /> */}
@@ -736,7 +733,8 @@ class DirectionsPanel extends Component {
                                                                 : `Opção ${index + 1}`
                                                                 }
                                                             </span>
-                                                            {(route.ascend !== undefined || route.descend !== undefined) && (
+
+                                                            {/* {(route.ascend !== undefined || route.descend !== undefined) && (
                                                                 <span className="flex flex-row font-normal items-center text-gray-400">
                                                                     {route.ascend !== undefined && 
                                                                         <span className="flex items-center mr-2">
@@ -749,17 +747,17 @@ class DirectionsPanel extends Component {
                                                                         </span>
                                                                     }
                                                                 </span>
-                                                            )}
-                                                            {this.props.selectedRouteIndex === index && coverageBreakdown && (
-                                                                <span className="text-xs text-gray-400 mt-1">
-                                                                    {coverageBreakdown}
-                                                                </span>
-                                                            )}
+                                                            )} */}
+
+                                                            {/* {this.props.selectedRouteIndex === index &&
+                                                                coverageBreakdown : */}
+                                                                {coverageBreakdownSimple}
+                                                            {/* } */}
                                                         </div>
                                                     </div>
 
                                                     {/* 2nd column */}
-                                                    <div className="flex flex-col flex-end">
+                                                    <div className="flex flex-col flex-end flex-shrink-0">
                                                         <span className="text-sm text-right mb-1">
                                                             {formatDuration(route.duration)}
                                                         </span>

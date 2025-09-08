@@ -86,7 +86,7 @@
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {
-  .mapboxgl-popup {
+  .popup-big.mapboxgl-popup {
     position: fixed;
     bottom: 8px;
     left: 8px;

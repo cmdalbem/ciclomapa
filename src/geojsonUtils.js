@@ -506,7 +506,7 @@ export function calculateCyclepathCoverage(route, geoJson, layers) {
     // Check overlap with each cyclepath
     cyclepathFeatures.forEach((cyclepath, index) => {
         try {
-            const overlap = turfLineOverlap(route, cyclepath, { tolerance: 0.01 });
+            const overlap = turfLineOverlap(route, cyclepath, { tolerance: 0.1 });
             
             if (overlap && overlap.features && overlap.features.length > 0) {
                 overlap.features.forEach((segment, segIndex) => {
