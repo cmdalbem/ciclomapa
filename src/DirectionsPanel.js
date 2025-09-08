@@ -95,6 +95,25 @@ class DirectionsPanel extends Component {
         this.removeMapClickListener();
     }
 
+    getRouteScore(routeCoverageData, index) {
+        if (!routeCoverageData || !routeCoverageData[index] || routeCoverageData[index].coverage === null) {
+            return { score: null, cssClass: null };
+        }
+        
+        const score = routeCoverageData[index].coverage.toFixed(0);
+        let cssClass;
+        
+        if (score < 50) {
+            cssClass = 'bg-red-600';
+        } else if (score < 75) {
+            cssClass = 'bg-yellow-600';
+        } else {
+            cssClass = 'bg-green-600';
+        }
+        
+        return { score, cssClass };
+    }
+
     initGeocoders() {
         if (!this.props.map) {
             console.debug('Map not available yet, waiting...');
@@ -589,7 +608,7 @@ class DirectionsPanel extends Component {
 
     render() {
         const { directions, directionsLoading, directionsError } = this.props;
-        const { routeCoverageData, selectedRouteIndex } = this.props;
+        const { routeCoverageData } = this.props;
         
         return (
             <>
@@ -700,20 +719,8 @@ class DirectionsPanel extends Component {
                             <div id="directionsPanel--results" className="mt-5">
                                 <div className="space-y-1">
                                     {directions.routes && directions.routes.map((route, index) => {
-                                        const coveragePercentage = routeCoverageData && routeCoverageData[index] && routeCoverageData[index].coverage !== null 
-                                            ? routeCoverageData[index].coverage.toFixed(1) 
-                                            : null;
-                                        
-                                        let coveragePercentageClass;
-                                        if (coveragePercentage < 50) {
-                                            coveragePercentageClass = 'bg-red-600';
-                                        } else if (coveragePercentage < 75) {
-                                            coveragePercentageClass = 'bg-yellow-600';
-                                        } else {
-                                            coveragePercentageClass = 'bg-green-600';
-                                        }
+                                        const { score: routeScore, cssClass: routeScoreClass } = this.getRouteScore(routeCoverageData, index);
 
-                                        
                                         return (
                                             <div
                                                 key={index}
@@ -739,9 +746,9 @@ class DirectionsPanel extends Component {
                                                                 : `Opção ${index + 1}`
                                                                 }
 
-                                                                {coveragePercentage && (
-                                                                    <span className={`${coveragePercentageClass} ml-2 px-1 py-0 rounded-full text-xs`} style={{color: 'white'}}>
-                                                                        {coveragePercentage}%
+                                                                {routeScore && (
+                                                                    <span className={`${routeScoreClass} ml-2 px-1 py-1 rounded-md leading-none text-xs`} style={{color: 'white'}}>
+                                                                        {routeScore}
                                                                     </span>
                                                                 )}
                                                             </span>
