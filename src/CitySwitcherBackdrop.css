@@ -36,3 +36,16 @@ body.show-city-picker #backdrop,
 body.show-city-picker #backdrop * {
     visibility: visible;
 }
+
+
+/* Mobile */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
+      top: 20%;
+    }
+
+    #closeBtn {
+      top: 20%;
+    }
+}
