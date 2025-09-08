@@ -43,7 +43,7 @@ export const LINE_WIDTH_MULTIPLIER_HOVER = 2;
 export const DIRECTIONS_LINE_WIDTH = 24;
 export const DIRECTIONS_LINE_BORDER_WIDTH = 4;
 
-export const ROUTES_ACTIVE_OPACITY = 0.5;
+export const ROUTES_ACTIVE_OPACITY = 0.4;
 
 
 // Map
@@ -52,7 +52,7 @@ export const DEFAULT_AREA = 'Fortaleza, Ceará, Brasil';
 export const DEFAULT_LNG = -38.5225359;
 export const DEFAULT_LAT = -3.7719909;
 export const DEFAULT_ZOOM = 12;
-export const POI_ZOOM_THRESHOLD = 14;
+export const POI_ZOOM_THRESHOLD = 15;
 export const COMMENTS_ZOOM_THRESHOLD = 13;
 
 
@@ -73,7 +73,7 @@ export const SAVE_TO_FIREBASE = true;
 export const DISABLE_DATA_HEALTY_TEST = false;
 export const THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE = 0.1;
 export const DISABLE_LOCAL_STORAGE = true;
-export const FORCE_RECALCULATE_LENGTHS_ALWAYS = !IS_PROD;
+export const FORCE_RECALCULATE_LENGTHS_ALWAYS = false;
 
 
 // Other

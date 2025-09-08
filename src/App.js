@@ -29,7 +29,7 @@ import OSMController from './OSMController.js'
 import Storage from './Storage.js'
 import { downloadObjectAsJson } from './utils.js'
 import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './geojsonUtils.js'
-import DirectionsManager from './DirectionsManager.js'
+import { DirectionsProvider } from './DirectionsContext.js'
 import {
     DEFAULT_LAT,
     DEFAULT_LNG,
@@ -78,11 +78,6 @@ class App extends Component {
         this.openAboutModal = this.openAboutModal.bind(this);
         this.closeAboutModal = this.closeAboutModal.bind(this);
         this.onChangeStrategy = this.onChangeStrategy.bind(this);
-        this.calculateDirections = this.calculateDirections.bind(this);
-        this.onDirectionsCalculated = this.onDirectionsCalculated.bind(this);
-        this.onDirectionsCleared = this.onDirectionsCleared.bind(this);
-        this.onRouteSelected = this.onRouteSelected.bind(this);
-        this.onRouteHovered = this.onRouteHovered.bind(this);
         this.setMapRef = this.setMapRef.bind(this);
         this.toggleTheme = this.toggleTheme.bind(this);
         this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
@@ -117,15 +112,9 @@ class App extends Component {
             hideUI: !urlParams.embed,
             aboutModal: false,
             lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
-            directions: null,
-            selectedRouteIndex: null,
-            hoveredRouteIndex: null,
             map: null,
             isDarkMode: isDarkMode,
             mapKey: 0,
-            routeCoverageData: [],
-            directionsLoading: false,
-            directionsError: null,
         };
 
         if (this.state.area) {
@@ -482,9 +471,6 @@ class App extends Component {
             // Clear directions using the panel's clear method for complete cleanup
             if (this.directionsPanel && this.directionsPanel.clearDirections) {
                 this.directionsPanel.clearDirections();
-            } else {
-                // Fallback to just clearing state if panel not available
-                this.onDirectionsCleared();
             }
 
             this.updateData();
@@ -509,10 +495,10 @@ class App extends Component {
                         'Não há dados cicloviários para esta cidade.',
                 });
             } else {
+                // @todo this seem to be being called every time!!!!
                 // Retrocompatibility case where lengths weren't saved to database
                 if (!this.state.lengths) {
                     console.debug('database didnt have lengths, computing...');
-                    
                     this.calculateLengths();
                 }
             }
@@ -633,62 +619,7 @@ class App extends Component {
         });
     }
 
-    async calculateDirections(fromCoords, toCoords, provider = 'graphhopper') {
-        this.setState({ 
-            directionsLoading: true, 
-            directionsError: null, 
-            directions: null,
-            routeCoverageData: []
-        });
 
-        try {
-            const result = await DirectionsManager.calculateDirections(
-                fromCoords, 
-                toCoords, 
-                provider, 
-                this.state.geoJson, 
-                this.state.layers
-            );
-
-            this.setState({ 
-                directions: result.directions,
-                routeCoverageData: result.routeCoverageData,
-                directionsLoading: false,
-                selectedRouteIndex: 0
-            });
-            
-        } catch (error) {
-            this.setState({ 
-                directionsError: error.message, 
-                directionsLoading: false 
-            });
-            console.error('Directions error:', error);
-        }
-    }
-
-    onDirectionsCalculated(directions) {
-        // This method is now deprecated - directions are calculated directly in calculateDirections
-        // Keeping for backward compatibility if needed
-        console.warn('onDirectionsCalculated is deprecated - use calculateDirections instead');
-    }
-
-    onDirectionsCleared() {
-        this.setState({ 
-            directions: null, 
-            selectedRouteIndex: null, 
-            hoveredRouteIndex: null,
-            routeCoverageData: []
-        });
-        console.log('Directions cleared from App');
-    }
-
-    onRouteSelected(routeIndex) {
-        this.setState({ selectedRouteIndex: routeIndex });
-    }
-
-    onRouteHovered(routeIndex) {
-        this.setState({ hoveredRouteIndex: routeIndex });
-    }
 
     setMapRef(map) {
         this.setState({ map });
@@ -706,7 +637,8 @@ class App extends Component {
 
     render() {
         return (
-            <div id="ciclomapa" className={this.state.hideUI ? "hideUI" : ""}>
+            <DirectionsProvider>
+                <div id="ciclomapa" className={this.state.hideUI ? "hideUI" : ""}>
                 {
                     !IS_PROD &&
                     <div className="fixed bottom-0 left-0 right-0 z-10 flex bg-yellow-300 text-black items-center justify-center text-center text-xs py-1">
@@ -751,12 +683,6 @@ class App extends Component {
                             embedMode={this.state.embedMode}
                             debugMode={this.state.debugMode}
                             isDarkMode={this.state.isDarkMode}
-                            directions={this.state.directions}
-                            selectedRouteIndex={this.state.selectedRouteIndex}
-                            hoveredRouteIndex={this.state.hoveredRouteIndex}
-                            routeCoverageData={this.state.routeCoverageData}
-                            onRouteSelected={this.onRouteSelected}
-                            onRouteHovered={this.onRouteHovered}
                             setMapRef={this.setMapRef}
                         />
                         
@@ -805,17 +731,9 @@ class App extends Component {
                 <DirectionsPanel
                     ref={this.setDirectionsPanelRef}
                     embedMode={this.state.embedMode}
-                    directions={this.state.directions}
-                    directionsLoading={this.state.directionsLoading}
-                    directionsError={this.state.directionsError}
-                    onDirectionsCleared={this.onDirectionsCleared}
-                    onCalculateDirections={this.calculateDirections}
-                    selectedRouteIndex={this.state.selectedRouteIndex}
-                    hoveredRouteIndex={this.state.hoveredRouteIndex}
-                    onRouteSelected={this.onRouteSelected}
-                    onRouteHovered={this.onRouteHovered}
                     map={this.state.map}
-                    routeCoverageData={this.state.routeCoverageData}
+                    geoJson={this.state.geoJson}
+                    layers={this.state.layers}
                 />
 
                 <AboutModal
@@ -831,7 +749,8 @@ class App extends Component {
                         onClose={this.onSpinnerClose}
                     />
                 }
-            </div>
+                </div>
+            </DirectionsProvider>
         );
     }
 }

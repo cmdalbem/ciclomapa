@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { useDirections } from './DirectionsContext.js';
 import { Button, Input, Space, Divider, Tabs } from 'antd';
 import { 
     HiOutlineMap as IconMap,
@@ -16,11 +17,12 @@ import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
 import './DirectionsPanel.css';
 
-import {
+import { 
     MAPBOX_ACCESS_TOKEN,
     IS_PROD,
     IS_MOBILE
 } from './constants.js'
+import DirectionsManager from './DirectionsManager.js'
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
@@ -54,6 +56,7 @@ class DirectionsPanel extends Component {
         this.handleInputBlur = this.handleInputBlur.bind(this);
         this.handleMapClick = this.handleMapClick.bind(this);
         this.attachGeocoderToDOM = this.attachGeocoderToDOM.bind(this);
+        this.calculateDirections = this.calculateDirections.bind(this);
     }
 
     componentDidMount() {
@@ -74,8 +77,9 @@ class DirectionsPanel extends Component {
         }
         
         if (this.props.map && prevProps.map && this.props.map !== prevProps.map) {
-            console.debug('Map reference changed, reattaching markers');
+            console.debug('Map reference changed, reattaching markers and click listener');
             this.reattachMarkers();
+            this.setupMapClickListener();
         }
     }
 
@@ -247,6 +251,9 @@ class DirectionsPanel extends Component {
     }
 
     cleanup() {
+        // Remove map click listener
+        this.removeMapClickListener();
+        
         // Remove geocoders from map if they exist
         if (this.fromGeocoder && this.props.map) {
             try {
@@ -292,13 +299,42 @@ class DirectionsPanel extends Component {
     }
 
 
+    async calculateDirections(fromCoords, toCoords, provider = 'graphhopper') {
+        if (this.props.setLoading) {
+            this.props.setLoading(true);
+        }
+        if (this.props.setError) {
+            this.props.setError(null);
+        }
+
+        try {
+            const result = await DirectionsManager.calculateDirections(
+                fromCoords, 
+                toCoords, 
+                provider, 
+                this.props.geoJson, 
+                this.props.layers
+            );
+
+            if (this.props.setDirectionsData) {
+                this.props.setDirectionsData(result);
+            }
+            
+        } catch (error) {
+            if (this.props.setError) {
+                this.props.setError(error.message);
+            }
+            console.error('Directions error:', error);
+        }
+    }
+
     requestDirectionsCalculation() {
-        if (this.state.fromPoint && this.state.toPoint && this.props.onCalculateDirections) {
+        if (this.state.fromPoint && this.state.toPoint) {
             const fromCoords = this.state.fromPoint.result.center;
             const toCoords = this.state.toPoint.result.center;
             
             console.debug('Requesting directions calculation from:', fromCoords, 'to:', toCoords);
-            this.props.onCalculateDirections(fromCoords, toCoords, this.state.selectedProvider);
+            this.calculateDirections(fromCoords, toCoords, this.state.selectedProvider);
         }
     }
 
@@ -448,6 +484,11 @@ class DirectionsPanel extends Component {
         if (this[`${inputType}GeocoderElement`]) {
             this[`${inputType}GeocoderElement`].querySelector('input').placeholder = 'Digite ou clique no mapa';
         }
+
+        // Notify parent that user is setting route points
+        if (this.props.onRouteModeChange) {
+            this.props.onRouteModeChange(true);
+        }
     }
 
     handleInputBlur(inputType) {
@@ -470,6 +511,11 @@ class DirectionsPanel extends Component {
 
                 if (this[`${inputType}GeocoderElement`]) {
                     this[`${inputType}GeocoderElement`].querySelector('input').placeholder = inputType === 'from' ? 'Origem' : 'Destino';
+                }
+
+                // Notify parent that user is no longer setting route points
+                if (this.props.onRouteModeChange) {
+                    this.props.onRouteModeChange(false);
                 }
             }, 500);
         } else {
@@ -757,4 +803,30 @@ class DirectionsPanel extends Component {
     }
 }
 
-export default DirectionsPanel;
+// Wrapper component to use the directions context with the class component
+const DirectionsPanelWrapper = (props) => {
+    const directionsContext = useDirections();
+    
+    return (
+        <DirectionsPanel
+            {...props}
+            directions={directionsContext.directions}
+            directionsLoading={directionsContext.directionsLoading}
+            directionsError={directionsContext.directionsError}
+            selectedRouteIndex={directionsContext.selectedRouteIndex}
+            hoveredRouteIndex={directionsContext.hoveredRouteIndex}
+            routeCoverageData={directionsContext.routeCoverageData}
+            onRouteSelected={directionsContext.selectRoute}
+            onRouteHovered={directionsContext.hoverRoute}
+            onDirectionsCleared={directionsContext.clearDirections}
+            onRouteModeChange={directionsContext.setRoutePointsMode}
+            setLoading={directionsContext.setLoading}
+            setError={directionsContext.setError}
+            setDirectionsData={directionsContext.setDirectionsData}
+            geoJson={props.geoJson}
+            layers={props.layers}
+        />
+    );
+};
+
+export default DirectionsPanelWrapper;

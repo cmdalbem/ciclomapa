@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { useDirections } from './DirectionsContext.js';
 
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -85,7 +86,7 @@ class Map extends Component {
         this.onMapMoved = this.onMapMoved.bind(this);
 
         this.newComment = this.newComment.bind(this);
-        this.addCommentsLayers = this.addCommentsLayers.bind(this);
+        this.initCommentsLayer = this.initCommentsLayer.bind(this);
         this.afterCommentCreate = this.afterCommentCreate.bind(this);
         this.showCommentModal = this.showCommentModal.bind(this);
         this.hideCommentModal = this.hideCommentModal.bind(this);
@@ -120,21 +121,22 @@ class Map extends Component {
         Analytics.event('new_comment');
 
         this.hideCommentModal();
-        this.addCommentsLayers();
+        this.initCommentsLayer();
     };
 
+    // Not in use
     // southern-most latitude, western-most longitude, northern-most latitude, eastern-most longitude
-    getCurrentBBox() {
-        const fallback = "-23.036345361742164,-43.270405878917785,-22.915284125684607,-43.1111041211104";
+    // getCurrentBBox() {
+    //     const fallback = "-23.036345361742164,-43.270405878917785,-22.915284125684607,-43.1111041211104";
 
-        if (this.map) {
-            const sw = this.map.getBounds().getSouthWest();
-            const ne = this.map.getBounds().getNorthEast();
-            return `${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
-        } else {
-            return fallback;
-        }
-    }
+    //     if (this.map) {
+    //         const sw = this.map.getBounds().getSouthWest();
+    //         const ne = this.map.getBounds().getNorthEast();
+    //         return `${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
+    //     } else {
+    //         return fallback;
+    //     }
+    // }
 
     reverseGeocode(lngLat) {
         if (lngLat.lat && lngLat.lng) {
@@ -215,7 +217,7 @@ class Map extends Component {
         ];
     }
 
-    addLayerPoi(l) {
+    initPOILayer(l) {
         const filters = this.convertFilterToMapboxFilter(l);
 
         // Base layer configuration
@@ -260,8 +262,8 @@ class Map extends Component {
                     ROUTES_ACTIVE_OPACITY,
                     ['case',
                         ['boolean', ['feature-state', 'hover'], false],
-                        .8,
-                        1
+                        0.7,
+                        1.0
                     ]
                 ],
                 'icon-opacity': ['case',
@@ -269,8 +271,8 @@ class Map extends Component {
                     ROUTES_ACTIVE_OPACITY,
                     ['case',
                         ['boolean', ['feature-state', 'hover'], false],
-                        .8,
-                        1
+                        0.7,
+                        1.0
                     ]
                 ]
             }
@@ -298,52 +300,64 @@ class Map extends Component {
         });
 
         // Interactions
+        const self = this;
 
-        this.map.on('mouseenter', l.id, e => {
-            if (e.features.length > 0 && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
-                this.map.getCanvas().style.cursor = 'pointer';
+        this.map.on('mouseenter', l.id, (e) => {
+            if (e.features.length > 0 && self.map.getZoom() > POI_ZOOM_THRESHOLD) {
+                // Disable POI hover effects when in route mode
+                if (self.props.isInRouteMode) {
+                    e.originalEvent.preventDefault();
+                    return;
+                }
+                self.map.getCanvas().style.cursor = 'pointer';
 
-                if (this.hoveredPOI) {
-                    this.map.setFeatureState({
+                if (self.hoveredPOI) {
+                    self.map.setFeatureState({
                         source: 'osm',
-                        id: this.hoveredPOI },
+                        id: self.hoveredPOI },
                         { hover: false });
                 }
-                this.hoveredPOI = e.features[0].id;
-                this.map.setFeatureState({
+                self.hoveredPOI = e.features[0].id;
+                self.map.setFeatureState({
                     source: 'osm',
-                    id: this.hoveredPOI },
+                    id: self.hoveredPOI },
                     { hover: true });
             }
             e.originalEvent.preventDefault();
         });
 
         this.map.on('mouseleave', l.id, e => {
-            if (this.hoveredPOI && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
-                this.map.getCanvas().style.cursor = '';
+            if (self.hoveredPOI && self.map.getZoom() > POI_ZOOM_THRESHOLD) {
+                self.map.getCanvas().style.cursor = '';
 
-                this.map.setFeatureState({
+                self.map.setFeatureState({
                     source: 'osm',
-                    id: this.hoveredPOI },
+                    id: self.hoveredPOI },
                     { hover: false });
             }
-            this.hoveredPOI = null;
+            self.hoveredPOI = null;
         });
 
         this.map.on('click', l.id, e => {
-            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
-                this.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
-                e.originalEvent.preventDefault();
+            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented && self.map.getZoom() > POI_ZOOM_THRESHOLD) {
+                // Disable POI clicks when in route mode
+                if (self.props.isInRouteMode) {
+                    e.originalEvent.preventDefault();
+                    return;
+                }
+                self.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
+                // e.originalEvent.preventDefault();
             }
         });
 
     }
 
-    addLayerWay(l) {
+    initCyclepathLayer(l) {
         const filters = this.convertFilterToMapboxFilter(l);
         const dashedLineStyle = { 'line-dasharray': [1, 1] };
         // Will be used as "beforeId" prop in AddLayer
         const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
+        const self = this;
 
         this.map.addLayer({
             "id": l.id + '--interactive',
@@ -442,22 +456,28 @@ class Map extends Component {
                         "case",
                         ["boolean", ["feature-state", "routes-active"], false],
                         ROUTES_ACTIVE_OPACITY,
-                        1.0
+                            [ 'case',
+                                ['boolean', ['feature-state', 'hover'], false],
+                                0.7, // On hover
+                                1.0
+                            ],
                     ],
                     "line-width": [
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"],
-                            10, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth * 1.5,
-                                Math.max(1, l.style.lineWidth/4)
-                            ],
-                            18, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER * LINE_WIDTH_MULTIPLIER_HOVER,
-                                l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
-                            ]
+                            10, Math.max(1, l.style.lineWidth/4),
+                            18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
+                            // 10, [ 'case',
+                            //     ['boolean', ['feature-state', 'hover'], false],
+                            //     l.style.lineWidth * 1.5, // On hover
+                            //     Math.max(1, l.style.lineWidth/4)
+                            // ],
+                            // 18, [ 'case',
+                            //     ['boolean', ['feature-state', 'hover'], false],
+                            //     l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER * LINE_WIDTH_MULTIPLIER_HOVER, // On hover
+                            //     l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
+                            // ]
                     ],
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
@@ -469,22 +489,28 @@ class Map extends Component {
         // Hover interaction is handled globally with map.on('mousemove')
         this.map.on('click', l.id + '--interactive', e => {
             if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-                // if (this.selectedCycleway) {
-                //     this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: false });
+                // Disable cyclepath clicks when in route mode
+                if (self.props.isInRouteMode) {
+                    e.originalEvent.preventDefault();
+                    return;
+                }
+                // if (self.selectedCycleway) {
+                //     self.map.setFeatureState({ source: 'osm', id: self.selectedCycleway }, { hover: false });
                 // }
-                // this.selectedCycleway = e.features[0].id;
-                // this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: true });
+                // self.selectedCycleway = e.features[0].id;
+                // self.map.setFeatureState({ source: 'osm', id: self.selectedCycleway }, { hover: true });
 
-                const layer = this.props.layers.find(l =>
+                const layer = self.props.layers.find(l =>
                     l.id === e.features[0].layer.id.split('--')[0]
                 );
-                this.popups.showCyclewayPopup(e, layer);
+                self.popups.showCyclewayPopup(e, layer);
                 e.originalEvent.preventDefault();
             }
         });
     }
 
-    async addCommentsLayers() {
+    async initCommentsLayer() {
+        const self = this;
         if (this.state.comments.length > 0) {
             this.state.comments.forEach(c => {
                 if (c.marker) {
@@ -548,37 +574,46 @@ class Map extends Component {
         
                     this.map.on('mouseenter', 'comentarios', e => {
                         if (e.features.length > 0) {
-                            this.map.getCanvas().style.cursor = 'pointer';
+                            // Disable comment hover effects when in route mode
+                            if (self.props.isInRouteMode) {
+                                return;
+                            }
+                            self.map.getCanvas().style.cursor = 'pointer';
             
-                            if (this.hoveredComment) {
-                                this.map.setFeatureState({
+                            if (self.hoveredComment) {
+                                self.map.setFeatureState({
                                     source: 'commentsSrc',
-                                    id: this.hoveredComment },
+                                    id: self.hoveredComment },
                                     { hover: false });
                             }
-                            this.hoveredComment = e.features[0].id;
-                            this.map.setFeatureState({
+                            self.hoveredComment = e.features[0].id;
+                            self.map.setFeatureState({
                                 source: 'commentsSrc',
-                                id: this.hoveredComment },
+                                id: self.hoveredComment },
                                 { hover: true });
                         }
                     });
             
                     this.map.on('mouseleave', 'comentarios', e => {
-                        if (this.hoveredComment) {// && !this.selectedCycleway) {
-                            this.map.getCanvas().style.cursor = '';
+                        if (self.hoveredComment) {// && !self.selectedCycleway) {
+                            self.map.getCanvas().style.cursor = '';
         
-                            this.map.setFeatureState({
+                            self.map.setFeatureState({
                                 source: 'commentsSrc',
-                                id: this.hoveredComment },
+                                id: self.hoveredComment },
                                 { hover: false });
                         }
-                        this.hoveredComment = null;
+                        self.hoveredComment = null;
                     });
         
                     this.map.on('click', 'comentarios', e => {
                         if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-                            this.popups.showCommentPopup(e);
+                            // Disable comment clicks when in route mode
+                            if (self.props.isInRouteMode) {
+                                e.originalEvent.preventDefault();
+                                return;
+                            }
+                            self.popups.showCommentPopup(e);
                             e.originalEvent.preventDefault();
                         }
                     });
@@ -652,6 +687,7 @@ class Map extends Component {
     // Afterwards their data can be updated safely without messing up the order
     initGeojsonLayers(layers) {
         const map = this.map;
+        const self = this;
 
         if (map.getLayer('mapbox-satellite')) {
             map.setLayoutProperty(
@@ -685,9 +721,9 @@ class Map extends Component {
             // Slice is used here to don't destructively reverse the original array.
             layers.slice().reverse().forEach(l => {
                 if (!l.type || l.type==='way') {
-                    this.addLayerWay(l);
+                    this.initCyclepathLayer(l);
                 } else if (l.type === 'poi' && l.filters) {
-                    this.addLayerPoi(l);
+                    this.initPOILayer(l);
                 }
             });
 
@@ -701,24 +737,28 @@ class Map extends Component {
                 });
     
                 if (features.length > 0) {
+                    // Disable cyclepath hover effects when in route mode
+                    if (self.props.isInRouteMode) {
+                        return;
+                    }
                     // console.debug(features);
                     map.getCanvas().style.cursor = 'pointer';
         
                     // Hover style
-                    if (this.hoveredCycleway) {
-                        map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
+                    if (self.hoveredCycleway) {
+                        map.setFeatureState({ source: 'osm', id: self.hoveredCycleway }, { hover: false });
                     }
-                    this.hoveredCycleway = features[0].id;
-                    map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: true });
+                    self.hoveredCycleway = features[0].id;
+                    map.setFeatureState({ source: 'osm', id: self.hoveredCycleway }, { hover: true });
                 } else {
                     // Hover style
-                    if (this.hoveredCycleway && !this.selectedCycleway) {
-                        map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
+                    if (self.hoveredCycleway && !self.selectedCycleway) {
+                        map.setFeatureState({ source: 'osm', id: self.hoveredCycleway }, { hover: false });
         
                         // Cursor cursor
                         map.getCanvas().style.cursor = '';
                     }
-                    this.hoveredCycleway = null;
+                    self.hoveredCycleway = null;
                 }
             });
         } else {
@@ -1018,7 +1058,7 @@ class Map extends Component {
             map.getSource('directions-route').setData(allRoutes);
             
             if (directions.bbox) { 
-                map.fitBounds(directions.bbox, { padding: 200, duration: 2000 }); 
+                map.fitBounds(directions.bbox, { padding: 100, duration: 2000 }); 
             }
         } else {
             // Clear the directions by setting empty data
@@ -1290,7 +1330,7 @@ class Map extends Component {
         this.initOverlappingCyclepathsLayer();
             
         if (ENABLE_COMMENTS) {
-            this.addCommentsLayers();
+            this.initCommentsLayer();
         }
 
         // Restore current directions if they exist
@@ -1357,4 +1397,22 @@ class Map extends Component {
     }
 }
 
-export default Map;
+// Wrapper component to use the directions context with the class component
+const MapWrapper = (props) => {
+    const directionsContext = useDirections();
+    
+    return (
+        <Map
+            {...props}
+            directions={directionsContext.directions}
+            selectedRouteIndex={directionsContext.selectedRouteIndex}
+            hoveredRouteIndex={directionsContext.hoveredRouteIndex}
+            routeCoverageData={directionsContext.routeCoverageData}
+            onRouteSelected={directionsContext.selectRoute}
+            onRouteHovered={directionsContext.hoverRoute}
+            isInRouteMode={directionsContext.isInRouteMode}
+        />
+    );
+};
+
+export default MapWrapper;
