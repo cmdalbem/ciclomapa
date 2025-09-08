@@ -38,13 +38,16 @@ class DirectionsManager {
                         const coverageResult = calculateCyclepathCoverage(route.geometry, geoJson, layers);
                         routeCoverageData[index] = {
                             coverage: coverageResult.coverage,
+                            coverageByType: coverageResult.coverageByType,
                             overlappingCyclepaths: coverageResult.overlappingCyclepaths
                         };
                         console.debug(`Route ${index} cyclepath coverage calculated:`, coverageResult.coverage + '%');
+                        console.debug(`Route ${index} coverage by type:`, coverageResult.coverageByType);
                         console.debug(`Route ${index} overlap segments found:`, coverageResult.overlappingCyclepaths.length);
                     } else {
                         routeCoverageData[index] = {
                             coverage: 0,
+                            coverageByType: {},
                             overlappingCyclepaths: []
                         };
                     }
@@ -63,13 +66,15 @@ class DirectionsManager {
             const routesWithCoverage = directions.routes.map((route, index) => ({
                 ...route,
                 coverage: routeCoverageData[index]?.coverage || 0,
+                coverageByType: routeCoverageData[index]?.coverageByType || {},
                 overlappingCyclepaths: routeCoverageData[index]?.overlappingCyclepaths || []
             })).sort((a, b) => b.coverage - a.coverage);
 
             // Extract sorted routes and coverage data
-            const sortedRoutes = routesWithCoverage.map(({ coverage, overlappingCyclepaths, ...route }) => route);
-            const sortedRouteCoverageData = routesWithCoverage.map(({ coverage, overlappingCyclepaths }) => ({
+            const sortedRoutes = routesWithCoverage.map(({ coverage, coverageByType, overlappingCyclepaths, ...route }) => route);
+            const sortedRouteCoverageData = routesWithCoverage.map(({ coverage, coverageByType, overlappingCyclepaths }) => ({
                 coverage,
+                coverageByType,
                 overlappingCyclepaths
             }));
 

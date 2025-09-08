@@ -96,11 +96,38 @@ class DirectionsPanel extends Component {
     }
 
     getRouteScore(routeCoverageData, index) {
-        if (!routeCoverageData || !routeCoverageData[index] || routeCoverageData[index].coverage === null) {
+        if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
             return { score: null, cssClass: null };
         }
         
-        const score = routeCoverageData[index].coverage.toFixed(0);
+        const coverageByType = routeCoverageData[index].coverageByType;
+        
+        // Infrastructure quality weights (higher = better)
+        const qualityWeights = {
+            'Ciclovia': 1.0,           // Perfect score
+            'Ciclofaixa': 0.8,         // Good but not perfect
+            'Ciclorrota': 0.6,         // Moderate quality
+            'Calçada compartilhada': 0.4  // Lower quality
+        };
+        
+        // Calculate weighted score
+        let weightedScore = 0;
+        let totalCoverage = 0;
+        
+        Object.keys(coverageByType).forEach(type => {
+            const percentage = coverageByType[type];
+            const weight = qualityWeights[type] || 0;
+            weightedScore += percentage * weight;
+            totalCoverage += percentage;
+        });
+        
+        // If no cycling infrastructure coverage, score is 0
+        if (totalCoverage === 0) {
+            return { score: 0, cssClass: 'bg-red-600' };
+        }
+        
+        // Normalize score to 0-100 range
+        const score = Math.round(weightedScore);
         let cssClass;
         
         if (score < 50) {
@@ -112,6 +139,33 @@ class DirectionsPanel extends Component {
         }
         
         return { score, cssClass };
+    }
+
+    getCoverageBreakdown(routeCoverageData, index) {
+        if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
+            return null;
+        }
+        
+        const coverageByType = routeCoverageData[index].coverageByType;
+        const breakdown = [];
+        
+        // Map infrastructure type names to shorter display names
+        const typeNames = {
+            'Ciclovia': 'ciclovia',
+            'Ciclofaixa': 'ciclofaixa', 
+            'Ciclorrota': 'ciclorrota',
+            'Calçada compartilhada': 'calçada'
+        };
+        
+        Object.keys(coverageByType).forEach(type => {
+            const percentage = coverageByType[type];
+            if (percentage > 1) {
+                const shortName = typeNames[type] || type.toLowerCase();
+                breakdown.push(`${percentage.toFixed(0)}% ${shortName}`);
+            }
+        });
+        
+        return breakdown.length > 0 ? breakdown.join(', ') : null;
     }
 
     initGeocoders() {
@@ -633,8 +687,8 @@ class DirectionsPanel extends Component {
                         <div id="directionsPanel--header" className="flex justify-between">
                             <h3 className=" font-semibold flex items-center">
                                 <IconRoute className="mr-2" />
-                                Rotas
-                                <span className="bg-white opacity-75 ml-1 px-1 py-0 rounded-full text-black text-xs leading-normal tracking-wider" style={{fontSize: 10}}>
+                                Rotas de bici
+                                <span className="bg-white opacity-50 ml-1 px-1 py-0 rounded-full text-black text-xs leading-normal tracking-wider" style={{fontSize: 10}}>
                                     BETA
                                 </span>
                             </h3>
@@ -676,7 +730,7 @@ class DirectionsPanel extends Component {
                             ]}
                         /> */}
 
-                        <Space direction="vertical" size="small" className="w-full">
+                        <Space direction="vertical" size="small" className="w-full mt-2">
                             <div 
                                 id="fromGeocoder"
                                 className='flex'
@@ -703,8 +757,8 @@ class DirectionsPanel extends Component {
                         </Space>
 
                         {directionsLoading && (
-                            <div className="mt-3 p-2 text-gray-300 text-sm flex items-center">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-300 mr-2"></div>
+                            <div className="mt-3 p-2 text-gray-400 text-sm flex items-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 mr-2"></div>
                                 Calculando rotas...
                             </div>
                         )}
@@ -720,14 +774,15 @@ class DirectionsPanel extends Component {
                                 <div className="space-y-1">
                                     {directions.routes && directions.routes.map((route, index) => {
                                         const { score: routeScore, cssClass: routeScoreClass } = this.getRouteScore(routeCoverageData, index);
+                                        const coverageBreakdown = this.getCoverageBreakdown(routeCoverageData, index);
 
                                         return (
                                             <div
                                                 key={index}
                                                 className={`rounded-lg p-2 cursor-pointer transition-colors ${
-                                                    this.props.selectedRouteIndex === index ? 'bg-white bg-opacity-20 border-opacity-60' : ''
+                                                    this.props.selectedRouteIndex === index ? 'bg-white bg-opacity-10 border-opacity-60' : ''
                                                 } ${
-                                                    this.props.hoveredRouteIndex === index ? 'bg-white bg-opacity-10' : ''
+                                                    this.props.hoveredRouteIndex === index ? 'bg-white bg-opacity-5' : ''
                                                 }`}
                                                 onMouseEnter={() => this.handleRouteHover(index)}
                                                 onMouseLeave={this.handleRouteLeave}
@@ -737,7 +792,13 @@ class DirectionsPanel extends Component {
                                                 <div className="flex justify-between">
                                                     {/* 1st column */}
                                                     <div className="flex">
-                                                        <IconBike className="mt-1 mr-3" />
+                                                        {/* <IconBike className="mt-1 mr-3" /> */}
+                                                            {routeScore && (
+                                                        <div className={`flex items-center mr-2 ${routeScoreClass} px-1 py-1 rounded-md text-sm leading-none font-mono text-center`} style={{color: 'white', width: 24, height: 24}}>
+                                                            {routeScore}
+                                                        </div>
+                                                            )}
+
                                                         <div className="flex flex-col flex-end">
                                                             <span className="directions--legLabel text-sm mb-1">
                                                                 {
@@ -745,12 +806,6 @@ class DirectionsPanel extends Component {
                                                                     route.legs[0].summary
                                                                 : `Opção ${index + 1}`
                                                                 }
-
-                                                                {routeScore && (
-                                                                    <span className={`${routeScoreClass} ml-2 px-1 py-1 rounded-md leading-none text-xs`} style={{color: 'white'}}>
-                                                                        {routeScore}
-                                                                    </span>
-                                                                )}
                                                             </span>
                                                             {(route.ascend !== undefined || route.descend !== undefined) && (
                                                                 <span className="flex flex-row font-normal items-center text-gray-400">
@@ -766,6 +821,11 @@ class DirectionsPanel extends Component {
                                                                     }
                                                                 </span>
                                                             )}
+                                                            {this.props.selectedRouteIndex === index && coverageBreakdown && (
+                                                                <span className="text-xs text-gray-400 mt-1">
+                                                                    {coverageBreakdown}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
 
@@ -774,7 +834,7 @@ class DirectionsPanel extends Component {
                                                         <span className="text-sm text-right mb-1">
                                                             {route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'}
                                                         </span>
-                                                        <span className="text-sm text-gray-300 text-right">
+                                                        <span className="text-sm text-gray-400 text-right">
                                                             {route.distance ? `${(route.distance / 1000).toFixed(1)} km` : 'N/A'}
                                                         </span>
                                                     </div>
