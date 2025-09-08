@@ -925,8 +925,8 @@ class Map extends Component {
                     'case',
                     ['==', ['get', 'type'], 'Ciclovia'], '#00A33F',
                     ['==', ['get', 'type'], 'Ciclofaixa'], '#84CC16',
-                    ['==', ['get', 'type'], 'Ciclorrota'], '#D97706',
-                    ['==', ['get', 'type'], 'Calçada compartilhada'], '#DC2626',
+                    ['==', ['get', 'type'], 'Ciclorrota'], '#F6CA5D',
+                    ['==', ['get', 'type'], 'Calçada compartilhada'], '#F56743',
                     '#00ff00' // Default fallback color
                 ],
                 'line-width': [
@@ -1008,6 +1008,7 @@ class Map extends Component {
         if (this.props.directions !== prevProps.directions) {
             this.updateDirectionsLayer(this.props.directions);
             this.updateCyclablePathsOpacity();
+            this.updateRouteTooltips();
         }
 
         // Handle route coverage data changes (for showing all route overlaps)
@@ -1190,6 +1191,17 @@ class Map extends Component {
         });
     }
 
+    updateRouteTooltips() {
+        if (this.popups) {
+            this.popups.updateRouteTooltips(
+                this.props.directions,
+                this.props.routeCoverageData,
+                this.props.isDarkMode,
+                this.props.onRouteSelected
+            );
+        }
+    }
+
     componentDidMount() {
         mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
@@ -1358,6 +1370,13 @@ class Map extends Component {
         this.map.on('moveend', this.onMapMoved);
     }
 
+    componentWillUnmount() {
+        if (this.popups) {
+            this.popups.clearRouteTooltips();
+        }
+        document.removeEventListener('newComment', this.newComment);
+    }
+
     newComment() {
         this.setState({ showCommentCursor: true }, () => {
             this.map.once('click', e => {
@@ -1391,6 +1410,7 @@ class Map extends Component {
                         onCancel={this.hideCommentModal}
                     />
                 }
+
             </>
         )
     }

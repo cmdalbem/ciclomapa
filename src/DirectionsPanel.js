@@ -23,6 +23,7 @@ import {
     IS_MOBILE
 } from './constants.js'
 import DirectionsManager from './DirectionsManager.js'
+import { getRouteScore, getCoverageBreakdown, formatDistance, formatDuration } from './routeUtils.js'
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
@@ -95,78 +96,6 @@ class DirectionsPanel extends Component {
         this.removeMapClickListener();
     }
 
-    getRouteScore(routeCoverageData, index) {
-        if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
-            return { score: null, cssClass: null };
-        }
-        
-        const coverageByType = routeCoverageData[index].coverageByType;
-        
-        // Infrastructure quality weights (higher = better)
-        const qualityWeights = {
-            'Ciclovia': 1.0,           // Perfect score
-            'Ciclofaixa': 0.8,         // Good but not perfect
-            'Ciclorrota': 0.6,         // Moderate quality
-            'Calçada compartilhada': 0.4  // Lower quality
-        };
-        
-        // Calculate weighted score
-        let weightedScore = 0;
-        let totalCoverage = 0;
-        
-        Object.keys(coverageByType).forEach(type => {
-            const percentage = coverageByType[type];
-            const weight = qualityWeights[type] || 0;
-            weightedScore += percentage * weight;
-            totalCoverage += percentage;
-        });
-        
-        // If no cycling infrastructure coverage, score is 0
-        if (totalCoverage === 0) {
-            return { score: 0, cssClass: 'bg-red-600' };
-        }
-        
-        // Normalize score to 0-100 range
-        const score = Math.round(weightedScore);
-        let cssClass;
-        
-        if (score < 50) {
-            cssClass = 'bg-red-600';
-        } else if (score < 75) {
-            cssClass = 'bg-yellow-600';
-        } else {
-            cssClass = 'bg-green-600';
-        }
-        
-        return { score, cssClass };
-    }
-
-    getCoverageBreakdown(routeCoverageData, index) {
-        if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
-            return null;
-        }
-        
-        const coverageByType = routeCoverageData[index].coverageByType;
-        const breakdown = [];
-        
-        // Map infrastructure type names to shorter display names
-        const typeNames = {
-            'Ciclovia': 'ciclovia',
-            'Ciclofaixa': 'ciclofaixa', 
-            'Ciclorrota': 'ciclorrota',
-            'Calçada compartilhada': 'calçada'
-        };
-        
-        Object.keys(coverageByType).forEach(type => {
-            const percentage = coverageByType[type];
-            if (percentage > 1) {
-                const shortName = typeNames[type] || type.toLowerCase();
-                breakdown.push(`${percentage.toFixed(0)}% ${shortName}`);
-            }
-        });
-        
-        return breakdown.length > 0 ? breakdown.join(', ') : null;
-    }
 
     initGeocoders() {
         if (!this.props.map) {
@@ -773,8 +702,8 @@ class DirectionsPanel extends Component {
                             <div id="directionsPanel--results" className="mt-5">
                                 <div className="space-y-1">
                                     {directions.routes && directions.routes.map((route, index) => {
-                                        const { score: routeScore, cssClass: routeScoreClass } = this.getRouteScore(routeCoverageData, index);
-                                        const coverageBreakdown = this.getCoverageBreakdown(routeCoverageData, index);
+                                        const { score: routeScore, cssClass: routeScoreClass } = getRouteScore(routeCoverageData, index);
+                                        const coverageBreakdown = getCoverageBreakdown(routeCoverageData, index);
 
                                         return (
                                             <div
@@ -832,10 +761,10 @@ class DirectionsPanel extends Component {
                                                     {/* 2nd column */}
                                                     <div className="flex flex-col flex-end">
                                                         <span className="text-sm text-right mb-1">
-                                                            {route.duration ? `${Math.round(route.duration / 60)} min` : 'N/A'}
+                                                            {formatDuration(route.duration)}
                                                         </span>
                                                         <span className="text-sm text-gray-400 text-right">
-                                                            {route.distance ? `${(route.distance / 1000).toFixed(1)} km` : 'N/A'}
+                                                            {formatDistance(route.distance)}
                                                         </span>
                                                     </div>
                                                 </div>

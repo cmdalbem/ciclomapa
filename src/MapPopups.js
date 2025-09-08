@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl'
 import './MapPopups.css'
 import { osmi18n as i18n } from './osmi18n.js'
 import Analytics from './Analytics.js'
+import { getRouteScore, formatDistance, formatDuration } from './routeUtils.js'
 
 import { IS_MOBILE } from "./constants.js";
 
@@ -13,6 +14,7 @@ class MapPopups {
     popup;
     commentPopup;
     poiPopup;
+    routeTooltips;
 
     constructor(map, debugMode) {
         this.map = map;
@@ -22,6 +24,7 @@ class MapPopups {
         //   from POI to POI, otherwise clicking on another POI would
         //   just close the popup from the previous one.
         this.cyclewayPopup = new mapboxgl.Popup({
+            className: 'popup-big',
             closeOnClick: IS_MOBILE,
         });
         this.cyclewayPopup.on('close', e => {
@@ -32,14 +35,18 @@ class MapPopups {
         });
 
         this.commentPopup = new mapboxgl.Popup({
+            className: 'popup-big',
             closeOnClick: IS_MOBILE,
             offset: 25
         });
 
         this.poiPopup = new mapboxgl.Popup({
+            className: 'popup-big',
             closeOnClick: IS_MOBILE,
             offset: 25
         });
+
+        this.routeTooltips = [];
     }
 
     getFooter(osmUrl, color='black') {
@@ -260,6 +267,77 @@ class MapPopups {
 
     hidePopup() {
         this.cyclewayPopup.remove();
+    }
+
+    // Route tooltip methods
+    createRouteTooltipHTML(route, routeIndex, routeCoverageData, isDarkMode) {
+        const { score: routeScore, cssClass: routeScoreClass } = getRouteScore(routeCoverageData, routeIndex);
+        
+        const baseClasses = "px-2 py-1 rounded-md text-xs font-medium shadow-lg cursor-pointer transition-all duration-200 max-w-[200px]";
+        const themeClasses = isDarkMode 
+            ? "bg-gray-800 text-white border border-gray-600 hover:bg-gray-700 hover:border-gray-500" 
+            : "bg-white text-gray-800 border border-gray-300 hover:bg-gray-50 hover:border-gray-400";
+        
+        return `
+            <div class="${baseClasses} ${themeClasses}" data-route-index="${routeIndex}">
+                <div class="flex items-center space-x-2">
+                    ${routeScore !== null ? `
+                        <div class="${routeScoreClass} text-white px-1 py-0.5 rounded text-xs font-mono">
+                            ${routeScore}
+                        </div>
+                    ` : ''}
+                    <div class="flex flex-col">
+                        <span class="font-semibold">${formatDistance(route.distance)}</span>
+                        <span class="text-gray-500">${formatDuration(route.duration)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    updateRouteTooltips(directions, routeCoverageData, isDarkMode, onRouteSelected) {
+        // Clear existing route tooltips
+        this.clearRouteTooltips();
+
+        if (directions && directions.routes && directions.routes.length > 0) {
+            directions.routes.forEach((route, index) => {
+                if (!route.geometry || route.geometry.type !== 'LineString') {
+                    return;
+                }
+
+                // Calculate midpoint of the route
+                const coordinates = route.geometry.coordinates;
+                const midIndex = Math.floor(coordinates.length / 2);
+                const midPoint = coordinates[midIndex];
+
+                // Create popup for this route
+                const popup = new mapboxgl.Popup({
+                    closeButton: false,
+                    closeOnClick: false,
+                    closeOnMove: false,
+                    className: 'route-tooltip-popup'
+                })
+                .setLngLat(midPoint)
+                .setHTML(this.createRouteTooltipHTML(route, index, routeCoverageData, isDarkMode))
+                .addTo(this.map);
+
+                // Add click handler to the popup content
+                popup.getElement().addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (onRouteSelected) {
+                        onRouteSelected(index);
+                    }
+                });
+
+                // Store popup reference for cleanup
+                this.routeTooltips.push(popup);
+            });
+        }
+    }
+
+    clearRouteTooltips() {
+        this.routeTooltips.forEach(popup => popup.remove());
+        this.routeTooltips = [];
     }
 }
 
