@@ -923,10 +923,10 @@ class Map extends Component {
             paint: {
                 'line-color': [
                     'case',
-                    ['==', ['get', 'type'], 'Ciclovia'], '#059669',
-                    ['==', ['get', 'type'], 'Ciclofaixa'], '#A1C181',
-                    ['==', ['get', 'type'], 'Ciclorrota'], '#E9C46A',
-                    ['==', ['get', 'type'], 'Calçada compartilhada'], '#E76F51',
+                    ['==', ['get', 'type'], 'Ciclovia'], '#00A33F',
+                    ['==', ['get', 'type'], 'Ciclofaixa'], '#84CC16',
+                    ['==', ['get', 'type'], 'Ciclorrota'], '#D97706',
+                    ['==', ['get', 'type'], 'Calçada compartilhada'], '#DC2626',
                     '#00ff00' // Default fallback color
                 ],
                 'line-width': [
@@ -935,8 +935,7 @@ class Map extends Component {
                         ["zoom"],
                         6, 2,
                         18, 8
-                ],
-                'line-opacity': 0.8
+                ]
             },
             filter: ['==', '$type', 'LineString']
         // }, layerUnderneathName);
