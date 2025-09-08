@@ -315,27 +315,6 @@
   background: #f3f4f6 !important;
 }
 
-/* MapPopups light mode overrides */
-/* .theme-light .mapboxgl-popup-content {
-  background: #ffffff !important;
-  color: rgba(0, 0, 0, 0.85) !important;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1) !important;
-}
-
-.theme-light .mapboxgl-popup-close-button {
-  color: rgba(0, 0, 0, 0.65) !important;
-}
-
-.theme-light .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
-  border-top-color: #ffffff !important;
-}
-
-.theme-light .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
-  border-bottom-color: #ffffff !important;
-} */
-
-/* Keep the colored popups as they are - they work well in both themes */
-
 /* Additional global overrides for any remaining dark styles */
 .theme-light {
   /* Ensure all text is dark in light mode */
