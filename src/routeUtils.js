@@ -46,7 +46,7 @@ export const getRouteScore = (routeCoverageData, index) => {
     return { score, cssClass };
 };
 
-export const getCoverageBreakdown = (routeCoverageData, index) => {
+export const getCoverageBreakdownSimple = (routeCoverageData, index) => {
     if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
         return null;
     }
@@ -70,7 +70,63 @@ export const getCoverageBreakdown = (routeCoverageData, index) => {
         }
     });
     
-    return breakdown.length > 0 ? breakdown.join(', ') : null;
+    return (
+        <span className="text-xs text-gray-400">
+            {breakdown.join('∙')}
+        </span>
+    );
+};
+
+export const getCoverageBreakdown = (routeCoverageData, index) => {
+    if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
+        return [];
+    }
+    
+    const coverageByType = routeCoverageData[index].coverageByType;
+    const breakdown = [];
+    
+    const typeNames = {
+        'Ciclovia': 'ciclovia',
+        'Ciclofaixa': 'ciclofaixa', 
+        'Ciclorrota': 'ciclorrota',
+        'Calçada compartilhada': 'calçada'
+    };
+
+    let totalPercentage = 100;
+    
+    Object.keys(coverageByType).forEach(type => {
+        const percentage = coverageByType[type];
+        if (percentage > 1) {
+            const shortName = typeNames[type] || type.toLowerCase();
+            breakdown.push(`${percentage.toFixed(0)}% ${shortName}`);
+            totalPercentage -= percentage;
+        }
+    });
+
+    if (totalPercentage > 0) {
+        breakdown.push(`${totalPercentage.toFixed(0)}% rua`);
+    }
+    
+    return (
+        <div className="flex flex-wrap gap-1 mt-1"> {
+            breakdown.map((item, index) => (
+                <span
+                    key={index}
+                    className="text-xs bg-white bg-opacity-10 text-white rounded-md px-1 py-0.5"
+                    style={{
+                        backgroundColor: 
+                            item.includes('ciclovia') ? '#4A5D5A'
+                            : item.includes('ciclofaixa') ? '#6B7A6B'
+                            : item.includes('ciclorrota') ? '#7A7568'
+                            : item.includes('calçada') ? '#7A6B6A'
+                            : '#FF9999'
+                    }}
+                >
+                    {item}
+                </span>
+            ))}
+        </div>
+    );
 };
 
 export const formatDistance = (distance) => {
