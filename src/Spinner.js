@@ -56,7 +56,7 @@ class Spinner extends Component {
                                     Carregando mapa cicloviário de <b>{city}</b>
                                 </div>
 
-                                <div className="text-base text-gray-200">
+                                <div className="text-base" style={{ color: 'rgba(255,255,255,0.7)' }}>
                                     Baixando dados atualizados do OpenStreetMap. Dependendo do tamanho da cidade, isso pode levar alguns segundos ou até mais de um minuto.
                                 </div>
                             </div>
