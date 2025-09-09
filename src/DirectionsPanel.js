@@ -737,9 +737,11 @@ class DirectionsPanel extends Component {
                                                 {/* Route alternative summary */}
                                                 <div className="flex justify-between gap-1">
                                                     {/* 1st column */}
-                                                    <div className="flex">
+                                                    <div className="flex items-start">
                                                         {/* <IconBike className="mt-1 mr-3" /> */}
-                                                        <div className={`flex items-center mr-2 ${routeScoreClass} px-1 py-1 rounded-md text-sm leading-none font-mono text-center`} style={{color: 'white', width: 24, height: 24}}>
+                                                        <div 
+                                                            className={`flex items-center mr-2 ${routeScoreClass} px-1.5 py-1.5 rounded-md text-sm leading-none font-mono text-center`} 
+                                                            style={{color: 'white'}}>
                                                             {routeScore}
                                                         </div>
 
