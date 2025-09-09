@@ -118,7 +118,7 @@ class LayersPanel extends Component {
                                 )}
                             >
                                 <div
-                                    className="flex items-center justify-between px-4 py-2 sm:py-1 sm:px-3 hover:bg-black hover:bg-opacity-50"
+                                    className="flex rounded-md items-center justify-between px-2 py-1 hover:bg-black hover:bg-opacity-50"
                                     onClick={this.onChange.bind(this, l.id, !l.isActive)}
                                     style={{ opacity: l.isActive ? 1 : .5 }}
                                 >
