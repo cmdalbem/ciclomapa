@@ -303,7 +303,7 @@ class Map extends Component {
         const self = this;
 
         this.map.on('mouseenter', l.id, (e) => {
-            if (e.features.length > 0 && self.map.getZoom() > POI_ZOOM_THRESHOLD) {
+            if (e.features.length > 0) {
                 // Disable POI hover effects when in route mode
                 if (self.props.isInRouteMode) {
                     e.originalEvent.preventDefault();
@@ -327,7 +327,7 @@ class Map extends Component {
         });
 
         this.map.on('mouseleave', l.id, e => {
-            if (self.hoveredPOI && self.map.getZoom() > POI_ZOOM_THRESHOLD) {
+            if (self.hoveredPOI) {
                 self.map.getCanvas().style.cursor = '';
 
                 self.map.setFeatureState({
@@ -339,7 +339,7 @@ class Map extends Component {
         });
 
         this.map.on('click', l.id, e => {
-            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented && self.map.getZoom() > POI_ZOOM_THRESHOLD) {
+            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
                 // Disable POI clicks when in route mode
                 if (self.props.isInRouteMode) {
                     e.originalEvent.preventDefault();
