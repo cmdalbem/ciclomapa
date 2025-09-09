@@ -64,6 +64,7 @@ class DirectionsPanel extends Component {
                 clearInterval(this.initGeocodersInterval);
             }
         }, 100);
+
     }
 
     componentDidUpdate(prevProps) {
@@ -76,6 +77,12 @@ class DirectionsPanel extends Component {
         if (this.props.map && prevProps.map && this.props.map !== prevProps.map) {
             console.debug('Map reference changed, reattaching markers and click listener');
             this.reattachMarkers();
+            this.setupMapClickListener();
+        }
+        
+        // Ensure map click listener is always attached when map is available
+        if (this.props.map && !this.mapClickListener) {
+            console.debug('Map available but no click listener, setting up');
             this.setupMapClickListener();
         }
     }
@@ -101,7 +108,7 @@ class DirectionsPanel extends Component {
 
         console.debug('Initializing geocoders with map:', this.props.map);
 
-        this.cleanup();
+        this.cleanup(false); // Don't remove map listener during geocoder reinit
 
         // Initialize "From" geocoder
         this.fromGeocoder = new MapboxGeocoder({
@@ -248,9 +255,11 @@ class DirectionsPanel extends Component {
         }
     }
 
-    cleanup() {
-        // Remove map click listener
-        this.removeMapClickListener();
+    cleanup(removeMapListener = true) {
+        // Remove map click listener only if explicitly requested
+        if (removeMapListener) {
+            this.removeMapClickListener();
+        }
         
         // Remove geocoders from map if they exist
         if (this.fromGeocoder && this.props.map) {
@@ -291,6 +300,7 @@ class DirectionsPanel extends Component {
     }
 
     toggleCollapse() {
+        this.clearDirections();
         this.setState({
             collapsed: !this.state.collapsed
         });
@@ -343,6 +353,11 @@ class DirectionsPanel extends Component {
         });
         
         this.cleanup();
+        
+        // Reattach map click listener after cleanup
+        if (this.props.map) {
+            this.setupMapClickListener();
+        }
         
         if (this.props.onDirectionsCleared) {
             this.props.onDirectionsCleared();
@@ -451,13 +466,17 @@ class DirectionsPanel extends Component {
             return;
         }
         
+        // Don't set up if already exists
+        if (this.mapClickListener) {
+            console.debug('Map click listener already exists, skipping setup');
+            return;
+        }
+        
         console.debug('Setting up map click listener');
-        // Remove any existing click listener
-        this.removeMapClickListener();
         
         // Add new click listener
         this.mapClickListener = (e) => {
-            // console.debug("Map clicked");
+            console.debug("Map clicked");
             if (this.state.focusedInput) {
                 this.handleMapClick(e);
             }
@@ -695,7 +714,7 @@ class DirectionsPanel extends Component {
                         )}
 
                         {directions && (
-                            <div id="directionsPanel--results" className="mt-5">
+                            <div id="directionsPanel--results" className="mt-3">
                                 <div className="space-y-1">
                                     {directions.routes && directions.routes.map((route, index) => {
                                         const { score: routeScore, cssClass: routeScoreClass } = getRouteScore(routeCoverageData, index);
@@ -719,11 +738,9 @@ class DirectionsPanel extends Component {
                                                     {/* 1st column */}
                                                     <div className="flex">
                                                         {/* <IconBike className="mt-1 mr-3" /> */}
-                                                            {routeScore && (
                                                         <div className={`flex items-center mr-2 ${routeScoreClass} px-1 py-1 rounded-md text-sm leading-none font-mono text-center`} style={{color: 'white', width: 24, height: 24}}>
                                                             {routeScore}
                                                         </div>
-                                                            )}
 
                                                         <div className="flex flex-col flex-end">
                                                             <span className="directions--legLabel text-sm mb-1">
@@ -783,7 +800,7 @@ class DirectionsPanel extends Component {
                                 </div>
                                 
                                 {/* Disclaimer */}
-                                <div className="mt-3 p-2 text-gray-400 text-xs">
+                                <div className="p-2 text-gray-500 text-xs">
                                     <span>
                                         As rotas são sugestões automáticas. Sempre verifique as condições das vias, sinalização e segurança antes de pedalar :)
                                     </span>
@@ -798,11 +815,12 @@ class DirectionsPanel extends Component {
 }
 
 // Wrapper component to use the directions context with the class component
-const DirectionsPanelWrapper = (props) => {
+const DirectionsPanelWrapper = React.forwardRef((props, ref) => {
     const directionsContext = useDirections();
     
     return (
         <DirectionsPanel
+            ref={ref}
             {...props}
             directions={directionsContext.directions}
             directionsLoading={directionsContext.directionsLoading}
@@ -821,6 +839,6 @@ const DirectionsPanelWrapper = (props) => {
             layers={props.layers}
         />
     );
-};
+});
 
 export default DirectionsPanelWrapper;
