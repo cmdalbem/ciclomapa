@@ -468,10 +468,7 @@ class App extends Component {
                 city_name: this.state.area
             });
 
-            // Clear directions using the panel's clear method for complete cleanup
-            if (this.directionsPanel && this.directionsPanel.clearDirections) {
-                this.directionsPanel.clearDirections();
-            }
+            this.directionsPanel.clearDirections();
 
             this.updateData();
 
@@ -618,8 +615,6 @@ class App extends Component {
             loading: false
         });
     }
-
-
 
     setMapRef(map) {
         this.setState({ map });
