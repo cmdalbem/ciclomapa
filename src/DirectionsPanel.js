@@ -10,6 +10,11 @@ import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import mapboxgl from 'mapbox-gl';
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
+import { Popover } from 'antd';
+import {
+    HiOutlineInformationCircle as IconInfo,
+} from "react-icons/hi";
+
 
 import './DirectionsPanel.css';
 
@@ -804,9 +809,30 @@ class DirectionsPanel extends Component {
                                 
                                 {/* Disclaimer */}
                                 <div className="p-2 text-gray-500 text-xs">
-                                    <span>
+                                    <p>
                                         As rotas são sugestões automáticas. Sempre verifique as condições das vias, sinalização e segurança antes de pedalar :)
-                                    </span>
+                                    </p>
+                                    <Popover
+                                        content={(
+                                            <div className="text-sm" style={{width: 320}}>
+                                                <p>
+                                                    Consideramos o quanto cada rota está coberta por diferentes tipos de infraestrutura cicloviária para calcular uma nota que indique a sua qualidade.
+                                                </p>
+                                                <p>
+                                                    Por exemplo: uma nota perfeita é uma rota 100% coberta por ciclovias. Porém se fosse por ciclorrotas a nota seria bem menor, já que a pessoa ciclista precisa compartilhar a via com carros.
+                                                </p>
+                                                <p>
+                                                    <code>
+                                                        nota = pCiclovia*1.0 + pCiclofaixa*0.8 + pCiclorrota*0.6 + pCalcadaCompartilhada*0.4
+                                                    </code>
+                                                </p>
+                                            </div>
+                                        )}
+                                    >
+                                        <div className="underline">
+                                            Leia mais sobre como calculamos as notas.
+                                        </div>
+                                    </Popover>
                                 </div>
                             </div>
                         )}
