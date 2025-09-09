@@ -15,6 +15,7 @@ class MapPopups {
     commentPopup;
     poiPopup;
     routeTooltips;
+    previousCyclewayLayerClass;
 
     constructor(map, debugMode) {
         this.map = map;
@@ -141,7 +142,11 @@ class MapPopups {
 
         let html = `
             <div class="text-2xl mt-3 mb-5">
-                <img src="${iconSrc}" class="inline-block align-bottom mr-1" alt=""/> ${properties.name ? properties.name : '<span class="italic opacity-50">Sem nome</span>'}
+                <img src="${iconSrc}" class="inline-block align-bottom mr-1" alt=""/>
+                    ${properties.name
+                        ? properties.name
+                        : '<span class="italic opacity-50">Sem nome</span>'
+                    }
             </div>
 
             <div class="mt-2 text-sm grid grid-cols-2 gap-2">
@@ -179,7 +184,7 @@ class MapPopups {
                 })
                 .map(i => i ? `
                     <div class="mt-2">
-                        <div class="text-xs font-bold tracking-widest uppercase opacity-50">
+                        <div class="text-xs font-bold opacity-50">
                             ${i[0]}
                         </div>
                         <div>
@@ -210,23 +215,29 @@ class MapPopups {
         const properties = e.features[0].properties;
         const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
         const bgClass = layer.id;
+        
+        if (this.previousCyclewayLayerClass) {
+            this.cyclewayPopup.removeClassName(this.previousCyclewayLayerClass);
+        }
+        this.previousCyclewayLayerClass = bgClass;
 
-        let internalPropsStr = '';
+        let debugPropsStr = '';
         if (this.debugMode) {
-            // Show only the props marked with ciclomapa:
-            let internalProps = {};
-            for (let k in properties) {
-                if (k.includes('ciclomapa')) {
-                    internalProps[k.split('ciclomapa:')[1]] = properties[k];
-                }
-            }
-            internalPropsStr = `
-                <div class="text-white">
-                    ${JSON.stringify(internalProps, null, 2)
-                    .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-                    .replace(/"|,|\{|\}/g, '')}
-                </div>
-            `;
+            debugPropsStr = `
+                <div class="mt-2 text-sm grid grid-cols-2 gap-2">
+                    ${Object.keys(properties).map(key => key ? `
+                        <div class="mt-2">
+                            <div class="text-xs font-bold opacity-50">
+                                ${key.includes('ciclomapa') ? key.split('ciclomapa:')[1] : key}
+                            </div>
+                            <div>
+                                ${typeof properties[key] === 'number' && !Number.isInteger(properties[key]) 
+                                    ? properties[key].toFixed(1) 
+                                    : (properties[key] || '')}
+                            </div>
+                        </div>` : '')
+                    .join('')}
+                </div>`;
         }
 
         let html = `
@@ -244,7 +255,7 @@ class MapPopups {
                     ${layer.name}
                 </div>
 
-                ${internalPropsStr}
+                ${debugPropsStr}
 
                 ${this.getFooter(osmUrl)}
             </div>
@@ -266,6 +277,9 @@ class MapPopups {
     }
 
     hidePopup() {
+        this.cyclewayPopup.removeClassName(this.previousCyclewayLayerClass);
+        this.previousCyclewayLayerClass = null;
+
         this.cyclewayPopup.remove();
     }
 
