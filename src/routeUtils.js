@@ -64,7 +64,7 @@ export const getCoverageBreakdownSimple = (routeCoverageData, index) => {
     
     Object.keys(coverageByType).forEach(type => {
         const percentage = coverageByType[type];
-        if (percentage > 1) {
+        if (percentage > 5) {
             const shortName = typeNames[type] || type.toLowerCase();
             breakdown.push(`${percentage.toFixed(0)}% ${shortName}`);
         }
