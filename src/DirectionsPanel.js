@@ -466,19 +466,18 @@ class DirectionsPanel extends Component {
             return;
         }
         
-        // Don't set up if already exists
-        if (this.mapClickListener) {
-            console.debug('Map click listener already exists, skipping setup');
-            return;
-        }
-        
         console.debug('Setting up map click listener');
+        
+        // Always remove existing listener first to ensure clean state
+        this.removeMapClickListener();
         
         // Add new click listener
         this.mapClickListener = (e) => {
-            console.debug("Map clicked");
+            console.debug("Map clicked, focusedInput:", this.state.focusedInput);
             if (this.state.focusedInput) {
                 this.handleMapClick(e);
+            } else {
+                console.debug("Map clicked but no input focused, ignoring");
             }
         };
         
@@ -490,8 +489,8 @@ class DirectionsPanel extends Component {
         if (this.props.map && this.mapClickListener) {
             console.debug('Removing map click listener');
             this.props.map.off('click', this.mapClickListener);
-            this.mapClickListener = null;
         }
+        this.mapClickListener = null;
     }
 
     handleInputFocus(inputType) {
@@ -541,6 +540,8 @@ class DirectionsPanel extends Component {
     }
 
     handleMapClick(e) {
+        console.debug('handleMapClick called, focusedInput:', this.state.focusedInput);
+        
         if (!this.state.focusedInput) {
             console.debug('No input focused, ignoring map click');
             return;
