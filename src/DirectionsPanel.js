@@ -6,6 +6,7 @@ import {
     HiOutlineTrendingDown as IconTrendingDown
 } from "react-icons/hi";
 import { LuBike as IconBike, LuRoute as IconRoute } from "react-icons/lu";
+import { HiOutlineArrowsUpDown as IconSwap } from "react-icons/hi2";
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import mapboxgl from 'mapbox-gl';
@@ -59,6 +60,7 @@ class DirectionsPanel extends Component {
         this.handleMapClick = this.handleMapClick.bind(this);
         this.attachGeocoderToDOM = this.attachGeocoderToDOM.bind(this);
         this.calculateDirections = this.calculateDirections.bind(this);
+        this.swapOriginDestination = this.swapOriginDestination.bind(this);
     }
 
     componentDidMount() {
@@ -367,6 +369,38 @@ class DirectionsPanel extends Component {
         if (this.props.onDirectionsCleared) {
             this.props.onDirectionsCleared();
         }
+    }
+
+    swapOriginDestination() {
+        const { fromPoint, toPoint } = this.state;
+        
+        if (!fromPoint || !toPoint) {
+            return;
+        }
+
+        // Swap the points
+        this.setState({
+            fromPoint: toPoint,
+            toPoint: fromPoint
+        }, () => {
+            // Update geocoder inputs
+            if (this.fromGeocoder && this.fromGeocoder.setInput) {
+                this.fromGeocoder.setInput(toPoint.result.place_name);
+            }
+            if (this.toGeocoder && this.toGeocoder.setInput) {
+                this.toGeocoder.setInput(fromPoint.result.place_name);
+            }
+
+            // Swap markers
+            const fromCoords = toPoint.result.center;
+            const toCoords = fromPoint.result.center;
+            
+            this.addMarker('from', fromCoords);
+            this.addMarker('to', toCoords);
+
+            // Recalculate directions with swapped points
+            this.requestDirectionsCalculation();
+        });
     }
 
     selectRoute(index) {
@@ -687,11 +721,25 @@ class DirectionsPanel extends Component {
                                 ref={this.attachGeocoderToDOM('from', 'fromGeocoder', 'fromGeocoderAttached')}
                             />
 
-                            <div 
-                                id="toGeocoder"
-                                className='flex'
-                                ref={this.attachGeocoderToDOM('to', 'toGeocoder', 'toGeocoderAttached')}
-                            />
+                            <div className="flex items-center gap-2">
+                                <div 
+                                    id="toGeocoder"
+                                    className='flex flex-1'
+                                    ref={this.attachGeocoderToDOM('to', 'toGeocoder', 'toGeocoderAttached')}
+                                />
+                                <Button
+                                    type="text"
+                                    shape="circle"
+                                    icon={
+                                        <IconSwap style={{
+                                            display: 'inline-block',
+                                        }}/>}
+                                    onClick={this.swapOriginDestination}
+                                    disabled={!this.state.fromPoint || !this.state.toPoint}
+                                    className="swap-button flex-shrink-0 text-white"
+                                    title="Trocar origem e destino"
+                                />
+                            </div>
 
                             {/* <Button
                                 type="primary"
