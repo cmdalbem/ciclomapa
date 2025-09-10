@@ -215,7 +215,7 @@ class DirectionsPanel extends Component {
         this.removeMarker(type);
         
         const el = document.createElement('div');
-        el.className = `custom-marker custom-marker--${type}`;
+        el.className = `origin-destination-marker bg-white border border-white flex items-center justify-center rounded-full text-base text-black`;
         el.innerHTML = type === 'from' ? 'A' : 'B';
 
         el.addEventListener('mousedown', () => {

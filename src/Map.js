@@ -814,7 +814,7 @@ class Map extends Component {
                     ['case',
                         ['boolean', ['feature-state', 'hover'], false],
                             this.props.isDarkMode ? '#ffffff' : '#211F1C', // On hover
-                            this.props.isDarkMode ? '#999999' : '#71716F', // Default
+                            this.props.isDarkMode ? '#999999' : '#7A7A78', // Default
                     ]
                 ], 
                 "line-width": [
@@ -928,6 +928,12 @@ class Map extends Component {
                     ['==', ['get', 'type'], 'Ciclorrota'], '#F6CA5D',
                     ['==', ['get', 'type'], 'Calçada compartilhada'], '#F56743',
                     '#00ff00' // Default fallback color
+                ],
+                'line-opacity': [
+                    'case',
+                    ['boolean', ['feature-state', 'selected'], false],
+                        1.0, // Full opacity when selected
+                        0.4  // More transparent by default to not compete with routes
                 ],
                 'line-width': [
                     "interpolate",
@@ -1107,6 +1113,9 @@ class Map extends Component {
         
         // Update the overlapping cyclepaths layer
         map.getSource('overlapping-cyclepaths').setData(cyclepathsGeoJSON);
+        
+        // Update selected state after data is loaded
+        this.updateOverlappingCyclepathsSelectedState(this.props.selectedRouteIndex);
     }
 
     updateSelectedRoute(selectedRouteIndex) {
@@ -1129,6 +1138,12 @@ class Map extends Component {
                 { selected: true }
             );
         }
+
+        // Update overlapping cyclepaths selected states
+        this.updateOverlappingCyclepathsSelectedState(selectedRouteIndex);
+        
+        // Update tooltip selected states
+        this.updateTooltipSelectedState(selectedRouteIndex);
     }
 
     clearAllHoverStates() {
@@ -1197,10 +1212,53 @@ class Map extends Component {
                 this.props.directions,
                 this.props.routeCoverageData,
                 this.props.isDarkMode,
-                this.props.onRouteSelected
+                this.props.onRouteSelected,
+                this.props.selectedRouteIndex
             );
         }
     }
+
+    updateTooltipSelectedState(selectedRouteIndex) {
+        if (this.popups) {
+            this.popups.updateTooltipSelectedState(selectedRouteIndex);
+        }
+    }
+
+    updateOverlappingCyclepathsSelectedState(selectedRouteIndex) {
+        const map = this.map;
+        if (!map || !map.getSource('overlapping-cyclepaths')) {
+            return;
+        }
+
+        // Get features from the source - this will be empty if data isn't loaded yet
+        const features = map.querySourceFeatures('overlapping-cyclepaths');
+        if (features.length === 0) {
+            // Data not loaded yet, try again after a short delay
+            setTimeout(() => this.updateOverlappingCyclepathsSelectedState(selectedRouteIndex), 50);
+            return;
+        }
+
+        // Clear all selected states
+        features.forEach((feature) => {
+            map.setFeatureState(
+                { source: 'overlapping-cyclepaths', id: feature.id },
+                { selected: false }
+            );
+        });
+
+        // Set selected state for cyclepaths belonging to the selected route
+        if (selectedRouteIndex !== null && selectedRouteIndex !== undefined) {
+            features.forEach((feature) => {
+                if (feature.properties && feature.properties.routeIndex === selectedRouteIndex) {
+                    map.setFeatureState(
+                        { source: 'overlapping-cyclepaths', id: feature.id },
+                        { selected: true }
+                    );
+                }
+            });
+        }
+    }
+
 
     componentDidMount() {
         mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;

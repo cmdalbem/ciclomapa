@@ -284,32 +284,38 @@ class MapPopups {
     }
 
     // Route tooltip methods
-    createRouteTooltipHTML(route, routeIndex, routeCoverageData, isDarkMode) {
+    createRouteTooltipHTML(route, routeIndex, routeCoverageData, isDarkMode, selectedRouteIndex = null) {
         const { score: routeScore, cssClass: routeScoreClass } = getRouteScore(routeCoverageData, routeIndex);
+        const stateClass = this.getTooltipStateClass(routeIndex, selectedRouteIndex);
         
-        const baseClasses = "px-2 py-1 rounded-md text-xs font-medium shadow-lg cursor-pointer transition-all duration-200 max-w-[200px]";
-        const themeClasses = isDarkMode 
-            ? "bg-gray-800 text-white border border-gray-600 hover:bg-gray-700 hover:border-gray-500" 
-            : "bg-white text-gray-800 border border-gray-300 hover:bg-gray-50 hover:border-gray-400";
+        const baseClasses = "px-2 py-1 text-xs font-medium shadow-lg cursor-pointer transition-all duration-200 max-w-[200px]";
         
         return `
-            <div class="${baseClasses} ${themeClasses}" data-route-index="${routeIndex}">
-                <div class="flex items-center space-x-2">
-                    ${routeScore !== null ? `
-                        <div class="${routeScoreClass} text-white px-1 py-0.5 rounded text-xs font-mono">
-                            ${routeScore}
+            <div class="route-tooltip-content ${stateClass}">
+                <div class="${baseClasses} text-black" data-route-index="${routeIndex}">
+                    <div class="flex items-center space-x-2">
+                        ${routeScore !== null ? `
+                            <div class="${routeScoreClass} text-white px-1 py-0.5 rounded text-xs font-mono">
+                                ${routeScore}
+                            </div>
+                        ` : ''}
+                        <div class="flex flex-col">
+                            <span class="font-semibold">${formatDistance(route.distance)}</span>
+                            <span class="text-gray-500">${formatDuration(route.duration)}</span>
                         </div>
-                    ` : ''}
-                    <div class="flex flex-col">
-                        <span class="font-semibold">${formatDistance(route.distance)}</span>
-                        <span class="text-gray-500">${formatDuration(route.duration)}</span>
                     </div>
                 </div>
             </div>
         `;
     }
 
-    updateRouteTooltips(directions, routeCoverageData, isDarkMode, onRouteSelected) {
+    getTooltipStateClass(routeIndex, selectedRouteIndex) {
+        if (selectedRouteIndex === routeIndex) return 'bg-white rounded-md';
+        if (selectedRouteIndex !== null) return 'bg-gray-300 hover:bg-white rounded-md';
+        return '';
+    }
+
+    updateRouteTooltips(directions, routeCoverageData, isDarkMode, onRouteSelected, selectedRouteIndex = null) {
         // Clear existing route tooltips
         this.clearRouteTooltips();
 
@@ -332,7 +338,7 @@ class MapPopups {
                     className: 'route-tooltip-popup'
                 })
                 .setLngLat(midPoint)
-                .setHTML(this.createRouteTooltipHTML(route, index, routeCoverageData, isDarkMode))
+                .setHTML(this.createRouteTooltipHTML(route, index, routeCoverageData, isDarkMode, selectedRouteIndex))
                 .addTo(this.map);
 
                 // Add click handler to the popup content
@@ -346,7 +352,25 @@ class MapPopups {
                 // Store popup reference for cleanup
                 this.routeTooltips.push(popup);
             });
+
+            // Update tooltip states after creation
+            this.updateTooltipStates(selectedRouteIndex);
         }
+    }
+
+    updateTooltipStates(selectedRouteIndex) {
+        if (!this.routeTooltips) return;
+
+        this.routeTooltips.forEach((popup, index) => {
+            const contentDiv = popup.getElement()?.querySelector('.route-tooltip-content');
+            if (contentDiv) {
+                contentDiv.className = `route-tooltip-content ${this.getTooltipStateClass(index, selectedRouteIndex)}`;
+            }
+        });
+    }
+
+    updateTooltipSelectedState(selectedRouteIndex) {
+        this.updateTooltipStates(selectedRouteIndex);
     }
 
     clearRouteTooltips() {

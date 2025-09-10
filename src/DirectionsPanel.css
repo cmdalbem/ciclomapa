@@ -60,39 +60,44 @@
 }
 
 /* Custom marker styles */
-.custom-marker {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    border: 1px solid white;
-    /* box-shadow: 0 2px 4px rgba(0,0,0,0.3); */
+.origin-destination-marker {
+    width: 32px;
+    height: 32px;
     cursor: grab;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    /* font-weight: bold; */
-    color: white;
-    /* text-shadow: 1px 1px 2px rgba(0,0,0,0.7); */
-    background-color: #2d2e30;
-}
-/* 
-.custom-marker--from {
-    background-color: #3b82f6;
 }
 
-.custom-marker--to {
-    background-color: #ef4444; 
-} */
-
-.custom-marker:hover {
+.origin-destination-marker:hover {
     opacity: 0.8;
 }
 
-.custom-marker--dragging {
+.origin-destination-marker--dragging {
     cursor: grabbing;
     opacity: 0.5;
 }
+
+/* DirectionsPanel light mode overrides */
+  .theme-light #layersPanelMobileButton.collapsed,
+  .theme-light .directions-panel-mobile-button.collapsed {
+    color: black !important;
+    background: #ffffff !important;
+  }
+  
+  .theme-light #layersPanelMobileButton.expanded,
+  .theme-light .directions-panel-mobile-button.expanded {
+    color: #111827 !important;
+    background: #f3f4f6 !important;
+  }
+  
+  /* Additional global overrides for any remaining dark styles */
+  .theme-light {
+    /* Ensure all text is dark in light mode */
+    color: rgba(0, 0, 0, 0.85) !important;
+  }
+  
+  .theme-light * {
+    /* Override any remaining dark text colors */
+    color: inherit;
+  }
 
 /* Mobile */
 @media (min-width: 320px) and (max-width: 480px) {
