@@ -2,7 +2,7 @@
     {
         "name": "DEBUG - Inclusas",
         "onlyDebug": true,
-        "description": "Vias inclusas no cálculo de total de kilometros da cidade.",
+        "description": "Vias inclusas no cálculo de total de quilômetros da cidade.",
         "filters": [
             ["ciclomapa:considered", "true"]
         ],
@@ -137,8 +137,8 @@
             ["cycleway:right", "lane"],
             ["cycleway:both", "lane"],
             ["cycleway", "opposite_lane"],
-            ["cycleway:right", "opposite_lane"],
-            ["cycleway:left", "opposite_lane"]
+            ["cycleway:left", "opposite_lane"],
+            ["cycleway:right", "opposite_lane"]
         ],
         "style": {
             "lineColor": "#A1C181",
@@ -152,13 +152,18 @@
             ["cycleway", "buffered_lane"],
             ["cycleway:left", "buffered_lane"],
             ["cycleway:right", "buffered_lane"],
+            ["cycleway:both", "buffered_lane"],
             ["cycleway", "shared_lane"],
             ["cycleway:left", "shared_lane"],
             ["cycleway:right", "shared_lane"],
+            ["cycleway:both", "shared_lane"],
             ["cycleway", "share_busway"],
             ["cycleway:left", "share_busway"],
             ["cycleway:right", "share_busway"],
-            ["cycleway", "opposite_share_busway"]
+            ["cycleway:both", "share_busway"],
+            ["cycleway", "opposite_share_busway"],
+            ["cycleway:left", "opposite_share_busway"],
+            ["cycleway:right", "opposite_share_busway"]
         ],
         "style": {
             "lineColor": "#E9C46A",
@@ -169,7 +174,9 @@
         "name": "Calçada compartilhada",
         "description": "Calçadas com sinalização para circulação compartilhada de bicicletas em que pedestres possuem a prioridade.",
         "filters": [
+            [["highway","cycleway"],["bicycle","designated"],["foot","designated"]],
             [["highway","footway"],["bicycle","designated"]],
+            [["highway","footway"],["bicycle","yes"]],
             [["highway","pedestrian"],["bicycle","designated"]],
             [["highway","pedestrian"],["bicycle","yes"]],
             ["cycleway", "sidepath"],
