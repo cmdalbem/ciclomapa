@@ -929,12 +929,14 @@ class Map extends Component {
                     ['==', ['get', 'type'], 'Calçada compartilhada'], '#F56743',
                     '#00ff00' // Default fallback color
                 ],
-                'line-opacity': [
-                    'case',
-                    ['boolean', ['feature-state', 'selected'], false],
-                        1.0, // Full opacity when selected
-                        0.4  // More transparent by default to not compete with routes
-                ],
+                // @TODO disable temporarily since it's not initializing properly
+                // 'line-opacity': [
+                //     'case',
+                //     ['boolean', ['feature-state', 'selected'], false],
+                //         1.0, // Full opacity when selected
+                //         0.4  // More transparent by default to not compete with routes
+                // ],
+                'line-opacity': 1,
                 'line-width': [
                     "interpolate",
                         ["exponential", 1.5],
