@@ -66,13 +66,12 @@ class LayersPanel extends Component {
                         <div
                             id="layersPanelMobileButton"
                             className={`
-                                p-4 border border-white border-opacity-20 rounded text-lg fixed
-                                ${this.state.collapsed ? 'text-gray-300' : 'text-gray-900 bg-gray-100'}`}
+                                p-4 border border-white border-opacity-20 rounded-full text-lg fixed
+                                ${this.state.collapsed ? 'collapsed text-gray-300' : 'expanded text-gray-900 bg-gray-100'}`}
                             onClick={this.toggleCollapse}
                             style={{
                                 bottom: 30,
                                 left: 8,
-                                background: this.state.collapsed ? '#1c1717' : ''
                             }}
                         >
                             <IconLayers/>
@@ -81,15 +80,15 @@ class LayersPanel extends Component {
                 <div
                     id="layersPanel"
                     className={`
-                        fixed text-white 
-                        ${IS_MOBILE && 'rounded border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
+                        fixed text-white
+                        ${IS_MOBILE && 'bg-black rounded-xl border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
                         ${IS_MOBILE && this.state.collapsed ? 'hidden ' : ''}
                         ${embedMode ? 'pointer-events-none ' : 'cursor-pointer '}
                     `}
                     style={{
                         bottom: IS_MOBILE ? 100 : 30,
                         left: 8,
-                        background: IS_MOBILE && '#1c1717'
+                        zIndex: IS_MOBILE ? 1000 : 1
                     }}
                     onMouseEnter={() => this.setState({hover: true})}
                     onMouseLeave={() => this.setState({hover: false})}
@@ -119,7 +118,7 @@ class LayersPanel extends Component {
                                 )}
                             >
                                 <div
-                                    className="flex items-center justify-between px-4 py-2 sm:py-1 sm:px-3 hover:bg-black hover:bg-opacity-50"
+                                    className="flex rounded-md items-center justify-between px-2 py-1 hover:bg-black hover:bg-opacity-50"
                                     onClick={this.onChange.bind(this, l.id, !l.isActive)}
                                     style={{ opacity: l.isActive ? 1 : .5 }}
                                 >

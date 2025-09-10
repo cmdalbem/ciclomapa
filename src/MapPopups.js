@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl'
 import './MapPopups.css'
 import { osmi18n as i18n } from './osmi18n.js'
 import Analytics from './Analytics.js'
+import { getRouteScore, formatDistance, formatDuration } from './routeUtils.js'
 
 import { IS_MOBILE } from "./constants.js";
 
@@ -13,6 +14,8 @@ class MapPopups {
     popup;
     commentPopup;
     poiPopup;
+    routeTooltips;
+    previousCyclewayLayerClass;
 
     constructor(map, debugMode) {
         this.map = map;
@@ -22,6 +25,7 @@ class MapPopups {
         //   from POI to POI, otherwise clicking on another POI would
         //   just close the popup from the previous one.
         this.cyclewayPopup = new mapboxgl.Popup({
+            className: 'popup-big',
             closeOnClick: IS_MOBILE,
         });
         this.cyclewayPopup.on('close', e => {
@@ -32,14 +36,18 @@ class MapPopups {
         });
 
         this.commentPopup = new mapboxgl.Popup({
+            className: 'popup-big',
             closeOnClick: IS_MOBILE,
             offset: 25
         });
 
         this.poiPopup = new mapboxgl.Popup({
+            className: 'popup-big',
             closeOnClick: IS_MOBILE,
             offset: 25
         });
+
+        this.routeTooltips = [];
     }
 
     getFooter(osmUrl, color='black') {
@@ -134,7 +142,11 @@ class MapPopups {
 
         let html = `
             <div class="text-2xl mt-3 mb-5">
-                <img src="${iconSrc}" class="inline-block align-bottom mr-1" alt=""/> ${properties.name ? properties.name : '<span class="italic opacity-50">Sem nome</span>'}
+                <img src="${iconSrc}" class="inline-block align-bottom mr-1" alt=""/>
+                    ${properties.name
+                        ? properties.name
+                        : '<span class="italic opacity-50">Sem nome</span>'
+                    }
             </div>
 
             <div class="mt-2 text-sm grid grid-cols-2 gap-2">
@@ -172,7 +184,7 @@ class MapPopups {
                 })
                 .map(i => i ? `
                     <div class="mt-2">
-                        <div class="text-xs font-bold tracking-widest uppercase opacity-50">
+                        <div class="text-xs font-bold opacity-50">
                             ${i[0]}
                         </div>
                         <div>
@@ -203,23 +215,29 @@ class MapPopups {
         const properties = e.features[0].properties;
         const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
         const bgClass = layer.id;
+        
+        if (this.previousCyclewayLayerClass) {
+            this.cyclewayPopup.removeClassName(this.previousCyclewayLayerClass);
+        }
+        this.previousCyclewayLayerClass = bgClass;
 
-        let internalPropsStr = '';
+        let debugPropsStr = '';
         if (this.debugMode) {
-            // Show only the props marked with ciclomapa:
-            let internalProps = {};
-            for (let k in properties) {
-                if (k.includes('ciclomapa')) {
-                    internalProps[k.split('ciclomapa:')[1]] = properties[k];
-                }
-            }
-            internalPropsStr = `
-                <div class="text-white">
-                    ${JSON.stringify(internalProps, null, 2)
-                    .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-                    .replace(/"|,|\{|\}/g, '')}
-                </div>
-            `;
+            debugPropsStr = `
+                <div class="mt-2 text-sm grid grid-cols-2 gap-2">
+                    ${Object.keys(properties).map(key => key ? `
+                        <div class="mt-2">
+                            <div class="text-xs font-bold opacity-50">
+                                ${key.includes('ciclomapa') ? key.split('ciclomapa:')[1] : key}
+                            </div>
+                            <div>
+                                ${typeof properties[key] === 'number' && !Number.isInteger(properties[key]) 
+                                    ? properties[key].toFixed(1) 
+                                    : (properties[key] || '')}
+                            </div>
+                        </div>` : '')
+                    .join('')}
+                </div>`;
         }
 
         let html = `
@@ -237,7 +255,7 @@ class MapPopups {
                     ${layer.name}
                 </div>
 
-                ${internalPropsStr}
+                ${debugPropsStr}
 
                 ${this.getFooter(osmUrl)}
             </div>
@@ -259,7 +277,105 @@ class MapPopups {
     }
 
     hidePopup() {
+        this.cyclewayPopup.removeClassName(this.previousCyclewayLayerClass);
+        this.previousCyclewayLayerClass = null;
+
         this.cyclewayPopup.remove();
+    }
+
+    // Route tooltip methods
+    createRouteTooltipHTML(route, routeIndex, routeCoverageData, isDarkMode, selectedRouteIndex = null) {
+        const { score: routeScore, cssClass: routeScoreClass } = getRouteScore(routeCoverageData, routeIndex);
+        const stateClass = this.getTooltipStateClass(routeIndex, selectedRouteIndex);
+        
+        const baseClasses = "px-2 py-1 text-xs font-medium shadow-lg cursor-pointer transition-all duration-200 max-w-[200px]";
+        
+        return `
+            <div class="route-tooltip-content ${stateClass}">
+                <div class="${baseClasses} text-black" data-route-index="${routeIndex}">
+                    <div class="flex items-center space-x-2">
+                        ${routeScore !== null ? `
+                            <div class="${routeScoreClass} text-white px-1 py-0.5 rounded text-xs font-mono">
+                                ${routeScore}
+                            </div>
+                        ` : ''}
+                        <div class="flex flex-col">
+                            <span class="font-semibold">${formatDistance(route.distance)}</span>
+                            <span class="text-gray-500">${formatDuration(route.duration)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    getTooltipStateClass(routeIndex, selectedRouteIndex) {
+        if (selectedRouteIndex === routeIndex) return 'bg-white rounded-md';
+        if (selectedRouteIndex !== null) return 'bg-gray-300 hover:bg-white rounded-md';
+        return '';
+    }
+
+    updateRouteTooltips(directions, routeCoverageData, isDarkMode, onRouteSelected, selectedRouteIndex = null) {
+        // Clear existing route tooltips
+        this.clearRouteTooltips();
+
+        if (directions && directions.routes && directions.routes.length > 0) {
+            directions.routes.forEach((route, index) => {
+                if (!route.geometry || route.geometry.type !== 'LineString') {
+                    return;
+                }
+
+                // Calculate midpoint of the route
+                const coordinates = route.geometry.coordinates;
+                const midIndex = Math.floor(coordinates.length / 2);
+                const midPoint = coordinates[midIndex];
+
+                // Create popup for this route
+                const popup = new mapboxgl.Popup({
+                    closeButton: false,
+                    closeOnClick: false,
+                    closeOnMove: false,
+                    className: 'route-tooltip-popup'
+                })
+                .setLngLat(midPoint)
+                .setHTML(this.createRouteTooltipHTML(route, index, routeCoverageData, isDarkMode, selectedRouteIndex))
+                .addTo(this.map);
+
+                // Add click handler to the popup content
+                popup.getElement().addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (onRouteSelected) {
+                        onRouteSelected(index);
+                    }
+                });
+
+                // Store popup reference for cleanup
+                this.routeTooltips.push(popup);
+            });
+
+            // Update tooltip states after creation
+            this.updateTooltipStates(selectedRouteIndex);
+        }
+    }
+
+    updateTooltipStates(selectedRouteIndex) {
+        if (!this.routeTooltips) return;
+
+        this.routeTooltips.forEach((popup, index) => {
+            const contentDiv = popup.getElement()?.querySelector('.route-tooltip-content');
+            if (contentDiv) {
+                contentDiv.className = `route-tooltip-content ${this.getTooltipStateClass(index, selectedRouteIndex)}`;
+            }
+        });
+    }
+
+    updateTooltipSelectedState(selectedRouteIndex) {
+        this.updateTooltipStates(selectedRouteIndex);
+    }
+
+    clearRouteTooltips() {
+        this.routeTooltips.forEach(popup => popup.remove());
+        this.routeTooltips = [];
     }
 }
 
