@@ -1,6 +1,6 @@
 // Generalized directions service supporting multiple providers
 import mbxDirections from '@mapbox/mapbox-sdk/services/directions';
-import { MAPBOX_ACCESS_TOKEN, OPENROUTESERVICE_API_KEY, GRAPHHOPPER_API_KEY, VALHALLA_API_KEY } from './constants';
+import { MAPBOX_ACCESS_TOKEN, OPENROUTESERVICE_API_KEY, GRAPHHOPPER_API_KEY } from './constants';
 
 // Abstract base class for directions providers
 class DirectionsProvider {
@@ -187,7 +187,7 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
                 
                 // Sets the factor by which the alternatives routes can be longer than the optimal route.
                 // Increasing can lead to worse alternatives. Default: 1.4
-                'alternative_route.max_weight_factor': 2,
+                'alternative_route.max_weight_factor': 4,
                 
                 // How similar an alternative route can be to the optimal route. Increasing can lead to worse alternatives. Default: 0.6
                 'alternative_route.max_share_factor': 0.5,
@@ -298,7 +298,6 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
 class ValhallaDirectionsProvider extends DirectionsProvider {
     constructor(config = {}) {
         super(config);
-        this.apiKey = VALHALLA_API_KEY;
         this.baseUrl = config.baseUrl || 'https://valhalla1.openstreetmap.de/route';
     }
 
@@ -325,7 +324,7 @@ class ValhallaDirectionsProvider extends DirectionsProvider {
                 alternates: 5,
             };
 
-            const url = this.apiKey ? `${this.baseUrl}?api_key=${this.apiKey}` : this.baseUrl;
+            const url = this.baseUrl;
             
             const response = await fetch(url, {
                 method: 'POST',
