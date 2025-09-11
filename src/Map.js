@@ -423,12 +423,6 @@ class Map extends Component {
                         adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3),
                         l.style.lineColor
                     ],
-                    // "line-opacity": [
-                    //     "case",
-                    //     ["boolean", ["feature-state", "routes-active"], false],
-                    //     ROUTES_ACTIVE_OPACITY,
-                    //     1.0
-                    // ],
                     "line-width": [
                         "interpolate",
                             ["exponential", 1.5],
@@ -460,8 +454,8 @@ class Map extends Component {
                     "line-color": [
                         "case",
                         ["boolean", ["feature-state", "routes-active"], false],
-                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.6),
-                        this.props.isDarkMode ? l.style.lineColor : adjustColorBrightness(l.style.lineColor, -0.1)
+                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.5),
+                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0 : -0.1),
                     ],
                     "line-width": [
                         "interpolate",
@@ -768,26 +762,14 @@ class Map extends Component {
 
     }
 
-    initDirectionsLayers() {
-        const map = this.map;
-        if (!map) return;
-
-        map.addSource("directions-route", {
-            "type": "geojson",
-            "data": {
-                'type': 'FeatureCollection',
-                'features': []
-            }
-        });
-
-        // The directions route is made of 3 layers:
-        // 1. A white "padding" layer to improve contrast (directions-route-padding)
-        // 2. A black border layer (directions-route--border)
-        // 3. The main route background layer (directions-route)
+    createRouteLayerSet(map, sourceId, layerType) {
+        const suffix = layerType === 'top' ? '-selected' : 's-unselected';
+        
+        // 1. Padding layer
         map.addLayer({
-            id: 'directions-route-padding',
+            id: `route-padding${suffix}`,
             type: 'line',
-            source: 'directions-route',
+            source: sourceId,
             layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: {
                 'line-color': this.props.isDarkMode ? '#2d2e30' : '#FFFFFF',
@@ -801,106 +783,136 @@ class Map extends Component {
             },
             filter: ['==', '$type', 'LineString']
         });
+
+        // 2. Border layer
         map.addLayer({
-            id: 'directions-route--border',
+            id: `route--border${suffix}`,
             type: 'line',
-            source: 'directions-route',
+            source: sourceId,
             layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: {
-                // 'line-color': this.props.isDarkMode ? '#ffffff' : '#211F1C',
-                'line-color': [
-                    'case',
-                    ['boolean', ['feature-state', 'selected'], false],
-                        this.props.isDarkMode ? '#ffffff' : '#211F1C',
-                    ['case',
+                'line-color': layerType === 'top' 
+                    ? (this.props.isDarkMode ? '#ffffff' : '#211F1C') // Selected route border
+                    : [
+                        'case',
                         ['boolean', ['feature-state', 'hover'], false],
                             this.props.isDarkMode ? '#ffffff' : '#211F1C', // On hover
                             this.props.isDarkMode ? '#999999' : '#7A7A78', // Default
-                    ]
-                ], 
+                    ],
                 "line-width": [
                     "interpolate",
-                        ["exponential", 1.5],
-                        ["zoom"],
-                        6, Math.max(1, DIRECTIONS_LINE_WIDTH/4),
-                        18, DIRECTIONS_LINE_WIDTH * DEFAULT_LINE_WIDTH_MULTIPLIER
-                ]
-            },
-            filter: ['==', '$type', 'LineString']
-        });
-        map.addLayer({
-            id: 'directions-route',
-            type: 'line',
-            source: 'directions-route',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-                'line-color': [
-                    'case',
-                    ['boolean', ['feature-state', 'selected'], false],
-                        this.props.isDarkMode ? '#2d2e30' : '#FFFFFF', // Selected color = street color
-                        this.props.isDarkMode ? '#1c1a17' : '#FAFAFA'  // Default color = map color (for better contrast)
-                ],
-                "line-width": [
-                    "interpolate",
-                        ["exponential", 1.5],
-                        ["zoom"],
-                        10, Math.max(1, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH)/4),
-                        18, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH) * DEFAULT_LINE_WIDTH_MULTIPLIER
+                    ["exponential", 1.5],
+                    ["zoom"],
+                    6, Math.max(1, DIRECTIONS_LINE_WIDTH/4),
+                    18, DIRECTIONS_LINE_WIDTH * DEFAULT_LINE_WIDTH_MULTIPLIER
                 ]
             },
             filter: ['==', '$type', 'LineString']
         });
 
-        map.on('click', 'directions-route', (e) => {
-            if (e.features && e.features.length > 0) {
-                const routeIndex = e.features[0].properties.routeIndex;
-                // Call the parent component's route selection handler
-                if (this.props.onRouteSelected) {
-                    this.props.onRouteSelected(routeIndex);
+        // 3. Main route layer
+        map.addLayer({
+            id: `route${suffix}`,
+            type: 'line',
+            source: sourceId,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': layerType === 'top'
+                    ? (this.props.isDarkMode ? '#000000' : '#FFFFFF') // Selected route color
+                    : [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                            this.props.isDarkMode ? '#000000' : '#FFFFFF', // On hover
+                            this.props.isDarkMode ? '#444547' : '#C5C3C1'  // Default unselected
+                    ],
+                "line-width": [
+                    "interpolate",
+                    ["exponential", 1.5],
+                    ["zoom"],
+                    10, Math.max(1, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH)/4),
+                    18, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH) * DEFAULT_LINE_WIDTH_MULTIPLIER
+                ]
+            },
+            filter: ['==', '$type', 'LineString']
+        });
+    }
+
+    setupRouteEventHandlers(map) {
+        const self = this;
+        
+        // Set up click handlers for both top and bottom layers
+        ['route-selected', 'routes-unselected'].forEach(layerId => {
+            map.on('click', layerId, (e) => {
+                if (e.features && e.features.length > 0) {
+                    const routeIndex = e.features[0].properties.routeIndex;
+                    if (self.props.onRouteSelected) {
+                        self.props.onRouteSelected(routeIndex);
+                    }
                 }
-            }
+            });
         });
 
         // Track currently hovered route
         this.currentHoveredRoute = null;
 
-        // Change cursor and add hover effects
-        map.on('mouseenter', 'directions-route', (e) => {
-            map.getCanvas().style.cursor = 'pointer';
-            
-            // Set hover state on the feature
-            if (e.features && e.features.length > 0) {
-                const routeIndex = e.features[0].properties.routeIndex;
-                this.currentHoveredRoute = routeIndex;
-                map.setFeatureState(
-                    { source: 'directions-route', id: routeIndex },
-                    { hover: true }
-                );
+        // Set up hover handlers for both top and bottom layers
+        ['route-selected', 'routes-unselected'].forEach(layerId => {
+            map.on('mouseenter', layerId, (e) => {
+                map.getCanvas().style.cursor = 'pointer';
                 
-                // Notify parent component about hover
-                if (this.props.onRouteHovered) {
-                    this.props.onRouteHovered(routeIndex);
+                if (e.features && e.features.length > 0) {
+                    const routeIndex = e.features[0].properties.routeIndex;
+                    this.currentHoveredRoute = routeIndex;
+                    
+                    // Determine which source this layer belongs to
+                    const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
+                    map.setFeatureState(
+                        { source: sourceId, id: routeIndex },
+                        { hover: true }
+                    );
+                    
+                    if (self.props.onRouteHovered) {
+                        self.props.onRouteHovered(routeIndex);
+                    }
                 }
-            }
-        });
+            });
 
-        map.on('mouseleave', 'directions-route', (e) => {
-            map.getCanvas().style.cursor = '';
-            
-            // Clear hover state using tracked route index
-            if (this.currentHoveredRoute !== null) {
-                map.setFeatureState(
-                    { source: 'directions-route', id: this.currentHoveredRoute },
-                    { hover: false }
-                );
-                this.currentHoveredRoute = null;
+            map.on('mouseleave', layerId, (e) => {
+                map.getCanvas().style.cursor = '';
                 
-                // Notify parent component to clear hover
-                if (this.props.onRouteHovered) {
-                    this.props.onRouteHovered(null);
+                if (this.currentHoveredRoute !== null) {
+                    // Determine which source this layer belongs to
+                    const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
+                    map.setFeatureState(
+                        { source: sourceId, id: this.currentHoveredRoute },
+                        { hover: false }
+                    );
+                    this.currentHoveredRoute = null;
                 }
-            }
+                
+                if (self.props.onRouteUnhovered) {
+                    self.props.onRouteUnhovered();
+                }
+            });
         });
+    }
+
+    initDirectionsLayers() {
+        const map = this.map;
+        if (!map) return;
+
+        const emptySource = {
+            "type": "geojson",
+            "data": {
+                'type': 'FeatureCollection',
+                'features': []
+            }
+        }
+        map.addSource("route-selected", emptySource);
+        map.addSource("routes-unselected", emptySource);
+        this.createRouteLayerSet(map, 'routes-unselected', 'bottom');
+        this.createRouteLayerSet(map, 'route-selected', 'top');
+        this.setupRouteEventHandlers(map);
     }
 
     initOverlappingCyclepathsLayer() {
@@ -1041,37 +1053,67 @@ class Map extends Component {
         if (!map) return;
 
         // Check if directions sources exist (they might not be initialized yet)
-        if (!map.getSource('directions-route')) {
+        if (!map.getSource('route-selected') || !map.getSource('routes-unselected')) {
             console.warn('Directions sources not yet initialized, skipping update');
             return;
         }
 
-        // Update the existing layers' data
         if (directions && directions.routes && directions.routes.length > 0) {
-            // Create a combined GeoJSON with all routes
-            const allRoutes = {
-                type: 'FeatureCollection',
-                features: directions.routes.map((route, index) => ({
-                    type: 'Feature',
-                    id: index, // Add explicit ID for feature state
-                    properties: { 
-                        routeIndex: index,
-                        distance: route.distance,
-                        duration: route.duration
-                    },
-                    geometry: route.geometry
-                }))
-            };
-            
-            // Update the route layer with all routes
-            map.getSource('directions-route').setData(allRoutes);
+            // Create GeoJSON features for all routes
+            const routeFeatures = directions.routes.slice().reverse().map((route) => ({
+                type: 'Feature',
+                id: route.sortedIndex, // Add explicit ID for feature state
+                properties: { 
+                    routeIndex: route.sortedIndex,
+                    distance: route.distance,
+                    duration: route.duration
+                },
+                geometry: route.geometry
+            }));
+
+            // Distribute routes between top and bottom layers based on current selection
+            this.distributeRoutesBetweenLayers(routeFeatures);
             
             if (directions.bbox) { 
                 map.fitBounds(directions.bbox, { padding: 100, duration: 2000 }); 
             }
         } else {
-            // Clear the directions by setting empty data
-            map.getSource('directions-route').setData({ type: 'FeatureCollection', features: [] });
+            // Clear both sources
+            const emptyData = { type: 'FeatureCollection', features: [] };
+            map.getSource('route-selected').setData(emptyData);
+            map.getSource('routes-unselected').setData(emptyData);
+        }
+    }
+
+    distributeRoutesBetweenLayers(routeFeatures) {
+        const map = this.map;
+        const selectedRouteIndex = this.props.selectedRouteIndex;
+        
+        // If there's a selected route, put it in top layer and others in bottom
+        if (selectedRouteIndex !== null && selectedRouteIndex !== undefined) {
+            const selectedRoute = routeFeatures.find(f => f.properties.routeIndex === selectedRouteIndex);
+            const otherRoutes = routeFeatures.filter(f => f.properties.routeIndex !== selectedRouteIndex);
+            
+            map.getSource('route-selected').setData({
+                type: 'FeatureCollection',
+                features: selectedRoute ? [selectedRoute] : []
+            });
+            
+            map.getSource('routes-unselected').setData({
+                type: 'FeatureCollection',
+                features: otherRoutes
+            });
+        } else {
+            // No selection, put all routes in bottom layer
+            map.getSource('route-selected').setData({
+                type: 'FeatureCollection',
+                features: []
+            });
+            
+            map.getSource('routes-unselected').setData({
+                type: 'FeatureCollection',
+                features: routeFeatures
+            });
         }
     }
 
@@ -1123,23 +1165,36 @@ class Map extends Component {
 
     updateSelectedRoute(selectedRouteIndex) {
         const map = this.map;
-        if (!map || !map.getSource('directions-route')) return;
+        if (!map || !map.getSource('route-selected') || !map.getSource('routes-unselected')) return;
 
-        // Clear all selected and hover states
-        const features = map.querySourceFeatures('directions-route');
-        features.forEach((feature, index) => {
+        // Get all route features from both sources
+        const topFeatures = map.querySourceFeatures('route-selected');
+        const bottomFeatures = map.querySourceFeatures('routes-unselected');
+        const allFeatures = [...topFeatures, ...bottomFeatures];
+
+        // Clear all hover states (no more selected states needed)
+        allFeatures.forEach((feature) => {
+            const sourceId = topFeatures.includes(feature) ? 'route-selected' : 'routes-unselected';
             map.setFeatureState(
-                { source: 'directions-route', id: index },
-                { selected: false, hover: false }
+                { source: sourceId, id: feature.id },
+                { hover: false }
             );
         });
 
-        // Set the selected route
-        if (selectedRouteIndex !== null && selectedRouteIndex !== undefined) {
-            map.setFeatureState(
-                { source: 'directions-route', id: selectedRouteIndex },
-                { selected: true }
-            );
+        // Redistribute routes between layers based on new selection
+        // We need to reconstruct the route features from the original directions data
+        if (this.props.directions && this.props.directions.routes) {
+            const routeFeatures = this.props.directions.routes.slice().reverse().map((route) => ({
+                type: 'Feature',
+                id: route.sortedIndex,
+                properties: { 
+                    routeIndex: route.sortedIndex,
+                    distance: route.distance,
+                    duration: route.duration
+                },
+                geometry: route.geometry
+            }));
+            this.distributeRoutesBetweenLayers(routeFeatures);
         }
 
         // Update overlapping cyclepaths selected states
@@ -1149,15 +1204,20 @@ class Map extends Component {
         this.updateTooltipSelectedState(selectedRouteIndex);
     }
 
+
     clearAllHoverStates() {
         const map = this.map;
-        if (!map || !map.getSource('directions-route')) return;
+        if (!map || !map.getSource('route-selected') || !map.getSource('routes-unselected')) return;
 
-        // Clear all hover states
-        const features = map.querySourceFeatures('directions-route');
-        features.forEach((feature, index) => {
+        // Clear all hover states from both sources
+        const topFeatures = map.querySourceFeatures('route-selected');
+        const bottomFeatures = map.querySourceFeatures('routes-unselected');
+        const allFeatures = [...topFeatures, ...bottomFeatures];
+        
+        allFeatures.forEach((feature) => {
+            const sourceId = topFeatures.includes(feature) ? 'route-selected' : 'routes-unselected';
             map.setFeatureState(
-                { source: 'directions-route', id: index },
+                { source: sourceId, id: feature.id },
                 { hover: false }
             );
         });
@@ -1168,23 +1228,32 @@ class Map extends Component {
 
     updateHoveredRoute(hoveredRouteIndex) {
         const map = this.map;
-        if (!map || !map.getSource('directions-route')) return;
+        if (!map || !map.getSource('route-selected') || !map.getSource('routes-unselected')) return;
 
         // Clear all hover states first
-        const features = map.querySourceFeatures('directions-route');
-        features.forEach((feature, index) => {
+        const topFeatures = map.querySourceFeatures('route-selected');
+        const bottomFeatures = map.querySourceFeatures('routes-unselected');
+        const allFeatures = [...topFeatures, ...bottomFeatures];
+        
+        allFeatures.forEach((feature) => {
+            const sourceId = topFeatures.includes(feature) ? 'route-selected' : 'routes-unselected';
             map.setFeatureState(
-                { source: 'directions-route', id: index },
+                { source: sourceId, id: feature.id },
                 { hover: false }
             );
         });
 
         // Set hover state for the specified route
         if (hoveredRouteIndex !== null && hoveredRouteIndex !== undefined) {
-            map.setFeatureState(
-                { source: 'directions-route', id: hoveredRouteIndex },
-                { hover: true }
-            );
+            // Find which source contains the hovered route
+            const hoveredFeature = allFeatures.find(f => f.properties.routeIndex === hoveredRouteIndex);
+            if (hoveredFeature) {
+                const sourceId = topFeatures.includes(hoveredFeature) ? 'route-selected' : 'routes-unselected';
+                map.setFeatureState(
+                    { source: sourceId, id: hoveredRouteIndex },
+                    { hover: true }
+                );
+            }
         }
     }
 
@@ -1214,7 +1283,6 @@ class Map extends Component {
             this.popups.updateRouteTooltips(
                 this.props.directions,
                 this.props.routeCoverageData,
-                this.props.isDarkMode,
                 this.props.onRouteSelected,
                 this.props.selectedRouteIndex
             );
