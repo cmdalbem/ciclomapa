@@ -183,7 +183,7 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
                 calc_points: 'true',
                 details: ['bike_network'],
                 algorithm: 'alternative_route',
-                'alternative_route.max_paths': 5,
+                'alternative_route.max_paths': 2,
                 
                 // Sets the factor by which the alternatives routes can be longer than the optimal route.
                 // Increasing can lead to worse alternatives. Default: 1.4

@@ -302,6 +302,7 @@ class MapPopups {
                         <div class="flex flex-col">
                             <span class="font-semibold">${formatDistance(route.distance)}</span>
                             <span class="text-gray-500">${formatDuration(route.duration)}</span>
+                            ${route.provider ? `<span class="text-xs text-gray-400 font-mono">${route.provider}</span>` : ''}
                         </div>
                     </div>
                 </div>

@@ -88,3 +88,6 @@ export const LENGTH_CALCULATE_STRATEGIES = [
     'average',  // Ignore sides, cut total raw street length by half and call it a day
 ]
 export const DEFAULT_LENGTH_CALCULATE_STRATEGIES = 'average';
+
+// Hybrid routing
+export const HYBRID_MAX_RESULTS = 5;

@@ -36,7 +36,7 @@ class DirectionsPanel extends Component {
             fromGeocoderAttached: false,
             toGeocoderAttached: false,
             focusedInput: null,
-            selectedProvider: 'valhalla'
+            selectedProvider: 'hybrid'
         };
 
         this.fromMarker = null;
@@ -719,7 +719,7 @@ class DirectionsPanel extends Component {
                             items={[
                                 {
                                     key: 'hybrid',
-                                    label: 'Hybrid',
+                                    label: '✨Combinado',
                                 },
                                 {
                                     key: 'valhalla',
@@ -821,13 +821,20 @@ class DirectionsPanel extends Component {
                                                         </div>
 
                                                         <div className="flex flex-col flex-end">
-                                                            <span className="directions--legLabel text-sm mb-1">
-                                                                {
-                                                                route.legs && route.legs.length > 0 && route.legs[0].summary.length > 0 ? route.legs[0].summary
-                                                                    : route.summary ? route.summary
-                                                                    : `Opção ${index + 1}`
-                                                                }
-                                                            </span>
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="directions--legLabel text-sm">
+                                                                    {
+                                                                    // route.legs && route.legs.length > 0 && route.legs[0].summary.length > 0 ? route.legs[0].summary :
+                                                                    //     route.summary ? route.summary :
+                                                                        `Opção ${index + 1}`
+                                                                    }
+                                                                </span>
+                                                                {route.provider && (
+                                                                    <span className="text-xs px-1 bg-gray-600 bg-opacity-50 rounded text-gray-300 font-mono">
+                                                                        {route.provider}
+                                                                    </span>
+                                                                )}
+                                                            </div>
 
                                                             {/* {(route.ascend !== undefined || route.descend !== undefined) && (
                                                                 <span className="flex flex-row font-normal items-center text-gray-400">
