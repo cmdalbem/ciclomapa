@@ -27,6 +27,7 @@ import AirtableDatabase from './AirtableDatabase.js'
 import CommentModal from './CommentModal.js'
 import NewCommentCursor from './NewCommentCursor.js'
 import MapPopups from './MapPopups.js'
+import { adjustColorBrightness } from './utils.js'
 
 import './Map.css'
 
@@ -416,13 +417,18 @@ class Map extends Component {
                 "description": l.description,
                 "filter": filters,
                 "paint": {
-                    "line-color": l.style.lineColor,
-                    "line-opacity": [
+                    "line-color": [
                         "case",
                         ["boolean", ["feature-state", "routes-active"], false],
-                        ROUTES_ACTIVE_OPACITY,
-                        1.0
+                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3),
+                        l.style.lineColor
                     ],
+                    // "line-opacity": [
+                    //     "case",
+                    //     ["boolean", ["feature-state", "routes-active"], false],
+                    //     ROUTES_ACTIVE_OPACITY,
+                    //     1.0
+                    // ],
                     "line-width": [
                         "interpolate",
                             ["exponential", 1.5],
@@ -451,16 +457,11 @@ class Map extends Component {
                 "description": l.description,
                 "filter": filters,
                 "paint": {
-                    "line-color": l.style.lineColor,
-                    "line-opacity": [
+                    "line-color": [
                         "case",
                         ["boolean", ["feature-state", "routes-active"], false],
-                        ROUTES_ACTIVE_OPACITY,
-                            [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                0.7, // On hover
-                                1.0
-                            ],
+                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.6),
+                        this.props.isDarkMode ? l.style.lineColor : adjustColorBrightness(l.style.lineColor, -0.1)
                     ],
                     "line-width": [
                         "interpolate",
