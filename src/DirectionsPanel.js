@@ -22,7 +22,7 @@ import {
     IS_MOBILE
 } from './constants.js'
 import DirectionsManager from './DirectionsManager.js'
-import { getRouteScore, getCoverageBreakdown, getCoverageBreakdownSimple, formatDistance, formatDuration } from './routeUtils.js'
+import { formatDistance, formatDuration } from './routeUtils.js'
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
@@ -682,8 +682,8 @@ class DirectionsPanel extends Component {
                     `}
                 >
                     <div className="p-4">
-                        <div id="directionsPanel--header" className="flex justify-between">
-                            <h3 className=" font-semibold flex items-center">
+                        <div id="directionsPanel--header" className="flex justify-between items-start">
+                            <h3 className=" font-semibold flex items-center mb-0">
                                 <IconRoute className="mr-2" />
                                 Rotas de bici
                                 <span className="bg-white opacity-50 ml-1 px-1 py-0 rounded-full text-black text-xs leading-normal tracking-wider" style={{fontSize: 10}}>
@@ -691,15 +691,28 @@ class DirectionsPanel extends Component {
                                 </span>
                             </h3>
 
-                            <div className="flex gap-2">
+                            <div className="flex items-start">
                                 {directions && (
                                     <Button
                                     onClick={this.clearDirections}
                                     type="text" 
-                                    size="small" 
+                                    // size="small" 
                                     >
                                         Limpar
                                     </Button>
+                                )}
+                                {this.state.fromPoint && this.state.toPoint && (
+                                    <Button 
+                                        type="text"
+                                        shape="circle"
+                                        icon={
+                                            <IconSwap style={{
+                                                display: 'inline-block',
+                                            }}/>}
+                                        onClick={this.swapOriginDestination}
+                                        className="swap-button flex-shrink-0 text-white"
+                                        title="Trocar origem e destino"
+                                    />
                                 )}
                                 {/* Put this back after we have a trigger to open the panel */}
                                 {/* <Button
@@ -712,7 +725,7 @@ class DirectionsPanel extends Component {
                         </div>
 
                         {/* Provider Selector */}
-                        <Tabs
+                        {/* <Tabs
                             size="small"
                             activeKey={this.state.selectedProvider}
                             onChange={this.handleProviderChange}
@@ -734,7 +747,7 @@ class DirectionsPanel extends Component {
                                     label: 'Mapbox',
                                 }
                             ]}
-                        />
+                        /> */}
 
                         <Space direction="vertical" size="small" className="w-full mt-2">
                             <div 
@@ -743,25 +756,11 @@ class DirectionsPanel extends Component {
                                 ref={this.attachGeocoderToDOM('from', 'fromGeocoder', 'fromGeocoderAttached')}
                             />
 
-                            <div className="flex items-center gap-2">
-                                <div 
-                                    id="toGeocoder"
-                                    className='flex flex-1'
-                                    ref={this.attachGeocoderToDOM('to', 'toGeocoder', 'toGeocoderAttached')}
-                                />
-                                <Button
-                                    type="text"
-                                    shape="circle"
-                                    icon={
-                                        <IconSwap style={{
-                                            display: 'inline-block',
-                                        }}/>}
-                                    onClick={this.swapOriginDestination}
-                                    disabled={!this.state.fromPoint || !this.state.toPoint}
-                                    className="swap-button flex-shrink-0 text-white"
-                                    title="Trocar origem e destino"
-                                />
-                            </div>
+                            <div 
+                                id="toGeocoder"
+                                className='flex flex-1'
+                                ref={this.attachGeocoderToDOM('to', 'toGeocoder', 'toGeocoderAttached')}
+                            />
 
                             {/* <Button
                                 type="primary"
@@ -789,99 +788,81 @@ class DirectionsPanel extends Component {
                             </div>
                         )}
 
-                        {directions && (
+                        {directions && !directionsLoading && (
                             <div id="directionsPanel--results" className="mt-3">
                                 <div className="space-y-1">
-                                    {directions.routes && directions.routes.map((route, index) => {
-                                        const { score: routeScore, cssClass: routeScoreClass } = getRouteScore(routeCoverageData, index);
-                                        const coverageBreakdown = getCoverageBreakdown(routeCoverageData, index);
-                                        const coverageBreakdownSimple = getCoverageBreakdownSimple(routeCoverageData, index);
-
-                                        return (
-                                            <div
-                                                key={index}
-                                                className={`rounded-lg p-2 cursor-pointer transition-colors ${
-                                                    this.props.selectedRouteIndex === index ? 'bg-white bg-opacity-10 border-opacity-60' : ''
-                                                } ${
-                                                    this.props.hoveredRouteIndex === index ? 'bg-white bg-opacity-5' : ''
-                                                }`}
-                                                onMouseEnter={() => this.handleRouteHover(index)}
-                                                onMouseLeave={this.handleRouteLeave}
-                                                onClick={() => this.handleRouteClick(index)}
-                                            >
-                                                {/* Route alternative summary */}
-                                                <div className="flex justify-between gap-1">
-                                                    {/* 1st column */}
-                                                    <div className="flex items-start">
-                                                        {/* <IconBike className="mt-1 mr-3" /> */}
-                                                        <div 
-                                                            className={`flex items-center mr-2 ${routeScoreClass} px-1.5 py-1.5 rounded-md text-sm leading-none font-mono text-center`} 
-                                                            style={{color: 'white'}}>
-                                                            {routeScore}
-                                                        </div>
-
-                                                        <div className="flex flex-col flex-end">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="directions--legLabel text-sm">
-                                                                    {
-                                                                    // route.legs && route.legs.length > 0 && route.legs[0].summary.length > 0 ? route.legs[0].summary :
-                                                                    //     route.summary ? route.summary :
-                                                                        `Opção ${index + 1}`
-                                                                    }
-                                                                </span>
-                                                                {route.provider && (
-                                                                    <span className="text-xs px-1 bg-gray-600 bg-opacity-50 rounded text-gray-300 font-mono">
-                                                                        {route.provider}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-
-                                                            {/* {(route.ascend !== undefined || route.descend !== undefined) && (
-                                                                <span className="flex flex-row font-normal items-center text-gray-400">
-                                                                    {route.ascend !== undefined && 
-                                                                        <span className="flex items-center mr-2">
-                                                                            <IconTrendingUp className="mr-1"/>{Math.round(route.ascend)}m
-                                                                        </span>
-                                                                    }
-                                                                    {route.descend !== undefined && 
-                                                                        <span className="flex items-center">
-                                                                            <IconTrendingDown className="mr-1"/>{Math.round(route.descend)}m
-                                                                        </span>
-                                                                    }
-                                                                </span>
-                                                            )} */}
-
-                                                            {/* {this.props.selectedRouteIndex === index &&
-                                                                coverageBreakdown : */}
-                                                                {coverageBreakdownSimple}
-                                                            {/* } */}
-                                                        </div>
+                                    {directions.routes && directions.routes.map((route, index) => (
+                                        <div
+                                            key={index}
+                                            className={`rounded-lg p-2 cursor-pointer transition-colors ${
+                                                this.props.selectedRouteIndex === index ? 'bg-white bg-opacity-10 border-opacity-60' : ''
+                                            } ${
+                                                this.props.hoveredRouteIndex === index ? 'bg-white bg-opacity-5' : ''
+                                            }`}
+                                            onMouseEnter={() => this.handleRouteHover(index)}
+                                            onMouseLeave={this.handleRouteLeave}
+                                            onClick={() => this.handleRouteClick(index)}
+                                        >
+                                            <div className="flex justify-between gap-1">
+                                                {/* Left column */}
+                                                <div className="flex items-start">
+                                                    <div 
+                                                        className={`flex items-center mr-2 ${(routeCoverageData[index] || {}).scoreClass || 'bg-gray-600'} px-1.5 py-1.5 rounded-md text-sm leading-none font-mono text-center`} 
+                                                        style={{color: 'white'}}>
+                                                        {(routeCoverageData[index] || {}).score || 0}
                                                     </div>
 
-                                                    {/* 2nd column */}
-                                                    <div className="flex flex-col flex-end flex-shrink-0">
-                                                        <span className="text-sm text-right mb-1">
-                                                            {formatDuration(route.duration)}
-                                                        </span>
-                                                        <span className="text-sm text-gray-400 text-right">
-                                                            {formatDistance(route.distance)}
-                                                        </span>
+                                                    <div className="flex flex-col flex-end">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="directions--legLabel text-sm">
+                                                                {
+                                                                // route.legs && route.legs.length > 0 && route.legs[0].summary.length > 0 ? route.legs[0].summary :
+                                                                //     route.summary ? route.summary :
+                                                                    `Opção ${index + 1}`
+                                                                }
+                                                            </span>
+                                                            {route.provider && (
+                                                                <span className="text-xs px-1 bg-gray-600 bg-opacity-50 rounded text-gray-300 font-mono">
+                                                                    {route.provider}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* {(route.ascend !== undefined || route.descend !== undefined) && (
+                                                            <span className="flex flex-row font-normal items-center text-gray-400">
+                                                                {route.ascend !== undefined && 
+                                                                    <span className="flex items-center mr-2">
+                                                                        <IconTrendingUp className="mr-1"/>{Math.round(route.ascend)}m
+                                                                    </span>
+                                                                }
+                                                                {route.descend !== undefined && 
+                                                                    <span className="flex items-center">
+                                                                        <IconTrendingDown className="mr-1"/>{Math.round(route.descend)}m
+                                                                    </span>
+                                                                }
+                                                            </span>
+                                                        )} */}
+
+                                                        {/* {this.props.selectedRouteIndex === index &&
+                                                            (routeCoverageData[index] || {}).coverageBreakdown : */}
+                                                            {(routeCoverageData[index] || {}).coverageBreakdownSimple || null}
+                                                        {/* } */}
                                                     </div>
                                                 </div>
 
-                                                {/* {route.legs && route.legs[0] && (
-                                                    <div className="text-xs text-gray-400 space-y-1">
-                                                        {route.legs[0].steps && route.legs[0].steps.length > 0 && (
-                                                            <div className="flex">
-                                                                <span className="mr-2">🚴</span>
-                                                                <span>{route.legs[0].steps.length} etapas</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )} */}
+                                                {/* Right column */}
+                                                <div className="flex flex-col flex-end flex-shrink-0">
+                                                    <span className="text-sm text-right mb-1">
+                                                        {formatDuration(route.duration)}
+                                                    </span>
+                                                    <span className="text-sm text-gray-400 text-right">
+                                                        {formatDistance(route.distance)}
+                                                    </span>
+                                                </div>
                                             </div>
+                                        </div>
                                         )
-                                    })}
+                                    )}
                                 </div>
                                 
                                 {/* Disclaimer */}
