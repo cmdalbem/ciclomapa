@@ -1,4 +1,5 @@
 import { calculateCyclepathCoverage } from './geojsonUtils.js';
+import { HYBRID_MAX_RESULTS } from './constants.js';
 
 class DirectionsManager {
     constructor() {
@@ -19,9 +20,16 @@ class DirectionsManager {
         try {
             console.debug('Calculating directions from:', fromCoords, 'to:', toCoords, 'using provider:', provider);
             
-            // Switch to the selected provider and get directions
-            this.directionsService.setProvider(provider);
-            const directions = await this.directionsService.getCyclingDirections(fromCoords, toCoords);
+            let directions;
+            
+            if (provider === 'hybrid') {
+                // Use hybrid approach - call all providers simultaneously
+                directions = await this.calculateHybridDirections(fromCoords, toCoords);
+            } else {
+                // Use single provider
+                this.directionsService.setProvider(provider);
+                directions = await this.directionsService.getCyclingDirections(fromCoords, toCoords);
+            }
             
             // Calculate cyclepath coverage for all routes
             let routeCoverageData = [];
@@ -95,6 +103,82 @@ class DirectionsManager {
             console.error('Directions error in DirectionsManager:', error);
             throw error;
         }
+    }
+
+    async calculateHybridDirections(fromCoords, toCoords) {
+        console.debug('Calculating hybrid directions using all providers');
+        
+        const providers = ['mapbox', 'graphhopper', 'valhalla'];
+        const promises = providers.map(async (providerName) => {
+            try {
+                this.directionsService.setProvider(providerName);
+                const result = await this.directionsService.getCyclingDirections(fromCoords, toCoords);
+                return {
+                    provider: providerName,
+                    routes: result.routes || [],
+                    waypoints: result.waypoints || [],
+                    bbox: result.bbox
+                };
+            } catch (error) {
+                console.warn(`Provider ${providerName} failed:`, error.message);
+                return {
+                    provider: providerName,
+                    routes: [],
+                    waypoints: [],
+                    bbox: null,
+                    error: error.message
+                };
+            }
+        });
+
+        const results = await Promise.allSettled(promises);
+        
+        // Combine all successful results
+        const allRoutes = [];
+        const allWaypoints = [];
+        let combinedBbox = null;
+        
+        results.forEach((result, index) => {
+            if (result.status === 'fulfilled' && result.value.routes.length > 0) {
+                const providerName = result.value.provider;
+                
+                // Add provider info to each route
+                const routesWithProvider = result.value.routes.map(route => ({
+                    ...route,
+                    provider: providerName.charAt(0).toUpperCase() + providerName.slice(1)
+                }));
+                
+                allRoutes.push(...routesWithProvider);
+                
+                // Use waypoints from first successful provider
+                if (allWaypoints.length === 0 && result.value.waypoints.length > 0) {
+                    allWaypoints.push(...result.value.waypoints);
+                }
+                
+                // Combine bounding boxes
+                if (result.value.bbox) {
+                    if (!combinedBbox) {
+                        combinedBbox = [...result.value.bbox];
+                    } else {
+                        combinedBbox[0] = Math.min(combinedBbox[0], result.value.bbox[0]);
+                        combinedBbox[1] = Math.min(combinedBbox[1], result.value.bbox[1]);
+                        combinedBbox[2] = Math.max(combinedBbox[2], result.value.bbox[2]);
+                        combinedBbox[3] = Math.max(combinedBbox[3], result.value.bbox[3]);
+                    }
+                }
+            }
+        });
+
+        // Limit the number of results
+        const limitedRoutes = allRoutes.slice(0, HYBRID_MAX_RESULTS);
+        
+        console.debug(`Hybrid calculation completed: ${limitedRoutes.length} routes (limited from ${allRoutes.length} total) from ${results.filter(r => r.status === 'fulfilled' && r.value.routes.length > 0).length} providers`);
+
+        return {
+            routes: limitedRoutes,
+            waypoints: allWaypoints,
+            bbox: combinedBbox
+        };
     }
 
 }
