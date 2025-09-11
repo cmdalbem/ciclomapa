@@ -682,7 +682,7 @@ class DirectionsPanel extends Component {
                     `}
                 >
                     <div className="p-4">
-                        <div id="directionsPanel--header" className="flex justify-between items-start">
+                        <div id="directionsPanel--header" className="flex justify-between items-start h-6">
                             <h3 className=" font-semibold flex items-center mb-0">
                                 <IconRoute className="mr-2" />
                                 Rotas de bici
@@ -696,7 +696,7 @@ class DirectionsPanel extends Component {
                                     <Button
                                     onClick={this.clearDirections}
                                     type="text" 
-                                    // size="small" 
+                                    size="small" 
                                     >
                                         Limpar
                                     </Button>
@@ -705,6 +705,7 @@ class DirectionsPanel extends Component {
                                     <Button 
                                         type="text"
                                         shape="circle"
+                                        size="small"
                                         icon={
                                             <IconSwap style={{
                                                 display: 'inline-block',
@@ -776,9 +777,14 @@ class DirectionsPanel extends Component {
                         </Space>
 
                         {directionsLoading && (
-                            <div className="mt-3 p-2 text-gray-400 text-sm flex items-center">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 mr-2"></div>
-                                Calculando rotas...
+                            <div className="mt-3 space-y-1">
+                                {[1, 2, 3].map((index) => (
+                                    <div key={index} className={`rounded-lg h-14 bg-gray-600 animate-pulse-2x ${
+                                        index === 1 ? 'bg-opacity-90' : 
+                                        index === 2 ? 'bg-opacity-70' : 
+                                        'bg-opacity-50'
+                                    }`}/>
+                                ))}
                             </div>
                         )}
 
