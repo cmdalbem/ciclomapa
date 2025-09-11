@@ -45,6 +45,7 @@ export const DirectionsProvider = ({ children }) => {
         setHoveredRouteIndex(null);
         setRouteCoverageData([]);
         setDirectionsError(null);
+        setDirectionsLoading(false);
         setIsSettingRoutePoints(false);
     }, []);
 
@@ -61,6 +62,7 @@ export const DirectionsProvider = ({ children }) => {
         setRouteCoverageData(data.routeCoverageData || []);
         setSelectedRouteIndex(0);
         setDirectionsError(null);
+        setDirectionsLoading(false);
     }, []);
 
     const setLoading = useCallback((loading) => {
@@ -69,7 +71,10 @@ export const DirectionsProvider = ({ children }) => {
 
     const setError = useCallback((error) => {
         setDirectionsError(error);
-        setDirectionsLoading(false);
+        // Only set loading to false if there's an actual error (not null)
+        if (error !== null) {
+            setDirectionsLoading(false);
+        }
     }, []);
 
     const value = {

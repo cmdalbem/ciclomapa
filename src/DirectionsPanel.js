@@ -12,9 +12,6 @@ import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import mapboxgl from 'mapbox-gl';
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 import { Popover } from 'antd';
-import {
-    HiOutlineInformationCircle as IconInfo,
-} from "react-icons/hi";
 
 
 import './DirectionsPanel.css';
@@ -339,6 +336,9 @@ class DirectionsPanel extends Component {
         } catch (error) {
             if (this.props.setError) {
                 this.props.setError(error.message);
+            }
+            if (this.props.setLoading) {
+                this.props.setLoading(false);
             }
             console.error('Directions error:', error);
         }
@@ -718,6 +718,10 @@ class DirectionsPanel extends Component {
                             onChange={this.handleProviderChange}
                             items={[
                                 {
+                                    key: 'hybrid',
+                                    label: 'Hybrid',
+                                },
+                                {
                                     key: 'valhalla',
                                     label: 'Valhalla',
                                 },
@@ -874,13 +878,16 @@ class DirectionsPanel extends Component {
                                 </div>
                                 
                                 {/* Disclaimer */}
-                                <div className="p-2 text-gray-500 text-xs">
-                                    <p>
+                                <div className="p-2 text-gray-500 text-xs gap-2 flex flex-col">
+                                    <div>
                                         As rotas são sugestões automáticas. Sempre verifique as condições das vias, sinalização e segurança antes de pedalar :)
-                                    </p>
+                                    </div>
                                     <Popover
                                         content={(
-                                            <div className="text-sm" style={{width: 320}}>
+                                            <div className="text-sm text-white" style={{width: 320}}>
+                                                <h3 className="font-semibold">
+                                                    Como calculamos as notas?
+                                                </h3>
                                                 <p>
                                                     Consideramos o quanto cada rota está coberta por diferentes tipos de infraestrutura cicloviária para calcular uma nota que indique a sua qualidade.
                                                 </p>
@@ -896,7 +903,7 @@ class DirectionsPanel extends Component {
                                         )}
                                     >
                                         <div className="underline">
-                                            Leia mais sobre como calculamos as notas.
+                                            Leia mais sobre as notas
                                         </div>
                                     </Popover>
                                 </div>
