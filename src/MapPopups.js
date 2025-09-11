@@ -284,7 +284,7 @@ class MapPopups {
     }
 
     // Route tooltip methods
-    createRouteTooltipHTML(route, routeIndex, routeCoverageData, isDarkMode, selectedRouteIndex = null) {
+    createRouteTooltipHTML(route, routeIndex, routeCoverageData, selectedRouteIndex = null) {
         const { score: routeScore, cssClass: routeScoreClass } = getRouteScore(routeCoverageData, routeIndex);
         const stateClass = this.getTooltipStateClass(routeIndex, selectedRouteIndex);
         
@@ -292,17 +292,17 @@ class MapPopups {
         
         return `
             <div class="route-tooltip-content ${stateClass}">
-                <div class="${baseClasses} text-black" data-route-index="${routeIndex}">
+                <div class="${baseClasses} text-white" data-route-index="${routeIndex}">
                     <div class="flex items-center space-x-2">
                         ${routeScore !== null ? `
-                            <div class="${routeScoreClass} text-white px-1 py-0.5 rounded text-xs font-mono">
+                            <div class="${routeScoreClass} text-black px-1 py-0.5 rounded text-xs font-mono">
                                 ${routeScore}
                             </div>
                         ` : ''}
                         <div class="flex flex-col">
                             <span class="font-semibold">${formatDistance(route.distance)}</span>
                             <span class="text-gray-500">${formatDuration(route.duration)}</span>
-                            ${route.provider ? `<span class="text-xs text-gray-400 font-mono">${route.provider}</span>` : ''}
+                            ${route.provider ? `<span class="text-xs text-gray-600 font-mono">${route.provider}</span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -311,25 +311,27 @@ class MapPopups {
     }
 
     getTooltipStateClass(routeIndex, selectedRouteIndex) {
-        if (selectedRouteIndex === routeIndex) return 'bg-white rounded-md';
-        if (selectedRouteIndex !== null) return 'bg-gray-300 hover:bg-white rounded-md';
+        if (selectedRouteIndex === routeIndex) return 'bg-black rounded-md';
+        if (selectedRouteIndex !== null) return 'bg-gray-800 hover:bg-black rounded-md';
         return '';
     }
 
-    updateRouteTooltips(directions, routeCoverageData, isDarkMode, onRouteSelected, selectedRouteIndex = null) {
+    updateRouteTooltips(directions, routeCoverageData, onRouteSelected, selectedRouteIndex = null) {
         // Clear existing route tooltips
         this.clearRouteTooltips();
 
         if (directions && directions.routes && directions.routes.length > 0) {
-            directions.routes.forEach((route, index) => {
+            directions.routes.forEach((route) => {
                 if (!route.geometry || route.geometry.type !== 'LineString') {
                     return;
                 }
 
+                console.debug('updateRouteTooltips - route', route, route.sortedIndex);
+
                 // Calculate midpoint of the route
                 const coordinates = route.geometry.coordinates;
-                const midIndex = Math.floor(coordinates.length / 2);
-                const midPoint = coordinates[midIndex];
+                const percentageSlot = (route.sortedIndex + 1) / (directions.routes.length + 1);
+                const midPoint = coordinates[Math.floor(coordinates.length * percentageSlot)];
 
                 // Create popup for this route
                 const popup = new mapboxgl.Popup({
@@ -339,14 +341,14 @@ class MapPopups {
                     className: 'route-tooltip-popup'
                 })
                 .setLngLat(midPoint)
-                .setHTML(this.createRouteTooltipHTML(route, index, routeCoverageData, isDarkMode, selectedRouteIndex))
+                .setHTML(this.createRouteTooltipHTML(route, route.sortedIndex, routeCoverageData, selectedRouteIndex))
                 .addTo(this.map);
 
                 // Add click handler to the popup content
                 popup.getElement().addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (onRouteSelected) {
-                        onRouteSelected(index);
+                        onRouteSelected(route.sortedIndex);
                     }
                 });
 

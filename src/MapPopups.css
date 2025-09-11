@@ -41,23 +41,19 @@
   background: #ffffff;
 }
 
-.theme-dark .mapboxgl-popup-anchor-bottom:not(.route-tooltip-popup) .mapboxgl-popup-tip,
-.theme-light .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+.theme-dark .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
   border-top-color: #333;
 }
 
-.theme-dark .mapboxgl-popup-anchor-top:not(.route-tooltip-popup) .mapboxgl-popup-tip,
-.theme-light .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
+.theme-dark .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
   border-bottom-color: #333;
 }
 
-.theme-light .popup-big .mapboxgl-popup-anchor-bottom:not(.route-tooltip-popup) .mapboxgl-popup-tip,
-.theme-dark .popup-big .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+.theme-light .popup-big .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
   border-top-color: #ffffff;
 }
 
-.theme-light .popup-big .mapboxgl-popup-anchor-top:not(.route-tooltip-popup) .mapboxgl-popup-tip,
-.theme-dark .popup-big .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
+.theme-light .popup-big .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
   border-bottom-color: #ffffff;
 }
 
