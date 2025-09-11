@@ -39,7 +39,7 @@ class DirectionsPanel extends Component {
             fromGeocoderAttached: false,
             toGeocoderAttached: false,
             focusedInput: null,
-            selectedProvider: 'graphhopper'
+            selectedProvider: 'valhalla'
         };
 
         this.fromMarker = null;
@@ -61,6 +61,7 @@ class DirectionsPanel extends Component {
         this.attachGeocoderToDOM = this.attachGeocoderToDOM.bind(this);
         this.calculateDirections = this.calculateDirections.bind(this);
         this.swapOriginDestination = this.swapOriginDestination.bind(this);
+        this.handleProviderChange = this.handleProviderChange.bind(this);
     }
 
     componentDidMount() {
@@ -314,7 +315,7 @@ class DirectionsPanel extends Component {
     }
 
 
-    async calculateDirections(fromCoords, toCoords, provider = 'graphhopper') {
+    async calculateDirections(fromCoords, toCoords, provider) {
         if (this.props.setLoading) {
             this.props.setLoading(true);
         }
@@ -401,6 +402,19 @@ class DirectionsPanel extends Component {
             // Recalculate directions with swapped points
             this.requestDirectionsCalculation();
         });
+    }
+
+    handleProviderChange(provider) {
+        this.setState({
+            selectedProvider: provider
+        });
+        
+        // Recalculate directions with the new provider if we have both points
+        if (this.state.fromPoint && this.state.toPoint) {
+            const fromCoords = this.state.fromPoint.result.center;
+            const toCoords = this.state.toPoint.result.center;
+            this.calculateDirections(fromCoords, toCoords, provider);
+        }
     }
 
     selectRoute(index) {
@@ -698,11 +712,15 @@ class DirectionsPanel extends Component {
                         </div>
 
                         {/* Provider Selector */}
-                        {/* <Tabs
+                        <Tabs
                             size="small"
                             activeKey={this.state.selectedProvider}
                             onChange={this.handleProviderChange}
                             items={[
+                                {
+                                    key: 'valhalla',
+                                    label: 'Valhalla',
+                                },
                                 {
                                     key: 'graphhopper',
                                     label: 'GraphHopper',
@@ -712,7 +730,7 @@ class DirectionsPanel extends Component {
                                     label: 'Mapbox',
                                 }
                             ]}
-                        /> */}
+                        />
 
                         <Space direction="vertical" size="small" className="w-full mt-2">
                             <div 
@@ -801,9 +819,9 @@ class DirectionsPanel extends Component {
                                                         <div className="flex flex-col flex-end">
                                                             <span className="directions--legLabel text-sm mb-1">
                                                                 {
-                                                                route.legs && route.legs.length > 0 ?
-                                                                    route.legs[0].summary
-                                                                : `Opção ${index + 1}`
+                                                                route.legs && route.legs.length > 0 && route.legs[0].summary.length > 0 ? route.legs[0].summary
+                                                                    : route.summary ? route.summary
+                                                                    : `Opção ${index + 1}`
                                                                 }
                                                             </span>
 

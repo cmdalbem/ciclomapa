@@ -1,6 +1,6 @@
 // Generalized directions service supporting multiple providers
 import mbxDirections from '@mapbox/mapbox-sdk/services/directions';
-import { MAPBOX_ACCESS_TOKEN, OPENROUTESERVICE_API_KEY, GRAPHHOPPER_API_KEY } from './constants';
+import { MAPBOX_ACCESS_TOKEN, OPENROUTESERVICE_API_KEY, GRAPHHOPPER_API_KEY, VALHALLA_API_KEY } from './constants';
 
 // Abstract base class for directions providers
 class DirectionsProvider {
@@ -175,19 +175,44 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
         try {
             const params = new URLSearchParams({
                 key: this.apiKey,
-                vehicle: this.getGraphHopperProfile(options.profile || 'cycling'),
+                vehicle: 'bike',
                 type: 'json',
                 instructions: 'false',
                 elevation: 'true',
                 points_encoded: 'false',
                 calc_points: 'true',
+                details: ['bike_network'],
                 algorithm: 'alternative_route',
-                'alternative_route.max_paths': 3,
+                'alternative_route.max_paths': 5,
+                
                 // Sets the factor by which the alternatives routes can be longer than the optimal route.
                 // Increasing can lead to worse alternatives. Default: 1.4
-                'alternative_route.max_weight_factor': 4,
+                'alternative_route.max_weight_factor': 2,
+                
                 // How similar an alternative route can be to the optimal route. Increasing can lead to worse alternatives. Default: 0.6
                 'alternative_route.max_share_factor': 0.5,
+                
+                // Only available in paidversion
+                // 'ch.disable': true,
+                // custom_model: JSON.stringify(
+                //     {
+                //         "distance_influence": 50,
+                //         "priority": [
+                //           {
+                //             "if": "road_class != CYCLEWAY",
+                //             "multiply_by": "0.1"
+                //           },
+                //           {
+                //             "if": "bike_network == MISSING",
+                //             "multiply_by": "0.1"
+                //           },
+                //           {
+                //             "if": "road_class == LIVING_STREET || road_class == RESIDENTIAL || road_class == UNCLASSIFIED",
+                //             "multiply_by": "0.1"
+                //             }
+                //         ]
+                //       }
+                // )
             });
             
             // Add multiple points using append (GraphHopper expects multiple 'point' parameters)
@@ -219,19 +244,6 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
             console.error('GraphHopper API error:', err);
             throw new Error(`Erro ao calcular rota: ${err.message}`);
         }
-    }
-
-    // Map cycling profiles to GraphHopper vehicle types
-    getGraphHopperProfile(profile) {
-        const profileMap = {
-            'cycling': 'bike',
-            'cycling-road': 'bike',
-            'cycling-mountain': 'mtb',
-            'cycling-electric': 'bike',
-            'walking': 'foot',
-            'driving': 'car'
-        };
-        return profileMap[profile] || 'bike';
     }
 
     // Map avoid features to GraphHopper format
@@ -283,13 +295,99 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
     }
 }
 
+class ValhallaDirectionsProvider extends DirectionsProvider {
+    constructor(config = {}) {
+        super(config);
+        this.apiKey = VALHALLA_API_KEY;
+        this.baseUrl = config.baseUrl || 'https://valhalla1.openstreetmap.de/route';
+    }
+
+    async getDirections(from, to, options = {}) {
+        const fromCoords = this.normalizeCoordinates(from);
+        const toCoords = this.normalizeCoordinates(to);
+
+        try {
+            const requestBody = {
+                locations: [
+                    { lat: fromCoords[1], lon: fromCoords[0] },
+                    { lat: toCoords[1], lon: toCoords[0] }
+                ],
+                costing: 'bicycle',
+                "costing_options": {
+                    "bicycle": {
+                        "maneuver_penalty": 20,
+                        "bicycle_type": "City",
+                        "use_roads": 0.1,
+                    }
+                },
+                format: "osrm",
+                shape_format: 'geojson',
+                alternates: 5,
+            };
+
+            const url = this.apiKey ? `${this.baseUrl}?api_key=${this.apiKey}` : this.baseUrl;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Valhalla API error response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorText
+                });
+                throw new Error(`Erro ao calcular rota: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+            return this.normalizeValhallaResponse(data);
+        } catch (err) {
+            console.error('Valhalla API error:', err);
+            throw new Error(`Erro ao calcular rota: ${err.message}`);
+        }
+    }
+
+    // Convert Valhalla response to Mapbox-compatible format
+    normalizeValhallaResponse(data) {
+        if (!data.routes || data.routes.length === 0) {
+            throw new Error('Não foram encontradas rotas');
+        }
+
+        const routes = data.routes.map(route => ({
+            geometry: route.geometry,
+            distance: route.distance,
+            duration: route.duration,
+            weight: route.weight,
+            legs: route.legs
+        }));
+
+        // Calculate bounding box from route coordinates
+        const bbox = this.calculateBbox(routes);
+
+        return {
+            routes,
+            waypoints: data.waypoints.map(waypoint => ({
+                coordinates: waypoint.location
+            })),
+            bbox
+        };
+    }
+}
+
 // Main Directions Service
 class DirectionsService {
     constructor(provider = 'mapbox', config = {}) {
         this.providers = {
             mapbox: new MapboxDirectionsProvider(config.mapbox || {}),
             openrouteservice: new OpenRouteServiceProvider(config.openrouteservice || {}),
-            graphhopper: new GraphHopperDirectionsProvider(config.graphhopper || {})
+            graphhopper: new GraphHopperDirectionsProvider(config.graphhopper || {}),
+            valhalla: new ValhallaDirectionsProvider(config.valhalla || {})
         };
         
         this.currentProvider = this.providers[provider];
@@ -330,7 +428,7 @@ const directionsService = new DirectionsService('mapbox');
 
 // Export both the service instance and the classes for advanced usage
 export default directionsService;
-export { DirectionsService, MapboxDirectionsProvider, OpenRouteServiceProvider, GraphHopperDirectionsProvider };
+export { DirectionsService, MapboxDirectionsProvider, OpenRouteServiceProvider, GraphHopperDirectionsProvider, ValhallaDirectionsProvider };
 
 // Backward compatibility exports
 export const getCyclingDirections = (from, to, options) => 
