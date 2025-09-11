@@ -1,5 +1,6 @@
 import { calculateCyclepathCoverage } from './geojsonUtils.js';
 import { HYBRID_MAX_RESULTS } from './constants.js';
+import { getRouteScore, getCoverageBreakdown, getCoverageBreakdownSimple } from './routeUtils.js';
 
 class DirectionsManager {
     constructor() {
@@ -31,20 +32,24 @@ class DirectionsManager {
                 directions = await this.directionsService.getCyclingDirections(fromCoords, toCoords);
             }
             
-            // Calculate cyclepath coverage for all routes
+            // Calculate coverage, scores, and prepare routes with all data in one pass
+            let routesWithScores = [];
             let routeCoverageData = [];
             
             if (directions && directions.routes && directions.routes.length > 0 && geoJson && layers) {
-                console.debug('GeoJson features count:', geoJson.features ? geoJson.features.length : 'no features');
-                console.debug('Layers count:', layers ? layers.length : 'no layers');
-                
-                // Calculate coverage for each route
-                directions.routes.forEach((route, index) => {
+                routesWithScores = directions.routes.map((route, index) => {
                     console.debug(`Route ${index} geometry:`, route.geometry);
                     
+                    let coverageData = {
+                        coverage: 0,
+                        coverageByType: {},
+                        overlappingCyclepaths: []
+                    };
+                    
+                    // Calculate coverage if route has valid geometry
                     if (route.geometry && route.geometry.type === 'LineString') {
                         const coverageResult = calculateCyclepathCoverage(route.geometry, geoJson, layers);
-                        routeCoverageData[index] = {
+                        coverageData = {
                             coverage: coverageResult.coverage,
                             coverageByType: coverageResult.coverageByType,
                             overlappingCyclepaths: coverageResult.overlappingCyclepaths
@@ -52,13 +57,32 @@ class DirectionsManager {
                         console.debug(`Route ${index} cyclepath coverage calculated:`, coverageResult.coverage + '%');
                         console.debug(`Route ${index} coverage by type:`, coverageResult.coverageByType);
                         console.debug(`Route ${index} overlap segments found:`, coverageResult.overlappingCyclepaths.length);
-                    } else {
-                        routeCoverageData[index] = {
-                            coverage: 0,
-                            coverageByType: {},
-                            overlappingCyclepaths: []
-                        };
                     }
+                    
+                    // Calculate route score using the coverage data
+                    const { score: routeScore, cssClass: routeScoreClass } = getRouteScore([coverageData], 0);
+                    
+                    // Calculate coverage breakdowns
+                    const coverageBreakdown = getCoverageBreakdown([coverageData], 0);
+                    const coverageBreakdownSimple = getCoverageBreakdownSimple([coverageData], 0);
+                    
+                    // Store coverage data for this route
+                    routeCoverageData[index] = {
+                        ...coverageData,
+                        score: routeScore,
+                        scoreClass: routeScoreClass,
+                        coverageBreakdown,
+                        coverageBreakdownSimple
+                    };
+                    
+                    return {
+                        ...route,
+                        ...coverageData,
+                        score: routeScore,
+                        scoreClass: routeScoreClass,
+                        coverageBreakdown,
+                        coverageBreakdownSimple
+                    };
                 });
                 
             } else {
@@ -70,20 +94,28 @@ class DirectionsManager {
                 });
             }
             
-            // Sort routes by coverage percentage (highest first)
-            const routesWithCoverage = directions.routes.map((route, index) => ({
-                ...route,
-                coverage: routeCoverageData[index]?.coverage || 0,
-                coverageByType: routeCoverageData[index]?.coverageByType || {},
-                overlappingCyclepaths: routeCoverageData[index]?.overlappingCyclepaths || []
-            })).sort((a, b) => b.coverage - a.coverage);
+            // Sort routes by score (highest first), then by coverage as tiebreaker
+            const sortedRoutesWithScores = routesWithScores.sort((a, b) => {
+                if (b.score !== a.score) {
+                    return (b.score || 0) - (a.score || 0);
+                }
+                return (b.coverage || 0) - (a.coverage || 0);
+            });
 
-            // Extract sorted routes and coverage data
-            const sortedRoutes = routesWithCoverage.map(({ coverage, coverageByType, overlappingCyclepaths, ...route }) => route);
-            const sortedRouteCoverageData = routesWithCoverage.map(({ coverage, coverageByType, overlappingCyclepaths }) => ({
+            // Extract sorted routes and coverage data, adding sorted index
+            const sortedRoutes = sortedRoutesWithScores.map(({ coverage, coverageByType, overlappingCyclepaths, score, scoreClass, coverageBreakdown, coverageBreakdownSimple, ...route }, sortedIndex) => ({
+                ...route,
+                sortedIndex
+            }));
+            const sortedRouteCoverageData = sortedRoutesWithScores.map(({ coverage, coverageByType, overlappingCyclepaths, score, scoreClass, coverageBreakdown, coverageBreakdownSimple }, sortedIndex) => ({
                 coverage,
                 coverageByType,
-                overlappingCyclepaths
+                overlappingCyclepaths,
+                score,
+                scoreClass,
+                coverageBreakdown,
+                coverageBreakdownSimple,
+                sortedIndex
             }));
 
             const result = {
@@ -95,7 +127,7 @@ class DirectionsManager {
             };
 
             console.log('Directions calculated in DirectionsManager:', result.directions);
-            console.log('Route coverage data calculated in DirectionsManager:', result.routeCoverageData);
+            console.log('Route coverage data with scores calculated in DirectionsManager:', result.routeCoverageData);
             
             return result;
             
@@ -108,7 +140,7 @@ class DirectionsManager {
     async calculateHybridDirections(fromCoords, toCoords) {
         console.debug('Calculating hybrid directions using all providers');
         
-        const providers = ['mapbox', 'graphhopper', 'valhalla'];
+        const providers = ['mapbox', 'graphhopper', 'valhalla', 'openrouteservice'];
         const promises = providers.map(async (providerName) => {
             try {
                 this.directionsService.setProvider(providerName);
@@ -173,6 +205,7 @@ class DirectionsManager {
         const limitedRoutes = allRoutes.slice(0, HYBRID_MAX_RESULTS);
         
         console.debug(`Hybrid calculation completed: ${limitedRoutes.length} routes (limited from ${allRoutes.length} total) from ${results.filter(r => r.status === 'fulfilled' && r.value.routes.length > 0).length} providers`);
+        console.debug('All hybrid routes:', allRoutes);
 
         return {
             routes: limitedRoutes,
