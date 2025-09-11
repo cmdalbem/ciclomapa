@@ -1,12 +1,13 @@
 import React, { Component } from 'react';
 import { useDirections } from './DirectionsContext.js';
-import { Button, Input, Space, Divider, Tabs } from 'antd';
+import { Button, Input, Space, Divider, Tabs, Select } from 'antd';
 import { 
     HiOutlineTrendingUp as IconTrendingUp,
     HiOutlineTrendingDown as IconTrendingDown
 } from "react-icons/hi";
 import { LuBike as IconBike, LuRoute as IconRoute } from "react-icons/lu";
-import { HiOutlineArrowsUpDown as IconSwap } from "react-icons/hi2";
+import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash } from "react-icons/hi2";
+import { HiCog as IconCog } from "react-icons/hi";
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import mapboxgl from 'mapbox-gl';
@@ -36,7 +37,8 @@ class DirectionsPanel extends Component {
             fromGeocoderAttached: false,
             toGeocoderAttached: false,
             focusedInput: null,
-            selectedProvider: 'hybrid'
+            selectedProvider: 'hybrid',
+            settingsVisible: false
         };
 
         this.fromMarker = null;
@@ -59,6 +61,7 @@ class DirectionsPanel extends Component {
         this.calculateDirections = this.calculateDirections.bind(this);
         this.swapOriginDestination = this.swapOriginDestination.bind(this);
         this.handleProviderChange = this.handleProviderChange.bind(this);
+        this.toggleSettings = this.toggleSettings.bind(this);
     }
 
     componentDidMount() {
@@ -417,6 +420,12 @@ class DirectionsPanel extends Component {
         }
     }
 
+    toggleSettings() {
+        this.setState({
+            settingsVisible: !this.state.settingsVisible
+        });
+    }
+
     selectRoute(index) {
         if (this.props.onRouteSelected) {
             this.props.onRouteSelected(index);
@@ -658,6 +667,39 @@ class DirectionsPanel extends Component {
         };
     }
 
+    renderSettingsContent() {
+        return (
+            <div className="text-white" style={{ width: 200 }}>
+                <h3 className="font-semibold mb-3">Serviço de Rotas</h3>
+                
+                <Select
+                    value={this.state.selectedProvider}
+                    onChange={this.handleProviderChange}
+                    className="w-full"
+                    size="small"
+                    options={[
+                        {
+                            value: 'hybrid',
+                            label: '✨ Combinado',
+                        },
+                        {
+                            value: 'valhalla',
+                            label: 'Valhalla',
+                        },
+                        {
+                            value: 'graphhopper',
+                            label: 'GraphHopper',
+                        },
+                        {
+                            value: 'mapbox',
+                            label: 'Mapbox',
+                        }
+                    ]}
+                />
+            </div>
+        );
+    }
+
     render() {
         const { directions, directionsLoading, directionsError } = this.props;
         const { routeCoverageData } = this.props;
@@ -682,7 +724,7 @@ class DirectionsPanel extends Component {
                     `}
                 >
                     <div className="p-4">
-                        <div id="directionsPanel--header" className="flex justify-between items-start h-6">
+                        <div id="directionsPanel--header" className="flex justify-between items-start h-6 mb-3">
                             <h3 className=" font-semibold flex items-center mb-0">
                                 <IconRoute className="mr-2" />
                                 Rotas de bici
@@ -691,21 +733,21 @@ class DirectionsPanel extends Component {
                                 </span>
                             </h3>
 
-                            <div className="flex items-start">
+                            <div className="flex items-start" style={{marginTop: '-5px'}}>
                                 {directions && (
                                     <Button
                                     onClick={this.clearDirections}
                                     type="text" 
-                                    size="small" 
+                                    icon={<IconTrash style={{
+                                        display: 'inline-block',
+                                    }}/>}
                                     >
-                                        Limpar
                                     </Button>
                                 )}
                                 {this.state.fromPoint && this.state.toPoint && (
                                     <Button 
                                         type="text"
                                         shape="circle"
-                                        size="small"
                                         icon={
                                             <IconSwap style={{
                                                 display: 'inline-block',
@@ -715,6 +757,26 @@ class DirectionsPanel extends Component {
                                         title="Trocar origem e destino"
                                     />
                                 )}
+                                
+                                <Popover
+                                    content={this.renderSettingsContent()}
+                                    title={null}
+                                    trigger="click"
+                                    open={this.state.settingsVisible}
+                                    onOpenChange={this.toggleSettings}
+                                    placement="bottomRight"
+                                >
+                                    <Button 
+                                        type="text"
+                                        shape="circle"
+                                        icon={<IconCog style={{
+                                            display: 'inline-block',
+                                        }}/>}
+                                        className="flex-shrink-0 text-white"
+                                        title="Configurações do serviço"
+                                    />
+                                </Popover>
+                                
                                 {/* Put this back after we have a trigger to open the panel */}
                                 {/* <Button
                                     onClick={this.toggleCollapse}
@@ -725,32 +787,8 @@ class DirectionsPanel extends Component {
                             </div>
                         </div>
 
-                        {/* Provider Selector */}
-                        {/* <Tabs
-                            size="small"
-                            activeKey={this.state.selectedProvider}
-                            onChange={this.handleProviderChange}
-                            items={[
-                                {
-                                    key: 'hybrid',
-                                    label: '✨Combinado',
-                                },
-                                {
-                                    key: 'valhalla',
-                                    label: 'Valhalla',
-                                },
-                                {
-                                    key: 'graphhopper',
-                                    label: 'GraphHopper',
-                                },
-                                {
-                                    key: 'mapbox',
-                                    label: 'Mapbox',
-                                }
-                            ]}
-                        /> */}
 
-                        <Space direction="vertical" size="small" className="w-full mt-2">
+                        <Space direction="vertical" size="small" className="w-full">
                             <div 
                                 id="fromGeocoder"
                                 className='flex'
@@ -778,11 +816,14 @@ class DirectionsPanel extends Component {
 
                         {directionsLoading && (
                             <div className="mt-3 space-y-1">
-                                {[1, 2, 3].map((index) => (
+                                {[1, 2, 3, 4, 5].map((index) => (
                                     <div key={index} className={`rounded-lg h-14 bg-gray-600 animate-pulse-2x ${
                                         index === 1 ? 'bg-opacity-90' : 
                                         index === 2 ? 'bg-opacity-70' : 
-                                        'bg-opacity-50'
+                                        index === 3 ? 'bg-opacity-50' :
+                                        index === 4 ? 'bg-opacity-30' :
+                                        index === 5 ? 'bg-opacity-10' :
+                                        ''
                                     }`}/>
                                 ))}
                             </div>

@@ -102,12 +102,18 @@ class DirectionsManager {
                 return (b.coverage || 0) - (a.coverage || 0);
             });
 
+            // Limit the number of results after scoring and sorting (only for hybrid provider)
+            let limitedSortedRoutes = sortedRoutesWithScores;
+            if (provider === 'hybrid') {
+                limitedSortedRoutes = sortedRoutesWithScores.slice(0, HYBRID_MAX_RESULTS);
+            }
+
             // Extract sorted routes and coverage data, adding sorted index
-            const sortedRoutes = sortedRoutesWithScores.map(({ coverage, coverageByType, overlappingCyclepaths, score, scoreClass, coverageBreakdown, coverageBreakdownSimple, ...route }, sortedIndex) => ({
+            const sortedRoutes = limitedSortedRoutes.map(({ coverage, coverageByType, overlappingCyclepaths, score, scoreClass, coverageBreakdown, coverageBreakdownSimple, ...route }, sortedIndex) => ({
                 ...route,
                 sortedIndex
             }));
-            const sortedRouteCoverageData = sortedRoutesWithScores.map(({ coverage, coverageByType, overlappingCyclepaths, score, scoreClass, coverageBreakdown, coverageBreakdownSimple }, sortedIndex) => ({
+            const sortedRouteCoverageData = limitedSortedRoutes.map(({ coverage, coverageByType, overlappingCyclepaths, score, scoreClass, coverageBreakdown, coverageBreakdownSimple }, sortedIndex) => ({
                 coverage,
                 coverageByType,
                 overlappingCyclepaths,
@@ -201,14 +207,11 @@ class DirectionsManager {
             }
         });
 
-        // Limit the number of results
-        const limitedRoutes = allRoutes.slice(0, HYBRID_MAX_RESULTS);
-        
-        console.debug(`Hybrid calculation completed: ${limitedRoutes.length} routes (limited from ${allRoutes.length} total) from ${results.filter(r => r.status === 'fulfilled' && r.value.routes.length > 0).length} providers`);
+        console.debug(`Hybrid calculation completed: ${allRoutes.length} routes from ${results.filter(r => r.status === 'fulfilled' && r.value.routes.length > 0).length} providers`);
         console.debug('All hybrid routes:', allRoutes);
 
         return {
-            routes: limitedRoutes,
+            routes: allRoutes,
             waypoints: allWaypoints,
             bbox: combinedBbox
         };
