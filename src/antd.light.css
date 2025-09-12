@@ -234,22 +234,6 @@
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
-.theme-light .opacity-50 {
-  opacity: 0.5 !important;
-}
-
-.theme-light .opacity-25 {
-  opacity: 0.25 !important;
-}
-
-.theme-light .opacity-100 {
-  opacity: 1 !important;
-}
-
-.theme-light .opacity-100:hover {
-  opacity: 1 !important;
-}
-
 /* Override any other common Tailwind classes that might need light mode variants */
 .theme-light .border-gray-200 {
   border-color: #e5e7eb !important;

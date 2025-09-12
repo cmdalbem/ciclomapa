@@ -288,7 +288,7 @@ class MapPopups {
         const { score: routeScore, cssClass: routeScoreClass } = getRouteScore(routeCoverageData, routeIndex);
         const stateClass = this.getTooltipStateClass(routeIndex, selectedRouteIndex);
         
-        const baseClasses = "px-2 py-1 text-xs font-medium shadow-lg cursor-pointer transition-all duration-200 max-w-[200px]";
+        const baseClasses = "px-2 py-1 text-xs bg-black rounded-md font-medium shadow-lg cursor-pointer transition-all duration-200 max-w-[200px]";
         
         return `
             <div class="route-tooltip-content ${stateClass}">
@@ -311,8 +311,8 @@ class MapPopups {
     }
 
     getTooltipStateClass(routeIndex, selectedRouteIndex) {
-        if (selectedRouteIndex === routeIndex) return 'bg-black rounded-md';
-        if (selectedRouteIndex !== null) return 'bg-gray-800 hover:bg-black rounded-md';
+        if (selectedRouteIndex === routeIndex) return '';
+        if (selectedRouteIndex !== null) return 'opacity-70 hover:opacity-100 ';
         return '';
     }
 
