@@ -372,113 +372,53 @@ class Map extends Component {
             },
         }, layerUnderneathName);
 
-        // Check if layer has a border color set. If that's the case the logic is a
-        //  little different and we'll need 2 layers, one for the line itself and 
-        //  another for the line underneath which creates the illusion of a border.
-        if (l.style.borderColor) {
-            // Border
-            this.map.addLayer({
-                "id": l.id + '--border',
-                "type": "line",
-                "source": "osm",
-                "name": l.name,
-                "description": l.description,
-                "filter": filters,
-                "paint": {
-                    "line-color": l.style.borderColor,
-                    "line-opacity": [
-                        "case",
-                        ["boolean", ["feature-state", "routes-active"], false],
-                        ROUTES_ACTIVE_OPACITY,
-                        1.0
+        // Create normal state layer
+        this.map.addLayer({
+            "id": l.id,
+            "type": "line",
+            "source": "osm",
+            "name": l.name,
+            "description": l.description,
+            "filter": filters,
+            "paint": {
+                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0 : -0.1),
+                "line-width": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, Math.max(1, l.style.lineWidth/4),
+                        18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
                     ],
-                    "line-width": [
-                        "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"], 
-                            10, l.style.lineWidth/4,
-                            18, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth*DEFAULT_LINE_WIDTH_MULTIPLIER*LINE_WIDTH_MULTIPLIER_HOVER,
-                                l.style.lineWidth*DEFAULT_LINE_WIDTH_MULTIPLIER
-                            ]
-                    ],
-                    ...(l.style.borderStyle === 'dashed' && dashedLineStyle)
+                    ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
-                "layout": (l.style.borderStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
+                "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
             }, layerUnderneathName);
 
-            // Line
-            this.map.addLayer({
-                "id": l.id,
-                "type": "line",
-                "source": "osm",
-                "name": l.name,
-                "description": l.description,
-                "filter": filters,
-                "paint": {
-                    "line-color": [
-                        "case",
-                        ["boolean", ["feature-state", "routes-active"], false],
-                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3),
-                        l.style.lineColor
-                    ],
-                    "line-width": [
-                        "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"],
-                            10, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth - l.style.borderWidth,
-                                Math.max(1, (l.style.lineWidth - l.style.borderWidth)/4),
-                            ],
-                            18, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                (l.style.lineWidth - l.style.borderWidth)*DEFAULT_LINE_WIDTH_MULTIPLIER*LINE_WIDTH_MULTIPLIER_HOVER,
-                                (l.style.lineWidth - l.style.borderWidth)*DEFAULT_LINE_WIDTH_MULTIPLIER
-                            ]
+        // Create routes-active state layer (initially hidden)
+        this.map.addLayer({
+            "id": l.id + '--routes-active',
+            "type": "line",
+            "source": "osm",
+            "name": l.name + ' (Routes Active)',
+            "description": l.description,
+            "filter": filters,
+            "paint": {
+                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.4),
+                "line-opacity": ROUTES_ACTIVE_OPACITY,
+                "line-width": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, Math.max(1, l.style.lineWidth/4),
+                        18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
                     ],
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
-                "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
-            }, layerUnderneathName);
-        } else {
-            this.map.addLayer({
-                "id": l.id,
-                "type": "line",
-                "source": "osm",
-                "name": l.name,
-                "description": l.description,
-                "filter": filters,
-                "paint": {
-                    "line-color": [
-                        "case",
-                        ["boolean", ["feature-state", "routes-active"], false],
-                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.5),
-                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0 : -0.1),
-                    ],
-                    "line-width": [
-                        "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"],
-                            10, Math.max(1, l.style.lineWidth/4),
-                            18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
-                            // 10, [ 'case',
-                            //     ['boolean', ['feature-state', 'hover'], false],
-                            //     l.style.lineWidth * 1.5, // On hover
-                            //     Math.max(1, l.style.lineWidth/4)
-                            // ],
-                            // 18, [ 'case',
-                            //     ['boolean', ['feature-state', 'hover'], false],
-                            //     l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER * LINE_WIDTH_MULTIPLIER_HOVER, // On hover
-                            //     l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
-                            // ]
-                    ],
-                    ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
+                "layout": {
+                    ...(l.style.lineStyle === 'dashed' ? {} : { "line-join": "round", "line-cap": "round" }),
+                    "visibility": "none"
                 },
-                "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
             }, layerUnderneathName);
-        }
 
         // Click interaction
         // Hover interaction is handled globally with map.on('mousemove')
@@ -1000,25 +940,8 @@ class Map extends Component {
         const currentActiveStatuses = this.props.layers.map(l => l.isActive).join();
         const prevActiveStatus = prevProps.layers.map(l => l.isActive).join();
         if (currentActiveStatuses === prevActiveStatus) {
-            this.props.layers.forEach( l => {
-                if (map.getLayer(l.id)) {
-                    const status = l.isActive ? 'visible' : 'none';
-                    map.setLayoutProperty(l.id, 'visibility', status);
-                    if (l.type === 'way') {
-                        map.setLayoutProperty(l.id+'--interactive', 'visibility', status);
-                        if (l.style.borderColor) {
-                            map.setLayoutProperty(l.id+'--border', 'visibility', status);
-                        }
-                    } else if (l.type === 'poi') {
-                        // Handle POI layers - show/hide based on isActive only
-                        const status = l.isActive ? 'visible' : 'none';
-                        
-                        if (map.getLayer(l.id)) {
-                            map.setLayoutProperty(l.id, 'visibility', status);
-                        }
-                    }
-                }
-            })
+            // Use the unified layer visibility update method
+            this.updateLayerVisibility();
         }
 
         if (this.props.isSidebarOpen !== prevProps.isSidebarOpen) {
@@ -1257,25 +1180,50 @@ class Map extends Component {
         }
     }
 
-    updateCyclablePathsOpacity() {
+    updateLayerVisibility() {
         const map = this.map;
         if (!map) return;
 
-        // Check if there are active directions/routes
         const hasRoutes = this.props.directions && 
                          this.props.directions.routes && 
                          this.props.directions.routes.length > 0;
 
-        // Get all features from the OSM source
-        const features = map.querySourceFeatures('osm');
-        
-        // Set feature state for all features in the OSM source
-        features.forEach(feature => {
-            map.setFeatureState(
-                { source: 'osm', id: feature.id },
-                { 'routes-active': hasRoutes }
-            );
+        // Update layer visibility based on both isActive status and routes state
+        this.props.layers.forEach(layer => {
+            if (layer.type === 'way') {
+                // Normal layer: visible if isActive AND no routes
+                if (map.getLayer(layer.id)) {
+                    const normalStatus = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
+                    map.setLayoutProperty(layer.id, 'visibility', normalStatus);
+                }
+                
+                // Routes-active layer: visible if isActive AND has routes
+                if (map.getLayer(layer.id + '--routes-active')) {
+                    const routesActiveStatus = (layer.isActive && hasRoutes) ? 'visible' : 'none';
+                    map.setLayoutProperty(layer.id + '--routes-active', 'visibility', routesActiveStatus);
+                }
+                
+                // Interactive layer follows the same logic as normal layer
+                if (map.getLayer(layer.id + '--interactive')) {
+                    const interactiveStatus = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
+                    map.setLayoutProperty(layer.id + '--interactive', 'visibility', interactiveStatus);
+                }
+            } else if (layer.type === 'poi') {
+                // Handle POI layers - show/hide based on isActive only
+                const status = layer.isActive ? 'visible' : 'none';
+                
+                if (map.getLayer(layer.id)) {
+                    map.setLayoutProperty(layer.id, 'visibility', status);
+                }
+            }
         });
+        
+        console.debug(`Updated layer visibility - routes active: ${hasRoutes}`);
+    }
+
+    updateCyclablePathsOpacity() {
+        // This method now just calls the unified visibility update
+        this.updateLayerVisibility();
     }
 
     updateRouteTooltips() {
@@ -1339,7 +1287,9 @@ class Map extends Component {
             style: this.props.style,
             center: this.props.center,
             zoom: this.props.zoom,
-            attributionControl: false
+            attributionControl: false,
+            dragRotate: false,
+            pitchWithRotate: false
         }).addControl(new mapboxgl.AttributionControl({
             compact: false
         }));
