@@ -360,6 +360,7 @@ class Map extends Component {
         const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
         const self = this;
 
+        // Interactive layer is wider than the actual layer to improve usability
         this.map.addLayer({
             "id": l.id + '--interactive',
             "type": "line",
@@ -372,7 +373,7 @@ class Map extends Component {
             },
         }, layerUnderneathName);
 
-        // Create normal state layer
+        // Normal state layer
         this.map.addLayer({
             "id": l.id,
             "type": "line",
@@ -394,7 +395,7 @@ class Map extends Component {
                 "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
             }, layerUnderneathName);
 
-        // Create routes-active state layer (initially hidden)
+        // Routes-active state layer (initially hidden)
         this.map.addLayer({
             "id": l.id + '--routes-active',
             "type": "line",
@@ -403,7 +404,7 @@ class Map extends Component {
             "description": l.description,
             "filter": filters,
             "paint": {
-                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.4),
+                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.3),
                 "line-opacity": ROUTES_ACTIVE_OPACITY,
                 "line-width": [
                     "interpolate",
@@ -800,39 +801,39 @@ class Map extends Component {
             map.on('mouseenter', layerId, (e) => {
                 map.getCanvas().style.cursor = 'pointer';
                 
-                if (e.features && e.features.length > 0) {
-                    const routeIndex = e.features[0].properties.routeIndex;
-                    this.currentHoveredRoute = routeIndex;
+                // if (e.features && e.features.length > 0) {
+                //     const routeIndex = e.features[0].properties.routeIndex;
+                //     this.currentHoveredRoute = routeIndex;
                     
-                    // Determine which source this layer belongs to
-                    const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
-                    map.setFeatureState(
-                        { source: sourceId, id: routeIndex },
-                        { hover: true }
-                    );
+                //     // Determine which source this layer belongs to
+                //     const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
+                //     map.setFeatureState(
+                //         { source: sourceId, id: routeIndex },
+                //         { hover: true }
+                //     );
                     
-                    if (self.props.onRouteHovered) {
-                        self.props.onRouteHovered(routeIndex);
-                    }
-                }
+                //     if (self.props.onRouteHovered) {
+                //         self.props.onRouteHovered(routeIndex);
+                //     }
+                // }
             });
 
             map.on('mouseleave', layerId, (e) => {
                 map.getCanvas().style.cursor = '';
                 
-                if (this.currentHoveredRoute !== null) {
-                    // Determine which source this layer belongs to
-                    const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
-                    map.setFeatureState(
-                        { source: sourceId, id: this.currentHoveredRoute },
-                        { hover: false }
-                    );
-                    this.currentHoveredRoute = null;
-                }
+                // if (this.currentHoveredRoute !== null) {
+                //     // Determine which source this layer belongs to
+                //     const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
+                //     map.setFeatureState(
+                //         { source: sourceId, id: this.currentHoveredRoute },
+                //         { hover: false }
+                //     );
+                //     this.currentHoveredRoute = null;
+                // }
                 
-                if (self.props.onRouteUnhovered) {
-                    self.props.onRouteUnhovered();
-                }
+                // if (self.props.onRouteUnhovered) {
+                //     self.props.onRouteUnhovered();
+                // }
             });
         });
     }
@@ -1209,8 +1210,8 @@ class Map extends Component {
                     map.setLayoutProperty(layer.id + '--interactive', 'visibility', interactiveStatus);
                 }
             } else if (layer.type === 'poi') {
-                // Handle POI layers - show/hide based on isActive only
-                const status = layer.isActive ? 'visible' : 'none';
+                // Handle POI layers - show/hide based on isActive AND no routes
+                const status = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
                 
                 if (map.getLayer(layer.id)) {
                     map.setLayoutProperty(layer.id, 'visibility', status);
