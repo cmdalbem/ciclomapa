@@ -299,7 +299,9 @@
   background-color: rgba(249, 250, 251, var(--tw-bg-opacity, 1)) !important;
 }
 
-
+.theme-light .ant-popover-inner-content {
+  color: black !important;
+}
 
 .theme-light .text-gray-50 {
   color: #111827 !important;
