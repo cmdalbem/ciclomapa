@@ -352,6 +352,91 @@ class Map extends Component {
 
     }
 
+    initBoundaryLayer() {
+        const filters = this.convertFilterToMapboxFilter({
+            filters: [
+                ["boundary", "administrative"],
+                ["admin_level", "6"],
+                ["admin_level", "7"],
+                ["admin_level", "8"],
+                ["admin_level", "9"],
+                ["admin_level", "10"]
+            ]}
+        );
+
+        this.map.addLayer({
+            'id': 'boundary-layer',
+            'type': 'line',
+            'source': 'osmdata',
+            'name': 'Limites',
+            'filter': filters,
+            'paint': {
+                'line-color': this.props.isDarkMode ? '#FFFFFF' : '#000000',
+                'line-dasharray': [1, 1],
+                'line-width': 2,
+                'line-opacity': 0.3
+            }
+        });
+
+        // this.updateWorldMask();
+    }
+
+    // updateWorldMask() {
+    //     const boundaryData = this.props.boundaryData;
+        
+    //     // Remove existing mask if no boundary data
+    //     if (!boundaryData || !boundaryData.features || boundaryData.features.length === 0) {
+    //         if (this.map.getLayer('city-boundary-mask')) {
+    //             this.map.removeLayer('city-boundary-mask');
+    //         }
+    //         if (this.map.getSource('worldMaskSrc')) {
+    //             this.map.removeSource('worldMaskSrc');
+    //         }
+    //         return;
+    //     }
+
+    //     // Create world polygon with hole for city boundary
+    //     const worldPolygonWithHole = {
+    //         'type': 'Feature',
+    //         'geometry': {
+    //             'type': 'Polygon',
+    //             'coordinates': [
+    //                 // Outer ring - covers the entire world
+    //                 [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]],
+    //                 // Inner ring - hole for the city boundary
+    //                 boundaryData.features[0].geometry.coordinates[0]
+    //             ]
+    //         }
+    //     };
+
+    //     const maskData = {
+    //         'type': 'FeatureCollection',
+    //         'features': [worldPolygonWithHole]
+    //     };
+
+    //     // Add or update source
+    //     if (!this.map.getSource('worldMaskSrc')) {
+    //         this.map.addSource('worldMaskSrc', {
+    //             'type': 'geojson',
+    //             'data': maskData
+    //         });
+
+    //         // Add mask layer
+    //         this.map.addLayer({
+    //             'id': 'city-boundary-mask',
+    //             'type': 'fill',
+    //             'source': 'worldMaskSrc',
+    //             'paint': {
+    //                 'fill-color': this.props.isDarkMode ? '#000000' : '#ffffff',
+    //                 'fill-opacity': 0.5
+    //             }
+    //         });
+    //     } else {
+    //         // Update existing source
+    //         this.map.getSource('worldMaskSrc').setData(maskData);
+    //     }
+    // }
+
     initCyclepathLayer(l) {
         const filters = this.convertFilterToMapboxFilter(l);
         const dashedLineStyle = { 'line-dasharray': [1, 1] };
@@ -649,6 +734,7 @@ class Map extends Component {
         });
     }
 
+
     // Layers need to be initialized in the paint order
     // Afterwards their data can be updated safely without messing up the order
     initGeojsonLayers(layers) {
@@ -682,6 +768,7 @@ class Map extends Component {
                 "generateId": true
             });
 
+
             // layers.json is ordered from most to least important, but we 
             //   want the most important ones to be on top so we add in reverse.
             // Slice is used here to don't destructively reverse the original array.
@@ -692,6 +779,8 @@ class Map extends Component {
                     this.initPOILayer(l);
                 }
             });
+
+            this.initBoundaryLayer();
 
             if (!this.props.embedMode) {
                 this.addCitiesLinksLayer();
@@ -937,6 +1026,7 @@ class Map extends Component {
             map.getSource("osmdata").setData(this.props.data);
         }
 
+
         if (this.props.style !== prevProps.style) {
             console.debug('new style', this.props.style);
             map.setStyle(this.props.style);
@@ -1016,6 +1106,9 @@ class Map extends Component {
                 geometry: route.geometry
             }));
 
+            // Progressively add all routes
+            // this.progressivelyAddAllRoutes(routeFeatures, this.props.selectedRouteIndex);
+
             // Distribute routes between top and bottom layers based on current selection
             this.distributeRoutesBetweenLayers(routeFeatures);
             
@@ -1060,6 +1153,117 @@ class Map extends Component {
                 features: routeFeatures
             });
         }
+    }
+
+    progressivelyAddAllRoutes(routeFeatures, selectedRouteIndex) {
+        const map = this.map;
+        let selectedFeatures = [];
+        let unselectedFeatures = [];
+        
+        // Separate selected and unselected routes
+        const selectedRoute = selectedRouteIndex !== null && selectedRouteIndex !== undefined 
+            ? routeFeatures.find(f => f.properties.routeIndex === selectedRouteIndex)
+            : null;
+        const unselectedRoutes = routeFeatures.filter(f => f.properties.routeIndex !== selectedRouteIndex);
+        
+        // Create ordered list: selected route first, then unselected routes
+        const orderedRoutes = selectedRoute ? [selectedRoute, ...unselectedRoutes] : unselectedRoutes;
+        let currentRouteIndex = 0;
+        
+        const addNextRoute = () => {
+            if (currentRouteIndex >= orderedRoutes.length) return;
+            
+            const route = orderedRoutes[currentRouteIndex];
+            const isSelected = selectedRouteIndex !== null && selectedRouteIndex !== undefined && 
+                             route.properties.routeIndex === selectedRouteIndex;
+            
+            // Create progressive geometry for this route
+            this.progressivelyAddRouteGeometry(route, isSelected, selectedFeatures, unselectedFeatures, map, () => {
+                // When this route is complete, move to the next one
+                currentRouteIndex++;
+                setTimeout(addNextRoute, 0); // Small delay between routes
+            });
+        };
+        
+        // Start with the first route (selected if available)
+        addNextRoute();
+    }
+
+    progressivelyAddRouteGeometry(route, isSelected, selectedFeatures, unselectedFeatures, map, onComplete) {
+        const coordinates = route.geometry.coordinates;
+        const chunkSize = 10;
+        const targetFPS = 60; // Target 60 FPS
+        const frameDelay = 1000 / targetFPS; // ~16.67ms per frame
+        let currentCoordinates = [];
+        let chunkIndex = 0;
+        
+        const addNextChunk = () => {
+            const startIndex = chunkIndex * chunkSize;
+            const endIndex = Math.min(startIndex + chunkSize, coordinates.length);
+            
+            // Add coordinates for this chunk
+            for (let i = startIndex; i < endIndex; i++) {
+                currentCoordinates.push(coordinates[i]);
+            }
+            
+            // Create updated route with current coordinates
+            const progressiveRoute = {
+                ...route,
+                geometry: {
+                    ...route.geometry,
+                    coordinates: [...currentCoordinates]
+                }
+            };
+            
+            // Update the appropriate layer
+            if (isSelected) {
+                selectedFeatures = [progressiveRoute];
+                map.getSource('route-selected').setData({
+                    type: 'FeatureCollection',
+                    features: selectedFeatures
+                });
+            } else {
+                // Find and update the route in unselected features
+                const existingIndex = unselectedFeatures.findIndex(f => f.properties.routeIndex === route.properties.routeIndex);
+                if (existingIndex >= 0) {
+                    unselectedFeatures[existingIndex] = progressiveRoute;
+                } else {
+                    unselectedFeatures.push(progressiveRoute);
+                }
+                map.getSource('routes-unselected').setData({
+                    type: 'FeatureCollection',
+                    features: unselectedFeatures
+                });
+            }
+            
+            chunkIndex++;
+            
+            // Continue if there are more coordinates
+            if (endIndex < coordinates.length) {
+                setTimeout(addNextChunk, frameDelay);
+            } else {
+                // Route is complete, call the callback
+                if (onComplete) onComplete();
+            }
+        };
+        
+        // Start the progressive addition
+        addNextChunk();
+    }
+
+    progressivelyAddRoutes(routes, sourceName) {
+        const map = this.map;
+        let currentFeatures = [];
+        
+        routes.forEach((route, index) => {
+            setTimeout(() => {
+                currentFeatures.push(route);
+                map.getSource(sourceName).setData({
+                    type: 'FeatureCollection',
+                    features: currentFeatures
+                });
+            }, index * 50); // 50ms delay between each route
+        });
     }
 
     updateOverlappingCyclepathsLayer(routeCoverageData) {
