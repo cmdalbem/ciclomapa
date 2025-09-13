@@ -21,8 +21,13 @@ export const AREA_ID_OVERRIDES = {
 // Mapbox
 
 export const MAPBOX_ACCESS_TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
-export const DEFAULT_MAPBOX_STYLE = 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm';
 
+export const MAP_STYLES = {
+    DARK: 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm',
+    LIGHT: 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'
+    // LIGHT: 'mapbox://styles/cmdalbem/cmf6j71jk00cv01sjezoh6fky'
+};
+ 
 
 // OpenRouteService
 
