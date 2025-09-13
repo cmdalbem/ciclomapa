@@ -14,6 +14,32 @@ import { slugify } from './utils.js'
 
 import * as layersDefinitions from './layers.json';
 
+// Helper function to parse area name into city, state, country components
+function parseAreaName(areaName) {
+    // Split by comma and clean up whitespace
+    const parts = areaName.split(',').map(part => part.trim());
+    
+    if (parts.length >= 3) {
+        return {
+            city: parts[0],
+            state: parts[1],
+            country: parts[2]
+        };
+    } else if (parts.length === 2) {
+        return {
+            city: parts[0],
+            state: parts[1],
+            country: parts[1] // Use state as country if no country specified
+        };
+    } else {
+        return {
+            city: parts[0],
+            state: parts[0], // Use city as state if only one part
+            country: parts[0] // Use city as country if only one part
+        };
+    }
+}
+
 class OSMController {
     // getQuery() converts our CicloMapa layers filter syntax to the OSM Overpass query syntax
     // Example:
@@ -33,6 +59,7 @@ class OSMController {
     static getQuery(constraints) {
         const bbox = constraints.bbox;
         const areaId = constraints.areaId;
+        const areaName = constraints.areaName;
         const filteredLayers = layersDefinitions.default.filter(l => l.filters);
 
         const body = filteredLayers.map(l =>
@@ -53,8 +80,35 @@ class OSMController {
             ).join("")
         ).join("");
 
+        // Add boundary geometry query
+        const boundaryQuery = areaName ? (() => {
+            const { city, state, country } = parseAreaName(areaName);
+            return `
+                (
+                    rel
+                    ["boundary"="administrative"]
+                    ["admin_level"~"^(6|7|8|9|10)$"]
+                    ["name"="${city}"]
+                    ["is_in:state"="${state}"]
+                    ["is_in:country"="${country}"];
+                    rel
+                    ["boundary"="administrative"]
+                    ["admin_level"~"^(6|7|8|9|10)$"]
+                    ["name"="${city}"]
+                    ["is_in:country"="${country}"];
+                    rel
+                    ["boundary"="administrative"]
+                    ["admin_level"~"^(6|7|8|9|10)$"]
+                    ["name"="${city}"];
+                );
+                map_to_area ->.cityArea;
+                out geom;
+            `;
+        })() : '';
+
         return `
             [out:json][timeout:500];
+            ${boundaryQuery}
             ${!bbox && `area(${areaId})->.a;`}
             (
                 ${body}
@@ -144,7 +198,10 @@ class OSMController {
             
             this.getAreaId(constraints.area)
                 .then(areaId => {
-                    const query = OSMController.getQuery({areaId});
+                    const query = OSMController.getQuery({
+                        areaId,
+                        areaName: constraints.area
+                    });
                     console.debug('generated query: ', query);
         
                     const encodedQuery = encodeURI(query);
@@ -168,7 +225,10 @@ class OSMController {
                                     }
         
                                     console.debug('osm data: ', data);
-                                    geoJson = osmtogeojson(data, { flatProperties: true });
+                                    
+                                    // Convert all data to GeoJSON without filtering
+                                    geoJson = osmtogeojson({ elements: data.elements }, { flatProperties: true });
+                                    
                                     console.debug('converted to geoJSON: ', geoJson);
                                     
                                     resolve({
@@ -188,7 +248,9 @@ class OSMController {
                                     }
                                     if (isLastRemainingRequest) {
                                         console.debug(`[SERVER #${i}] I was the last one, so probably the result is empty.`);
-                                        resolve({ geoJson: null });
+                                        resolve({ 
+                                            geoJson: null
+                                        });
                                     }
                                 }
                             }).fail(e => {
