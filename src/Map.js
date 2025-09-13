@@ -19,7 +19,6 @@ import {
     COMMENTS_ZOOM_THRESHOLD,
     DIRECTIONS_LINE_WIDTH,
     DIRECTIONS_LINE_BORDER_WIDTH,
-    ROUTES_ACTIVE_OPACITY,
 } from './constants.js'
 
 import Analytics from './Analytics.js'
@@ -214,7 +213,7 @@ class Map extends Component {
                             ["==", ["get", f2[0]], f2[1]]
                         )
                     ]
-            )
+            ),
         ];
     }
 
@@ -251,7 +250,7 @@ class Map extends Component {
                     "interpolate",
                         ["exponential", 1.5],
                         ["zoom"], 
-                        10, 0.5,
+                        10, 0.3,
                         POI_ZOOM_THRESHOLD, 1
                 ],
             },
@@ -259,22 +258,14 @@ class Map extends Component {
                 'text-color': l.style.textColor || 'white',
                 'text-halo-width': 1,
                 'text-opacity': ['case',
-                    ['boolean', ['feature-state', 'routes-active'], false],
-                    ROUTES_ACTIVE_OPACITY,
-                    ['case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                        0.7,
-                        1.0
-                    ]
+                    ['boolean', ['feature-state', 'hover'], false],
+                    0.7,
+                    1.0
                 ],
                 'icon-opacity': ['case',
-                    ['boolean', ['feature-state', 'routes-active'], false],
-                    ROUTES_ACTIVE_OPACITY,
-                    ['case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                        0.7,
-                        1.0
-                    ]
+                    ['boolean', ['feature-state', 'hover'], false],
+                    0.7,
+                    1.0
                 ]
             }
         };
@@ -383,6 +374,23 @@ class Map extends Component {
             "filter": filters,
             "paint": {
                 "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0 : -0.1),
+                "line-offset": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, [
+                            "case",
+                                ["has", "cycleway:right"], Math.max(1, l.style.lineWidth/4),
+                                ["has", "cycleway:left"], Math.min(-1, -l.style.lineWidth/4),
+                                0
+                        ],
+                        18, [
+                            "case",
+                                ["has", "cycleway:right"], l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                ["has", "cycleway:left"], -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                0
+                        ]
+                    ],
                 "line-width": [
                     "interpolate",
                         ["exponential", 1.5],
@@ -404,8 +412,7 @@ class Map extends Component {
             "description": l.description,
             "filter": filters,
             "paint": {
-                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.3),
-                "line-opacity": ROUTES_ACTIVE_OPACITY,
+                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.4),
                 "line-width": [
                     "interpolate",
                         ["exponential", 1.5],
@@ -883,14 +890,6 @@ class Map extends Component {
                     ['==', ['get', 'type'], 'Calçada compartilhada'], '#F56743',
                     '#00ff00' // Default fallback color
                 ],
-                // @TODO disable temporarily since it's not initializing properly
-                // 'line-opacity': [
-                //     'case',
-                //     ['boolean', ['feature-state', 'selected'], false],
-                //         1.0, // Full opacity when selected
-                //         0.4  // More transparent by default to not compete with routes
-                // ],
-                'line-opacity': 1,
                 'line-width': [
                     "interpolate",
                         ["exponential", 1.5],
@@ -918,7 +917,6 @@ class Map extends Component {
         if (this.props.style !== prevProps.style) {
             console.debug('new style', this.props.style);
             map.setStyle(this.props.style);
-            // this.initLayers();
         }
 
         if (this.props.showSatellite !== prevProps.showSatellite) {
@@ -1210,8 +1208,8 @@ class Map extends Component {
                     map.setLayoutProperty(layer.id + '--interactive', 'visibility', interactiveStatus);
                 }
             } else if (layer.type === 'poi') {
-                // Handle POI layers - show/hide based on isActive AND no routes
-                const status = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
+                // Handle POI layers - show/hide based on isActive only
+                const status = layer.isActive ? 'visible' : 'none';
                 
                 if (map.getLayer(layer.id)) {
                     map.setLayoutProperty(layer.id, 'visibility', status);
