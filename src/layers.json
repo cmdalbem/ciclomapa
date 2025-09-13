@@ -84,7 +84,7 @@
         "type": "poi",
         "icon": "poi-bikeshop",
         "style": {
-            "textColor": "#33B6FF"
+            "textColor": "#2A7BF4"
         }
     },
     {
@@ -96,7 +96,7 @@
         "type": "poi",
         "icon": "poi-rental",
         "style": {
-            "textColor": "#FF8933"
+            "textColor": "#E56119"
         }
     },
     {
@@ -108,7 +108,7 @@
         "type": "poi",
         "icon": "poi-bikeparking",
         "style": {
-            "textColor": "#4DB269"
+            "textColor": "#2F904A"
         }
     },
     {
