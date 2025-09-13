@@ -36,14 +36,17 @@ import capitalsGeojson from './brazil_capitals.geojson';
 import commentIcon from './img/icons/poi-comment.png';
 
 import bikeparkingIcon from './img/icons/poi-bikeparking.png';
+import bikeparkingIconLight from './img/icons/poi-bikeparking--light.png';
 import bikeparkingIcon2x from './img/icons/poi-bikeparking@2x.png';
 import bikeparkingIconMini from './img/icons/poi-bikeparking-mini.png';
 import bikeparkingIconMiniLight from './img/icons/poi-bikeparking-mini--light.png';
 import bikeshopIcon from './img/icons/poi-bikeshop.png';
+import bikeshopIconLight from './img/icons/poi-bikeshop--light.png';
 import bikeshopIcon2x from './img/icons/poi-bikeshop@2x.png';
 import bikeshopIconMini from './img/icons/poi-bikeshop-mini.png';
 import bikeshopIconMiniLight from './img/icons/poi-bikeshop-mini--light.png';
 import bikerentalIcon from './img/icons/poi-bikerental.png';
+import bikerentalIconLight from './img/icons/poi-bikerental--light.png';
 import bikerentalIcon2x from './img/icons/poi-bikerental@2x.png';
 import bikerentalIconMini from './img/icons/poi-bikerental-mini.png';
 import bikerentalIconMiniLight from './img/icons/poi-bikerental-mini--light.png';
@@ -51,14 +54,17 @@ import bikerentalIconMiniLight from './img/icons/poi-bikerental-mini--light.png'
 const iconsMap = {
     "poi-comment": commentIcon,
     "poi-bikeparking": bikeparkingIcon,
+    "poi-bikeparking--light": bikeparkingIconLight,
     "poi-bikeparking-2x": bikeparkingIcon2x,
     "poi-bikeparking-mini": bikeparkingIconMini,
     "poi-bikeparking-mini--light": bikeparkingIconMiniLight,
     "poi-bikeshop": bikeshopIcon,
+    "poi-bikeshop--light": bikeshopIconLight,
     "poi-bikeshop-2x": bikeshopIcon2x,
     "poi-bikeshop-mini": bikeshopIconMini,
     "poi-bikeshop-mini--light": bikeshopIconMiniLight,
     "poi-rental": bikerentalIcon,
+    "poi-rental--light": bikerentalIconLight,
     "poi-rental-2x": bikerentalIcon2x,
     "poi-rental-mini": bikerentalIconMini,
     "poi-rental-mini--light": bikerentalIconMiniLight,
@@ -228,8 +234,10 @@ class Map extends Component {
             "description": l.description,
             'layout': {
                 'text-field': [ 'step', ['zoom'], '', POI_ZOOM_THRESHOLD, ['get', 'name'], ],
-                'text-font': ['IBM Plex Sans Bold'],
+                'text-font': ['IBM Plex Sans Medium'],
+                'text-letter-spacing': 0.05,
                 "text-offset": [0, 1.5],
+                "text-max-width": 8,
                 'text-size': [
                     "interpolate",
                         ["exponential", 1.5],
@@ -237,7 +245,7 @@ class Map extends Component {
                         10, 10,
                         18, 14
                 ],
-                'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
+                'text-variable-anchor': ['top'],
                 "icon-padding": 0,
                 "icon-allow-overlap": [
                     'step',
@@ -250,7 +258,7 @@ class Map extends Component {
                     "interpolate",
                         ["exponential", 1.5],
                         ["zoom"], 
-                        10, 0.3,
+                        10, 0.5,
                         POI_ZOOM_THRESHOLD, 1
                 ],
             },
@@ -282,7 +290,7 @@ class Map extends Component {
                     ['zoom'],
                     this.props.isDarkMode ? `${l.icon}-mini` : `${l.icon}-mini--light`,
                     POI_ZOOM_THRESHOLD,
-                    l.icon
+                    this.props.isDarkMode ? `${l.icon}` : `${l.icon}--light`,
                 ],
             },
             'paint': {
@@ -581,11 +589,14 @@ class Map extends Component {
             'id': 'cities',
             'type': 'symbol',
             'source': 'cities',
-            'layout': {
+            'layout': { 
+                'icon-image': this.props.isDarkMode ? 'city-dark' : 'city',
+                'icon-color': this.props.isDarkMode ? '#B6F9D1' : '#059669',
+                'icon-size': 1,
                 "text-allow-overlap": true,
                 'text-field': ['get', 'name'],
                 'text-font': ['IBM Plex Sans Bold'],
-                "text-offset": [0, 0],
+                "text-offset": [0, 0.8],
                 'text-size': [
                     "interpolate",
                         ["exponential", 1.5],
@@ -593,10 +604,17 @@ class Map extends Component {
                         4, 12,
                         10, 18
                 ],
-                'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
+                'text-variable-anchor': ['top'],
             },
             'paint': {
                 'text-opacity': [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"], 
+                        4, 1,
+                        11, 0
+                ],
+                'icon-opacity': [
                     "interpolate",
                         ["exponential", 1.5],
                         ["zoom"], 

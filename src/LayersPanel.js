@@ -18,9 +18,9 @@ import {
 } from './constants.js'
 
 import commentIcon from './img/icons/poi-comment-flat.png';
-import bikeparkingIcon from './img/icons/poi-bikeparking.png';
-import bikeshopIcon from './img/icons/poi-bikeshop.png';
-import bikerentalIcon from './img/icons/poi-bikerental.png';
+import bikeparkingIcon from './img/icons/poi-bikeparking@2x.png';
+import bikeshopIcon from './img/icons/poi-bikeshop@2x.png';
+import bikerentalIcon from './img/icons/poi-bikerental@2x.png';
 
 const iconsMap = {
     "poi-comment": commentIcon,
