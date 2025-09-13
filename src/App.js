@@ -35,14 +35,14 @@ import {
     DEFAULT_LNG,
     DEFAULT_ZOOM,
     OSM_DATA_MAX_AGE_MS,
-    DEFAULT_MAPBOX_STYLE,
     SAVE_TO_FIREBASE,
     DISABLE_DATA_HEALTY_TEST,
     IS_PROD,
     THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE,
     IS_MOBILE,
     FORCE_RECALCULATE_LENGTHS_ALWAYS,
-    DEFAULT_LENGTH_CALCULATE_STRATEGIES
+    DEFAULT_LENGTH_CALCULATE_STRATEGIES,
+    MAP_STYLES
 } from './constants.js'
 
 import './App.less';
@@ -103,8 +103,8 @@ class App extends Component {
             debugMode: urlParams.debug || false,
             loading: false,
             mapStyle: isDarkMode ? 
-                'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' : 
-                'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb',
+                MAP_STYLES.DARK : 
+                MAP_STYLES.LIGHT,
             layers: this.initLayers(prev.layersStates, urlParams.debug || false),
             lengths: {},
             embedMode: urlParams.embed,
@@ -143,8 +143,8 @@ class App extends Component {
         // // Update map style if default style is selected (not satellite)
         // if (!this.state.showSatellite) {
         //     const newMapStyle = newIsDark 
-        //         ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
-        //         : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'; // Light style
+        //         ? MAP_STYLES.DARK
+        //         : MAP_STYLES.LIGHT;
         //     this.setState({ mapStyle: newMapStyle });
         // }
 
@@ -416,12 +416,6 @@ class App extends Component {
 
     onMapStyleChange(newMapStyle) {
         this.setState({ mapStyle: newMapStyle});
-    }
-
-    getDefaultMapStyle() {
-        return this.state.isDarkMode 
-            ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
-            : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'; // Light style
     }
 
     onMapShowSatelliteChanged(showSatellite) {

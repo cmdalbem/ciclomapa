@@ -14,7 +14,7 @@ import {
     ENABLE_COMMENTS,
     IS_PROD,
     DEFAULT_LINE_WIDTH_MULTIPLIER,
-    LINE_WIDTH_MULTIPLIER_HOVER,
+    MAP_STYLES,
     POI_ZOOM_THRESHOLD,
     COMMENTS_ZOOM_THRESHOLD,
     DIRECTIONS_LINE_WIDTH,
@@ -229,7 +229,7 @@ class Map extends Component {
         // Base layer configuration
         const baseLayerConfig = {
             'type': 'symbol',
-            'source': 'osm',
+            'source': "osmdata",
             "filter": filters,
             "description": l.description,
             'layout': {
@@ -313,13 +313,13 @@ class Map extends Component {
 
                 if (self.hoveredPOI) {
                     self.map.setFeatureState({
-                        source: 'osm',
+                        source: "osmdata",
                         id: self.hoveredPOI },
                         { hover: false });
                 }
                 self.hoveredPOI = e.features[0].id;
                 self.map.setFeatureState({
-                    source: 'osm',
+                    source: "osmdata",
                     id: self.hoveredPOI },
                     { hover: true });
             }
@@ -331,7 +331,7 @@ class Map extends Component {
                 self.map.getCanvas().style.cursor = '';
 
                 self.map.setFeatureState({
-                    source: 'osm',
+                    source: "osmdata",
                     id: self.hoveredPOI },
                     { hover: false });
             }
@@ -363,7 +363,7 @@ class Map extends Component {
         this.map.addLayer({
             "id": l.id + '--interactive',
             "type": "line",
-            "source": "osm",
+            "source": "osmdata",
             "filter": filters,
             "paint": {
                 "line-opacity": 0,
@@ -376,7 +376,7 @@ class Map extends Component {
         this.map.addLayer({
             "id": l.id,
             "type": "line",
-            "source": "osm",
+            "source": "osmdata",
             "name": l.name,
             "description": l.description,
             "filter": filters,
@@ -420,12 +420,12 @@ class Map extends Component {
         this.map.addLayer({
             "id": l.id + '--routes-active',
             "type": "line",
-            "source": "osm",
+            "source": "osmdata",
             "name": l.name + ' (Routes Active)',
             "description": l.description,
             "filter": filters,
             "paint": {
-                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.4),
+                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.6 : 0.4),
                 "line-width": [
                     "interpolate",
                         ["exponential", 1.5],
@@ -451,10 +451,10 @@ class Map extends Component {
                     return;
                 }
                 // if (self.selectedCycleway) {
-                //     self.map.setFeatureState({ source: 'osm', id: self.selectedCycleway }, { hover: false });
+                //     self.map.setFeatureState({ source: "osmdata", id: self.selectedCycleway }, { hover: false });
                 // }
                 // self.selectedCycleway = e.features[0].id;
-                // self.map.setFeatureState({ source: 'osm', id: self.selectedCycleway }, { hover: true });
+                // self.map.setFeatureState({ source: "osmdata", id: self.selectedCycleway }, { hover: true });
 
                 const layer = self.props.layers.find(l =>
                     l.id === e.features[0].layer.id.split('--')[0]
@@ -662,8 +662,8 @@ class Map extends Component {
                 this.props.showSatellite ? 'visible' : 'none');
         }
 
-        if (!map.getLayer('OSM')) {
-            map.addSource("osm", {
+        if (!map.getSource("osmdata")) {
+            map.addSource("osmdata", {
                 "type": "geojson",
                 "data": this.props.data || {
                     'type': 'FeatureCollection',
@@ -712,14 +712,14 @@ class Map extends Component {
         
                     // Hover style
                     if (self.hoveredCycleway) {
-                        map.setFeatureState({ source: 'osm', id: self.hoveredCycleway }, { hover: false });
+                        map.setFeatureState({ source: "osmdata", id: self.hoveredCycleway }, { hover: false });
                     }
                     self.hoveredCycleway = features[0].id;
-                    map.setFeatureState({ source: 'osm', id: self.hoveredCycleway }, { hover: true });
+                    map.setFeatureState({ source: "osmdata", id: self.hoveredCycleway }, { hover: true });
                 } else {
                     // Hover style
                     if (self.hoveredCycleway && !self.selectedCycleway) {
-                        map.setFeatureState({ source: 'osm', id: self.hoveredCycleway }, { hover: false });
+                        map.setFeatureState({ source: "osmdata", id: self.hoveredCycleway }, { hover: false });
         
                         // Cursor cursor
                         map.getCanvas().style.cursor = '';
@@ -870,7 +870,7 @@ class Map extends Component {
 
     initDirectionsLayers() {
         const map = this.map;
-        if (!map) return;
+        if (!map || map.getSource("route-selected")) return;
 
         const emptySource = {
             "type": "geojson",
@@ -889,7 +889,7 @@ class Map extends Component {
     initOverlappingCyclepathsLayer() {
         const map = this.map;
         // const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
-        if (!map) return;
+        if (!map || map.getSource("overlapping-cyclepaths")) return;
 
         map.addSource("overlapping-cyclepaths", {
             "type": "geojson",
@@ -934,7 +934,7 @@ class Map extends Component {
         }
 
         if (this.props.data !== prevProps.data) {
-            map.getSource('osm').setData(this.props.data);
+            map.getSource("osmdata").setData(this.props.data);
         }
 
         if (this.props.style !== prevProps.style) {
@@ -1231,8 +1231,8 @@ class Map extends Component {
                     map.setLayoutProperty(layer.id + '--interactive', 'visibility', interactiveStatus);
                 }
             } else if (layer.type === 'poi') {
-                // Handle POI layers - show/hide based on isActive only
-                const status = layer.isActive ? 'visible' : 'none';
+                // Handle POI layers - hide when routes are active, show when no routes and isActive
+                const status = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
                 
                 if (map.getLayer(layer.id)) {
                     map.setLayoutProperty(layer.id, 'visibility', status);
@@ -1307,6 +1307,12 @@ class Map extends Component {
         this.map = new mapboxgl.Map({
             container: this.mapContainer,
             style: this.props.style,
+            // style: MAP_STYLES.LIGHT,
+            // config: {
+            //     basemap: {
+            //         lightPreset: this.props.style === MAP_STYLES.DARK ? "night" : "daytime",
+            //     }
+            // },
             center: this.props.center,
             zoom: this.props.zoom,
             attributionControl: false,
@@ -1403,14 +1409,16 @@ class Map extends Component {
         
         // Listeners
 
-        this.map.on('style.load', () => {
+        // Try to be sure this will only be called once
+        const styleLoadHandler = () => {
             console.debug('style.load');
             this.initLayers();
-        });
+            this.map.off('style.load', styleLoadHandler);
+        };
+        this.map.on('style.load', styleLoadHandler);
 
         
-        // Initialize map data center
-        
+        // Initialize map center
         this.reverseGeocode(this.props.center);
     }
 

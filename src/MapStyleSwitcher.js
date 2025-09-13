@@ -4,6 +4,8 @@ import dark from './img/dark.png';
 import satellite from './img/satelite.png';
 import light from './img/light.png';
 
+import { MAP_STYLES } from './constants.js';
+
 import './MapStyleSwitcher.css'
 
 class MapStyleSwitcher extends Component {
@@ -17,8 +19,8 @@ class MapStyleSwitcher extends Component {
                 name: 'default',
                 img: isDarkMode ? dark : light,
                 url: isDarkMode 
-                    ? 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm' // Dark style
-                    : 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb' // Light style
+                    ? MAP_STYLES.DARK
+                    : MAP_STYLES.LIGHT
             },
             {
                 name: 'satellite',
