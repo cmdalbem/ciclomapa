@@ -360,7 +360,7 @@ class Map extends Component {
             "paint": {
                 "line-opacity": 0,
                 "line-color": 'yellow',
-                "line-width": 24
+                "line-width": 20
             },
         }, layerUnderneathName);
 
@@ -373,7 +373,12 @@ class Map extends Component {
             "description": l.description,
             "filter": filters,
             "paint": {
-                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0 : -0.1),
+                "line-color": [
+                    "case",
+                    ["boolean", ["feature-state", "hover"], false],
+                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3), // On hover
+                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0 : -0.1)
+                ],
                 "line-offset": [
                     "interpolate",
                         ["exponential", 1.5],
