@@ -29,14 +29,15 @@ export const MAP_STYLES = {
 };
  
 
-// OpenRouteService
+// Routing providers
 
 export const OPENROUTESERVICE_API_KEY = process.env.REACT_APP_OPENROUTESERVICE_API_KEY;
-
-
-// GraphHopper
+export const OPENROUTESERVICE_BASE_URL = 'https://api.openrouteservice.org/v2/directions';
 
 export const GRAPHHOPPER_API_KEY = process.env.REACT_APP_GRAPHHOPPER_API_KEY;
+export const GRAPHHOPPER_BASE_URL = 'https://graphhopper.com/api/1/route';
+
+export const VALHALLA_BASE_URL = 'https://valhalla1.openstreetmap.de/route';
 
 
 
