@@ -1,4 +1,74 @@
-export const osmi18n = {
+/*
+ * Brazilian Portuguese translations for common OSM tags,
+ * used to detailed information in the popups.
+ */
+export const osmi18n = {    
+    /*
+     * Cycleway tags
+     */
+    lit: 'Iluminado',
+    
+    // Surface types
+    surface: 'Superfície',
+    asphalt: 'Asfalto',
+    concrete: 'Concreto',
+    gravel: 'Pedra',
+    dirt: 'Solo',
+    grass: 'Grama',
+    sand: 'Areia',
+    paving_stones: "Caminho de pedra",
+    paved: 'Pavimentado',
+
+    // Properties
+    maxspeed: 'Velocidade máxima',
+    oneway: 'Sentido único?',
+    "oneway:bicycle": 'Sentido único para bicicletas?',
+    
+    // Road types
+    // highway: 'Estrada',
+    // track: 'Estrada',
+    path: 'Caminho',
+    // cycleway: 'Caminho para bicicletas',
+    // footway: 'Caminho para pedestres',
+    // sidewalk: 'Caminho para pedestres',
+    "cycleway:left": 'Tipo de caminho para bicicletas na esquerda',
+    "cycleway:right": 'Tipo de caminho para bicicletas na direita',
+    "cycleway:both": 'Tipo de caminho para bicicletas em ambos lados',
+    "cycleway:opposite": 'Tipo de caminho para bicicletas (lado oposto)',
+    "cycleway:opposite:left": 'Tipo de caminho para bicicletas (lado oposto esquerdo)',
+    "cycleway:opposite:right": 'Tipo de caminho para bicicletas (lado oposto direito)',
+    "cycleway:opposite:both": 'Tipo de caminho para bicicletas (lado oposto, ambos lados)',
+    tertiary: 'Terciária',
+    secondary: 'Secundária',
+    primary: 'Primária',
+    // motorway: 'Estrada',
+    trunk: 'Estrada expressa',
+    unclassified: 'Não classificada',
+    living_street: 'Residencial',
+    residential: 'Residencial',
+    service: 'Serviço',
+    pedestrian: 'Passeio',
+    // bicycle: 'Bicicleta',
+    // foot: 'Passeio',
+    lane: 'Faixa',
+    // lanes: 'Nro de faixas',
+    buffered_lane: 'Faixa bufferizada',
+    shared_lane: 'Faixa compartilhada',
+    share_busway: 'Faixa compartilhada com ônibus',
+    opposite_share_busway: 'Faixa oposta compartilhada com ônibus',
+    sidepath: 'Caminho lateral',
+    opposite_track: 'Caminho oposto',
+    opposite_lane: 'Faixa oposta',
+    opposite_buffered_lane: 'Faixa oposta bufferizada',
+    opposite_shared_lane: 'Faixa oposta compartilhada',
+    opposite_share_busway: 'Faixa oposta compartilhada com ônibus',
+
+
+
+    /*
+     * POI tags
+     */
+
     // Bike parking
     covered: 'Coberto',
     access: 'Acesso',
@@ -78,19 +148,19 @@ export const osmi18n = {
     note: 'Comentário',
     'note:pt': 'Comentário',
     email: 'Email',
-    wheelchair: 'Cadeira de rodas',
+    wheelchair: 'Acessível por cadeira de rodas?',
     yes: 'Sim',
     no: 'Não',
     unknown: 'Desconhecido',
-    free: 'Grátis',
-    fee: 'Pago',
+    free: 'Grátis?',
+    fee: 'Pago?',
     only: 'Somente isso',
     tyres: 'Pneus',
-    public: 'Público',
-    private: 'Privado',
+    public: 'Público?',
+    private: 'Privado?',
     limited: 'Limitado',
     designated: '',
-    permissive: 'Permissivo',
+    permissive: 'Permissivo?',
     customers: 'Clientes',
     'addr:street': 'Rua',
     'addr:housenumber': 'Número',
@@ -98,9 +168,13 @@ export const osmi18n = {
     // Custom internal tags (not from OSM!)
     'ciclomapa:address': 'Endereço',
 
+    
     //////////////////////////
 
-    // Ignored tags
+
+    /*
+     * Ignored OSM tags
+     */
     'id':  null,
     'amenity':  null,
     'name': null,

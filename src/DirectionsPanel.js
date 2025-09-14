@@ -426,6 +426,33 @@ class DirectionsPanel extends Component {
         });
     }
 
+    setDestination(coordinates) {
+        // Set the destination point programmatically
+        const newPoint = {
+            result: {
+                center: coordinates,
+                place_name: 'Destino selecionado'
+            }
+        };
+
+        this.setState({ toPoint: newPoint }, () => {
+            this.addMarker('to', coordinates);
+            
+            // Set the geocoder input if available
+            if (this.toGeocoder && this.toGeocoder.setInput) {
+                this.toGeocoder.setInput('Destino selecionado');
+            }
+
+            // Perform reverse geocoding to get the address
+            this.reverseGeocode({ lng: coordinates[0], lat: coordinates[1] }, 'to');
+
+            // If we have both origin and destination, calculate directions
+            if (this.state.fromPoint && this.state.toPoint) {
+                this.requestDirectionsCalculation();
+            }
+        });
+    }
+
     selectRoute(index) {
         if (this.props.onRouteSelected) {
             this.props.onRouteSelected(index);
@@ -734,7 +761,7 @@ class DirectionsPanel extends Component {
                             </h3>
 
                             <div className="flex items-start" style={{marginTop: '-5px'}}>
-                                {directions && (
+                                {(directions || this.state.fromPoint || this.state.toPoint) && (
                                     <Button
                                     onClick={this.clearDirections}
                                     type="text" 

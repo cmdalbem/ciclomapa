@@ -1526,6 +1526,15 @@ class Map extends Component {
         }
 
         this.popups = new MapPopups(this.map, this.props.debugMode);
+        
+        // Set up global function for popup routing button
+        window.setDestinationFromPopup = (coordinates) => {
+            if (this.props.directionsPanelRef && this.props.directionsPanelRef.setDestination) {
+                this.props.directionsPanelRef.setDestination(coordinates);
+                // Close all popups after setting destination
+                this.popups.closeAllPopups();
+            }
+        };
 
         
         // Native Mapbox map controls

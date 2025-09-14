@@ -673,6 +673,7 @@ class App extends Component {
                             debugMode={this.state.debugMode}
                             isDarkMode={this.state.isDarkMode}
                             setMapRef={this.setMapRef}
+                            directionsPanelRef={this.directionsPanel}
                         />
                         
                         {

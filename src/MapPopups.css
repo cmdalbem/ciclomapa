@@ -15,7 +15,7 @@
 
 .popup-big .mapboxgl-popup-content {
   padding: 24px 16px;
-  min-width: 360px;
+  min-width: 420px;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
   /* box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3); */
   border-radius: 12px;
