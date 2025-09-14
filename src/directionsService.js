@@ -1,11 +1,10 @@
 // Generalized directions service supporting multiple providers
 import mbxDirections from '@mapbox/mapbox-sdk/services/directions';
-import { MAPBOX_ACCESS_TOKEN, OPENROUTESERVICE_API_KEY, GRAPHHOPPER_API_KEY } from './constants';
+import { MAPBOX_ACCESS_TOKEN, OPENROUTESERVICE_API_KEY, OPENROUTESERVICE_BASE_URL, GRAPHHOPPER_API_KEY, GRAPHHOPPER_BASE_URL, VALHALLA_BASE_URL } from './constants';
 
 // Abstract base class for directions providers
 class DirectionsProvider {
-    constructor(config = {}) {
-        this.config = config;
+    constructor() {
     }
 
     async getDirections(from, to, options = {}) {
@@ -44,8 +43,8 @@ class DirectionsProvider {
 }
 
 class MapboxDirectionsProvider extends DirectionsProvider {
-    constructor(config = {}) {
-        super(config);
+    constructor() {
+        super();
         this.client = mbxDirections({ accessToken: MAPBOX_ACCESS_TOKEN });
     }
 
@@ -82,13 +81,10 @@ class MapboxDirectionsProvider extends DirectionsProvider {
 }
 
 class OpenRouteServiceProvider extends DirectionsProvider {
-    constructor(config = {}) {
-        super(config);
+    constructor() {
+        super();
         this.apiKey = OPENROUTESERVICE_API_KEY;
-        // Use proxy in development, direct API in production
-        this.baseUrl = config.baseUrl || (process.env.NODE_ENV === 'development' 
-            ? '/api/openrouteservice/v2/directions' 
-            : 'https://api.openrouteservice.org/v2/directions');
+        this.baseUrl = OPENROUTESERVICE_BASE_URL;
     }
 
     async getDirections(from, to) {
@@ -158,10 +154,10 @@ class OpenRouteServiceProvider extends DirectionsProvider {
 }
 
 class GraphHopperDirectionsProvider extends DirectionsProvider {
-    constructor(config = {}) {
-        super(config);
+    constructor() {
+        super();
         this.apiKey = GRAPHHOPPER_API_KEY;
-        this.baseUrl = config.baseUrl || 'https://graphhopper.com/api/1/route';
+        this.baseUrl = GRAPHHOPPER_BASE_URL;
     }
 
     async getDirections(from, to, options = {}) {
@@ -175,13 +171,14 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
         try {
             const params = new URLSearchParams({
                 key: this.apiKey,
-                vehicle: 'bike',
+                // vehicle: 'bike',
+                profile: 'bike',
                 type: 'json',
                 instructions: 'false',
-                elevation: 'true',
+                // elevation: 'true',
                 points_encoded: 'false',
                 calc_points: 'true',
-                details: ['bike_network'],
+                // details: ['bike_network'],
                 algorithm: 'alternative_route',
                 'alternative_route.max_paths': 2,
                 
@@ -192,26 +189,22 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
                 // How similar an alternative route can be to the optimal route. Increasing can lead to worse alternatives. Default: 0.6
                 'alternative_route.max_share_factor': 0.5,
                 
-                // Only available in paidversion
+                // Only available in paid version or self-hosted servers
                 // 'ch.disable': true,
                 // custom_model: JSON.stringify(
                 //     {
-                //         "distance_influence": 50,
+                //         "distance_influence": 15,
                 //         "priority": [
                 //           {
-                //             "if": "road_class != CYCLEWAY",
-                //             "multiply_by": "0.1"
+                //             "if": "bike_network == LOCAL",
+                //             "multiply_by": "20"
                 //           },
                 //           {
-                //             "if": "bike_network == MISSING",
-                //             "multiply_by": "0.1"
-                //           },
-                //           {
-                //             "if": "road_class == LIVING_STREET || road_class == RESIDENTIAL || road_class == UNCLASSIFIED",
-                //             "multiply_by": "0.1"
-                //             }
+                //             "if": "road_class == CYCLEWAY",
+                //             "multiply_by": "20"
+                //           }
                 //         ]
-                //       }
+                //     }
                 // )
             });
             
@@ -296,9 +289,9 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
 }
 
 class ValhallaDirectionsProvider extends DirectionsProvider {
-    constructor(config = {}) {
-        super(config);
-        this.baseUrl = config.baseUrl || 'https://valhalla1.openstreetmap.de/route';
+    constructor() {
+        super();
+        this.baseUrl = VALHALLA_BASE_URL;
     }
 
     async getDirections(from, to, options = {}) {
@@ -381,12 +374,12 @@ class ValhallaDirectionsProvider extends DirectionsProvider {
 
 // Main Directions Service
 class DirectionsService {
-    constructor(provider = 'mapbox', config = {}) {
+    constructor(provider = 'mapbox') {
         this.providers = {
-            mapbox: new MapboxDirectionsProvider(config.mapbox || {}),
-            openrouteservice: new OpenRouteServiceProvider(config.openrouteservice || {}),
-            graphhopper: new GraphHopperDirectionsProvider(config.graphhopper || {}),
-            valhalla: new ValhallaDirectionsProvider(config.valhalla || {})
+            mapbox: new MapboxDirectionsProvider(),
+            openrouteservice: new OpenRouteServiceProvider(),
+            graphhopper: new GraphHopperDirectionsProvider(),
+            valhalla: new ValhallaDirectionsProvider()
         };
         
         this.currentProvider = this.providers[provider];
