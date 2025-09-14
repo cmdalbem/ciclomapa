@@ -2,7 +2,7 @@
 
 .theme-light body {
   background: #ffffff !important;
-  color: rgba(0, 0, 0, 0.85) !important;
+  color: rgba(0, 0, 0, var(--tw-text-opacity)) !important;
 }
 
 .theme-light .ant-layout {
@@ -210,7 +210,7 @@
 
 /* Tailwind CSS overrides for light mode */
 .theme-light .text-white {
-  color: rgba(0, 0, 0, 0.85) !important;
+  color: rgba(0, 0, 0, var(--tw-text-opacity)) !important;
 }
 
 .theme-light .text-green-300 {
@@ -227,7 +227,7 @@
 }
 
 .theme-light .text-black {
-  color: rgba(255, 255, 255, 0.85) !important;
+  color: rgba(255, 255, 255, var(--tw-text-opacity)) !important;
 }
 
 .theme-light .hover\:text-white:hover {
@@ -241,6 +241,14 @@
 
 .theme-light .border-gray-300 {
   border-color: #d1d5db !important;
+}
+
+.theme-light .border-black {
+  border-color: rgba(255, 255, 255, var(--tw-border-opacity, 1)) !important;
+}
+
+.theme-light .border-white {
+  border-color: rgba(0, 0, 0, var(--tw-border-opacity, 1)) !important;
 }
 
 .theme-light .bg-gray-50 {
@@ -325,6 +333,14 @@
 
 .theme-light .text-gray-900 {
   color: #f9fafb !important;
+}
+
+.theme-light .text-red-500 {
+  color: rgba(239,68,68,var(--tw-text-opacity)) !important;
+}
+
+.theme-light .text-opacity-50 {
+  opacity: 0.5 !important;
 }
 
 /* Map-specific light mode overrides */

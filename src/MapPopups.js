@@ -50,21 +50,81 @@ class MapPopups {
         this.routeTooltips = [];
     }
 
-    getFooter(osmUrl, color='black') {
+    renderProperties(properties) {
+        const propertiesHtml = Object.keys(properties)
+            .filter(key => this.debugMode ? true : !key.startsWith('ciclomapa:'))
+            .map(key => {
+                const untranslatedValue = properties[key];
+                const translatedName = i18n[key];
+                const translatedValue = i18n[untranslatedValue];
+
+                let content = '';
+                let isTranslated = true;
+
+                switch(key) {
+                    case 'website':
+                    case 'email':
+                    case 'facebook':
+                        // Sometimes people will not put the http part of the link on OSM,
+                        // making the browser think the link is a subpage of CicloMapa and
+                        // adding our domain to the beggining of it.
+                        let link = untranslatedValue.includes('http') ? untranslatedValue : 'http://' + untranslatedValue;
+                        content = `<a target="_BLANK" rel="noopener" class="underline" href=${link}>Link</a>`;
+                        break;
+                    
+                    default: 
+                        if (translatedName) {
+                            content = translatedValue || untranslatedValue;
+                        } else {
+                            if (this.debugMode) {
+                                // In debug mode, show untranslated properties
+                                content = untranslatedValue;
+                                isTranslated = false;
+                            } else {
+                                console.debug('Ignored OSM tag:', key, untranslatedValue);
+                                return '';
+                            }
+                        };
+                        break;
+                }
+
+                const labelColor = this.debugMode && !isTranslated ? 'text-red-500' : 'opacity-70';
+                const displayName = translatedName || key;
+
+                return `
+                    <div class="mt-2">
+                        <div class="font-bold ${labelColor}">
+                            ${displayName}
+                        </div>
+                        <div>
+                            ${content}
+                        </div>
+                    </div>`;
+            }).join('');
+
         return `
-            <!-- <div class="-ml-4 -mr-4 border border-b-0 border-${color} border-opacity-25 mt-10">
-            </div> -->
-            
-            <div class="-mb-2 mt-10">
-                <div class="opacity-25 mb-2 italic">
-                    Acha que estes dados podem ser melhorados?
-                </div>
-                
+            <div class="mt-2 text-sm grid grid-cols-2 gap-2">
+                ${propertiesHtml}
+            </div>`;
+    }
+
+    getFooter(osmUrl, color='black', coordinates = null) {
+        return `
+            <div class="-mb-6 -mx-4 mt-10 p-4 pt-4 rounded-bl-lg rounded-br-lg" style="background-color: rgba(0,0,0,0.04)">
+                ${coordinates && `
+                    <button class="text-${color} border border-opacity-25 border-${color} px-2 py-0.5 rounded-xl mr-1"
+                        onclick="window.setDestinationFromPopup && window.setDestinationFromPopup(${JSON.stringify(coordinates)})"
+                    >
+                        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-0.5" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.62515 0.569498C5.38448 -0.189833 6.61582 -0.189833 7.37515 0.569498L11.4308 4.62516C12.19 5.38451 12.1901 6.61589 11.4308 7.37516L7.37515 11.4308C6.61588 12.1901 5.38449 12.19 4.62515 11.4308L0.569489 7.37516C-0.189836 6.61584 -0.189824 5.38449 0.569489 4.62516L4.62515 0.569498ZM7.00015 5.00016H4.50015C3.67173 5.00016 3.00015 5.67173 3.00015 6.50016V8.00016H4.00015V6.50016C4.00015 6.22402 4.22401 6.00016 4.50015 6.00016H7.00015V8.65153L9.10074 5.50016L7.00015 2.34879V5.00016Z"/></svg>
+                        Como chegar
+                    </button>
+                ` || ''}
+
                 <a class="text-${color} border border-opacity-25 border-${color} px-2 py-1 rounded-xl mr-1"
                     target="_BLANK" rel="noopener"
                     href="${osmUrl}"
                 >
-                    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 24 24" class="react-icon" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>    
+                    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-0.5" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M1 8.91695V11H3.08304L8.91638 5.16667L6.83333 3.08362L1 8.91695ZM10.8375 3.24552C11.0542 3.02888 11.0542 2.67893 10.8375 2.4623L9.5377 1.16248C9.32107 0.945841 8.97111 0.945841 8.75448 1.16248L7.73795 2.179L9.821 4.26205L10.8375 3.24552Z"/></svg>    
                     Editar no OSM
                 </a>
 
@@ -72,7 +132,7 @@ class MapPopups {
                     class="text-${color} border border-opacity-25 border-${color} px-2 py-1 rounded-xl"
                     onClick="document.dispatchEvent(new Event('newComment'));"
                 >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="react-icon"><path fill-rule="evenodd" clip-rule="evenodd" d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H8L3 22V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15ZM13 14V11H16V9H13V6H11V9H8V11H11V14H13Z"></path></svg>
+                    <svg fill="currentColor" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-0.5"><path d="M10.3887 0.677734C10.6833 0.677734 10.9664 0.793706 11.1748 1C11.383 1.20617 11.4999 1.48584 11.5 1.77734V7.40039C11.4999 7.69189 11.383 7.97154 11.1748 8.17773C10.9664 8.38404 10.6833 8.5 10.3887 8.5H4.27734L3.16699 10.9004L1.5 12V1.77734C1.50013 1.48583 1.61701 1.20617 1.8252 1C2.03357 0.793706 2.31664 0.677734 2.61133 0.677734H10.3887ZM6 2V4H4V5H6V7H7V5H9V4H7V2H6Z"/></svg>
                     Comentar
                 </a>
             </div>
@@ -140,61 +200,24 @@ class MapPopups {
             delete properties['addr:housenumber'];
         }
 
+        const poiTypeMap = {
+            "poi-bikeshop": "Oficinas/loja (sem nome)",
+            "poi-rental": "Estação de bicicleta (sem nome)",
+            "poi-bikeparking": "Bicicletário/paraciclo"
+        };
+
         let html = `
             <div class="text-2xl mt-3 mb-5">
                 <img src="${iconSrc}" class="inline-block align-bottom mr-1" alt=""/>
                     ${properties.name
                         ? properties.name
-                        : '<span class="italic opacity-50">Sem nome</span>'
+                        : `<span class="italic opacity-50">${poiTypeMap[poiType]} </span>`
                     }
             </div>
 
-            <div class="mt-2 text-sm grid grid-cols-2 gap-2">
-                ${Object.keys(properties).map(key => {
-                    const translatedName = i18n[key];
-                    const untranslatedValue = properties[key];
-                    const translatedValue = i18n[untranslatedValue];
+            ${this.renderProperties(properties)}
 
-                    switch(key) {
-                        case 'website':
-                        case 'email':
-                        case 'facebook':
-                            // Sometimes people will not put the http part of the link on OSM,
-                            // making the browser think the link is a subpage of CicloMapa and
-                            // adding our domain to the beggining of it.
-                            let link = untranslatedValue.includes('http') ? untranslatedValue : 'http://' + untranslatedValue;
-                            return [
-                                translatedName,
-                                `<a target="_BLANK" rel="noopener"
-                                    class="underline" href=${link}>
-                                    Link</a>`
-                            ];
-                        
-                        default: 
-                            if (translatedName) {
-                                return [
-                                    translatedName,
-                                    translatedValue || untranslatedValue
-                                ];
-                            } else {
-                                console.debug('Ignored OSM tag:', key, untranslatedValue);
-                                return '';
-                            };
-                    }
-                })
-                .map(i => i ? `
-                    <div class="mt-2">
-                        <div class="text-xs font-bold opacity-50">
-                            ${i[0]}
-                        </div>
-                        <div>
-                            ${i[1]}
-                        </div>
-                    </div>` : '')
-                .join('')}
-            </div>
-
-            ${this.getFooter(osmUrl, 'white')}
+            ${this.getFooter(osmUrl, 'white', [coords.lng, coords.lat])}
         `;
 
         this.poiPopup.setLngLat(coords)
@@ -221,43 +244,25 @@ class MapPopups {
         }
         this.previousCyclewayLayerClass = bgClass;
 
-        let debugPropsStr = '';
-        if (this.debugMode) {
-            debugPropsStr = `
-                <div class="mt-2 text-sm grid grid-cols-2 gap-2">
-                    ${Object.keys(properties).map(key => key ? `
-                        <div class="mt-2">
-                            <div class="text-xs font-bold opacity-50">
-                                ${key.includes('ciclomapa') ? key.split('ciclomapa:')[1] : key}
-                            </div>
-                            <div>
-                                ${typeof properties[key] === 'number' && !Number.isInteger(properties[key]) 
-                                    ? properties[key].toFixed(1) 
-                                    : (properties[key] || '')}
-                            </div>
-                        </div>` : '')
-                    .join('')}
-                </div>`;
-        }
 
         let html = `
             <div class="text-black">
-                <div class="text-2xl mt-3 mb-5">
-                    ${properties.name ?
-                        properties.name :
-                        '<span class="italic opacity-50">Via sem nome</span>'}
-                </div>
-
                 <div
-                    class="inline-block py-1 px-3 rounded-full bg-black font-bold"
+                    class="inline-block mt-3 py-0 px-2 rounded-full bg-black font-bold"
                     style="color: ${layer.style.lineColor}"
                 >
                     ${layer.name}
                 </div>
 
-                ${debugPropsStr}
+                <div class="text-2xl mt-2 mb-5">
+                    ${properties.name ?
+                        properties.name :
+                        '<span class="italic opacity-50">Via sem nome</span>'}
+                </div>
 
-                ${this.getFooter(osmUrl)}
+                ${this.renderProperties(properties)}
+
+                ${this.getFooter(osmUrl, 'black', [coords.lng, coords.lat])}
             </div>
         `;
 
@@ -379,6 +384,12 @@ class MapPopups {
     clearRouteTooltips() {
         this.routeTooltips.forEach(popup => popup.remove());
         this.routeTooltips = [];
+    }
+
+    closeAllPopups() {
+        this.cyclewayPopup.remove();
+        this.commentPopup.remove();
+        this.poiPopup.remove();
     }
 }
 
