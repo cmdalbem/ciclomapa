@@ -254,13 +254,7 @@ class Map extends Component {
                     POI_ZOOM_THRESHOLD,
                     true
                 ],
-                'icon-size': [
-                    "interpolate",
-                        ["exponential", 1.5],
-                        ["zoom"], 
-                        10, 0.5,
-                        POI_ZOOM_THRESHOLD, 1
-                ],
+                'icon-size': 1,
             },
             'paint': {
                 'text-color': l.style.textColor || 'white',
