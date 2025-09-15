@@ -42,7 +42,8 @@ import {
     IS_MOBILE,
     FORCE_RECALCULATE_LENGTHS_ALWAYS,
     DEFAULT_LENGTH_CALCULATE_STRATEGIES,
-    MAP_STYLES
+    MAP_STYLES,
+    WHITELISTED_CITIES
 } from './constants.js'
 
 import './App.less';
@@ -373,6 +374,17 @@ class App extends Component {
 
     updateData(forceUpdate) {
         if (this.state.area) {
+            // Check if city is whitelisted before running OSM query
+            if (WHITELISTED_CITIES.includes(this.state.area)) {
+                console.debug(`City ${this.state.area} is whitelisted, skipping OSM query!`);
+                this.setState({ 
+                    loading: false,
+                    geoJson: null,
+                    lengths: {}
+                });
+                return;
+            }
+
             if (forceUpdate) {
                 this.getDataFromOSM({forceUpdate: true});
             } else {

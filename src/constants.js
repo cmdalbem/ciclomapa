@@ -94,3 +94,8 @@ export const DEFAULT_LENGTH_CALCULATE_STRATEGIES = 'average';
 
 // Hybrid routing
 export const HYBRID_MAX_RESULTS = 5;
+
+// Whitelisted cities for OSM data queries
+export const WHITELISTED_CITIES = [
+    'Barcelona, Barcelona, Espanha'
+];
