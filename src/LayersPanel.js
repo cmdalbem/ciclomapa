@@ -99,19 +99,20 @@ class LayersPanel extends Component {
                         .map(l =>
                             <Popover
                                 placement="left"
-                                arrowPointAtCenter={true} key={l.name}
+                                key={l.name}
                                 content={(
                                     <div style={{width: 320}}>
-                                        <h3 className="text-lg">
-                                            { l.name }
-                                        </h3>
-
                                         {
                                             l.type === 'way' &&
                                             <img
-                                                className="w-full mb-2" alt=""
+                                                className="mb-3 -m-4" alt=""
+                                                style={{ width: '352px', maxWidth: 'none' }}
                                                 src={'/' + slugify(l.name) + '.png'}/>
                                         }
+
+                                        <h3 className="text-2xl mb-1 tracking-tight">
+                                            { l.displayName || l.name }
+                                        </h3>
                                         
                                         { l.description }
                                     </div>
@@ -146,7 +147,7 @@ class LayersPanel extends Component {
                                         </span>
 
                                         <span className={`font-semibold ${embedMode ? 'text-xs' : ''}`}>
-                                            {l.name} 
+                                            {l.displayName || l.name} 
                                         </span>
 
                                     </div>

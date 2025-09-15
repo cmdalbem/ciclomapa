@@ -69,7 +69,7 @@ class MapPopups {
                         // making the browser think the link is a subpage of CicloMapa and
                         // adding our domain to the beggining of it.
                         let link = untranslatedValue.includes('http') ? untranslatedValue : 'http://' + untranslatedValue;
-                        content = `<a target="_BLANK" rel="noopener" class="underline" href=${link}>Link</a>`;
+                        content = `<a target="_BLANK" rel="noopener" class="underline" href=${link}>${link}</a>`;
                         break;
                     
                     default: 
@@ -81,7 +81,7 @@ class MapPopups {
                                 content = untranslatedValue;
                                 isTranslated = false;
                             } else {
-                                console.debug('Ignored OSM tag:', key, untranslatedValue);
+                                console.debug('Map tooltip: ignored OSM tag:', key, untranslatedValue);
                                 return '';
                             }
                         };
@@ -96,7 +96,7 @@ class MapPopups {
                         <div class="font-bold ${labelColor}">
                             ${displayName}
                         </div>
-                        <div>
+                        <div class="overflow-ellipsis overflow-hidden">
                             ${content}
                         </div>
                     </div>`;
@@ -201,7 +201,7 @@ class MapPopups {
         }
 
         const poiTypeMap = {
-            "poi-bikeshop": "Oficinas/loja (sem nome)",
+            "poi-bikeshop": "Oficina/loja (sem nome)",
             "poi-rental": "Estação de bicicleta (sem nome)",
             "poi-bikeparking": "Bicicletário/paraciclo"
         };
@@ -247,14 +247,22 @@ class MapPopups {
 
         let html = `
             <div class="text-black">
-                <div
-                    class="inline-block mt-3 py-0 px-2 rounded-full bg-black font-bold"
-                    style="color: ${layer.style.lineColor}"
-                >
-                    ${layer.name}
+                <div class="relative inline-block mt-3 group">
+                    <div
+                        class="inline-flex items-center py-0 px-2 rounded-full bg-black font-semibold tracking-wide cursor-pointer"
+                        style="color: ${layer.style.lineColor}"
+                    >
+                        ${layer.name}
+                    </div>
+                    ${layer.description ? `
+                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs font-normal rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none w-64 z-10">
+                            ${layer.description}
+                            <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                    ` : ''}
                 </div>
 
-                <div class="text-2xl mt-2 mb-5">
+                <div class="text-2xl mt-2 mb-5 tracking-tight">
                     ${properties.name ?
                         properties.name :
                         '<span class="italic opacity-50">Via sem nome</span>'}
