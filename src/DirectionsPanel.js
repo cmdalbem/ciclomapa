@@ -958,7 +958,7 @@ class DirectionsPanel extends Component {
                                                 </p>
                                                 <p>
                                                     <code>
-                                                        nota = pCiclovia*1.0 + pCiclofaixa*0.8 + pCiclorrota*0.6 + pCalcadaCompartilhada*0.4
+                                                        nota = pCiclovia*1.0 + pCiclofaixa*0.8 + pCalcadaCompartilhada*0.6 + pCiclorrota*0.4
                                                     </code>
                                                 </p>
                                             </div>
