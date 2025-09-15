@@ -374,20 +374,20 @@ class App extends Component {
 
     updateData(forceUpdate) {
         if (this.state.area) {
-            // Check if city is whitelisted before running OSM query
-            if (WHITELISTED_CITIES.includes(this.state.area)) {
-                console.debug(`City ${this.state.area} is whitelisted, skipping OSM query!`);
-                this.setState({ 
-                    loading: false,
-                    geoJson: null,
-                    lengths: {}
-                });
-                return;
-            }
-
             if (forceUpdate) {
                 this.getDataFromOSM({forceUpdate: true});
             } else {
+                // Check if city is whitelisted before running OSM query
+                if (WHITELISTED_CITIES.includes(this.state.area)) {
+                    console.debug(`City ${this.state.area} is whitelisted, skipping OSM query!`);
+                    this.setState({ 
+                        loading: false,
+                        geoJson: null,
+                        lengths: {}
+                    });
+                    return;
+                }
+                
                 // Try to retrieve previously saved data for this area
                 this.storage.load(this.state.area)
                     .then(data => {

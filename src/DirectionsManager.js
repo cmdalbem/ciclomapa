@@ -36,23 +36,33 @@ class DirectionsManager {
             let routesWithScores = [];
             let routeCoverageData = [];
             
-            if (directions && directions.routes && directions.routes.length > 0 && geoJson && layers) {
+            // Check if coverage data is available once for all routes
+            const hasCoverageData = geoJson && layers;
+            
+            if (directions && directions.routes && directions.routes.length > 0) {
+                
+                if (!hasCoverageData) {
+                    console.debug('No coverage data available for any routes');
+                }
+                
                 routesWithScores = directions.routes.map((route, index) => {
                     console.debug(`Route ${index} geometry:`, route.geometry);
                     
                     let coverageData = {
                         coverage: 0,
                         coverageByType: {},
-                        overlappingCyclepaths: []
+                        overlappingCyclepaths: [],
+                        hasCoverageData
                     };
                     
-                    // Calculate coverage if route has valid geometry
-                    if (route.geometry && route.geometry.type === 'LineString') {
+                    // Calculate coverage if route has valid geometry and coverage data is available
+                    if (route.geometry && route.geometry.type === 'LineString' && hasCoverageData) {
                         const coverageResult = calculateCyclepathCoverage(route.geometry, geoJson, layers);
                         coverageData = {
                             coverage: coverageResult.coverage,
                             coverageByType: coverageResult.coverageByType,
-                            overlappingCyclepaths: coverageResult.overlappingCyclepaths
+                            overlappingCyclepaths: coverageResult.overlappingCyclepaths,
+                            hasCoverageData: true
                         };
                         console.debug(`Route ${index} cyclepath coverage calculated:`, coverageResult.coverage + '%');
                         console.debug(`Route ${index} coverage by type:`, coverageResult.coverageByType);
@@ -60,11 +70,27 @@ class DirectionsManager {
                     }
                     
                     // Calculate route score using the coverage data
-                    const { score: routeScore, cssClass: routeScoreClass } = getRouteScore([coverageData], 0);
+                    // Only calculate score if we have coverage data, otherwise return null
+                    let routeScore, routeScoreClass;
+                    if (hasCoverageData) {
+                        const scoreResult = getRouteScore([coverageData], 0);
+                        routeScore = scoreResult.score;
+                        routeScoreClass = scoreResult.cssClass;
+                    } else {
+                        routeScore = null;
+                        routeScoreClass = null;
+                    }
                     
                     // Calculate coverage breakdowns
-                    const coverageBreakdown = getCoverageBreakdown([coverageData], 0);
-                    const coverageBreakdownSimple = getCoverageBreakdownSimple([coverageData], 0);
+                    // Only calculate breakdowns if we have coverage data, otherwise return null
+                    let coverageBreakdown, coverageBreakdownSimple;
+                    if (hasCoverageData) {
+                        coverageBreakdown = getCoverageBreakdown([coverageData], 0);
+                        coverageBreakdownSimple = getCoverageBreakdownSimple([coverageData], 0);
+                    } else {
+                        coverageBreakdown = null;
+                        coverageBreakdownSimple = null;
+                    }
                     
                     // Store coverage data for this route
                     routeCoverageData[index] = {
@@ -86,20 +112,24 @@ class DirectionsManager {
                 });
                 
             } else {
-                console.error('Missing data for coverage calculation:', {
+                console.error('Missing directions data:', {
                     directions: !!directions,
-                    routes: directions?.routes?.length || 0,
-                    geoJson: !!geoJson,
-                    layers: !!layers
+                    routes: directions?.routes?.length || 0
                 });
             }
             
             // Sort routes by score (highest first), then by coverage as tiebreaker
+            // Routes without coverage data are sorted by distance (shortest first)
             const sortedRoutesWithScores = routesWithScores.sort((a, b) => {
-                if (b.score !== a.score) {
-                    return (b.score || 0) - (a.score || 0);
+                // If coverage data is available, sort by score
+                if (hasCoverageData) {
+                    if (b.score !== a.score) {
+                        return (b.score || 0) - (a.score || 0);
+                    }
+                    return (b.coverage || 0) - (a.coverage || 0);
                 }
-                return (b.coverage || 0) - (a.coverage || 0);
+                // If no coverage data, sort by distance (shortest first)
+                return (a.distance || 0) - (b.distance || 0);
             });
 
             // Limit the number of results after scoring and sorting (only for hybrid provider)
