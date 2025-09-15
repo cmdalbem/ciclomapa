@@ -435,7 +435,10 @@ class Map extends Component {
         const filters = this.convertFilterToMapboxFilter(l);
         const dashedLineStyle = { 'line-dasharray': [1, 1] };
         // Will be used as "beforeId" prop in AddLayer
-        const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
+        const layerUnderneathName = 
+            this.map.getLayer('road-label-small') ? 'road-label-small'
+                : this.map.getLayer('road-label') ? 'road-label'
+                : '';
         const self = this;
 
         // Interactive layer is wider than the actual layer to improve usability
@@ -992,8 +995,8 @@ class Map extends Component {
                     'case',
                     ['==', ['get', 'type'], 'Ciclovia'], '#00A33F',
                     ['==', ['get', 'type'], 'Ciclofaixa'], '#84CC16',
-                    ['==', ['get', 'type'], 'Ciclorrota'], '#F6CA5D',
-                    ['==', ['get', 'type'], 'Calçada compartilhada'], '#F56743',
+                    ['==', ['get', 'type'], 'Ciclorrota'], '#F56743',
+                    ['==', ['get', 'type'], 'Calçada compartilhada'], '#F6CA5D',
                     '#00ff00' // Default fallback color
                 ],
                 'line-width': [
