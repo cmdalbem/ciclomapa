@@ -72,7 +72,7 @@
 
 .theme-light .ant-popover-inner {
   background: #ffffff !important;
-  border: 1px solid #d9d9d9 !important;
+  /* border: 1px solid #d9d9d9 !important; */
 }
 
 .theme-light .ant-popover-arrow {
@@ -222,7 +222,8 @@
   background-color: rgba(0,0,0,var(--tw-bg-opacity)) !important;
 }
 
-.theme-light .bg-black {
+.theme-light .bg-black,
+.theme-light .hover\:bg-black:hover {
   background-color: rgba(255,255,255,var(--tw-bg-opacity)) !important;
 }
 
@@ -378,4 +379,8 @@
 
 .theme-light .switcher-bar > div.selected {
   border: 2px solid #4EA76F !important;
+}
+
+.theme-light .ant-popover-arrow-content {
+  --antd-arrow-background-color: #ffffff !important;
 }

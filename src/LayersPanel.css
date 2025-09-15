@@ -1,4 +1,8 @@
 
+.ant-popover-inner {
+    overflow: hidden;
+}
+
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {
