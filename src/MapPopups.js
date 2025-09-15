@@ -298,7 +298,8 @@ class MapPopups {
 
     // Route tooltip methods
     createRouteTooltipHTML(route, routeIndex, routeCoverageData, selectedRouteIndex = null) {
-        const { score: routeScore, cssClass: routeScoreClass } = getRouteScore(routeCoverageData, routeIndex);
+        const routeScore = routeCoverageData[routeIndex]?.score || null;
+        const routeScoreClass = routeCoverageData[routeIndex]?.scoreClass || null;
         const stateClass = this.getTooltipStateClass(routeIndex, selectedRouteIndex);
         
         const baseClasses = "px-2 py-1 text-xs bg-black rounded-md font-medium shadow-lg cursor-pointer transition-all duration-200 max-w-[200px]";

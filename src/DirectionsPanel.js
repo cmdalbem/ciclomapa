@@ -6,7 +6,7 @@ import {
     HiOutlineTrendingDown as IconTrendingDown
 } from "react-icons/hi";
 import { LuBike as IconBike, LuRoute as IconRoute } from "react-icons/lu";
-import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash } from "react-icons/hi2";
+import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash, HiOutlineExclamationTriangle as IconNoData } from "react-icons/hi2";
 import { HiCog as IconCog } from "react-icons/hi";
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
@@ -880,11 +880,18 @@ class DirectionsPanel extends Component {
                                             <div className="flex justify-between gap-1">
                                                 {/* Left column */}
                                                 <div className="flex items-start">
-                                                    <div 
-                                                        className={`flex items-center mr-2 ${(routeCoverageData[index] || {}).scoreClass || 'bg-gray-600'} px-1.5 py-1.5 rounded-md text-sm leading-none font-mono text-center`} 
-                                                        style={{color: 'white'}}>
-                                                        {(routeCoverageData[index] || {}).score || 0}
-                                                    </div>
+                                                    {(routeCoverageData[index] || {}).score !== null ? (
+                                                        <div 
+                                                            className={`flex items-center mr-2 ${(routeCoverageData[index] || {}).scoreClass || 'bg-gray-600'} px-1.5 py-1.5 rounded-md text-sm leading-none font-mono text-center`} 
+                                                            style={{color: 'white'}}>
+                                                            {(routeCoverageData[index] || {}).score}
+                                                        </div>
+                                                    ) : (
+                                                        <IconBike 
+                                                            className="w-4 h-4 mr-2" 
+                                                            title="Dados de cobertura não disponíveis" 
+                                                        />
+                                                    )}
 
                                                     <div className="flex flex-col flex-end">
                                                         <div className="flex items-center gap-2 mb-1">

@@ -193,7 +193,7 @@ class TopBar extends Component {
                                     </Button>
 
                                     {
-                                        lastUpdate && !IS_MOBILE &&
+                                        !IS_MOBILE &&
                                         <Popover
                                             trigger={IS_MOBILE ? 'click' : 'hover'}
                                             placement="bottom"
@@ -201,9 +201,12 @@ class TopBar extends Component {
                                             content={(
                                                 <div style={{ maxWidth: 250 }}>
                                                     <Space size="small" direction="vertical" >
-                                                        <div>
-                                                            O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
-                                                        </div> 
+                                                        {
+                                                            lastUpdate &&
+                                                            <div>
+                                                                O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
+                                                            </div> 
+                                                        }
 
                                                         <Button
                                                             size="small"
