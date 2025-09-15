@@ -11,8 +11,8 @@ export const getRouteScore = (routeCoverageData, index) => {
     const qualityWeights = {
         'Ciclovia': 1.0,           // Perfect score
         'Ciclofaixa': 0.8,         // Good but not perfect
-        'Ciclorrota': 0.6,         // Moderate quality
-        'Calçada compartilhada': 0.4  // Lower quality
+        'Calçada compartilhada': 0.6,         // Moderate quality
+        'Ciclorrota': 0.4  // Lower quality
     };
     
     // Calculate weighted score
@@ -35,6 +35,10 @@ export const getRouteScore = (routeCoverageData, index) => {
     const score = Math.round(weightedScore);
     let cssClass;
     
+    // Score ranges
+    //   0-50: Bad
+    //   51-75: Good
+    //   76-100: Very good
     if (score < 50) {
         cssClass = 'bg-red-600';
     } else if (score < 75) {
@@ -117,8 +121,8 @@ export const getCoverageBreakdown = (routeCoverageData, index) => {
                         backgroundColor: 
                             item.includes('ciclovia') ? '#4A5D5A'
                             : item.includes('ciclofaixa') ? '#6B7A6B'
-                            : item.includes('ciclorrota') ? '#7A7568'
-                            : item.includes('calçada') ? '#7A6B6A'
+                            : item.includes('calçada') ? '#7A7568'
+                            : item.includes('ciclorrota') ? '#7A6B6A'
                             : '#FF9999'
                     }}
                 >
