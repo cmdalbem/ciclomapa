@@ -500,10 +500,10 @@ class App extends Component {
             } else {
                 // @todo this seem to be being called every time!!!!
                 // Retrocompatibility case where lengths weren't saved to database
-                if (!this.state.lengths) {
-                    console.debug('database didnt have lengths, computing...');
-                    this.calculateLengths();
-                }
+                // if (!this.state.lengths) {
+                //     console.debug('database didnt have lengths, computing...');
+                //     this.calculateLengths();
+                // }
             }
         }
         
