@@ -6,6 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
+import { PmTilesSource } from 'mapbox-pmtiles';
 
 import {
     MAPBOX_ACCESS_TOKEN,
@@ -82,6 +83,7 @@ class Map extends Component {
     hoveredCycleway;
     hoveredComment;
     hoveredPOI;
+    geojsonSourceID;
 
     airtableDatabase;
     comments;
@@ -223,75 +225,93 @@ class Map extends Component {
         ];
     }
 
-    initPOILayer(l) {
+    initPOILayer(l, sourceId = "osmdata") {
         const filters = this.convertFilterToMapboxFilter(l);
 
-        // Base layer configuration
-        const baseLayerConfig = {
-            'type': 'symbol',
-            'source': "osmdata",
-            "filter": filters,
-            "description": l.description,
-            'layout': {
-                'text-field': [ 'step', ['zoom'], '', POI_ZOOM_THRESHOLD, ['get', 'name'], ],
-                'text-font': ['IBM Plex Sans Medium'],
-                'text-letter-spacing': 0.05,
-                "text-offset": [0, 1.5],
-                "text-max-width": 8,
-                'text-size': [
-                    "interpolate",
-                        ["exponential", 1.5],
-                        ["zoom"], 
-                        10, 10,
-                        18, 14
-                ],
-                'text-variable-anchor': ['top'],
-                "icon-padding": 0,
-                "icon-allow-overlap": [
-                    'step',
-                    ['zoom'],
-                    false,
-                    POI_ZOOM_THRESHOLD,
-                    true
-                ],
-                'icon-size': 1,
-            },
-            'paint': {
-                'text-color': l.style.textColor || 'white',
-                'text-halo-width': 1,
-                'text-opacity': ['case',
-                    ['boolean', ['feature-state', 'hover'], false],
-                    0.7,
-                    1.0
-                ],
-                'icon-opacity': ['case',
-                    ['boolean', ['feature-state', 'hover'], false],
-                    0.7,
-                    1.0
-                ]
-            }
-        };
+        const sourceLayer = sourceId === 'osmdata' ? '' : 'default';
 
-        // Create POI layer
-        this.map.addLayer({
-            ...baseLayerConfig,
-            'id': l.id,
-            "name": l.name,
-            'layout': {
-                ...baseLayerConfig.layout,
-                'icon-image': [
-                    'step',
-                    ['zoom'],
-                    this.props.isDarkMode ? `${l.icon}-mini` : `${l.icon}-mini--light`,
-                    POI_ZOOM_THRESHOLD,
-                    this.props.isDarkMode ? `${l.icon}` : `${l.icon}--light`,
-                ],
-            },
-            'paint': {
-                ...baseLayerConfig.paint,
-                'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#ffffff',
-            }
-        });
+        // @TODO temporary debug layer while we don't know what's wrong with Mapbox and symbol layers
+        if (sourceId !== 'osmdata') {
+            this.map.addLayer({
+                'id': l.id,
+                "name": l.name,
+                'source': sourceId,
+                'source-layer': sourceLayer,
+                "filter": filters,
+                "description": l.description,
+                // 'type': 'symbol',
+                type: 'circle',
+                'paint': {
+                    'circle-radius': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        12, 2,
+                        18, 6
+                    ],
+                    'circle-color': l.style.textColor,
+                    'circle-opacity': 1,
+                    'circle-stroke-width': 1,
+                    'circle-stroke-color': '#ffffff'
+                }
+            });
+        } else {
+            this.map.addLayer({
+                'id': l.id,
+                "name": l.name,
+                'type': 'symbol',
+                'source': sourceId,
+                'source-layer': sourceLayer,
+                "filter": filters,
+                "description": l.description,
+                'layout': {
+                    'text-field': [ 'step', ['zoom'], '', POI_ZOOM_THRESHOLD, ['get', 'name'], ],
+                    'text-font': ['IBM Plex Sans Medium'],
+                    'text-letter-spacing': 0.05,
+                    "text-offset": [0, 1.5],
+                    "text-max-width": 8,
+                    'text-size': [
+                        "interpolate",
+                            ["exponential", 1.5],
+                            ["zoom"], 
+                            10, 10,
+                            18, 14
+                    ],
+                    'text-variable-anchor': ['top'],
+                    "icon-padding": 0,
+                    "icon-allow-overlap": [
+                        'step',
+                        ['zoom'],
+                        false,
+                        POI_ZOOM_THRESHOLD,
+                        true
+                    ],
+                    'icon-size': 1,
+                    'icon-image': [
+                        'step',
+                        ['zoom'],
+                        this.props.isDarkMode ? `${l.icon}-mini` : `${l.icon}-mini--light`,
+                        POI_ZOOM_THRESHOLD,
+                        this.props.isDarkMode ? `${l.icon}` : `${l.icon}--light`,
+                    ],
+                },
+                'paint': {
+                    'text-color': l.style.textColor || 'white',
+                    'text-halo-width': 1,
+                    'text-opacity': ['case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        0.7,
+                        1.0
+                    ],
+                    'icon-opacity': ['case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        0.7,
+                        1.0
+                    ],
+                    'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#ffffff',
+                }
+            });
+        }
 
         // Interactions
         const self = this;
@@ -307,13 +327,15 @@ class Map extends Component {
 
                 if (self.hoveredPOI) {
                     self.map.setFeatureState({
-                        source: "osmdata",
+                        source: sourceId,
+                        'source-layer': sourceLayer,
                         id: self.hoveredPOI },
                         { hover: false });
                 }
                 self.hoveredPOI = e.features[0].id;
                 self.map.setFeatureState({
-                    source: "osmdata",
+                    source: sourceId,
+                    'source-layer': sourceLayer,
                     id: self.hoveredPOI },
                     { hover: true });
             }
@@ -325,7 +347,8 @@ class Map extends Component {
                 self.map.getCanvas().style.cursor = '';
 
                 self.map.setFeatureState({
-                    source: "osmdata",
+                    source: sourceId,
+                    'source-layer': sourceLayer,
                     id: self.hoveredPOI },
                     { hover: false });
             }
@@ -431,7 +454,7 @@ class Map extends Component {
     //     }
     // }
 
-    initCyclepathLayer(l) {
+    initCyclepathLayer(l, sourceId = "osmdata") {
         const filters = this.convertFilterToMapboxFilter(l);
         const dashedLineStyle = { 'line-dasharray': [1, 1] };
         // Will be used as "beforeId" prop in AddLayer
@@ -441,11 +464,14 @@ class Map extends Component {
                 : '';
         const self = this;
 
+        const sourceLayer = sourceId === 'osmdata' ? '' : 'default';
+
         // Interactive layer is wider than the actual layer to improve usability
         this.map.addLayer({
             "id": l.id + '--interactive',
             "type": "line",
-            "source": "osmdata",
+            "source": sourceId,
+            'source-layer': sourceLayer,
             "filter": filters,
             "paint": {
                 "line-opacity": 0,
@@ -458,7 +484,8 @@ class Map extends Component {
         this.map.addLayer({
             "id": l.id,
             "type": "line",
-            "source": "osmdata",
+            "source": sourceId,
+            'source-layer': sourceLayer,
             "name": l.name,
             "description": l.description,
             "filter": filters,
@@ -502,7 +529,8 @@ class Map extends Component {
         this.map.addLayer({
             "id": l.id + '--routes-active',
             "type": "line",
-            "source": "osmdata",
+            "source": sourceId,
+            'source-layer': sourceLayer,
             "name": l.name + ' (Routes Active)',
             "description": l.description,
             "filter": filters,
@@ -659,6 +687,165 @@ class Map extends Component {
         });
     }
 
+
+    async setupPmTilesForCyclepaths() {
+        // PmTiles is now available via import
+
+        // Ensure style is fully loaded before adding sources
+        if (!this.map.isStyleLoaded()) {
+            await new Promise(resolve => {
+                if (this.map.isStyleLoaded()) {
+                    resolve();
+                } else {
+                    this.map.once('styledata', resolve);
+                }
+            });
+        }
+
+        // Set up PmTiles source for cyclepath data
+        const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'barnaregion.pmtiles';
+        
+        try {
+            console.log('Loading PMTiles from S3:', PMTILES_URL);
+            
+            // Get header information from the PmTiles file
+            const header = await PmTilesSource.getHeader(PMTILES_URL);
+            console.log('PMTiles loaded - bounds:', [header.minLon, header.minLat, header.maxLon, header.maxLat], 'zoom:', header.minZoom + '-' + header.maxZoom);
+            console.log('PMTiles header full:', header);
+            
+            const bounds = [
+                header.minLon,
+                header.minLat,
+                header.maxLon,
+                header.maxLat,
+            ];
+
+            // Add the PmTiles source for cyclepath data
+            this.map.addSource('pmtiles-cyclepaths', {
+                type: PmTilesSource.SOURCE_TYPE,
+                url: PMTILES_URL,
+                minzoom: header.minZoom,
+                maxzoom: header.maxZoom,
+                bounds: bounds,
+            });
+
+            // Add debug layers to show everything from PMTiles
+            // this.addPmTilesDebugLayers();
+
+            console.log('PMTiles source added successfully');
+            return 'pmtiles-cyclepaths';
+        } catch (error) {
+            console.error('Error setting up PmTiles for cyclepaths:', error);
+            return 'osmdata'; // Fallback to osmdata
+        }
+    }
+
+    addPmTilesDebugLayers() {
+        // Add a debug layer that shows ALL features from PMTiles as points
+        this.map.addLayer({
+            id: 'pmtiles-debug-points',
+            type: 'circle',
+            source: 'pmtiles-cyclepaths',
+            'source-layer': 'default',
+            paint: {
+                'circle-radius': 5,
+                'circle-color': '#ff0000',
+                'circle-opacity': 0.8
+            },
+            filter: ['==', '$type', 'Point']
+        });
+
+        // Add a debug layer that shows ALL features from PMTiles as lines
+        this.map.addLayer({
+            id: 'pmtiles-debug-lines',
+            type: 'line',
+            source: 'pmtiles-cyclepaths',
+            'source-layer': 'default',
+            paint: {
+                'line-color': '#00ff00',
+                'line-width': 2,
+                'line-opacity': 0.8
+            },
+            filter: ['==', '$type', 'LineString']
+        });
+
+        // Add a debug layer that shows ALL features from PMTiles as polygons
+        this.map.addLayer({
+            id: 'pmtiles-debug-polygons',
+            type: 'fill',
+            source: 'pmtiles-cyclepaths',
+            'source-layer': 'default',
+            paint: {
+                'fill-color': '#0000ff',
+                'fill-opacity': 0.5
+            },
+            filter: ['==', '$type', 'Polygon']
+        });
+
+        // Add click handlers to inspect features
+        this.map.on('click', 'pmtiles-debug-points', (e) => {
+            console.log('PMTiles Point feature:', e.features[0]);
+            this.showDebugPopup(e, 'Point');
+        });
+
+        this.map.on('click', 'pmtiles-debug-lines', (e) => {
+            console.log('PMTiles LineString feature:', e.features[0]);
+            this.showDebugPopup(e, 'LineString');
+        });
+
+        this.map.on('click', 'pmtiles-debug-polygons', (e) => {
+            console.log('PMTiles Polygon feature:', e.features[0]);
+            this.showDebugPopup(e, 'Polygon');
+        });
+
+        // Change cursor on hover
+        this.map.on('mouseenter', ['pmtiles-debug-points', 'pmtiles-debug-lines', 'pmtiles-debug-polygons'], () => {
+            this.map.getCanvas().style.cursor = 'pointer';
+        });
+
+        this.map.on('mouseleave', ['pmtiles-debug-points', 'pmtiles-debug-lines', 'pmtiles-debug-polygons'], () => {
+            this.map.getCanvas().style.cursor = '';
+        });
+
+        console.log('PMTiles debug layers added');
+    }
+
+    showDebugPopup(e, geometryType) {
+        const feature = e.features[0];
+        const properties = feature.properties;
+        
+        // Create a popup with all the feature data
+        let html = `
+            <div style="max-width: 300px; max-height: 400px; overflow-y: auto;">
+                <h3>PMTiles Debug - ${geometryType}</h3>
+                <p><strong>Layer:</strong> ${feature.layer.id}</p>
+                <p><strong>Source:</strong> ${feature.source}</p>
+                <p><strong>Source Layer:</strong> ${feature.sourceLayer || 'none'}</p>
+                <h4>Properties:</h4>
+                <pre style="font-size: 12px; background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">
+${JSON.stringify(properties, null, 2)}
+                </pre>
+                <h4>Full Feature:</h4>
+                <pre style="font-size: 10px; background: #f0f0f0; padding: 10px; border-radius: 4px; overflow-x: auto;">
+${JSON.stringify(feature, null, 2)}
+                </pre>
+            </div>
+        `;
+
+        new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(html)
+            .addTo(this.map);
+    }
+
+
+    hideCyclewaysFromStyle() {
+        // Hide the specific "cycleways" layer
+        if (this.map.getLayer('cycleways')) {
+            this.map.setLayoutProperty('cycleways', 'visibility', 'none');
+        }
+    }
+
     addCitiesLinksLayer() {
         this.map.addSource(
             'cities', {
@@ -734,7 +921,7 @@ class Map extends Component {
 
     // Layers need to be initialized in the paint order
     // Afterwards their data can be updated safely without messing up the order
-    initGeojsonLayers(layers) {
+    async initGeojsonLayers(layers) {
         const map = this.map;
         const self = this;
 
@@ -765,15 +952,16 @@ class Map extends Component {
                 "generateId": true
             });
 
+            this.geojsonSourceID = await this.setupPmTilesForCyclepaths();
 
             // layers.json is ordered from most to least important, but we 
             //   want the most important ones to be on top so we add in reverse.
             // Slice is used here to don't destructively reverse the original array.
             layers.slice().reverse().forEach(l => {
                 if (!l.type || l.type==='way') {
-                    this.initCyclepathLayer(l);
+                    this.initCyclepathLayer(l, this.geojsonSourceID);
                 } else if (l.type === 'poi' && l.filters) {
-                    this.initPOILayer(l);
+                    this.initPOILayer(l, this.geojsonSourceID);
                 }
             });
 
@@ -783,36 +971,42 @@ class Map extends Component {
                 this.addCitiesLinksLayer();
             }
     
-            map.on('mousemove', function(e) {
-                const features = map.queryRenderedFeatures(e.point, {
-                  layers: layers.filter(l => l.type === 'way').map(l => l.id+'--interactive')
+            // @TODO temporary disable this while we investigae the following error:
+            //    Error: The sourceLayer parameter must be provided for vector source types.
+            //
+            if (this.geojsonSourceID === 'osmdata') {
+                map.on('mousemove', function(e) {
+                    const sourceLayer = self.geojsonSourceID === 'osmdata' ? '' : 'default';
+                    const features = map.queryRenderedFeatures(e.point, {
+                    layers: layers.filter(l => l.type === 'way').map(l => l.id+'--interactive')
+                    });
+        
+                    if (features.length > 0) {
+                        // Disable cyclepath hover effects when in route mode
+                        if (self.props.isInRouteMode) {
+                            return;
+                        }
+                        // console.debug(features);
+                        map.getCanvas().style.cursor = 'pointer';
+            
+                        // Hover style
+                        if (self.hoveredCycleway) {
+                            map.setFeatureState({ source: self.geojsonSourceID, 'source-layer': sourceLayer, id: self.hoveredCycleway }, { hover: false });
+                        }
+                        self.hoveredCycleway = features[0].id;
+                        map.setFeatureState({ source: self.geojsonSourceID, 'source-layer': sourceLayer, id: self.hoveredCycleway }, { hover: true });
+                    } else {
+                        // Hover style
+                        if (self.hoveredCycleway && !self.selectedCycleway) {
+                            map.setFeatureState({ source: self.geojsonSourceID, 'source-layer': sourceLayer, id: self.hoveredCycleway }, { hover: false });
+            
+                            // Cursor cursor
+                            map.getCanvas().style.cursor = '';
+                        }
+                        self.hoveredCycleway = null;
+                    }
                 });
-    
-                if (features.length > 0) {
-                    // Disable cyclepath hover effects when in route mode
-                    if (self.props.isInRouteMode) {
-                        return;
-                    }
-                    // console.debug(features);
-                    map.getCanvas().style.cursor = 'pointer';
-        
-                    // Hover style
-                    if (self.hoveredCycleway) {
-                        map.setFeatureState({ source: "osmdata", id: self.hoveredCycleway }, { hover: false });
-                    }
-                    self.hoveredCycleway = features[0].id;
-                    map.setFeatureState({ source: "osmdata", id: self.hoveredCycleway }, { hover: true });
-                } else {
-                    // Hover style
-                    if (self.hoveredCycleway && !self.selectedCycleway) {
-                        map.setFeatureState({ source: "osmdata", id: self.hoveredCycleway }, { hover: false });
-        
-                        // Cursor cursor
-                        map.getCanvas().style.cursor = '';
-                    }
-                    self.hoveredCycleway = null;
-                }
-            });
+            }
         } else {
             console.warn('Map layers already initialized.');
         }
@@ -1027,6 +1221,11 @@ class Map extends Component {
         if (this.props.style !== prevProps.style) {
             console.debug('new style', this.props.style);
             map.setStyle(this.props.style);
+            
+            // Hide cycleways when style changes
+            map.once('style.load', () => {
+                this.hideCyclewaysFromStyle();
+            });
         }
 
         if (this.props.showSatellite !== prevProps.showSatellite) {
@@ -1501,11 +1700,15 @@ class Map extends Component {
         }
     }
 
-
     componentDidMount() {
         mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
-
-        this.map = new mapboxgl.Map({
+        
+        // Register PmTiles source type
+        mapboxgl.Style.setSourceType(PmTilesSource.SOURCE_TYPE, PmTilesSource);
+        
+        try {
+            console.log('Creating Mapbox map...');
+            this.map = new mapboxgl.Map({
             container: this.mapContainer,
             style: this.props.style,
             // style: MAP_STYLES.LIGHT,
@@ -1522,6 +1725,11 @@ class Map extends Component {
         }).addControl(new mapboxgl.AttributionControl({
             compact: false
         }));
+
+        } catch (error) {
+            console.error('Error creating Mapbox map:', error);
+            throw error;
+        }
 
         // Pass the map reference to the parent component
         if (this.props.setMapRef) {
@@ -1620,9 +1828,18 @@ class Map extends Component {
         // Listeners
 
         // Try to be sure this will only be called once
-        const styleLoadHandler = () => {
+        const styleLoadHandler = async () => {
             console.debug('style.load');
-            this.initLayers();
+            
+            // Wait for the style to be fully loaded
+            if (!this.map.isStyleLoaded()) {
+                this.map.once('styledata', async () => {
+                    await this.initializeAfterStyleLoad();
+                });
+            } else {
+                await this.initializeAfterStyleLoad();
+            }
+            
             this.map.off('style.load', styleLoadHandler);
         };
         this.map.on('style.load', styleLoadHandler);
@@ -1630,6 +1847,13 @@ class Map extends Component {
         
         // Initialize map center
         this.reverseGeocode(this.props.center);
+    }
+
+    async initializeAfterStyleLoad() {
+        // Hide cycleways layer from the style
+        this.hideCyclewaysFromStyle();
+        
+        await this.initLayers();
     }
 
     loadImages() {
@@ -1653,10 +1877,12 @@ class Map extends Component {
     }
 
 
-    initLayers() {
+    async initLayers() {
         // The order in which layers are initialized will define their paint order
-        this.initGeojsonLayers(this.props.layers);
+        await this.initGeojsonLayers(this.props.layers);
+        
         this.initDirectionsLayers();
+        
         this.initOverlappingCyclepathsLayer();
             
         if (ENABLE_COMMENTS) {
