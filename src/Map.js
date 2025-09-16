@@ -239,7 +239,6 @@ class Map extends Component {
                 'source-layer': sourceLayer,
                 "filter": filters,
                 "description": l.description,
-                // 'type': 'symbol',
                 type: 'circle',
                 'paint': {
                     'circle-radius': [
@@ -249,10 +248,9 @@ class Map extends Component {
                         12, 2,
                         18, 6
                     ],
-                    'circle-color': l.style.textColor,
-                    'circle-opacity': 1,
+                    'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? 0.2 : -0.2),
                     'circle-stroke-width': 1,
-                    'circle-stroke-color': '#ffffff'
+                    'circle-stroke-color': this.props.isDarkMode ? '#000000' : '#ffffff'
                 }
             });
         } else {
@@ -688,7 +686,7 @@ class Map extends Component {
     }
 
 
-    async setupPmTilesForCyclepaths() {
+    async loadPMTiles() {
         // PmTiles is now available via import
 
         // Ensure style is fully loaded before adding sources
@@ -703,7 +701,11 @@ class Map extends Component {
         }
 
         // Set up PmTiles source for cyclepath data
-        const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'barnaregion.pmtiles';
+        const files = [
+            'spain.pmtiles',
+            'brasil.pmtiles',
+        ];
+        const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'brasil.pmtiles';
         
         try {
             console.log('Loading PMTiles from S3:', PMTILES_URL);
@@ -729,9 +731,6 @@ class Map extends Component {
                 bounds: bounds,
             });
 
-            // Add debug layers to show everything from PMTiles
-            // this.addPmTilesDebugLayers();
-
             console.log('PMTiles source added successfully');
             return 'pmtiles-cyclepaths';
         } catch (error) {
@@ -739,105 +738,6 @@ class Map extends Component {
             return 'osmdata'; // Fallback to osmdata
         }
     }
-
-    addPmTilesDebugLayers() {
-        // Add a debug layer that shows ALL features from PMTiles as points
-        this.map.addLayer({
-            id: 'pmtiles-debug-points',
-            type: 'circle',
-            source: 'pmtiles-cyclepaths',
-            'source-layer': 'default',
-            paint: {
-                'circle-radius': 5,
-                'circle-color': '#ff0000',
-                'circle-opacity': 0.8
-            },
-            filter: ['==', '$type', 'Point']
-        });
-
-        // Add a debug layer that shows ALL features from PMTiles as lines
-        this.map.addLayer({
-            id: 'pmtiles-debug-lines',
-            type: 'line',
-            source: 'pmtiles-cyclepaths',
-            'source-layer': 'default',
-            paint: {
-                'line-color': '#00ff00',
-                'line-width': 2,
-                'line-opacity': 0.8
-            },
-            filter: ['==', '$type', 'LineString']
-        });
-
-        // Add a debug layer that shows ALL features from PMTiles as polygons
-        this.map.addLayer({
-            id: 'pmtiles-debug-polygons',
-            type: 'fill',
-            source: 'pmtiles-cyclepaths',
-            'source-layer': 'default',
-            paint: {
-                'fill-color': '#0000ff',
-                'fill-opacity': 0.5
-            },
-            filter: ['==', '$type', 'Polygon']
-        });
-
-        // Add click handlers to inspect features
-        this.map.on('click', 'pmtiles-debug-points', (e) => {
-            console.log('PMTiles Point feature:', e.features[0]);
-            this.showDebugPopup(e, 'Point');
-        });
-
-        this.map.on('click', 'pmtiles-debug-lines', (e) => {
-            console.log('PMTiles LineString feature:', e.features[0]);
-            this.showDebugPopup(e, 'LineString');
-        });
-
-        this.map.on('click', 'pmtiles-debug-polygons', (e) => {
-            console.log('PMTiles Polygon feature:', e.features[0]);
-            this.showDebugPopup(e, 'Polygon');
-        });
-
-        // Change cursor on hover
-        this.map.on('mouseenter', ['pmtiles-debug-points', 'pmtiles-debug-lines', 'pmtiles-debug-polygons'], () => {
-            this.map.getCanvas().style.cursor = 'pointer';
-        });
-
-        this.map.on('mouseleave', ['pmtiles-debug-points', 'pmtiles-debug-lines', 'pmtiles-debug-polygons'], () => {
-            this.map.getCanvas().style.cursor = '';
-        });
-
-        console.log('PMTiles debug layers added');
-    }
-
-    showDebugPopup(e, geometryType) {
-        const feature = e.features[0];
-        const properties = feature.properties;
-        
-        // Create a popup with all the feature data
-        let html = `
-            <div style="max-width: 300px; max-height: 400px; overflow-y: auto;">
-                <h3>PMTiles Debug - ${geometryType}</h3>
-                <p><strong>Layer:</strong> ${feature.layer.id}</p>
-                <p><strong>Source:</strong> ${feature.source}</p>
-                <p><strong>Source Layer:</strong> ${feature.sourceLayer || 'none'}</p>
-                <h4>Properties:</h4>
-                <pre style="font-size: 12px; background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">
-${JSON.stringify(properties, null, 2)}
-                </pre>
-                <h4>Full Feature:</h4>
-                <pre style="font-size: 10px; background: #f0f0f0; padding: 10px; border-radius: 4px; overflow-x: auto;">
-${JSON.stringify(feature, null, 2)}
-                </pre>
-            </div>
-        `;
-
-        new mapboxgl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(html)
-            .addTo(this.map);
-    }
-
 
     hideCyclewaysFromStyle() {
         // Hide the specific "cycleways" layer
@@ -952,7 +852,7 @@ ${JSON.stringify(feature, null, 2)}
                 "generateId": true
             });
 
-            this.geojsonSourceID = await this.setupPmTilesForCyclepaths();
+            this.geojsonSourceID = await this.loadPMTiles();
 
             // layers.json is ordered from most to least important, but we 
             //   want the most important ones to be on top so we add in reverse.
