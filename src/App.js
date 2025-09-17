@@ -118,9 +118,10 @@ class App extends Component {
             mapKey: 0,
         };
 
-        if (this.state.area) {
-            this.updateData();
-        }
+        // @todo check if this is needed
+        // if (this.state.area) {
+        //     this.updateData();
+        // }
     }
 
     onChangeStrategy(event) {
@@ -388,6 +389,17 @@ class App extends Component {
                     return;
                 }
                 
+                // Skip Firebase data loading if PMTiles are available
+                if (this.state.map && this.state.map.isPmtilesAvailable && this.state.map.isPmtilesAvailable()) {
+                    console.debug('PMTiles available, skipping Firebase data loading');
+                    this.setState({ 
+                        loading: false,
+                        geoJson: null,
+                        lengths: {}
+                    });
+                    return;
+                }
+                
                 // Try to retrieve previously saved data for this area
                 this.storage.load(this.state.area)
                     .then(data => {
@@ -476,7 +488,8 @@ class App extends Component {
 
             this.directionsPanel.clearDirections();
 
-            this.updateData();
+            // @todo this is being called before we know if PMTiles are available
+            // this.updateData();
 
             // Only redo the query if we need new data
             // if (!doesAContainsB(largestBoundsYet, newBounds)) {
@@ -605,11 +618,6 @@ class App extends Component {
     }
 
     onMapMoved(newState) {
-        // Ignore new area changes from Map
-        // if (this.state.area) {
-        //     delete newState.area;
-        // }
-
         requestAnimationFrame(() => {
             this.setState(newState);
         });
