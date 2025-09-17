@@ -246,10 +246,21 @@ class Map extends Component {
                         ['linear'],
                         ['zoom'],
                         12, 2,
-                        18, 6
+                        POI_ZOOM_THRESHOLD, 7
                     ],
-                    'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? 0.2 : -0.2),
-                    'circle-stroke-width': 1,
+                    'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.2 : 0.2),
+                    'circle-stroke-width': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        12, 0,
+                        POI_ZOOM_THRESHOLD, 3
+                    ],
+                    'circle-opacity': ['case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        0.7,
+                        1.0
+                    ],
                     'circle-stroke-color': this.props.isDarkMode ? '#000000' : '#ffffff'
                 }
             });
@@ -326,14 +337,14 @@ class Map extends Component {
                 if (self.hoveredPOI) {
                     self.map.setFeatureState({
                         source: sourceId,
-                        'source-layer': sourceLayer,
+                        sourceLayer: sourceLayer,
                         id: self.hoveredPOI },
                         { hover: false });
                 }
                 self.hoveredPOI = e.features[0].id;
                 self.map.setFeatureState({
                     source: sourceId,
-                    'source-layer': sourceLayer,
+                    sourceLayer: sourceLayer,
                     id: self.hoveredPOI },
                     { hover: true });
             }
@@ -346,7 +357,7 @@ class Map extends Component {
 
                 self.map.setFeatureState({
                     source: sourceId,
-                    'source-layer': sourceLayer,
+                    sourceLayer: sourceLayer,
                     id: self.hoveredPOI },
                     { hover: false });
             }
@@ -550,7 +561,6 @@ class Map extends Component {
             }, layerUnderneathName);
 
         // Click interaction
-        // Hover interaction is handled globally with map.on('mousemove')
         this.map.on('click', l.id + '--interactive', e => {
             if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
                 // Disable cyclepath clicks when in route mode
@@ -569,6 +579,47 @@ class Map extends Component {
                 );
                 self.popups.showCyclewayPopup(e, layer);
                 e.originalEvent.preventDefault();
+            }
+        });
+
+        // Since these structures are contiguous we need to use mousemove instead of mouseenter/mouseleave
+        this.map.on('mousemove', l.id + '--interactive', e => {
+            if (e.features.length > 0) {
+                if (self.props.isInRouteMode) {
+                    return;
+                }
+
+                if (!e.features[0].id) {
+                    console.error('No id found for hovered cycleway, make sure youre generating these ids either in mapbox or in the tile generation script', e.features[0]);
+                    return;
+                }
+
+                self.map.getCanvas().style.cursor = 'pointer';
+    
+                if (self.hoveredCycleway) {
+                    self.map.setFeatureState({
+                        source: self.geojsonSourceID,
+                        sourceLayer: sourceLayer,
+                        id: self.hoveredCycleway
+                    }, { hover: false });
+                }
+                self.hoveredCycleway = e.features[0].id;
+                self.map.setFeatureState({
+                    source: self.geojsonSourceID,
+                    sourceLayer: sourceLayer,
+                    id: self.hoveredCycleway
+                }, { hover: true });
+            } else {
+                if (self.hoveredCycleway && !self.selectedCycleway) {
+                    self.map.setFeatureState({
+                        source: self.geojsonSourceID,
+                        sourceLayer: sourceLayer,
+                        id: self.hoveredCycleway
+                    }, { hover: false });
+    
+                    self.map.getCanvas().style.cursor = '';
+                }
+                self.hoveredCycleway = null;
             }
         });
     }
@@ -705,7 +756,8 @@ class Map extends Component {
             'spain.pmtiles',
             'brasil.pmtiles',
         ];
-        const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'brasil.pmtiles';
+        // const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'all.pmtiles';
+        const PMTILES_URL = 'http://localhost:8000/all.pmtiles';
         
         try {
             console.log('Loading PMTiles from S3:', PMTILES_URL);
@@ -723,30 +775,24 @@ class Map extends Component {
             ];
 
             // Add the PmTiles source for cyclepath data
-            this.map.addSource('pmtiles-cyclepaths', {
+            this.map.addSource('pmtiles-source', {
                 type: PmTilesSource.SOURCE_TYPE,
                 url: PMTILES_URL,
                 minzoom: header.minZoom,
                 maxzoom: header.maxZoom,
                 bounds: bounds,
+                // generateId: true, // don't work! these should be generate in the tile generation script
             });
 
             console.log('PMTiles source added successfully');
-            return 'pmtiles-cyclepaths';
+            return 'pmtiles-source';
         } catch (error) {
             console.error('Error setting up PmTiles for cyclepaths:', error);
             return 'osmdata'; // Fallback to osmdata
         }
     }
 
-    hideCyclewaysFromStyle() {
-        // Hide the specific "cycleways" layer
-        if (this.map.getLayer('cycleways')) {
-            this.map.setLayoutProperty('cycleways', 'visibility', 'none');
-        }
-    }
-
-    addCitiesLinksLayer() {
+    addInteractiveCapitalsLayer() {
         this.map.addSource(
             'cities', {
             'type': 'geojson',
@@ -865,48 +911,19 @@ class Map extends Component {
                 }
             });
 
-            this.initBoundaryLayer();
-
-            if (!this.props.embedMode) {
-                this.addCitiesLinksLayer();
-            }
-    
-            // @TODO temporary disable this while we investigae the following error:
-            //    Error: The sourceLayer parameter must be provided for vector source types.
-            //
+            
             if (this.geojsonSourceID === 'osmdata') {
-                map.on('mousemove', function(e) {
-                    const sourceLayer = self.geojsonSourceID === 'osmdata' ? '' : 'default';
-                    const features = map.queryRenderedFeatures(e.point, {
-                    layers: layers.filter(l => l.type === 'way').map(l => l.id+'--interactive')
-                    });
-        
-                    if (features.length > 0) {
-                        // Disable cyclepath hover effects when in route mode
-                        if (self.props.isInRouteMode) {
-                            return;
-                        }
-                        // console.debug(features);
-                        map.getCanvas().style.cursor = 'pointer';
-            
-                        // Hover style
-                        if (self.hoveredCycleway) {
-                            map.setFeatureState({ source: self.geojsonSourceID, 'source-layer': sourceLayer, id: self.hoveredCycleway }, { hover: false });
-                        }
-                        self.hoveredCycleway = features[0].id;
-                        map.setFeatureState({ source: self.geojsonSourceID, 'source-layer': sourceLayer, id: self.hoveredCycleway }, { hover: true });
-                    } else {
-                        // Hover style
-                        if (self.hoveredCycleway && !self.selectedCycleway) {
-                            map.setFeatureState({ source: self.geojsonSourceID, 'source-layer': sourceLayer, id: self.hoveredCycleway }, { hover: false });
-            
-                            // Cursor cursor
-                            map.getCanvas().style.cursor = '';
-                        }
-                        self.hoveredCycleway = null;
-                    }
-                });
+                this.initBoundaryLayer();
+
+                if (!this.props.embedMode) {
+                    this.addInteractiveCapitalsLayer();
+                }
+            } else {
+                if (this.map.getLayer('capitais-br')) {
+                    this.map.setLayoutProperty('capitais-br', 'visibility', 'visible');
+                }
             }
+
         } else {
             console.warn('Map layers already initialized.');
         }
@@ -1121,11 +1138,6 @@ class Map extends Component {
         if (this.props.style !== prevProps.style) {
             console.debug('new style', this.props.style);
             map.setStyle(this.props.style);
-            
-            // Hide cycleways when style changes
-            map.once('style.load', () => {
-                this.hideCyclewaysFromStyle();
-            });
         }
 
         if (this.props.showSatellite !== prevProps.showSatellite) {
@@ -1658,7 +1670,7 @@ class Map extends Component {
                     language: 'pt-br',
                     placeholder: 'Buscar endereços, estabelecimentos, ...',
                     countries: IS_PROD ? 'br' : '',
-                    // collapsed: IS_MOBILE
+                    collapsed: true
                 });
                 this.map.addControl(this.searchBar, 'bottom-right');
             }
@@ -1750,9 +1762,6 @@ class Map extends Component {
     }
 
     async initializeAfterStyleLoad() {
-        // Hide cycleways layer from the style
-        this.hideCyclewaysFromStyle();
-        
         await this.initLayers();
     }
 
