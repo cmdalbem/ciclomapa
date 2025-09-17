@@ -1,3 +1,7 @@
+.nav-links button {
+    border-radius: 99px;
+}
+
 .react-icon {
     display: inline-block;
     font-size: 1em;
