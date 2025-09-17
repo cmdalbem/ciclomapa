@@ -6,6 +6,8 @@ import {
     Button
 } from 'antd';
 
+import { getOsmUrl } from './utils.js';
+
 class EditModal extends Component {
     render() {
         return (
@@ -28,7 +30,7 @@ class EditModal extends Component {
                         <a
                             className="hover:text-white"
                             target="_BLANK" rel="noopener noreferrer"
-                            href={this.props.getOsmUrl()}
+                            href={getOsmUrl(this.props.lat, this.props.lng, this.props.z)}
                         >
                             Ir para OSM
                         </a>

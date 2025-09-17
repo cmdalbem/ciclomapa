@@ -34,7 +34,8 @@ import {
 import { IconContext } from "react-icons";
 
 import {
-    timeSince
+    timeSince,
+    getOsmUrl
 } from './utils.js'
 
 import {
@@ -58,7 +59,6 @@ class TopBar extends Component {
         this.onEditModalCheckboxChange = this.onEditModalCheckboxChange.bind(this);
         
         this.handleMenuClick = this.handleMenuClick.bind(this);
-        this.getOsmUrl = this.getOsmUrl.bind(this);
 
         this.state = {
             editModal: false,
@@ -100,14 +100,6 @@ class TopBar extends Component {
         }
     }
 
-    getOsmUrl() {
-        let { lat, lng, z } = this.props;
-
-        // Compensate different zoom levels from Mapbox to OSM Editor
-        z = Math.ceil(z) + 1;
-
-        return `https://www.openstreetmap.org/edit#map=${z}/${lat}/${lng}`;
-    }
 
     render() {
         let {
@@ -144,7 +136,7 @@ class TopBar extends Component {
                             <a
                                 className="inline-block w-full hover:text-white"
                                 target="_BLANK" rel="noopener noreferrer"
-                                href={this.getOsmUrl()}
+                                href={getOsmUrl(this.props.lat, this.props.lng, this.props.z)}
                             >
                                 Editar no OSM
                             </a>
@@ -274,7 +266,9 @@ class TopBar extends Component {
 
                 <EditModal
                     visible={this.state.editModal}
-                    getOsmUrl={this.getOsmUrl}
+                    lat={this.props.lat}
+                    lng={this.props.lng}
+                    z={this.props.z}
                     onClose={this.closeEditModal}
                     onCheckboxChange={this.onEditModalCheckboxChange}
                 />
