@@ -11,11 +11,11 @@ import { PmTilesSource } from 'mapbox-pmtiles';
 import {
     MAPBOX_ACCESS_TOKEN,
     IS_MOBILE,
+    INTERACTIVE_LAYERS_ZOOM_THRESHOLD,
     DEFAULT_ZOOM,
     ENABLE_COMMENTS,
     IS_PROD,
     DEFAULT_LINE_WIDTH_MULTIPLIER,
-    MAP_STYLES,
     POI_ZOOM_THRESHOLD,
     COMMENTS_ZOOM_THRESHOLD,
     DIRECTIONS_LINE_WIDTH,
@@ -326,6 +326,9 @@ class Map extends Component {
         const self = this;
 
         this.map.on('mouseenter', l.id, (e) => {
+            if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
+                return;
+            }
             if (e.features.length > 0) {
                 // Disable POI hover effects when in route mode
                 if (self.props.isInRouteMode) {
@@ -365,6 +368,9 @@ class Map extends Component {
         });
 
         this.map.on('click', l.id, e => {
+            if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
+                return;
+            }
             if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
                 // Disable POI clicks when in route mode
                 if (self.props.isInRouteMode) {
@@ -562,6 +568,9 @@ class Map extends Component {
 
         // Click interaction
         this.map.on('click', l.id + '--interactive', e => {
+            if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
+                return;
+            }
             if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
                 // Disable cyclepath clicks when in route mode
                 if (self.props.isInRouteMode) {
@@ -585,10 +594,12 @@ class Map extends Component {
         // Since these structures are contiguous we need to use mousemove instead of mouseenter/mouseleave
         this.map.on('mousemove', l.id + '--interactive', e => {
             if (e.features.length > 0) {
+                if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
+                    return;
+                }
                 if (self.props.isInRouteMode) {
                     return;
                 }
-
                 if (!e.features[0].id) {
                     console.error('No id found for hovered cycleway, make sure youre generating these ids either in mapbox or in the tile generation script', e.features[0]);
                     return;
@@ -722,6 +733,9 @@ class Map extends Component {
                     });
         
                     this.map.on('click', 'comentarios', e => {
+                        if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
+                            return;
+                        }
                         if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
                             // Disable comment clicks when in route mode
                             if (self.props.isInRouteMode) {
@@ -756,8 +770,7 @@ class Map extends Component {
             'spain.pmtiles',
             'brasil.pmtiles',
         ];
-        // const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'all.pmtiles';
-        const PMTILES_URL = 'http://localhost:8000/all.pmtiles';
+        const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'all.pmtiles';
         
         try {
             console.log('Loading PMTiles from S3:', PMTILES_URL);
@@ -785,11 +798,27 @@ class Map extends Component {
             });
 
             console.log('PMTiles source added successfully');
+            this.onPMTilesLoaded();
             return 'pmtiles-source';
         } catch (error) {
             console.error('Error setting up PmTiles for cyclepaths:', error);
+            this.pmtilesLoadedSuccessfully = false;
             return 'osmdata'; // Fallback to osmdata
         }
+    }
+
+    onPMTilesLoaded() {
+        this.pmtilesLoadedSuccessfully = true;
+
+        document.querySelector('.city-picker').setAttribute('style', 'visibility: hidden;');
+    }
+
+    isPmtilesAvailable() {
+        console.debug('pmtilesLoadedSuccessfully = ', this.pmtilesLoadedSuccessfully);
+        if (this.pmtilesLoadedSuccessfully === undefined) {
+            console.error('PmTiles loaded successfully status is undefined, this should not happen');
+        }
+        return this.pmtilesLoadedSuccessfully === true;
     }
 
     addInteractiveCapitalsLayer() {
@@ -1659,9 +1688,16 @@ class Map extends Component {
             }
         };
 
+        this.loadImages();
         
-        // Native Mapbox map controls
+        // Initialize map after style is loaded
+        this.initializeMapAfterStyleLoad();
+        
+        // Initialize map center
+        this.reverseGeocode(this.props.center);
+    }
 
+    initMapControls() {
         if (!this.props.embedMode) {
             if (!IS_MOBILE) {
                 this.searchBar = new MapboxGeocoder({
@@ -1675,41 +1711,44 @@ class Map extends Component {
                 this.map.addControl(this.searchBar, 'bottom-right');
             }
     
-            const cityPicker = new MapboxGeocoder({
-                accessToken: mapboxgl.accessToken,
-                mapboxgl: mapboxgl,
-                language: 'pt-br',
-                placeholder: `Buscar cidades ${IS_PROD ? 'brasileiras' : 'no mundo'}`,
-                countries: IS_PROD ? 'br' : '',
-                types: 'place',
-                marker: false,
-                clearOnBlur: true,
-                flyTo: false
-            });
-            cityPicker.on('result', result => {
-                console.debug('geocoder result', result);
-    
-                let flyToPos;
-                if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
-                    flyToPos = [-40.3144, -20.2944];
-                } else {
-                    flyToPos = result.result.center;
-                }
-                this.map.flyTo({
-                    center: flyToPos,
-                    zoom: DEFAULT_ZOOM,
-                    speed: 2,
-                    minZoom: 6
+            if (!this.isPmtilesAvailable()) {
+                const cityPicker = new MapboxGeocoder({
+                    accessToken: mapboxgl.accessToken,
+                    mapboxgl: mapboxgl,
+                    language: 'pt-br',
+                    placeholder: `Buscar cidades ${IS_PROD ? 'brasileiras' : 'no mundo'}`,
+                    countries: IS_PROD ? 'br' : '',
+                    types: 'place',
+                    marker: false,
+                    clearOnBlur: true,
+                    flyTo: false
                 });
-    
-                this.reverseGeocode(result.result.center);
-    
-                // Hide UI
-                // @todo refactor this to use React state
-                document.querySelector('body').classList.remove('show-city-picker');
-                cityPicker.clear();
-            });
-            this.map.addControl(cityPicker, 'top-left');
+                cityPicker.on('result', result => {
+                    console.debug('geocoder result', result);
+        
+                    let flyToPos;
+                    if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
+                        flyToPos = [-40.3144, -20.2944];
+                    } else {
+                        flyToPos = result.result.center;
+                    }
+                    this.map.flyTo({
+                        center: flyToPos,
+                        zoom: DEFAULT_ZOOM,
+                        speed: 2,
+                        minZoom: 6
+                    });
+        
+                    this.reverseGeocode(result.result.center);
+        
+                    // Hide UI
+                    // @todo refactor this to use React state
+                    document.querySelector('body').classList.remove('show-city-picker');
+                    cityPicker.clear();
+                });
+                // Doesn't matter where we add this, it's customized via CSS
+                this.map.addControl(cityPicker, 'top-left');
+            }
     
             this.map.addControl(
                 new mapboxgl.NavigationControl({
@@ -1734,35 +1773,49 @@ class Map extends Component {
             //     container: document.querySelector('body')
             // }), 'bottom-right');
         }
+    }
 
-        this.loadImages();
-        
-        // Listeners
+    /**
+     * Initialize map after style is fully loaded
+     * Handles the complex Mapbox style loading lifecycle cleanly
+     */
+    initializeMapAfterStyleLoad() {
+        const handleStyleReady = async () => {
+            try {
+                await this.initializeAfterStyleLoad();
+            } catch (error) {
+                console.error('Error initializing map after style load:', error);
+            }
+        };
 
-        // Try to be sure this will only be called once
-        const styleLoadHandler = async () => {
+        // If style is already loaded, initialize immediately
+        if (this.map.isStyleLoaded()) {
+            handleStyleReady();
+            return;
+        }
+
+        // Otherwise, wait for style to load
+        const styleLoadHandler = () => {
             console.debug('style.load');
             
-            // Wait for the style to be fully loaded
-            if (!this.map.isStyleLoaded()) {
-                this.map.once('styledata', async () => {
-                    await this.initializeAfterStyleLoad();
-                });
+            // If style data is ready, initialize immediately
+            if (this.map.isStyleLoaded()) {
+                handleStyleReady();
             } else {
-                await this.initializeAfterStyleLoad();
+                // Wait for style data to be ready
+                this.map.once('styledata', handleStyleReady);
             }
             
+            // Clean up the style.load listener
             this.map.off('style.load', styleLoadHandler);
         };
-        this.map.on('style.load', styleLoadHandler);
 
-        
-        // Initialize map center
-        this.reverseGeocode(this.props.center);
+        this.map.on('style.load', styleLoadHandler);
     }
 
     async initializeAfterStyleLoad() {
         await this.initLayers();
+        this.initMapControls();
     }
 
     loadImages() {
