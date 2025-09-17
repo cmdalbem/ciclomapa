@@ -293,12 +293,12 @@ class Storage {
     }
 
     getDataFromDB(slug, resolve, reject, part) {
-        const slugWithPart = slug + (part ? part : '');
+        const slugWithPart = slug + (part || '');
         this.db.collection(DEFAULT_CITIES_COLLECTION).doc(slugWithPart).get().then(doc => {
             if (doc.exists) {
                 let data = doc.data();
 
-                console.debug("[Firebase] Document data:", data);
+                console.debug("[Firebase] Retrieved document data:", data);
 
                 if (!data.part || data.part === 1) {
                     // Recursion iteration 0
@@ -312,7 +312,7 @@ class Storage {
                     return this.getDataFromDB(slug, resolve, reject, data.part+1);
                 }
             } else {
-                console.debug("[Firebase] No document for: ", slug);
+                console.debug("[Firebase] No document for: ", slugWithPart);
 
                 // Check if recursion tail
                 if (!!part) {
