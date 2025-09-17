@@ -141,3 +141,11 @@ export function adjustColorBrightness(hexColor, percentage = 0.3) {
     
     return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
 }
+
+// Generate OSM editor URL with proper zoom compensation
+export function getOsmUrl(lat, lng, zoom) {
+    // Compensate different zoom levels from Mapbox to OSM Editor
+    zoom = Math.ceil(zoom) + 1;
+
+    return `https://www.openstreetmap.org/edit#map=${zoom}/${lat}/${lng}`;
+}
