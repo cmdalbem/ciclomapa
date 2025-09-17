@@ -84,8 +84,11 @@ class App extends Component {
         this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
         this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
 
+        this.initState();
+    }
+
+    initState() {
         const urlParams = this.getParamsFromURL();
-        
         const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
         console.log('Previous saved state:', prev);
         
@@ -118,10 +121,7 @@ class App extends Component {
             mapKey: 0,
         };
 
-        // @todo check if this is needed
-        // if (this.state.area) {
-        //     this.updateData();
-        // }
+        // this.updateData();
     }
 
     onChangeStrategy(event) {
@@ -389,21 +389,12 @@ class App extends Component {
                     return;
                 }
                 
-                // Skip Firebase data loading if PMTiles are available
-                if (this.state.map && this.state.map.isPmtilesAvailable && this.state.map.isPmtilesAvailable()) {
-                    console.debug('PMTiles available, skipping Firebase data loading');
-                    this.setState({ 
-                        loading: false,
-                        geoJson: null,
-                        lengths: {}
-                    });
-                    return;
-                }
                 
-                // Try to retrieve previously saved data for this area
+                // Try to retrieve this area's geojson data from the database
                 this.storage.load(this.state.area)
                     .then(data => {
                         if (data) {
+                            // @todo Improve this check - how fresh is the data? Add some threshold, like 1 month.
                             console.debug('Database data is fresh.');
 
                             if (FORCE_RECALCULATE_LENGTHS_ALWAYS) {
@@ -488,8 +479,7 @@ class App extends Component {
 
             this.directionsPanel.clearDirections();
 
-            // @todo this is being called before we know if PMTiles are available
-            // this.updateData();
+            this.updateData();
 
             // Only redo the query if we need new data
             // if (!doesAContainsB(largestBoundsYet, newBounds)) {
@@ -508,7 +498,8 @@ class App extends Component {
                 notification['warning']({
                     message: 'Ops',
                     description:
-                        'Não há dados cicloviários para esta cidade.',
+                        'Não há dados cicloviários para esta cidade. Que tal colaborar no OpenStreetMap?',
+                    // action: <a href={getOsmUrl(this.state.lat, this.state.lng, this.state.zoom)} target="_blank" rel="noopener noreferrer">Editar no OSM</a> // not available in current Ant Design version
                 });
             } else {
                 // @todo this seem to be being called every time!!!!

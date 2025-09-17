@@ -83,7 +83,6 @@ class Map extends Component {
     hoveredCycleway;
     hoveredComment;
     hoveredPOI;
-    geojsonSourceID;
 
     airtableDatabase;
     comments;
@@ -225,48 +224,50 @@ class Map extends Component {
         ];
     }
 
-    initPOILayer(l, sourceId = "osmdata") {
+    initPOILayerForSource(l, sourceId) {
         const filters = this.convertFilterToMapboxFilter(l);
 
         const sourceLayer = sourceId === 'osmdata' ? '' : 'default';
+        const sourceSuffix = sourceId === 'osmdata' ? '' : '--pmtiles';
+        const layerId = l.id + sourceSuffix;
 
         // @TODO temporary debug layer while we don't know what's wrong with Mapbox and symbol layers
         if (sourceId !== 'osmdata') {
-            this.map.addLayer({
-                'id': l.id,
-                "name": l.name,
-                'source': sourceId,
-                'source-layer': sourceLayer,
-                "filter": filters,
-                "description": l.description,
-                type: 'circle',
-                'paint': {
-                    'circle-radius': [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        12, 2,
-                        POI_ZOOM_THRESHOLD, 7
-                    ],
-                    'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.2 : 0.2),
-                    'circle-stroke-width': [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        12, 0,
-                        POI_ZOOM_THRESHOLD, 3
-                    ],
-                    'circle-opacity': ['case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                        0.7,
-                        1.0
-                    ],
-                    'circle-stroke-color': this.props.isDarkMode ? '#000000' : '#ffffff'
-                }
-            });
+            // this.map.addLayer({
+            //     'id': layerId,
+            //     "name": l.name,
+            //     'source': sourceId,
+            //     'source-layer': sourceLayer,
+            //     "filter": filters,
+            //     "description": l.description,
+            //     type: 'circle',
+            //     'paint': {
+            //         'circle-radius': [
+            //             'interpolate',
+            //             ['linear'],
+            //             ['zoom'],
+            //             12, 2,
+            //             POI_ZOOM_THRESHOLD, 7
+            //         ],
+            //         'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.2 : 0.2),
+            //         'circle-stroke-width': [
+            //             'interpolate',
+            //             ['linear'],
+            //             ['zoom'],
+            //             12, 0,
+            //             POI_ZOOM_THRESHOLD, 3
+            //         ],
+            //         'circle-opacity': ['case',
+            //             ['boolean', ['feature-state', 'hover'], false],
+            //             0.7,
+            //             1.0
+            //         ],
+            //         'circle-stroke-color': this.props.isDarkMode ? '#000000' : '#ffffff'
+            //     }
+            // });
         } else {
             this.map.addLayer({
-                'id': l.id,
+                'id': layerId,
                 "name": l.name,
                 'type': 'symbol',
                 'source': sourceId,
@@ -325,12 +326,11 @@ class Map extends Component {
         // Interactions
         const self = this;
 
-        this.map.on('mouseenter', l.id, (e) => {
+        this.map.on('mouseenter', layerId, (e) => {
             if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
                 return;
             }
             if (e.features.length > 0) {
-                // Disable POI hover effects when in route mode
                 if (self.props.isInRouteMode) {
                     e.originalEvent.preventDefault();
                     return;
@@ -354,7 +354,7 @@ class Map extends Component {
             e.originalEvent.preventDefault();
         });
 
-        this.map.on('mouseleave', l.id, e => {
+        this.map.on('mouseleave', layerId, e => {
             if (self.hoveredPOI) {
                 self.map.getCanvas().style.cursor = '';
 
@@ -367,12 +367,11 @@ class Map extends Component {
             self.hoveredPOI = null;
         });
 
-        this.map.on('click', l.id, e => {
+        this.map.on('click', layerId, e => {
             if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
                 return;
             }
             if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-                // Disable POI clicks when in route mode
                 if (self.props.isInRouteMode) {
                     e.originalEvent.preventDefault();
                     return;
@@ -469,7 +468,7 @@ class Map extends Component {
     //     }
     // }
 
-    initCyclepathLayer(l, sourceId = "osmdata") {
+    initCyclepathLayerForSource(l, sourceId) {
         const filters = this.convertFilterToMapboxFilter(l);
         const dashedLineStyle = { 'line-dasharray': [1, 1] };
         // Will be used as "beforeId" prop in AddLayer
@@ -481,9 +480,16 @@ class Map extends Component {
 
         const sourceLayer = sourceId === 'osmdata' ? '' : 'default';
 
+        const sourceSuffix = sourceId === 'osmdata' ? '' : '--pmtiles';
+        const interactiveLayerId = l.id + '--interactive' + sourceSuffix;
+        const normalLayerId = l.id + sourceSuffix;
+        const routesActiveLayerId = l.id + '--routes-active' + sourceSuffix;
+
+        console.debug('initCyclepathLayerForSource', normalLayerId);
+
         // Interactive layer is wider than the actual layer to improve usability
         this.map.addLayer({
-            "id": l.id + '--interactive',
+            "id": interactiveLayerId,
             "type": "line",
             "source": sourceId,
             'source-layer': sourceLayer,
@@ -495,9 +501,8 @@ class Map extends Component {
             },
         }, layerUnderneathName);
 
-        // Normal state layer
         this.map.addLayer({
-            "id": l.id,
+            "id": normalLayerId,
             "type": "line",
             "source": sourceId,
             'source-layer': sourceLayer,
@@ -540,9 +545,8 @@ class Map extends Component {
                 "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
             }, layerUnderneathName);
 
-        // Routes-active state layer (initially hidden)
         this.map.addLayer({
-            "id": l.id + '--routes-active',
+            "id": routesActiveLayerId,
             "type": "line",
             "source": sourceId,
             'source-layer': sourceLayer,
@@ -566,8 +570,7 @@ class Map extends Component {
                 },
             }, layerUnderneathName);
 
-        // Click interaction
-        this.map.on('click', l.id + '--interactive', e => {
+        this.map.on('click', interactiveLayerId, e => {
             if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
                 return;
             }
@@ -592,7 +595,7 @@ class Map extends Component {
         });
 
         // Since these structures are contiguous we need to use mousemove instead of mouseenter/mouseleave
-        this.map.on('mousemove', l.id + '--interactive', e => {
+        this.map.on('mousemove', interactiveLayerId, e => {
             if (e.features.length > 0) {
                 if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
                     return;
@@ -609,21 +612,21 @@ class Map extends Component {
     
                 if (self.hoveredCycleway) {
                     self.map.setFeatureState({
-                        source: self.geojsonSourceID,
+                        source: sourceId,
                         sourceLayer: sourceLayer,
                         id: self.hoveredCycleway
                     }, { hover: false });
                 }
                 self.hoveredCycleway = e.features[0].id;
                 self.map.setFeatureState({
-                    source: self.geojsonSourceID,
+                    source: sourceId,
                     sourceLayer: sourceLayer,
                     id: self.hoveredCycleway
                 }, { hover: true });
             } else {
                 if (self.hoveredCycleway && !self.selectedCycleway) {
                     self.map.setFeatureState({
-                        source: self.geojsonSourceID,
+                        source: sourceId,
                         sourceLayer: sourceLayer,
                         id: self.hoveredCycleway
                     }, { hover: false });
@@ -751,10 +754,7 @@ class Map extends Component {
     }
 
 
-    async loadPMTiles() {
-        // PmTiles is now available via import
-
-        // Ensure style is fully loaded before adding sources
+    async initializeDataSources() {
         if (!this.map.isStyleLoaded()) {
             await new Promise(resolve => {
                 if (this.map.isStyleLoaded()) {
@@ -765,20 +765,23 @@ class Map extends Component {
             });
         }
 
-        // Set up PmTiles source for cyclepath data
-        const files = [
-            'spain.pmtiles',
-            'brasil.pmtiles',
-        ];
-        const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'all.pmtiles';
-        
+        if (!this.map.getSource("osmdata")) {
+            this.map.addSource("osmdata", {
+                "type": "geojson",
+                "data": this.props.data || {
+                    'type': 'FeatureCollection',
+                    'features': []
+                },
+                "generateId": true
+            });
+        }
+
         try {
+            const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'all.pmtiles';
             console.log('Loading PMTiles from S3:', PMTILES_URL);
             
-            // Get header information from the PmTiles file
             const header = await PmTilesSource.getHeader(PMTILES_URL);
             console.log('PMTiles loaded - bounds:', [header.minLon, header.minLat, header.maxLon, header.maxLat], 'zoom:', header.minZoom + '-' + header.maxZoom);
-            console.log('PMTiles header full:', header);
             
             const bounds = [
                 header.minLon,
@@ -787,23 +790,19 @@ class Map extends Component {
                 header.maxLat,
             ];
 
-            // Add the PmTiles source for cyclepath data
             this.map.addSource('pmtiles-source', {
                 type: PmTilesSource.SOURCE_TYPE,
                 url: PMTILES_URL,
                 minzoom: header.minZoom,
                 maxzoom: header.maxZoom,
                 bounds: bounds,
-                // generateId: true, // don't work! these should be generate in the tile generation script
             });
 
             console.log('PMTiles source added successfully');
-            this.onPMTilesLoaded();
-            return 'pmtiles-source';
+            this.pmtilesLoadedSuccessfully = true;
         } catch (error) {
             console.error('Error setting up PmTiles for cyclepaths:', error);
             this.pmtilesLoadedSuccessfully = false;
-            return 'osmdata'; // Fallback to osmdata
         }
     }
 
@@ -898,7 +897,33 @@ class Map extends Component {
     // Afterwards their data can be updated safely without messing up the order
     async initGeojsonLayers(layers) {
         const map = this.map;
-        const self = this;
+
+        // @todo Better way to check if layers are already initialized
+        if (!map.getSource("osmdata")) {
+            await this.initializeDataSources();
+
+            if (!map.getSource("commentsSrc")) {
+                map.addSource("commentsSrc", {
+                    "type": "geojson",
+                    "data": {
+                        'type': 'FeatureCollection',
+                        'features': []
+                    },
+                    "generateId": true
+                });
+            }
+
+            this.initializeLayersForBothSources(layers);
+            
+            // this.initBoundaryLayer();
+
+            if (!this.props.embedMode) {
+                this.addInteractiveCapitalsLayer();
+            }
+
+        } else {
+            console.warn('Map layers already initialized.');
+        }
 
         if (map.getLayer('mapbox-satellite')) {
             map.setLayoutProperty(
@@ -906,57 +931,27 @@ class Map extends Component {
                 'visibility',
                 this.props.showSatellite ? 'visible' : 'none');
         }
+    }
 
-        if (!map.getSource("osmdata")) {
-            map.addSource("osmdata", {
-                "type": "geojson",
-                "data": this.props.data || {
-                    'type': 'FeatureCollection',
-                    'features': []
-                },
-                "generateId": true
-            });
-
-            // Comments layer
-            map.addSource("commentsSrc", {
-                "type": "geojson",
-                "data": {
-                    'type': 'FeatureCollection',
-                    'features': []
-                },
-                "generateId": true
-            });
-
-            this.geojsonSourceID = await this.loadPMTiles();
-
-            // layers.json is ordered from most to least important, but we 
-            //   want the most important ones to be on top so we add in reverse.
-            // Slice is used here to don't destructively reverse the original array.
-            layers.slice().reverse().forEach(l => {
-                if (!l.type || l.type==='way') {
-                    this.initCyclepathLayer(l, this.geojsonSourceID);
-                } else if (l.type === 'poi' && l.filters) {
-                    this.initPOILayer(l, this.geojsonSourceID);
+    initializeLayersForBothSources(layers) {
+        // layers.json is ordered from most to least important, but we 
+        //   want the most important ones to be on top so we add in reverse.
+        // Slice is used here to don't destructively reverse the original array.
+        layers.slice().reverse().forEach(l => {
+            if (!l.type || l.type === 'way') {
+                if (this.pmtilesLoadedSuccessfully) {
+                    this.initCyclepathLayerForSource(l, 'pmtiles-source');
                 }
-            });
-
-            
-            if (this.geojsonSourceID === 'osmdata') {
-                this.initBoundaryLayer();
-
-                if (!this.props.embedMode) {
-                    this.addInteractiveCapitalsLayer();
+                
+                this.initCyclepathLayerForSource(l, 'osmdata');
+            } else if (l.type === 'poi' && l.filters) {
+                if (this.pmtilesLoadedSuccessfully) {
+                    this.initPOILayerForSource(l, 'pmtiles-source');
                 }
-            } else {
-                if (this.map.getLayer('capitais-br')) {
-                    this.map.setLayoutProperty('capitais-br', 'visibility', 'visible');
-                }
+
+                this.initPOILayerForSource(l, 'osmdata');
             }
-
-        } else {
-            console.warn('Map layers already initialized.');
-        }
-
+        });
     }
 
     createRouteLayerSet(map, sourceId, layerType) {
@@ -1160,7 +1155,9 @@ class Map extends Component {
         }
 
         if (this.props.data !== prevProps.data) {
-            map.getSource("osmdata").setData(this.props.data);
+            if (map.getSource("osmdata")) {
+                map.getSource("osmdata").setData(this.props.data);
+            }
         }
 
 
@@ -1551,33 +1548,37 @@ class Map extends Component {
                          this.props.directions.routes && 
                          this.props.directions.routes.length > 0;
 
-        // Update layer visibility based on both isActive status and routes state
         this.props.layers.forEach(layer => {
             if (layer.type === 'way') {
-                // Normal layer: visible if isActive AND no routes
-                if (map.getLayer(layer.id)) {
-                    const normalStatus = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
-                    map.setLayoutProperty(layer.id, 'visibility', normalStatus);
-                }
-                
-                // Routes-active layer: visible if isActive AND has routes
-                if (map.getLayer(layer.id + '--routes-active')) {
-                    const routesActiveStatus = (layer.isActive && hasRoutes) ? 'visible' : 'none';
-                    map.setLayoutProperty(layer.id + '--routes-active', 'visibility', routesActiveStatus);
-                }
-                
-                // Interactive layer follows the same logic as normal layer
-                if (map.getLayer(layer.id + '--interactive')) {
-                    const interactiveStatus = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
-                    map.setLayoutProperty(layer.id + '--interactive', 'visibility', interactiveStatus);
-                }
+                ['', '--pmtiles'].forEach(sourceSuffix => {
+                    const baseLayerId = layer.id + sourceSuffix;
+                    const interactiveLayerId = layer.id + '--interactive' + sourceSuffix;
+                    const routesActiveLayerId = layer.id + '--routes-active' + sourceSuffix;
+                    
+                    if (map.getLayer(baseLayerId)) {
+                        const normalStatus = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
+                        map.setLayoutProperty(baseLayerId, 'visibility', normalStatus);
+                    }
+                    
+                    if (map.getLayer(routesActiveLayerId)) {
+                        const routesActiveStatus = (layer.isActive && hasRoutes) ? 'visible' : 'none';
+                        map.setLayoutProperty(routesActiveLayerId, 'visibility', routesActiveStatus);
+                    }
+                    
+                    if (map.getLayer(interactiveLayerId)) {
+                        const interactiveStatus = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
+                        map.setLayoutProperty(interactiveLayerId, 'visibility', interactiveStatus);
+                    }
+                });
             } else if (layer.type === 'poi') {
-                // Handle POI layers - hide when routes are active, show when no routes and isActive
                 const status = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
                 
-                if (map.getLayer(layer.id)) {
-                    map.setLayoutProperty(layer.id, 'visibility', status);
-                }
+                ['', '--pmtiles'].forEach(sourceSuffix => {
+                    const layerId = layer.id + sourceSuffix;
+                    if (map.getLayer(layerId)) {
+                        map.setLayoutProperty(layerId, 'visibility', status);
+                    }
+                });
             }
         });
         
@@ -1585,7 +1586,6 @@ class Map extends Component {
     }
 
     updateCyclablePathsOpacity() {
-        // This method now just calls the unified visibility update
         this.updateLayerVisibility();
     }
 
@@ -1642,6 +1642,12 @@ class Map extends Component {
     }
 
     componentDidMount() {
+        // Prevent multiple map initializations
+        if (this.map) {
+            console.warn('Map already initialized, skipping...');
+            return;
+        }
+
         mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
         
         // Register PmTiles source type
@@ -1711,44 +1717,42 @@ class Map extends Component {
                 this.map.addControl(this.searchBar, 'bottom-right');
             }
     
-            if (!this.isPmtilesAvailable()) {
-                const cityPicker = new MapboxGeocoder({
-                    accessToken: mapboxgl.accessToken,
-                    mapboxgl: mapboxgl,
-                    language: 'pt-br',
-                    placeholder: `Buscar cidades ${IS_PROD ? 'brasileiras' : 'no mundo'}`,
-                    countries: IS_PROD ? 'br' : '',
-                    types: 'place',
-                    marker: false,
-                    clearOnBlur: true,
-                    flyTo: false
+            const cityPicker = new MapboxGeocoder({
+                accessToken: mapboxgl.accessToken,
+                mapboxgl: mapboxgl,
+                language: 'pt-br',
+                placeholder: `Buscar cidades ${IS_PROD ? 'brasileiras' : 'no mundo'}`,
+                countries: IS_PROD ? 'br' : '',
+                types: 'place',
+                marker: false,
+                clearOnBlur: true,
+                flyTo: false
+            });
+            cityPicker.on('result', result => {
+                console.debug('geocoder result', result);
+    
+                let flyToPos;
+                if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
+                    flyToPos = [-40.3144, -20.2944];
+                } else {
+                    flyToPos = result.result.center;
+                }
+                this.map.flyTo({
+                    center: flyToPos,
+                    zoom: DEFAULT_ZOOM,
+                    speed: 2,
+                    minZoom: 6
                 });
-                cityPicker.on('result', result => {
-                    console.debug('geocoder result', result);
-        
-                    let flyToPos;
-                    if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
-                        flyToPos = [-40.3144, -20.2944];
-                    } else {
-                        flyToPos = result.result.center;
-                    }
-                    this.map.flyTo({
-                        center: flyToPos,
-                        zoom: DEFAULT_ZOOM,
-                        speed: 2,
-                        minZoom: 6
-                    });
-        
-                    this.reverseGeocode(result.result.center);
-        
-                    // Hide UI
-                    // @todo refactor this to use React state
-                    document.querySelector('body').classList.remove('show-city-picker');
-                    cityPicker.clear();
-                });
-                // Doesn't matter where we add this, it's customized via CSS
-                this.map.addControl(cityPicker, 'top-left');
-            }
+    
+                this.reverseGeocode(result.result.center);
+    
+                // Hide UI
+                // @todo refactor this to use React state
+                document.querySelector('body').classList.remove('show-city-picker');
+                cityPicker.clear();
+            });
+            // Doesn't matter where we add this, it's customized via CSS
+            this.map.addControl(cityPicker, 'top-left');
     
             this.map.addControl(
                 new mapboxgl.NavigationControl({
@@ -1882,6 +1886,34 @@ class Map extends Component {
             this.popups.clearRouteTooltips();
         }
         document.removeEventListener('newComment', this.newComment);
+
+        if (this.map) {
+            // Remove all event listeners to prevent memory leaks
+            this.map.off();
+            
+            // Remove all layers
+            const style = this.map.getStyle();
+            if (style && style.layers) {
+                style.layers.forEach(layer => {
+                    if (this.map.getLayer(layer.id)) {
+                        this.map.removeLayer(layer.id);
+                    }
+                });
+            }
+            
+            // Remove all sources
+            if (style && style.sources) {
+                Object.keys(style.sources).forEach(sourceId => {
+                    if (this.map.getSource(sourceId)) {
+                        this.map.removeSource(sourceId);
+                    }
+                });
+            }
+            
+            // Remove the map instance
+            this.map.remove();
+            this.map = null;
+        }
     }
 
     newComment() {
