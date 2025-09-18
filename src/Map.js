@@ -20,6 +20,7 @@ import {
     COMMENTS_ZOOM_THRESHOLD,
     DIRECTIONS_LINE_WIDTH,
     DIRECTIONS_LINE_BORDER_WIDTH,
+    MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
 } from './constants.js'
 
 import Analytics from './Analytics.js'
@@ -28,6 +29,7 @@ import CommentModal from './CommentModal.js'
 import NewCommentCursor from './NewCommentCursor.js'
 import MapPopups from './MapPopups.js'
 import { adjustColorBrightness } from './utils.js'
+import debounce from 'lodash.debounce'
 
 import './Map.css'
 
@@ -86,12 +88,14 @@ class Map extends Component {
 
     airtableDatabase;
     comments;
+    debouncedMapStateSync;
+    lastGeocodedPlaceName;
 
     constructor(props) {
         super(props);
 
-        this.onMapMoved = this.onMapMoved.bind(this);
-
+        // Bind functions that'll be used as callbacks with Mapbox
+        this.onMapMoveEnded = this.onMapMoveEnded.bind(this);
         this.newComment = this.newComment.bind(this);
         this.initCommentsLayer = this.initCommentsLayer.bind(this);
         this.afterCommentCreate = this.afterCommentCreate.bind(this);
@@ -109,6 +113,13 @@ class Map extends Component {
             tagsList: [],
             comments: [],
         };
+
+        // Create debounced map state sync function (only syncs if place name has been consistent for 3+ seconds)
+        this.debouncedMapStateSync = debounce((placeName) => {
+            console.debug('Syncing map state with consistent place:', placeName);
+            this.syncMapState(placeName);
+            document.querySelector('.city-picker span').setAttribute('style','opacity: 1');
+        }, 2000);
     }
 
     showCommentModal() {
@@ -152,13 +163,10 @@ class Map extends Component {
 
         if (!lngLat || !lngLat[0] || !lngLat[1]) {
             console.error('Something wrong with lngLat passed.');
-            return;
+            return Promise.reject(new Error('Invalid coordinates'));
         }
 
-        // Clear previous map panning limits
-        this.map.setMaxBounds();
-
-        geocodingClient
+        return geocodingClient
             .reverseGeocode({
                 query: lngLat,
                 types: ['place'],
@@ -168,7 +176,6 @@ class Map extends Component {
             .send()
             .then(response => {
                 const features = response.body.features;
-
                 console.debug('reverseGeocode', features);
 
                 if (features && features[0]) {
@@ -178,34 +185,72 @@ class Map extends Component {
                         this.searchBar.setBbox(place.bbox);
                     }
 
-                    // Disabled temporarily because it had a bug that it changed the map center
-                    // this.map.once('moveend', () => {
-                    //     this.map.setMaxBounds([
-                    //         [place.bbox[0]-0.15, place.bbox[1]-0.15], // Southwest coordinates
-                    //         [place.bbox[2]+0.15, place.bbox[3]+0.15]  // Northeast coordinates
-                    //     ]); 
-                    // });
-
-                    this.props.onMapMoved({ area: place.place_name });
+                    return {
+                        place_name: place.place_name,
+                        bbox: place.bbox
+                    };
                 }
+                
+                // Reject if no valid results found
+                return Promise.reject(new Error('No geocoding results found'));
             })
             .catch(err => {
-                console.error(err.message);
+                console.error('Reverse geocoding failed:', err);
+                throw err;
             });
     }
 
-    onMapMoved() {
-        const lat = this.map.getCenter().lat;
-        const lng = this.map.getCenter().lng;
-        const zoom = this.map.getZoom();
+    onMapMoveEnded() {
+        this.syncMapState();
+        
+        if (this.map.getZoom() > MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD) {
+            const center = this.map.getCenter();
+            this.reverseGeocode([center.lng, center.lat])
+                .then(result => {
+                    const currentPlaceName = result.place_name;
+                    console.debug('Geocoding result:', currentPlaceName);
 
-        this.props.onMapMoved({
-            lat: lat,
-            lng: lng,
-            zoom: zoom,
-        });
+                    if (!this.lastGeocodedPlaceName) {
+                        // Initial case
+                        this.lastGeocodedPlaceName = this.props.location;
+                        console.debug('Initializing last geocoded place name:', this.lastGeocodedPlaceName);
+                    } else {
+                        // Check if this is the same place as the last geocoding result
+                        if (this.lastGeocodedPlaceName === currentPlaceName) {
+                            console.debug('Same place detected, not triggering debounced sync...');
+                        } else {
+                            console.debug('Different place detected, cancelling previous sync and starting new timer');
 
-        // console.debug('onMapMoved');
+                            document.querySelector('.city-picker span').setAttribute('style','opacity: 0.5');
+
+                            // Different place - cancel previous debounced call and start new timer
+                            this.debouncedMapStateSync.cancel();
+                            this.lastGeocodedPlaceName = currentPlaceName;
+                            this.debouncedMapStateSync(currentPlaceName);
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.debug('Reverse geocoding failed:', err);
+                });
+        } else {
+            console.debug('Map zoom is below auto change area zoom threshold');
+            // document.querySelector('.city-picker span').setAttribute('style','opacity: 0.5');
+        }
+    }
+
+    syncMapState(newArea) {
+        const ret = {
+            lat: this.map.getCenter().lat,
+            lng: this.map.getCenter().lng,
+            zoom: this.map.getZoom(),
+        };
+
+        if (newArea) {
+            ret.area = newArea;
+        }
+
+        this.props.onMapMoved(ret);
     }
 
     convertFilterToMapboxFilter(l) {
@@ -887,7 +932,10 @@ class Map extends Component {
                     zoom: DEFAULT_ZOOM,
                 }); 
     
-                this.reverseGeocode(coords);
+                this.reverseGeocode(coords)
+                    .then(result => {
+                        this.syncMapState(result.place_name);
+                    });
             }
         });
     }
@@ -1185,7 +1233,7 @@ class Map extends Component {
         // Compare only 'isActive' field of layers
         const currentActiveStatuses = this.props.layers.map(l => l.isActive).join();
         const prevActiveStatus = prevProps.layers.map(l => l.isActive).join();
-        if (currentActiveStatuses === prevActiveStatus) {
+        if (currentActiveStatuses !== prevActiveStatus) {
             // Use the unified layer visibility update method
             this.updateLayerVisibility();
         }
@@ -1700,7 +1748,10 @@ class Map extends Component {
         this.initializeMapAfterStyleLoad();
         
         // Initialize map center
-        this.reverseGeocode(this.props.center);
+        this.reverseGeocode(this.props.center)
+            .then(result => {
+                this.syncMapState(result.place_name);
+            });
     }
 
     initMapControls() {
@@ -1744,7 +1795,10 @@ class Map extends Component {
                     minZoom: 6
                 });
     
-                this.reverseGeocode(result.result.center);
+                this.reverseGeocode(result.result.center)
+                    .then(geocodeResult => {
+                        this.syncMapState(geocodeResult.place_name);
+                    });
     
                 // Hide UI
                 // @todo refactor this to use React state
@@ -1768,7 +1822,10 @@ class Map extends Component {
             });
             geolocate.on('geolocate', result => {
                 console.debug('geolocate', result);
-                this.reverseGeocode([result.coords.longitude, result.coords.latitude]);
+                this.reverseGeocode([result.coords.longitude, result.coords.latitude])
+                    .then(geocodeResult => {
+                        this.syncMapState(geocodeResult.place_name);
+                    });
             });
             this.map.addControl(geolocate, 'bottom-right');
             
@@ -1873,12 +1930,12 @@ class Map extends Component {
             this.updateOverlappingCyclepathsLayer(this.props.routeCoverageData);
         }
 
-        this.onMapMoved();
+        this.syncMapState();
 
         // Set initial cyclable paths opacity based on current directions state
         this.updateCyclablePathsOpacity();
 
-        this.map.on('moveend', this.onMapMoved);
+        this.map.on('moveend', this.onMapMoveEnded);
     }
 
     componentWillUnmount() {

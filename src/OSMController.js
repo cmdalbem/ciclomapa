@@ -193,11 +193,19 @@ class OSMController {
     }
 
     static getData(constraints) {
-        return new Promise((resolve, reject) => {
+        let abortController = new AbortController();
+        let isAborted = false;
+        
+        const promise = new Promise((resolve, reject) => {
             let geoJson;
             
             this.getAreaId(constraints.area)
                 .then(areaId => {
+                    if (isAborted) {
+                        reject(new Error('Request aborted'));
+                        return;
+                    }
+                    
                     const query = OSMController.getQuery({
                         areaId,
                         areaName: constraints.area
@@ -215,6 +223,10 @@ class OSMController {
                         requests[i] = $.getJSON(
                             endpoint,
                             data => {
+                                if (isAborted) {
+                                    return;
+                                }
+                                
                                 if (data.elements.length > 0) {
                                     console.debug(`[SERVER #${i}] Success!`);
                                     for (let r = 0; r < requests.length; r++) {
@@ -254,17 +266,28 @@ class OSMController {
                                     }
                                 }
                             }).fail(e => {
-                                if (e.statusText !== 'abort') {
+                                if (e.statusText !== 'abort' && !isAborted) {
                                     console.error(`[SERVER #${i}] Error:`, e);
                                 }
                             });
                     }
                 })
                 .catch(e => {
-                    console.error(e);
-                    reject();
+                    if (!isAborted) {
+                        console.error(e);
+                        reject();
+                    }
                 });
         });
+        
+        // Add abort method to the promise
+        promise.abort = () => {
+            console.debug('OSM request aborted');
+            isAborted = true;
+            abortController.abort();
+        };
+        
+        return promise;
     }
 }
 

@@ -52,6 +52,7 @@ class App extends Component {
     geoJson;
     storage = new Storage();
     osmController = OSMController;
+    currentOSMRequest = null;
 
     // Detect system theme preference
     getSystemThemePreference() {
@@ -119,7 +120,7 @@ class App extends Component {
             mapKey: 0,
         };
 
-        // this.updateData();
+        this.updateData();
     }
 
     onChangeStrategy(event) {
@@ -328,18 +329,37 @@ class App extends Component {
     getDataFromOSM(options = {}) {
         const {areaName = this.state.area, forceUpdate} = options;
 
+        // Cancel any existing OSM request
+        if (this.currentOSMRequest) {
+            console.debug('Cancelling previous OSM request');
+            // notification.warning({
+            //     message: 'OSM Request Cancelled',
+            //     description: 'Previous OSM request was cancelled to start a new one.',
+            //     duration: 2
+            // });
+            this.currentOSMRequest.abort();
+            this.currentOSMRequest = null;
+        }
+
         this.setState({ loading: true });
         
         const parts = areaName.split(',');
         const city = parts[0];
         
         // notification.info({
-        //     message: `Carregando mapa cicloviário de ${city}`,
-        //     description: 'Baixando dados atualizados do OpenStreetMap. Dependendo do tamanho da cidade, isso pode levar alguns segundos ou até mais de um minuto.',
-        //     duration: 0
+        //     message: 'OSM Request Started',
+        //     description: `Starting OSM data request for ${city}`,
+        //     duration: 2
         // });
+        
+        notification.info({
+            message: `Carregando mapa cicloviário de ${city}`,
+            description: 'Baixando dados atualizados do OpenStreetMap. Dependendo do tamanho da cidade, isso pode levar alguns segundos ou até mais de um minuto.',
+            duration: 0
+        });
 
-        return OSMController.getData({ area: areaName })
+        this.currentOSMRequest = OSMController.getData({ area: areaName });
+        return this.currentOSMRequest
             .then(newData => {
                 this.geoJsonDiff(this.state.geoJson, newData.geoJson);
 
@@ -375,7 +395,16 @@ class App extends Component {
                     });
                     
                     notification.destroy();
+                    
+                    // notification.success({
+                    //     message: 'OSM Request Completed',
+                    //     description: `Successfully loaded data for ${city}`,
+                    //     duration: 2
+                    // });
                 }
+                
+                // Clear the current request reference
+                this.currentOSMRequest = null;
             }).catch(e => {
                 console.error(e);
                 this.setState({
@@ -383,11 +412,25 @@ class App extends Component {
                 });
                 
                 notification.destroy();
-                notification.error({
-                    message: 'Ops',
-                    description: 'O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.',
-                    duration: 0
-                });
+                
+                // Check if the error is due to request abortion
+                if (e.message === 'Request aborted') {
+                    console.debug('OSM request was cancelled due to a new request');
+                    // notification.warning({
+                    //     message: 'OSM Request Aborted',
+                    //     description: 'OSM request was cancelled due to a new request.',
+                    //     duration: 2
+                    // });
+                } else {
+                    notification.error({
+                        message: 'Ops',
+                        description: 'O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.',
+                        duration: 0
+                    });
+                }
+                
+                // Clear the current request reference
+                this.currentOSMRequest = null;
             });
     }
 
@@ -436,11 +479,11 @@ class App extends Component {
                         }
                     }).catch(e => {
                         console.error(e);
-                        notification['error']({
-                            message: 'Erro',
-                            description:
-                                'Ocorreu um erro ao acessar o banco de dados.',
-                        });
+                        // notification['error']({
+                        //     message: 'Erro',
+                        //     description:
+                        //         'Ocorreu um erro ao acessar o banco de dados.',
+                        // });
                     });
             }
         } else {
@@ -499,6 +542,8 @@ class App extends Component {
             this.directionsPanel.clearDirections();
 
             this.updateData();
+
+            document.querySelector('.city-picker span').setAttribute('style','opacity: 1');
 
             // Only redo the query if we need new data
             // if (!doesAContainsB(largestBoundsYet, newBounds)) {
@@ -621,6 +666,18 @@ class App extends Component {
             const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
             mediaQuery.removeEventListener('change', this.themeChangeListener);
         }
+        
+        // Cancel any pending OSM request
+        if (this.currentOSMRequest) {
+            console.debug('Cancelling OSM request on component unmount');
+            // notification.info({
+            //     message: 'OSM Request Cancelled',
+            //     description: 'OSM request was cancelled due to component unmount.',
+            //     duration: 2
+            // });
+            this.currentOSMRequest.abort();
+            this.currentOSMRequest = null;
+        }
     }
 
     onRouteChanged() {
@@ -691,7 +748,6 @@ class App extends Component {
                             center={this.state.center}
                             showSatellite={this.state.showSatellite}
                             location={this.state.area}
-                            updateData={this.updateData}
                             onMapMoved={this.onMapMoved}
                             updateLengths={this.updateLengths}
                             isSidebarOpen={this.state.isSidebarOpen}

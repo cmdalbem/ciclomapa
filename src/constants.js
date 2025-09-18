@@ -59,6 +59,7 @@ export const DEFAULT_ZOOM = 12;
 export const POI_ZOOM_THRESHOLD = 15;
 export const INTERACTIVE_LAYERS_ZOOM_THRESHOLD = 12;
 export const COMMENTS_ZOOM_THRESHOLD = 13;
+export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 11;
 
 
 // Layout
