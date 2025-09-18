@@ -18,7 +18,6 @@ import {
 import AboutModal from './AboutModal.js'
 import Analytics from './Analytics.js'
 import Map from './Map.js'
-import Spinner from './Spinner.js'
 import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
 import TopBar from './TopBar.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
@@ -74,7 +73,6 @@ class App extends Component {
         this.onLayersChange = this.onLayersChange.bind(this);
         this.downloadData = this.downloadData.bind(this);
         this.forceUpdate = this.forceUpdate.bind(this);
-        this.onSpinnerClose = this.onSpinnerClose.bind(this);
         this.toggleSidebar = this.toggleSidebar.bind(this);
         this.openAboutModal = this.openAboutModal.bind(this);
         this.closeAboutModal = this.closeAboutModal.bind(this);
@@ -331,6 +329,15 @@ class App extends Component {
         const {areaName = this.state.area, forceUpdate} = options;
 
         this.setState({ loading: true });
+        
+        const parts = areaName.split(',');
+        const city = parts[0];
+        
+        // notification.info({
+        //     message: `Carregando mapa cicloviário de ${city}`,
+        //     description: 'Baixando dados atualizados do OpenStreetMap. Dependendo do tamanho da cidade, isso pode levar alguns segundos ou até mais de um minuto.',
+        //     duration: 0
+        // });
 
         return OSMController.getData({ area: areaName })
             .then(newData => {
@@ -345,10 +352,12 @@ class App extends Component {
                     if (SAVE_TO_FIREBASE) {
                         this.storage.save(areaName, newData.geoJson, lengths)
                             .then(() => {
+                                if (this.state.debugMode) {
                                 notification.success({
-                                    message: 'Banco de dados atualizado',
-                                    description: "O banco do CicloMapa foi atualizado com a versão mais recente dos dados desta cidade."
-                                });
+                                        message: 'Banco de dados atualizado',
+                                        description: "O banco do CicloMapa foi atualizado com a versão mais recente dos dados desta cidade."
+                                    });
+                                }
                             }).catch(e => {
                                 notification['error']({
                                     message: 'Erro ao atualizar banco de dados',
@@ -364,11 +373,20 @@ class App extends Component {
                         loading: false,
                         lengths: lengths
                     });
+                    
+                    notification.destroy();
                 }
             }).catch(e => {
                 console.error(e);
                 this.setState({
-                    error: true
+                    loading: false
+                });
+                
+                notification.destroy();
+                notification.error({
+                    message: 'Ops',
+                    description: 'O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.',
+                    duration: 0
                 });
             });
     }
@@ -417,6 +435,7 @@ class App extends Component {
                             this.getDataFromOSM();
                         }
                     }).catch(e => {
+                        console.error(e);
                         notification['error']({
                             message: 'Erro',
                             description:
@@ -495,12 +514,13 @@ class App extends Component {
         if (this.state.geoJson !== prevState.geoJson) {
             if (!this.state.geoJson || (this.state.geoJson.features && this.state.geoJson.features.length === 0)) {
                 // @todo link to our tutorials and invite the user to start mapping it
-                notification['warning']({
-                    message: 'Ops',
-                    description:
-                        'Não há dados cicloviários para esta cidade. Que tal colaborar no OpenStreetMap?',
-                    // action: <a href={getOsmUrl(this.state.lat, this.state.lng, this.state.zoom)} target="_blank" rel="noopener noreferrer">Editar no OSM</a> // not available in current Ant Design version
-                });
+                // @todo this was being triggered wrong
+                // notification['warning']({
+                //     message: 'Ops',
+                //     description:
+                //         'Não há dados cicloviários para esta cidade. Que tal colaborar no OpenStreetMap?',
+                //     // action: <a href={getOsmUrl(this.state.lat, this.state.lng, this.state.zoom)} target="_blank" rel="noopener noreferrer">Editar no OSM</a> // not available in current Ant Design version
+                // });
             } else {
                 // @todo this seem to be being called every time!!!!
                 // Retrocompatibility case where lengths weren't saved to database
@@ -614,12 +634,6 @@ class App extends Component {
         });
     }
 
-    onSpinnerClose() {
-        this.setState({
-            error: false,
-            loading: false
-        });
-    }
 
     setMapRef(map) {
         this.setState({ map });
@@ -664,6 +678,7 @@ class App extends Component {
                             openAboutModal={this.openAboutModal}
                             isDarkMode={this.state.isDarkMode}
                             toggleTheme={this.toggleTheme}
+                            loading={this.state.loading}
                         />
 
                         <Map
@@ -742,14 +757,6 @@ class App extends Component {
                     onClose={this.closeAboutModal}
                 />
 
-                {
-                    this.state.loading &&
-                    <Spinner
-                        area={this.state.area}
-                        error={this.state.error}
-                        onClose={this.onSpinnerClose}
-                    />
-                }
                 </div>
             </DirectionsProvider>
         );

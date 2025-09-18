@@ -109,7 +109,8 @@ class TopBar extends Component {
             downloadData,
             embedMode,
             isDarkMode,
-            toggleTheme
+            toggleTheme,
+            loading
         } = this.props;
 
         const parts = title.split(',');
@@ -165,24 +166,35 @@ class TopBar extends Component {
                         {
                             !embedMode && 
                             <div className={`city-picker sm:text-center ${IS_MOBILE && 'w-full'}`}>
-                                <div className={`mb-1 sm:mb-1 ${IS_MOBILE && 'w-full'}`}>
-                                    <Button
-                                        block={IS_MOBILE}
-                                        size={IS_MOBILE ? "large" : "middle"}
-                                        onClick={this.showCityPicker}
-                                    >
-                                        <h3 className="flex items-center justify-between">
-                                            <span className="mr-3">
-                                                <span className="font-bold">
-                                                    {city},
+                                <div className={`flex mb-1 sm:mb-1 ${IS_MOBILE && 'w-full'}`}>
+                                    <div className="relative">
+                                        <Button
+                                            block={IS_MOBILE}
+                                            size={IS_MOBILE ? "large" : "middle"}
+                                            onClick={this.showCityPicker}
+                                        >
+                                            <h3 className="flex items-center justify-between">
+                                                <span className="mr-3">
+                                                    <span className="font-bold">
+                                                        {city},
+                                                    </span>
+
+                                                    {state}
                                                 </span>
 
-                                                {state}
-                                            </span>
+                                                <IconCaret className="text-green-300"/>
+                                            </h3>
+                                        </Button>
+                                        {
+                                            loading &&
+                                            <div className="loader-container h-1 absolute bottom-0 left-0 right-0">
+                                                <div className="progress-materializecss">
+                                                    <div className="indeterminate"></div>
+                                                </div> 
+                                            </div>
+                                        } 
+                                    </div> 
 
-                                            <IconCaret className="text-green-300"/>
-                                        </h3>
-                                    </Button>
 
                                     {
                                         !IS_MOBILE &&
