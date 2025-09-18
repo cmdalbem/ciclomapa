@@ -26,7 +26,7 @@ class MapPopups {
         //   just close the popup from the previous one.
         this.cyclewayPopup = new mapboxgl.Popup({
             className: 'popup-big',
-            closeOnClick: IS_MOBILE,
+            closeOnClick: true,
         });
         this.cyclewayPopup.on('close', e => {
             if (this.selectedCycleway) {
@@ -37,13 +37,13 @@ class MapPopups {
 
         this.commentPopup = new mapboxgl.Popup({
             className: 'popup-big',
-            closeOnClick: IS_MOBILE,
+            closeOnClick: true,
             offset: 25
         });
 
         this.poiPopup = new mapboxgl.Popup({
             className: 'popup-big',
-            closeOnClick: IS_MOBILE,
+            closeOnClick: true,
             offset: 25
         });
 
