@@ -119,7 +119,7 @@ class Map extends Component {
             console.debug('Syncing map state with consistent place:', placeName);
             this.syncMapState(placeName);
             document.querySelector('.city-picker span').setAttribute('style','opacity: 1');
-        }, 2000);
+        }, 1000);
     }
 
     showCommentModal() {

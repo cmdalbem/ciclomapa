@@ -352,11 +352,11 @@ class App extends Component {
         //     duration: 2
         // });
         
-        notification.info({
-            message: `Carregando mapa cicloviário de ${city}`,
-            description: 'Baixando dados atualizados do OpenStreetMap. Dependendo do tamanho da cidade, isso pode levar alguns segundos ou até mais de um minuto.',
-            duration: 0
-        });
+        // notification.info({
+        //     message: `Carregando mapa cicloviário de ${city}`,
+        //     description: 'Baixando dados atualizados do OpenStreetMap. Dependendo do tamanho da cidade, isso pode levar alguns segundos ou até mais de um minuto.',
+        //     duration: 0
+        // });
 
         this.currentOSMRequest = OSMController.getData({ area: areaName });
         return this.currentOSMRequest
