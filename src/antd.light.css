@@ -1,0 +1,386 @@
+/* Light theme CSS - overrides for Ant Design dark theme */
+
+.theme-light body {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, var(--tw-text-opacity)) !important;
+}
+
+.theme-light .ant-layout {
+  background: #ffffff !important;
+}
+
+.theme-light .ant-layout-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.theme-light .ant-layout-sider {
+  background: #ffffff !important;
+}
+
+.theme-light .ant-menu {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-menu-item {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-menu-item:hover {
+  background-color: #f5f5f5 !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-btn:not(.ant-btn-text) {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-btn:hover:not(.ant-btn-text) {
+  background: #f5f5f5 !important;
+  border-color: #40a9ff !important;
+  color: #40a9ff !important;
+}
+
+.theme-light .ant-btn-primary:not(.ant-btn-text) {
+  background: #4EA76F !important;
+  border-color: #4EA76F !important;
+  color: #ffffff !important;
+}
+
+.theme-light .ant-btn-primary:hover:not(.ant-btn-text) {
+  background: #3d8a5a !important;
+  border-color: #3d8a5a !important;
+}
+
+.theme-light .ant-btn-text {
+  background: transparent !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  border: none !important;
+}
+
+.theme-light .ant-btn-text:hover {
+  background: #f5f5f5 !important;
+  color: #4EA76F !important;
+}
+
+.theme-light .ant-btn-text:focus {
+  background: #f5f5f5 !important;
+  color: #4EA76F !important;
+}
+
+.theme-light .ant-popover-inner {
+  background: #ffffff !important;
+  /* border: 1px solid #d9d9d9 !important; */
+}
+
+.theme-light .ant-popover-arrow {
+  border-color: #d9d9d9 !important;
+}
+
+.theme-light .ant-dropdown {
+  background: #ffffff !important;
+  border: 1px solid #d9d9d9 !important;
+}
+
+.theme-light .ant-dropdown-menu {
+  background: #ffffff !important;
+}
+
+.theme-light .ant-dropdown-menu-item {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-dropdown-menu-item:hover {
+  background: #f5f5f5 !important;
+}
+
+.theme-light .ant-modal-content {
+  background: #ffffff !important;
+}
+
+.theme-light .ant-modal-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.theme-light .ant-modal-title {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-input {
+  background: #ffffff !important;
+  border-color: #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-input:focus {
+  border-color: #4EA76F !important;
+  box-shadow: 0 0 0 2px rgba(78, 167, 111, 0.2) !important;
+}
+
+.theme-light .ant-select-selector {
+  background: #ffffff !important;
+  border-color: #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-select-selection-item {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-select-dropdown {
+  background: #ffffff !important;
+  border: 1px solid #d9d9d9 !important;
+}
+
+.theme-light .ant-select-item {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-select-item:hover {
+  background: #f5f5f5 !important;
+}
+
+.theme-light .ant-select-item-option-selected {
+  background: #e6f7ff !important;
+  color: #4EA76F !important;
+}
+
+.theme-light .ant-tabs {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-tabs-tab,
+.ant-tabs-top > .ant-tabs-nav::before,
+.ant-tabs-bottom > .ant-tabs-nav::before,
+.ant-tabs-top > div > .ant-tabs-nav::before,
+.ant-tabs-bottom > div > .ant-tabs-nav::before {
+  color: rgba(0, 0, 0, 0.65) !important;
+  border-color: #d9d9d9 !important;
+}
+
+.theme-light .ant-tabs-tab:hover {
+  color: #4EA76F !important;
+}
+
+.theme-light .ant-tabs-tab.ant-tabs-tab-active {
+  color: #4EA76F !important;
+}
+
+.theme-light .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #4EA76F !important;
+}
+
+.theme-light .ant-tabs-ink-bar {
+  background: #4EA76F !important;
+}
+
+.theme-light .ant-tabs-content-holder {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-tooltip-inner {
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  border: 1px solid #d9d9d9 !important;
+}
+
+.theme-light .ant-tooltip-arrow {
+  border-color: #d9d9d9 !important;
+}
+
+.theme-light .ant-notification-notice {
+  background: #ffffff !important;
+  border: 1px solid #d9d9d9 !important;
+}
+
+.theme-light .ant-notification-notice-message {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.theme-light .ant-notification-notice-description {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+.theme-light #backdrop {
+  background: #ffffff !important;
+}
+
+/* Tailwind CSS overrides for light mode */
+.theme-light .text-white {
+  color: rgba(0, 0, 0, var(--tw-text-opacity)) !important;
+}
+
+.theme-light .text-green-300 {
+  color: #4EA76F !important;
+}
+
+.theme-light .bg-white,
+.theme-light .hover\:bg-white:hover {
+  background-color: rgba(0,0,0,var(--tw-bg-opacity)) !important;
+}
+
+.theme-light .bg-black,
+.theme-light .hover\:bg-black:hover {
+  background-color: rgba(255,255,255,var(--tw-bg-opacity)) !important;
+}
+
+.theme-light .text-black {
+  color: rgba(255, 255, 255, var(--tw-text-opacity)) !important;
+}
+
+.theme-light .hover\:text-white:hover {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Override any other common Tailwind classes that might need light mode variants */
+.theme-light .border-gray-200 {
+  border-color: #e5e7eb !important;
+}
+
+.theme-light .border-gray-300 {
+  border-color: #d1d5db !important;
+}
+
+.theme-light .border-black {
+  border-color: rgba(255, 255, 255, var(--tw-border-opacity, 1)) !important;
+}
+
+.theme-light .border-white {
+  border-color: rgba(0, 0, 0, var(--tw-border-opacity, 1)) !important;
+}
+
+.theme-light .bg-gray-50 {
+  background-color: rgba(249, 250, 251, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-light .bg-gray-100 {
+  background-color: rgba(243, 244, 246, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-light .bg-gray-200 {
+  background-color: rgba(55, 65, 81, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-light .bg-gray-300 {
+  background-color: rgba(75, 85, 99, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-light .bg-gray-400 {
+  background-color: rgba(107, 114, 128, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-light .bg-gray-500 {
+  background-color: rgba(156, 163, 175, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-light .bg-gray-600 {
+  background-color: rgba(209, 213, 219, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-light .bg-gray-700 {
+  background-color: rgba(229, 231, 235, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-light .bg-gray-800 {
+  background-color: rgba(243, 244, 246, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-light .bg-gray-900 {
+  background-color: rgba(249, 250, 251, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-light .ant-popover-inner-content {
+  color: black !important;
+}
+
+.theme-light .text-gray-50 {
+  color: #111827 !important;
+}
+
+.theme-light .text-gray-100 {
+  color: #1f2937 !important;
+}
+
+.theme-light .text-gray-200 {
+  color: #374151 !important;
+}
+
+.theme-light .text-gray-300 {
+  color: #4b5563 !important;
+}
+
+.theme-light .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+.theme-light .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+.theme-light .text-gray-600 {
+  color: #d1d5db !important;
+}
+
+.theme-light .text-gray-700 {
+  color: #e5e7eb !important;
+}
+
+.theme-light .text-gray-800 {
+  color: #f3f4f6 !important;
+}
+
+.theme-light .text-gray-900 {
+  color: #f9fafb !important;
+}
+
+.theme-light .text-red-500 {
+  color: rgba(239,68,68,var(--tw-text-opacity)) !important;
+}
+
+.theme-light .text-opacity-50 {
+  opacity: 0.5 !important;
+}
+
+/* Map-specific light mode overrides */
+.theme-light .mapboxgl-ctrl-group button {
+  filter: none !important;
+}
+
+.theme-light .mapboxgl-ctrl-icon.mapboxgl-ctrl-zoom-in,
+.theme-light .mapboxgl-ctrl-icon.mapboxgl-ctrl-zoom-out,
+.theme-light .mapboxgl-ctrl-icon.mapboxgl-ctrl-geolocate::before {
+  filter: none !important;
+}
+
+.theme-light .mapboxgl-ctrl-attrib a {
+  color: rgba(0, 0, 0, 0.2) !important;
+}
+
+.theme-light .mapboxgl-ctrl-logo {
+  opacity: 0.2 !important;
+}
+
+.theme-light .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder--icon-search {
+  opacity: 0.3 !important;
+}
+
+/* MapStyleSwitcher light mode overrides */
+.theme-light .switcher-bar > div {
+  background: #f3f4f6 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.theme-light .switcher-bar > div:hover {
+  box-shadow: 0px 2px 7px rgba(0, 0, 0, 0.1) !important;
+}
+
+.theme-light .switcher-bar > div.selected {
+  border: 2px solid #4EA76F !important;
+}
+
+.theme-light .ant-popover-arrow-content {
+  --antd-arrow-background-color: #ffffff !important;
+}

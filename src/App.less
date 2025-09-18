@@ -1,10 +1,13 @@
-// @import './theme.less';
+// Import dark theme by default (existing behavior)
 @import './antd.customize.less';
 
 body {
     margin: 0;
     padding: 0;
+    transition: background-color 0.3s ease;
+}
 
+.theme-dark body {
     background: #211f1c;
 }
 
@@ -20,40 +23,55 @@ body {
     right: 0;
     left: 0;
     pointer-events: none;
+    transition: box-shadow 0.3s ease;
     
     // background: linear-gradient(90deg, #211f1c 0%, transparent 30%, transparent 70%, #282622 100%);
     // background: radial-gradient(circle, transparent 60%, #211f1c 100%);
+}
+
+.theme-light #gradient-backdrop {
+    box-shadow: inset 0px 60px 100px 0px #EDEEED;
+}
+
+.theme-dark #gradient-backdrop {
     box-shadow: inset 0px 60px 100px 0px #211f1c;
 }
 
 // Transition-in effect
-#ciclomapa #analyticsSidebar,
-#ciclomapa #mapSwitcher,
-#ciclomapa .mapboxgl-ctrl-group,
-#ciclomapa .mapboxgl-ctrl-geocoder,
-#ciclomapa #layersPanel,
-#ciclomapa #layersPanelMobileButton,
-#ciclomapa #topbar {
-    transition: transform 1000ms, opacity 1000ms;
-    transition-delay: 1s;
-    opacity: 1;
-}
+// #ciclomapa #analyticsSidebar,
+// #ciclomapa #mapSwitcher,
+// #ciclomapa .mapboxgl-ctrl-group,
+// #ciclomapa .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder,
+// #ciclomapa #layersPanel,
+// #ciclomapa #layersPanelMobileButton,
+// #ciclomapa #directionsPanel,
+// #ciclomapa #directionsPanelMobileButton,
+// #ciclomapa #topbar {
+//     transition: transform 1000ms, opacity 1000ms;
+//     transition-delay: 1s;
+//     opacity: 1;
+// }
 
-#ciclomapa.hideUI #topbar {
-    transform: translateY(-100%);
-    opacity: 0;
-}
+// // From the top
+// #ciclomapa.hideUI #topbar,
+// #ciclomapa.hideUI #directionsPanel {
+//     transform: translateY(-100%);
+//     opacity: 0;
+// }
 
-#ciclomapa.hideUI #layersPanel,
-#ciclomapa.hideUI #layersPanelMobileButton {
-    transform: translateX(-100%);
-    opacity: 0;
-}
+// // From the left
+// #ciclomapa.hideUI #layersPanel,
+// #ciclomapa.hideUI #directionsPanelMobileButton,
+// #ciclomapa.hideUI #layersPanelMobileButton {
+//     transform: translateX(-100%);
+//     opacity: 0;
+// }
 
-#ciclomapa.hideUI #mapSwitcher,
-#ciclomapa.hideUI #analyticsSidebar,
-#ciclomapa.hideUI .mapboxgl-ctrl-group,
-#ciclomapa.hideUI .mapboxgl-ctrl-geocoder {
-    transform: translateX(100%);
-    opacity: 0;
-}
+// // From the right
+// #ciclomapa.hideUI #mapSwitcher,
+// #ciclomapa.hideUI #analyticsSidebar,
+// #ciclomapa.hideUI .mapboxgl-ctrl-group,
+// #ciclomapa.hideUI .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder {
+//     transform: translateX(100%);
+//     opacity: 0;
+// }

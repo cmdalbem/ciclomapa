@@ -13,7 +13,10 @@ class Spinner extends Component {
         return (
             <div
                 className="loader-container fixed top-0 bottom-0 left-0 right-0 z-10 flex justify-center items-center"
-                style={{background: 'rgba(37,32,29,0.9)'}}
+                style={{
+                    background: 'rgba(37,32,29,0.9)',
+                    color: 'white'
+                }}
             >
                 <div className="relative max-w-lg p-4 sm:p-0">
                     {
@@ -53,7 +56,7 @@ class Spinner extends Component {
                                     Carregando mapa cicloviário de <b>{city}</b>
                                 </div>
 
-                                <div className="text-base text-gray-200">
+                                <div className="text-base" style={{ color: 'rgba(255,255,255,0.7)' }}>
                                     Baixando dados atualizados do OpenStreetMap. Dependendo do tamanho da cidade, isso pode levar alguns segundos ou até mais de um minuto.
                                 </div>
                             </div>

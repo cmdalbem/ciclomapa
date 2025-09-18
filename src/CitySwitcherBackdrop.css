@@ -6,11 +6,17 @@
     bottom: 0;
     right: 0;
     left: 0;
-    /* background: rgba(255,255,255,0.8); */
-    /* background: rgba(37,32,29,0.9); */
-    background: #211F1C;
     opacity: .7;
     z-index: 1;
+    transition: background-color 0.3s ease;
+}
+
+.theme-light #backdrop {
+    background: #ffffff;
+}
+
+.theme-dark #backdrop {
+    background: #211F1C;
 }
 
 #closeBtn {
@@ -29,4 +35,17 @@ body #backdrop * {
 body.show-city-picker #backdrop,
 body.show-city-picker #backdrop * {
     visibility: visible;
+}
+
+
+/* Mobile */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
+      top: 20%;
+    }
+
+    #closeBtn {
+      top: 20%;
+    }
 }

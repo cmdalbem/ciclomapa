@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { useDirections } from './DirectionsContext.js';
 
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -13,9 +14,11 @@ import {
     ENABLE_COMMENTS,
     IS_PROD,
     DEFAULT_LINE_WIDTH_MULTIPLIER,
-    LINE_WIDTH_MULTIPLIER_HOVER,
+    MAP_STYLES,
     POI_ZOOM_THRESHOLD,
     COMMENTS_ZOOM_THRESHOLD,
+    DIRECTIONS_LINE_WIDTH,
+    DIRECTIONS_LINE_BORDER_WIDTH,
 } from './constants.js'
 
 import Analytics from './Analytics.js'
@@ -23,6 +26,7 @@ import AirtableDatabase from './AirtableDatabase.js'
 import CommentModal from './CommentModal.js'
 import NewCommentCursor from './NewCommentCursor.js'
 import MapPopups from './MapPopups.js'
+import { adjustColorBrightness } from './utils.js'
 
 import './Map.css'
 
@@ -32,26 +36,38 @@ import capitalsGeojson from './brazil_capitals.geojson';
 import commentIcon from './img/icons/poi-comment.png';
 
 import bikeparkingIcon from './img/icons/poi-bikeparking.png';
+import bikeparkingIconLight from './img/icons/poi-bikeparking--light.png';
 import bikeparkingIcon2x from './img/icons/poi-bikeparking@2x.png';
 import bikeparkingIconMini from './img/icons/poi-bikeparking-mini.png';
+import bikeparkingIconMiniLight from './img/icons/poi-bikeparking-mini--light.png';
 import bikeshopIcon from './img/icons/poi-bikeshop.png';
+import bikeshopIconLight from './img/icons/poi-bikeshop--light.png';
 import bikeshopIcon2x from './img/icons/poi-bikeshop@2x.png';
 import bikeshopIconMini from './img/icons/poi-bikeshop-mini.png';
+import bikeshopIconMiniLight from './img/icons/poi-bikeshop-mini--light.png';
 import bikerentalIcon from './img/icons/poi-bikerental.png';
+import bikerentalIconLight from './img/icons/poi-bikerental--light.png';
 import bikerentalIcon2x from './img/icons/poi-bikerental@2x.png';
 import bikerentalIconMini from './img/icons/poi-bikerental-mini.png';
+import bikerentalIconMiniLight from './img/icons/poi-bikerental-mini--light.png';
 
 const iconsMap = {
     "poi-comment": commentIcon,
     "poi-bikeparking": bikeparkingIcon,
+    "poi-bikeparking--light": bikeparkingIconLight,
     "poi-bikeparking-2x": bikeparkingIcon2x,
     "poi-bikeparking-mini": bikeparkingIconMini,
+    "poi-bikeparking-mini--light": bikeparkingIconMiniLight,
     "poi-bikeshop": bikeshopIcon,
+    "poi-bikeshop--light": bikeshopIconLight,
     "poi-bikeshop-2x": bikeshopIcon2x,
     "poi-bikeshop-mini": bikeshopIconMini,
+    "poi-bikeshop-mini--light": bikeshopIconMiniLight,
     "poi-rental": bikerentalIcon,
+    "poi-rental--light": bikerentalIconLight,
     "poi-rental-2x": bikerentalIcon2x,
     "poi-rental-mini": bikerentalIconMini,
+    "poi-rental-mini--light": bikerentalIconMiniLight,
 }
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
@@ -76,7 +92,7 @@ class Map extends Component {
         this.onMapMoved = this.onMapMoved.bind(this);
 
         this.newComment = this.newComment.bind(this);
-        this.addCommentsLayers = this.addCommentsLayers.bind(this);
+        this.initCommentsLayer = this.initCommentsLayer.bind(this);
         this.afterCommentCreate = this.afterCommentCreate.bind(this);
         this.showCommentModal = this.showCommentModal.bind(this);
         this.hideCommentModal = this.hideCommentModal.bind(this);
@@ -111,21 +127,22 @@ class Map extends Component {
         Analytics.event('new_comment');
 
         this.hideCommentModal();
-        this.addCommentsLayers();
+        this.initCommentsLayer();
     };
 
+    // Not in use
     // southern-most latitude, western-most longitude, northern-most latitude, eastern-most longitude
-    getCurrentBBox() {
-        const fallback = "-23.036345361742164,-43.270405878917785,-22.915284125684607,-43.1111041211104";
+    // getCurrentBBox() {
+    //     const fallback = "-23.036345361742164,-43.270405878917785,-22.915284125684607,-43.1111041211104";
 
-        if (this.map) {
-            const sw = this.map.getBounds().getSouthWest();
-            const ne = this.map.getBounds().getNorthEast();
-            return `${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
-        } else {
-            return fallback;
-        }
-    }
+    //     if (this.map) {
+    //         const sw = this.map.getBounds().getSouthWest();
+    //         const ne = this.map.getBounds().getNorthEast();
+    //         return `${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
+    //     } else {
+    //         return fallback;
+    //     }
+    // }
 
     reverseGeocode(lngLat) {
         if (lngLat.lat && lngLat.lng) {
@@ -202,24 +219,25 @@ class Map extends Component {
                             ["==", ["get", f2[0]], f2[1]]
                         )
                     ]
-            )
+            ),
         ];
     }
 
-    addLayerPoi(l) {
+    initPOILayer(l) {
         const filters = this.convertFilterToMapboxFilter(l);
 
-        this.map.addLayer({
-            'id': l.id,
+        // Base layer configuration
+        const baseLayerConfig = {
             'type': 'symbol',
-            'source': 'osm',
+            'source': "osmdata",
             "filter": filters,
-            "name": l.name,
             "description": l.description,
             'layout': {
                 'text-field': [ 'step', ['zoom'], '', POI_ZOOM_THRESHOLD, ['get', 'name'], ],
-                'text-font': ['IBM Plex Sans Bold'],
+                'text-font': ['IBM Plex Sans Medium'],
+                'text-letter-spacing': 0.05,
                 "text-offset": [0, 1.5],
+                "text-max-width": 8,
                 'text-size': [
                     "interpolate",
                         ["exponential", 1.5],
@@ -227,7 +245,7 @@ class Map extends Component {
                         10, 10,
                         18, 14
                 ],
-                'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
+                'text-variable-anchor': ['top'],
                 "icon-padding": 0,
                 "icon-allow-overlap": [
                     'step',
@@ -236,209 +254,301 @@ class Map extends Component {
                     POI_ZOOM_THRESHOLD,
                     true
                 ],
-                'icon-image': [
-                    'step',
-                    ['zoom'],
-                    `${l.icon}-mini`,
-                    POI_ZOOM_THRESHOLD,
-                    l.icon
-                ],
-                'icon-size': [
-                    "interpolate",
-                        ["exponential", 1.5],
-                        ["zoom"], 
-                        10, 0.5,
-                        POI_ZOOM_THRESHOLD, 1
-                ],
+                'icon-size': 1,
             },
             'paint': {
                 'text-color': l.style.textColor || 'white',
                 'text-halo-width': 1,
-                'text-halo-color': '#1c1a17',
                 'text-opacity': ['case',
                     ['boolean', ['feature-state', 'hover'], false],
-                    .8,
-                    1
+                    0.7,
+                    1.0
                 ],
                 'icon-opacity': ['case',
                     ['boolean', ['feature-state', 'hover'], false],
-                    .8,
-                    1
+                    0.7,
+                    1.0
                 ]
+            }
+        };
+
+        // Create POI layer
+        this.map.addLayer({
+            ...baseLayerConfig,
+            'id': l.id,
+            "name": l.name,
+            'layout': {
+                ...baseLayerConfig.layout,
+                'icon-image': [
+                    'step',
+                    ['zoom'],
+                    this.props.isDarkMode ? `${l.icon}-mini` : `${l.icon}-mini--light`,
+                    POI_ZOOM_THRESHOLD,
+                    this.props.isDarkMode ? `${l.icon}` : `${l.icon}--light`,
+                ],
+            },
+            'paint': {
+                ...baseLayerConfig.paint,
+                'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#ffffff',
             }
         });
 
         // Interactions
+        const self = this;
 
-        this.map.on('mouseenter', l.id, e => {
-            if (e.features.length > 0 && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
-                this.map.getCanvas().style.cursor = 'pointer';
+        this.map.on('mouseenter', l.id, (e) => {
+            if (e.features.length > 0) {
+                // Disable POI hover effects when in route mode
+                if (self.props.isInRouteMode) {
+                    e.originalEvent.preventDefault();
+                    return;
+                }
+                self.map.getCanvas().style.cursor = 'pointer';
 
-                if (this.hoveredPOI) {
-                    this.map.setFeatureState({
-                        source: 'osm',
-                        id: this.hoveredPOI },
+                if (self.hoveredPOI) {
+                    self.map.setFeatureState({
+                        source: "osmdata",
+                        id: self.hoveredPOI },
                         { hover: false });
                 }
-                this.hoveredPOI = e.features[0].id;
-                this.map.setFeatureState({
-                    source: 'osm',
-                    id: this.hoveredPOI },
+                self.hoveredPOI = e.features[0].id;
+                self.map.setFeatureState({
+                    source: "osmdata",
+                    id: self.hoveredPOI },
                     { hover: true });
             }
             e.originalEvent.preventDefault();
         });
 
         this.map.on('mouseleave', l.id, e => {
-            if (this.hoveredPOI && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
-                this.map.getCanvas().style.cursor = '';
+            if (self.hoveredPOI) {
+                self.map.getCanvas().style.cursor = '';
 
-                this.map.setFeatureState({
-                    source: 'osm',
-                    id: this.hoveredPOI },
+                self.map.setFeatureState({
+                    source: "osmdata",
+                    id: self.hoveredPOI },
                     { hover: false });
             }
-            this.hoveredPOI = null;
+            self.hoveredPOI = null;
         });
 
         this.map.on('click', l.id, e => {
-            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented && this.map.getZoom() > POI_ZOOM_THRESHOLD) {
-                this.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
-                e.originalEvent.preventDefault();
+            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
+                // Disable POI clicks when in route mode
+                if (self.props.isInRouteMode) {
+                    e.originalEvent.preventDefault();
+                    return;
+                }
+                self.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
+                // e.originalEvent.preventDefault();
             }
         });
+
     }
 
-    addLayerWay(l) {
-        const filters = this.convertFilterToMapboxFilter(l);
-        const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
+    initBoundaryLayer() {
+        const filters = this.convertFilterToMapboxFilter({
+            filters: [
+                ["boundary", "administrative"],
+                ["admin_level", "6"],
+                ["admin_level", "7"],
+                ["admin_level", "8"],
+                ["admin_level", "9"],
+                ["admin_level", "10"]
+            ]}
+        );
 
-        const dashedLineStyle = { 'line-dasharray': [1, 1] };
+        this.map.addLayer({
+            'id': 'boundary-layer',
+            'type': 'line',
+            'source': 'osmdata',
+            'name': 'Limites',
+            'filter': filters,
+            'paint': {
+                'line-color': this.props.isDarkMode ? '#FFFFFF' : '#000000',
+                'line-dasharray': [1, 1],
+                'line-width': 2,
+                'line-opacity': 0.3
+            }
+        });
 
+        // this.updateWorldMask();
+    }
+
+    // updateWorldMask() {
+    //     const boundaryData = this.props.boundaryData;
         
+    //     // Remove existing mask if no boundary data
+    //     if (!boundaryData || !boundaryData.features || boundaryData.features.length === 0) {
+    //         if (this.map.getLayer('city-boundary-mask')) {
+    //             this.map.removeLayer('city-boundary-mask');
+    //         }
+    //         if (this.map.getSource('worldMaskSrc')) {
+    //             this.map.removeSource('worldMaskSrc');
+    //         }
+    //         return;
+    //     }
 
+    //     // Create world polygon with hole for city boundary
+    //     const worldPolygonWithHole = {
+    //         'type': 'Feature',
+    //         'geometry': {
+    //             'type': 'Polygon',
+    //             'coordinates': [
+    //                 // Outer ring - covers the entire world
+    //                 [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]],
+    //                 // Inner ring - hole for the city boundary
+    //                 boundaryData.features[0].geometry.coordinates[0]
+    //             ]
+    //         }
+    //     };
+
+    //     const maskData = {
+    //         'type': 'FeatureCollection',
+    //         'features': [worldPolygonWithHole]
+    //     };
+
+    //     // Add or update source
+    //     if (!this.map.getSource('worldMaskSrc')) {
+    //         this.map.addSource('worldMaskSrc', {
+    //             'type': 'geojson',
+    //             'data': maskData
+    //         });
+
+    //         // Add mask layer
+    //         this.map.addLayer({
+    //             'id': 'city-boundary-mask',
+    //             'type': 'fill',
+    //             'source': 'worldMaskSrc',
+    //             'paint': {
+    //                 'fill-color': this.props.isDarkMode ? '#000000' : '#ffffff',
+    //                 'fill-opacity': 0.5
+    //             }
+    //         });
+    //     } else {
+    //         // Update existing source
+    //         this.map.getSource('worldMaskSrc').setData(maskData);
+    //     }
+    // }
+
+    initCyclepathLayer(l) {
+        const filters = this.convertFilterToMapboxFilter(l);
+        const dashedLineStyle = { 'line-dasharray': [1, 1] };
+        // Will be used as "beforeId" prop in AddLayer
+        const layerUnderneathName = 
+            this.map.getLayer('road-label-small') ? 'road-label-small'
+                : this.map.getLayer('road-label') ? 'road-label'
+                : '';
+        const self = this;
+
+        // Interactive layer is wider than the actual layer to improve usability
         this.map.addLayer({
             "id": l.id + '--interactive',
             "type": "line",
-            "source": "osm",
+            "source": "osmdata",
             "filter": filters,
             "paint": {
                 "line-opacity": 0,
                 "line-color": 'yellow',
-                "line-width": 24
+                "line-width": 20
             },
         }, layerUnderneathName);
 
-        // Check if layer has a border color set. If that's the case the logic is a
-        //  little different and we'll need 2 layers, one for the line itself and 
-        //  another for the line underneath which creates the illusion of a border.
-        if (l.style.borderColor) {
-            // Border
-            this.map.addLayer({
-                "id": l.id + '--border',
-                "type": "line",
-                "source": "osm",
-                "name": l.name,
-                "description": l.description,
-                "filter": filters,
-                "paint": {
-                    "line-color": l.style.borderColor,
-                    "line-width": [
-                        "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"], 
-                            10, l.style.lineWidth/4,
-                            18, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth*DEFAULT_LINE_WIDTH_MULTIPLIER*LINE_WIDTH_MULTIPLIER_HOVER,
-                                l.style.lineWidth*DEFAULT_LINE_WIDTH_MULTIPLIER
-                            ]
+        // Normal state layer
+        this.map.addLayer({
+            "id": l.id,
+            "type": "line",
+            "source": "osmdata",
+            "name": l.name,
+            "description": l.description,
+            "filter": filters,
+            "paint": {
+                "line-color": [
+                    "case",
+                    ["boolean", ["feature-state", "hover"], false],
+                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3), // On hover
+                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0 : -0.1)
+                ],
+                "line-offset": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, [
+                            "case",
+                                ["has", "cycleway:right"], Math.max(1, l.style.lineWidth/4),
+                                ["has", "cycleway:left"], Math.min(-1, -l.style.lineWidth/4),
+                                0
+                        ],
+                        18, [
+                            "case",
+                                ["has", "cycleway:right"], l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                ["has", "cycleway:left"], -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                0
+                        ]
                     ],
-                    ...(l.style.borderStyle === 'dashed' && dashedLineStyle)
+                "line-width": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, Math.max(1, l.style.lineWidth/4),
+                        18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
+                    ],
+                    ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
-                "layout": (l.style.borderStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
+                "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
             }, layerUnderneathName);
 
-            // Line
-            this.map.addLayer({
-                "id": l.id,
-                "type": "line",
-                "source": "osm",
-                "name": l.name,
-                "description": l.description,
-                "filter": filters,
-                "paint": {
-                    "line-color": l.style.lineColor,
-                    "line-width": [
-                        "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"],
-                            10, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth - l.style.borderWidth,
-                                Math.max(1, (l.style.lineWidth - l.style.borderWidth)/4),
-                            ],
-                            18, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                (l.style.lineWidth - l.style.borderWidth)*DEFAULT_LINE_WIDTH_MULTIPLIER*LINE_WIDTH_MULTIPLIER_HOVER,
-                                (l.style.lineWidth - l.style.borderWidth)*DEFAULT_LINE_WIDTH_MULTIPLIER
-                            ]
+        // Routes-active state layer (initially hidden)
+        this.map.addLayer({
+            "id": l.id + '--routes-active',
+            "type": "line",
+            "source": "osmdata",
+            "name": l.name + ' (Routes Active)',
+            "description": l.description,
+            "filter": filters,
+            "paint": {
+                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.6 : 0.4),
+                "line-width": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, Math.max(1, l.style.lineWidth/4),
+                        18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
                     ],
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
-                "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
-            }, layerUnderneathName);
-        } else {
-            this.map.addLayer({
-                "id": l.id,
-                "type": "line",
-                "source": "osm",
-                "name": l.name,
-                "description": l.description,
-                "filter": filters,
-                "paint": {
-                    "line-color": l.style.lineColor,
-                    "line-width": [
-                        "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"],
-                            10, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth * 1.5,
-                                Math.max(1, l.style.lineWidth/4)
-                            ],
-                            18, [ 'case',
-                                ['boolean', ['feature-state', 'hover'], false],
-                                l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER * LINE_WIDTH_MULTIPLIER_HOVER,
-                                l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
-                            ]
-                    ],
-                    ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
+                "layout": {
+                    ...(l.style.lineStyle === 'dashed' ? {} : { "line-join": "round", "line-cap": "round" }),
+                    "visibility": "none"
                 },
-                "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
             }, layerUnderneathName);
-        }
 
         // Click interaction
         // Hover interaction is handled globally with map.on('mousemove')
         this.map.on('click', l.id + '--interactive', e => {
             if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-                // if (this.selectedCycleway) {
-                //     this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: false });
+                // Disable cyclepath clicks when in route mode
+                if (self.props.isInRouteMode) {
+                    e.originalEvent.preventDefault();
+                    return;
+                }
+                // if (self.selectedCycleway) {
+                //     self.map.setFeatureState({ source: "osmdata", id: self.selectedCycleway }, { hover: false });
                 // }
-                // this.selectedCycleway = e.features[0].id;
-                // this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: true });
+                // self.selectedCycleway = e.features[0].id;
+                // self.map.setFeatureState({ source: "osmdata", id: self.selectedCycleway }, { hover: true });
 
-                const layer = this.props.layers.find(l =>
+                const layer = self.props.layers.find(l =>
                     l.id === e.features[0].layer.id.split('--')[0]
                 );
-                this.popups.showCyclewayPopup(e, layer);
+                self.popups.showCyclewayPopup(e, layer);
                 e.originalEvent.preventDefault();
             }
         });
     }
 
-    async addCommentsLayers() {
+    async initCommentsLayer() {
+        const self = this;
         if (this.state.comments.length > 0) {
             this.state.comments.forEach(c => {
                 if (c.marker) {
@@ -502,37 +612,46 @@ class Map extends Component {
         
                     this.map.on('mouseenter', 'comentarios', e => {
                         if (e.features.length > 0) {
-                            this.map.getCanvas().style.cursor = 'pointer';
+                            // Disable comment hover effects when in route mode
+                            if (self.props.isInRouteMode) {
+                                return;
+                            }
+                            self.map.getCanvas().style.cursor = 'pointer';
             
-                            if (this.hoveredComment) {
-                                this.map.setFeatureState({
+                            if (self.hoveredComment) {
+                                self.map.setFeatureState({
                                     source: 'commentsSrc',
-                                    id: this.hoveredComment },
+                                    id: self.hoveredComment },
                                     { hover: false });
                             }
-                            this.hoveredComment = e.features[0].id;
-                            this.map.setFeatureState({
+                            self.hoveredComment = e.features[0].id;
+                            self.map.setFeatureState({
                                 source: 'commentsSrc',
-                                id: this.hoveredComment },
+                                id: self.hoveredComment },
                                 { hover: true });
                         }
                     });
             
                     this.map.on('mouseleave', 'comentarios', e => {
-                        if (this.hoveredComment) {// && !this.selectedCycleway) {
-                            this.map.getCanvas().style.cursor = '';
+                        if (self.hoveredComment) {// && !self.selectedCycleway) {
+                            self.map.getCanvas().style.cursor = '';
         
-                            this.map.setFeatureState({
+                            self.map.setFeatureState({
                                 source: 'commentsSrc',
-                                id: this.hoveredComment },
+                                id: self.hoveredComment },
                                 { hover: false });
                         }
-                        this.hoveredComment = null;
+                        self.hoveredComment = null;
                     });
         
                     this.map.on('click', 'comentarios', e => {
                         if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-                            this.popups.showCommentPopup(e);
+                            // Disable comment clicks when in route mode
+                            if (self.props.isInRouteMode) {
+                                e.originalEvent.preventDefault();
+                                return;
+                            }
+                            self.popups.showCommentPopup(e);
                             e.originalEvent.preventDefault();
                         }
                     });
@@ -552,11 +671,14 @@ class Map extends Component {
             'id': 'cities',
             'type': 'symbol',
             'source': 'cities',
-            'layout': {
+            'layout': { 
+                'icon-image': this.props.isDarkMode ? 'city-dark' : 'city',
+                'icon-color': this.props.isDarkMode ? '#B6F9D1' : '#059669',
+                'icon-size': 1,
                 "text-allow-overlap": true,
                 'text-field': ['get', 'name'],
                 'text-font': ['IBM Plex Sans Bold'],
-                "text-offset": [0, 0],
+                "text-offset": [0, 0.8],
                 'text-size': [
                     "interpolate",
                         ["exponential", 1.5],
@@ -564,7 +686,7 @@ class Map extends Component {
                         4, 12,
                         10, 18
                 ],
-                'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
+                'text-variable-anchor': ['top'],
             },
             'paint': {
                 'text-opacity': [
@@ -574,9 +696,16 @@ class Map extends Component {
                         4, 1,
                         11, 0
                 ],
-                'text-color': '#B6F9D1',
+                'icon-opacity': [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"], 
+                        4, 1,
+                        11, 0
+                ],
+                'text-color': this.props.isDarkMode ? '#B6F9D1' : '#059669',
                 'text-halo-width': 1,
-                'text-halo-color': '#1c1a17',
+                'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#FFFFFF',
             }
         });
 
@@ -602,18 +731,22 @@ class Map extends Component {
         });
     }
 
+
+    // Layers need to be initialized in the paint order
+    // Afterwards their data can be updated safely without messing up the order
     initGeojsonLayers(layers) {
         const map = this.map;
+        const self = this;
 
-        if (map.getLayer('satellite')) {
+        if (map.getLayer('mapbox-satellite')) {
             map.setLayoutProperty(
-                'satellite',
+                'mapbox-satellite',
                 'visibility',
                 this.props.showSatellite ? 'visible' : 'none');
         }
 
-        if (!map.getLayer('OSM')) {
-            map.addSource("osm", {
+        if (!map.getSource("osmdata")) {
+            map.addSource("osmdata", {
                 "type": "geojson",
                 "data": this.props.data || {
                     'type': 'FeatureCollection',
@@ -621,7 +754,8 @@ class Map extends Component {
                 },
                 "generateId": true
             });
-    
+
+            // Comments layer
             map.addSource("commentsSrc", {
                 "type": "geojson",
                 "data": {
@@ -630,17 +764,20 @@ class Map extends Component {
                 },
                 "generateId": true
             });
-    
+
+
             // layers.json is ordered from most to least important, but we 
             //   want the most important ones to be on top so we add in reverse.
             // Slice is used here to don't destructively reverse the original array.
             layers.slice().reverse().forEach(l => {
                 if (!l.type || l.type==='way') {
-                    this.addLayerWay(l);
+                    this.initCyclepathLayer(l);
                 } else if (l.type === 'poi' && l.filters) {
-                    this.addLayerPoi(l);
+                    this.initPOILayer(l);
                 }
             });
+
+            this.initBoundaryLayer();
 
             if (!this.props.embedMode) {
                 this.addCitiesLinksLayer();
@@ -652,30 +789,227 @@ class Map extends Component {
                 });
     
                 if (features.length > 0) {
+                    // Disable cyclepath hover effects when in route mode
+                    if (self.props.isInRouteMode) {
+                        return;
+                    }
                     // console.debug(features);
                     map.getCanvas().style.cursor = 'pointer';
         
                     // Hover style
-                    if (this.hoveredCycleway) {
-                        map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
+                    if (self.hoveredCycleway) {
+                        map.setFeatureState({ source: "osmdata", id: self.hoveredCycleway }, { hover: false });
                     }
-                    this.hoveredCycleway = features[0].id;
-                    map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: true });
+                    self.hoveredCycleway = features[0].id;
+                    map.setFeatureState({ source: "osmdata", id: self.hoveredCycleway }, { hover: true });
                 } else {
                     // Hover style
-                    if (this.hoveredCycleway && !this.selectedCycleway) {
-                        map.setFeatureState({ source: 'osm', id: this.hoveredCycleway }, { hover: false });
+                    if (self.hoveredCycleway && !self.selectedCycleway) {
+                        map.setFeatureState({ source: "osmdata", id: self.hoveredCycleway }, { hover: false });
         
                         // Cursor cursor
                         map.getCanvas().style.cursor = '';
                     }
-                    this.hoveredCycleway = null;
+                    self.hoveredCycleway = null;
                 }
             });
         } else {
             console.warn('Map layers already initialized.');
         }
 
+    }
+
+    createRouteLayerSet(map, sourceId, layerType) {
+        const suffix = layerType === 'top' ? '-selected' : 's-unselected';
+        
+        // 1. Padding layer
+        map.addLayer({
+            id: `route-padding${suffix}`,
+            type: 'line',
+            source: sourceId,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': this.props.isDarkMode ? '#2d2e30' : '#FFFFFF',
+                "line-width": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, Math.max(1, (DIRECTIONS_LINE_WIDTH+DIRECTIONS_LINE_BORDER_WIDTH*2)/4),
+                        18, (DIRECTIONS_LINE_WIDTH+DIRECTIONS_LINE_BORDER_WIDTH*2) * DEFAULT_LINE_WIDTH_MULTIPLIER
+                ]
+            },
+            filter: ['==', '$type', 'LineString']
+        });
+
+        // 2. Border layer
+        map.addLayer({
+            id: `route--border${suffix}`,
+            type: 'line',
+            source: sourceId,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': layerType === 'top' 
+                    ? (this.props.isDarkMode ? '#ffffff' : '#211F1C') // Selected route border
+                    : [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                            this.props.isDarkMode ? '#ffffff' : '#211F1C', // On hover
+                            this.props.isDarkMode ? '#999999' : '#7A7A78', // Default
+                    ],
+                "line-width": [
+                    "interpolate",
+                    ["exponential", 1.5],
+                    ["zoom"],
+                    6, Math.max(1, DIRECTIONS_LINE_WIDTH/4),
+                    18, DIRECTIONS_LINE_WIDTH * DEFAULT_LINE_WIDTH_MULTIPLIER
+                ]
+            },
+            filter: ['==', '$type', 'LineString']
+        });
+
+        // 3. Main route layer
+        map.addLayer({
+            id: `route${suffix}`,
+            type: 'line',
+            source: sourceId,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': layerType === 'top'
+                    ? (this.props.isDarkMode ? '#000000' : '#FFFFFF') // Selected route color
+                    : [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                            this.props.isDarkMode ? '#000000' : '#FFFFFF', // On hover
+                            this.props.isDarkMode ? '#444547' : '#C5C3C1'  // Default unselected
+                    ],
+                "line-width": [
+                    "interpolate",
+                    ["exponential", 1.5],
+                    ["zoom"],
+                    10, Math.max(1, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH)/4),
+                    18, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH) * DEFAULT_LINE_WIDTH_MULTIPLIER
+                ]
+            },
+            filter: ['==', '$type', 'LineString']
+        });
+    }
+
+    setupRouteEventHandlers(map) {
+        const self = this;
+        
+        // Set up click handlers for both top and bottom layers
+        ['route-selected', 'routes-unselected'].forEach(layerId => {
+            map.on('click', layerId, (e) => {
+                if (e.features && e.features.length > 0) {
+                    const routeIndex = e.features[0].properties.routeIndex;
+                    if (self.props.onRouteSelected) {
+                        self.props.onRouteSelected(routeIndex);
+                    }
+                }
+            });
+        });
+
+        // Track currently hovered route
+        this.currentHoveredRoute = null;
+
+        // Set up hover handlers for both top and bottom layers
+        ['route-selected', 'routes-unselected'].forEach(layerId => {
+            map.on('mouseenter', layerId, (e) => {
+                map.getCanvas().style.cursor = 'pointer';
+                
+                // if (e.features && e.features.length > 0) {
+                //     const routeIndex = e.features[0].properties.routeIndex;
+                //     this.currentHoveredRoute = routeIndex;
+                    
+                //     // Determine which source this layer belongs to
+                //     const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
+                //     map.setFeatureState(
+                //         { source: sourceId, id: routeIndex },
+                //         { hover: true }
+                //     );
+                    
+                //     if (self.props.onRouteHovered) {
+                //         self.props.onRouteHovered(routeIndex);
+                //     }
+                // }
+            });
+
+            map.on('mouseleave', layerId, (e) => {
+                map.getCanvas().style.cursor = '';
+                
+                // if (this.currentHoveredRoute !== null) {
+                //     // Determine which source this layer belongs to
+                //     const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
+                //     map.setFeatureState(
+                //         { source: sourceId, id: this.currentHoveredRoute },
+                //         { hover: false }
+                //     );
+                //     this.currentHoveredRoute = null;
+                // }
+                
+                // if (self.props.onRouteUnhovered) {
+                //     self.props.onRouteUnhovered();
+                // }
+            });
+        });
+    }
+
+    initDirectionsLayers() {
+        const map = this.map;
+        if (!map || map.getSource("route-selected")) return;
+
+        const emptySource = {
+            "type": "geojson",
+            "data": {
+                'type': 'FeatureCollection',
+                'features': []
+            }
+        }
+        map.addSource("route-selected", emptySource);
+        map.addSource("routes-unselected", emptySource);
+        this.createRouteLayerSet(map, 'routes-unselected', 'bottom');
+        this.createRouteLayerSet(map, 'route-selected', 'top');
+        this.setupRouteEventHandlers(map);
+    }
+
+    initOverlappingCyclepathsLayer() {
+        const map = this.map;
+        // const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
+        if (!map || map.getSource("overlapping-cyclepaths")) return;
+
+        map.addSource("overlapping-cyclepaths", {
+            "type": "geojson",
+            "data": {
+                'type': 'FeatureCollection',
+                'features': []
+            }
+        });
+        
+        map.addLayer({
+            id: 'overlapping-cyclepaths',
+            type: 'line',
+            source: 'overlapping-cyclepaths',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': [
+                    'case',
+                    ['==', ['get', 'type'], 'Ciclovia'], '#00A33F',
+                    ['==', ['get', 'type'], 'Ciclofaixa'], '#84CC16',
+                    ['==', ['get', 'type'], 'Ciclorrota'], '#F56743',
+                    ['==', ['get', 'type'], 'Calçada compartilhada'], '#F6CA5D',
+                    '#00ff00' // Default fallback color
+                ],
+                'line-width': [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        6, 2,
+                        18, 8
+                ]
+            },
+            filter: ['==', '$type', 'LineString']
+        // }, layerUnderneathName);
+        });
     }
 
     componentDidUpdate(prevProps) {
@@ -686,21 +1020,22 @@ class Map extends Component {
         }
 
         if (this.props.data !== prevProps.data) {
-            map.getSource('osm').setData(this.props.data);
+            map.getSource("osmdata").setData(this.props.data);
         }
+
 
         if (this.props.style !== prevProps.style) {
             console.debug('new style', this.props.style);
             map.setStyle(this.props.style);
-            // this.initLayers();
         }
 
         if (this.props.showSatellite !== prevProps.showSatellite) {
             map.setLayoutProperty(
-                'satellite',
+                'mapbox-satellite',
                 'visibility',
                 this.props.showSatellite ? 'visible' : 'none');
         }
+
 
         // if (this.props.zoom !== prevProps.zoom) {
         //     map.setZoom(this.props.zoom);
@@ -714,24 +1049,458 @@ class Map extends Component {
         const currentActiveStatuses = this.props.layers.map(l => l.isActive).join();
         const prevActiveStatus = prevProps.layers.map(l => l.isActive).join();
         if (currentActiveStatuses === prevActiveStatus) {
-            this.props.layers.forEach( l => {
-                if (map.getLayer(l.id)) {
-                    const status = l.isActive ? 'visible' : 'none';
-                    map.setLayoutProperty(l.id, 'visibility', status);
-                    if (l.type === 'way') {
-                        map.setLayoutProperty(l.id+'--interactive', 'visibility', status);
-                        if (l.style.borderColor) {
-                            map.setLayoutProperty(l.id+'--border', 'visibility', status);
-                        }
-                    }
-                }
-            })
+            // Use the unified layer visibility update method
+            this.updateLayerVisibility();
         }
 
         if (this.props.isSidebarOpen !== prevProps.isSidebarOpen) {
             map.resize();
         }
+
+        // Handle directions changes
+        if (this.props.directions !== prevProps.directions) {
+            this.updateDirectionsLayer(this.props.directions);
+            this.updateCyclablePathsOpacity();
+            this.updateRouteTooltips();
+        }
+
+        // Handle route coverage data changes (for showing all route overlaps)
+        if (this.props.routeCoverageData !== prevProps.routeCoverageData) {
+            this.updateOverlappingCyclepathsLayer(this.props.routeCoverageData);
+        }
+
+        // Handle selected route changes
+        if (this.props.selectedRouteIndex !== prevProps.selectedRouteIndex) {
+            this.updateSelectedRoute(this.props.selectedRouteIndex);
+        }
+
+        // Handle hovered route changes
+        if (this.props.hoveredRouteIndex !== prevProps.hoveredRouteIndex) {
+            this.updateHoveredRoute(this.props.hoveredRouteIndex);
+        }
     }
+
+    updateDirectionsLayer(directions) {
+        const map = this.map;
+        if (!map) return;
+
+        // Check if directions sources exist (they might not be initialized yet)
+        if (!map.getSource('route-selected') || !map.getSource('routes-unselected')) {
+            console.warn('Directions sources not yet initialized, skipping update');
+            return;
+        }
+
+        if (directions && directions.routes && directions.routes.length > 0) {
+            // Create GeoJSON features for all routes
+            const routeFeatures = directions.routes.slice().reverse().map((route) => ({
+                type: 'Feature',
+                id: route.sortedIndex, // Add explicit ID for feature state
+                properties: { 
+                    routeIndex: route.sortedIndex,
+                    distance: route.distance,
+                    duration: route.duration
+                },
+                geometry: route.geometry
+            }));
+
+            // Progressively add all routes
+            // this.progressivelyAddAllRoutes(routeFeatures, this.props.selectedRouteIndex);
+
+            // Distribute routes between top and bottom layers based on current selection
+            this.distributeRoutesBetweenLayers(routeFeatures);
+            
+            if (directions.bbox) { 
+                map.fitBounds(directions.bbox, { padding: 100, duration: 2000 }); 
+            }
+        } else {
+            // Clear both sources
+            const emptyData = { type: 'FeatureCollection', features: [] };
+            map.getSource('route-selected').setData(emptyData);
+            map.getSource('routes-unselected').setData(emptyData);
+        }
+    }
+
+    distributeRoutesBetweenLayers(routeFeatures) {
+        const map = this.map;
+        const selectedRouteIndex = this.props.selectedRouteIndex;
+        
+        // If there's a selected route, put it in top layer and others in bottom
+        if (selectedRouteIndex !== null && selectedRouteIndex !== undefined) {
+            const selectedRoute = routeFeatures.find(f => f.properties.routeIndex === selectedRouteIndex);
+            const otherRoutes = routeFeatures.filter(f => f.properties.routeIndex !== selectedRouteIndex);
+            
+            map.getSource('route-selected').setData({
+                type: 'FeatureCollection',
+                features: selectedRoute ? [selectedRoute] : []
+            });
+            
+            map.getSource('routes-unselected').setData({
+                type: 'FeatureCollection',
+                features: otherRoutes
+            });
+        } else {
+            // No selection, put all routes in bottom layer
+            map.getSource('route-selected').setData({
+                type: 'FeatureCollection',
+                features: []
+            });
+            
+            map.getSource('routes-unselected').setData({
+                type: 'FeatureCollection',
+                features: routeFeatures
+            });
+        }
+    }
+
+    progressivelyAddAllRoutes(routeFeatures, selectedRouteIndex) {
+        const map = this.map;
+        let selectedFeatures = [];
+        let unselectedFeatures = [];
+        
+        // Separate selected and unselected routes
+        const selectedRoute = selectedRouteIndex !== null && selectedRouteIndex !== undefined 
+            ? routeFeatures.find(f => f.properties.routeIndex === selectedRouteIndex)
+            : null;
+        const unselectedRoutes = routeFeatures.filter(f => f.properties.routeIndex !== selectedRouteIndex);
+        
+        // Create ordered list: selected route first, then unselected routes
+        const orderedRoutes = selectedRoute ? [selectedRoute, ...unselectedRoutes] : unselectedRoutes;
+        let currentRouteIndex = 0;
+        
+        const addNextRoute = () => {
+            if (currentRouteIndex >= orderedRoutes.length) return;
+            
+            const route = orderedRoutes[currentRouteIndex];
+            const isSelected = selectedRouteIndex !== null && selectedRouteIndex !== undefined && 
+                             route.properties.routeIndex === selectedRouteIndex;
+            
+            // Create progressive geometry for this route
+            this.progressivelyAddRouteGeometry(route, isSelected, selectedFeatures, unselectedFeatures, map, () => {
+                // When this route is complete, move to the next one
+                currentRouteIndex++;
+                setTimeout(addNextRoute, 0); // Small delay between routes
+            });
+        };
+        
+        // Start with the first route (selected if available)
+        addNextRoute();
+    }
+
+    progressivelyAddRouteGeometry(route, isSelected, selectedFeatures, unselectedFeatures, map, onComplete) {
+        const coordinates = route.geometry.coordinates;
+        const chunkSize = 10;
+        const targetFPS = 60; // Target 60 FPS
+        const frameDelay = 1000 / targetFPS; // ~16.67ms per frame
+        let currentCoordinates = [];
+        let chunkIndex = 0;
+        
+        const addNextChunk = () => {
+            const startIndex = chunkIndex * chunkSize;
+            const endIndex = Math.min(startIndex + chunkSize, coordinates.length);
+            
+            // Add coordinates for this chunk
+            for (let i = startIndex; i < endIndex; i++) {
+                currentCoordinates.push(coordinates[i]);
+            }
+            
+            // Create updated route with current coordinates
+            const progressiveRoute = {
+                ...route,
+                geometry: {
+                    ...route.geometry,
+                    coordinates: [...currentCoordinates]
+                }
+            };
+            
+            // Update the appropriate layer
+            if (isSelected) {
+                selectedFeatures = [progressiveRoute];
+                map.getSource('route-selected').setData({
+                    type: 'FeatureCollection',
+                    features: selectedFeatures
+                });
+            } else {
+                // Find and update the route in unselected features
+                const existingIndex = unselectedFeatures.findIndex(f => f.properties.routeIndex === route.properties.routeIndex);
+                if (existingIndex >= 0) {
+                    unselectedFeatures[existingIndex] = progressiveRoute;
+                } else {
+                    unselectedFeatures.push(progressiveRoute);
+                }
+                map.getSource('routes-unselected').setData({
+                    type: 'FeatureCollection',
+                    features: unselectedFeatures
+                });
+            }
+            
+            chunkIndex++;
+            
+            // Continue if there are more coordinates
+            if (endIndex < coordinates.length) {
+                setTimeout(addNextChunk, frameDelay);
+            } else {
+                // Route is complete, call the callback
+                if (onComplete) onComplete();
+            }
+        };
+        
+        // Start the progressive addition
+        addNextChunk();
+    }
+
+    progressivelyAddRoutes(routes, sourceName) {
+        const map = this.map;
+        let currentFeatures = [];
+        
+        routes.forEach((route, index) => {
+            setTimeout(() => {
+                currentFeatures.push(route);
+                map.getSource(sourceName).setData({
+                    type: 'FeatureCollection',
+                    features: currentFeatures
+                });
+            }, index * 50); // 50ms delay between each route
+        });
+    }
+
+    updateOverlappingCyclepathsLayer(routeCoverageData) {
+        const map = this.map;
+        if (!map) return;
+
+        // Check if overlapping cyclepaths source exists (it might not be initialized yet)
+        if (!map.getSource('overlapping-cyclepaths')) {
+            console.warn('Overlapping cyclepaths source not yet initialized, skipping update');
+            return;
+        }
+
+        let allOverlappingCyclepaths = [];
+        let featureId = 0;
+
+        if (routeCoverageData && routeCoverageData.length > 0) {
+            // Process routeCoverageData array
+            routeCoverageData.forEach((routeData, routeIndex) => {
+                if (routeData && routeData.overlappingCyclepaths && routeData.overlappingCyclepaths.length > 0) {
+                    routeData.overlappingCyclepaths.forEach((segment) => {
+                        allOverlappingCyclepaths.push({
+                            type: 'Feature',
+                            id: featureId++,
+                            properties: {
+                                ...segment.properties,
+                                routeIndex: routeIndex,
+                                // Use debug_cyclepath_type for styling since these are overlap segments
+                                type: segment.properties.debug_cyclepath_type || 'Unknown'
+                            },
+                            geometry: segment.geometry
+                        });
+                    });
+                }
+            });
+        }
+
+        const cyclepathsGeoJSON = {
+            type: 'FeatureCollection',
+            features: allOverlappingCyclepaths
+        };
+        
+        // Update the overlapping cyclepaths layer
+        map.getSource('overlapping-cyclepaths').setData(cyclepathsGeoJSON);
+        
+        // Update selected state after data is loaded
+        this.updateOverlappingCyclepathsSelectedState(this.props.selectedRouteIndex);
+    }
+
+    updateSelectedRoute(selectedRouteIndex) {
+        const map = this.map;
+        if (!map || !map.getSource('route-selected') || !map.getSource('routes-unselected')) return;
+
+        // Get all route features from both sources
+        const topFeatures = map.querySourceFeatures('route-selected');
+        const bottomFeatures = map.querySourceFeatures('routes-unselected');
+        const allFeatures = [...topFeatures, ...bottomFeatures];
+
+        // Clear all hover states (no more selected states needed)
+        allFeatures.forEach((feature) => {
+            const sourceId = topFeatures.includes(feature) ? 'route-selected' : 'routes-unselected';
+            map.setFeatureState(
+                { source: sourceId, id: feature.id },
+                { hover: false }
+            );
+        });
+
+        // Redistribute routes between layers based on new selection
+        // We need to reconstruct the route features from the original directions data
+        if (this.props.directions && this.props.directions.routes) {
+            const routeFeatures = this.props.directions.routes.slice().reverse().map((route) => ({
+                type: 'Feature',
+                id: route.sortedIndex,
+                properties: { 
+                    routeIndex: route.sortedIndex,
+                    distance: route.distance,
+                    duration: route.duration
+                },
+                geometry: route.geometry
+            }));
+            this.distributeRoutesBetweenLayers(routeFeatures);
+        }
+
+        // Update overlapping cyclepaths selected states
+        this.updateOverlappingCyclepathsSelectedState(selectedRouteIndex);
+        
+        // Update tooltip selected states
+        this.updateTooltipSelectedState(selectedRouteIndex);
+    }
+
+
+    clearAllHoverStates() {
+        const map = this.map;
+        if (!map || !map.getSource('route-selected') || !map.getSource('routes-unselected')) return;
+
+        // Clear all hover states from both sources
+        const topFeatures = map.querySourceFeatures('route-selected');
+        const bottomFeatures = map.querySourceFeatures('routes-unselected');
+        const allFeatures = [...topFeatures, ...bottomFeatures];
+        
+        allFeatures.forEach((feature) => {
+            const sourceId = topFeatures.includes(feature) ? 'route-selected' : 'routes-unselected';
+            map.setFeatureState(
+                { source: sourceId, id: feature.id },
+                { hover: false }
+            );
+        });
+        
+        // Reset tracking variable
+        this.currentHoveredRoute = null;
+    }
+
+    updateHoveredRoute(hoveredRouteIndex) {
+        const map = this.map;
+        if (!map || !map.getSource('route-selected') || !map.getSource('routes-unselected')) return;
+
+        // Clear all hover states first
+        const topFeatures = map.querySourceFeatures('route-selected');
+        const bottomFeatures = map.querySourceFeatures('routes-unselected');
+        const allFeatures = [...topFeatures, ...bottomFeatures];
+        
+        allFeatures.forEach((feature) => {
+            const sourceId = topFeatures.includes(feature) ? 'route-selected' : 'routes-unselected';
+            map.setFeatureState(
+                { source: sourceId, id: feature.id },
+                { hover: false }
+            );
+        });
+
+        // Set hover state for the specified route
+        if (hoveredRouteIndex !== null && hoveredRouteIndex !== undefined) {
+            // Find which source contains the hovered route
+            const hoveredFeature = allFeatures.find(f => f.properties.routeIndex === hoveredRouteIndex);
+            if (hoveredFeature) {
+                const sourceId = topFeatures.includes(hoveredFeature) ? 'route-selected' : 'routes-unselected';
+                map.setFeatureState(
+                    { source: sourceId, id: hoveredRouteIndex },
+                    { hover: true }
+                );
+            }
+        }
+    }
+
+    updateLayerVisibility() {
+        const map = this.map;
+        if (!map) return;
+
+        const hasRoutes = this.props.directions && 
+                         this.props.directions.routes && 
+                         this.props.directions.routes.length > 0;
+
+        // Update layer visibility based on both isActive status and routes state
+        this.props.layers.forEach(layer => {
+            if (layer.type === 'way') {
+                // Normal layer: visible if isActive AND no routes
+                if (map.getLayer(layer.id)) {
+                    const normalStatus = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
+                    map.setLayoutProperty(layer.id, 'visibility', normalStatus);
+                }
+                
+                // Routes-active layer: visible if isActive AND has routes
+                if (map.getLayer(layer.id + '--routes-active')) {
+                    const routesActiveStatus = (layer.isActive && hasRoutes) ? 'visible' : 'none';
+                    map.setLayoutProperty(layer.id + '--routes-active', 'visibility', routesActiveStatus);
+                }
+                
+                // Interactive layer follows the same logic as normal layer
+                if (map.getLayer(layer.id + '--interactive')) {
+                    const interactiveStatus = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
+                    map.setLayoutProperty(layer.id + '--interactive', 'visibility', interactiveStatus);
+                }
+            } else if (layer.type === 'poi') {
+                // Handle POI layers - hide when routes are active, show when no routes and isActive
+                const status = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
+                
+                if (map.getLayer(layer.id)) {
+                    map.setLayoutProperty(layer.id, 'visibility', status);
+                }
+            }
+        });
+        
+        console.debug(`Updated layer visibility - routes active: ${hasRoutes}`);
+    }
+
+    updateCyclablePathsOpacity() {
+        // This method now just calls the unified visibility update
+        this.updateLayerVisibility();
+    }
+
+    updateRouteTooltips() {
+        if (this.popups) {
+            this.popups.updateRouteTooltips(
+                this.props.directions,
+                this.props.routeCoverageData,
+                this.props.onRouteSelected,
+                this.props.selectedRouteIndex
+            );
+        }
+    }
+
+    updateTooltipSelectedState(selectedRouteIndex) {
+        if (this.popups) {
+            this.popups.updateTooltipSelectedState(selectedRouteIndex);
+        }
+    }
+
+    updateOverlappingCyclepathsSelectedState(selectedRouteIndex) {
+        const map = this.map;
+        if (!map || !map.getSource('overlapping-cyclepaths')) {
+            return;
+        }
+
+        // Get features from the source - this will be empty if data isn't loaded yet
+        const features = map.querySourceFeatures('overlapping-cyclepaths');
+        if (features.length === 0) {
+            // Data not loaded yet, try again after a short delay
+            setTimeout(() => this.updateOverlappingCyclepathsSelectedState(selectedRouteIndex), 50);
+            return;
+        }
+
+        // Clear all selected states
+        features.forEach((feature) => {
+            map.setFeatureState(
+                { source: 'overlapping-cyclepaths', id: feature.id },
+                { selected: false }
+            );
+        });
+
+        // Set selected state for cyclepaths belonging to the selected route
+        if (selectedRouteIndex !== null && selectedRouteIndex !== undefined) {
+            features.forEach((feature) => {
+                if (feature.properties && feature.properties.routeIndex === selectedRouteIndex) {
+                    map.setFeatureState(
+                        { source: 'overlapping-cyclepaths', id: feature.id },
+                        { selected: true }
+                    );
+                }
+            });
+        }
+    }
+
 
     componentDidMount() {
         mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
@@ -739,14 +1508,36 @@ class Map extends Component {
         this.map = new mapboxgl.Map({
             container: this.mapContainer,
             style: this.props.style,
+            // style: MAP_STYLES.LIGHT,
+            // config: {
+            //     basemap: {
+            //         lightPreset: this.props.style === MAP_STYLES.DARK ? "night" : "daytime",
+            //     }
+            // },
             center: this.props.center,
             zoom: this.props.zoom,
-            attributionControl: false
+            attributionControl: false,
+            dragRotate: false,
+            pitchWithRotate: false
         }).addControl(new mapboxgl.AttributionControl({
             compact: false
         }));
 
+        // Pass the map reference to the parent component
+        if (this.props.setMapRef) {
+            this.props.setMapRef(this.map);
+        }
+
         this.popups = new MapPopups(this.map, this.props.debugMode);
+        
+        // Set up global function for popup routing button
+        window.setDestinationFromPopup = (coordinates) => {
+            if (this.props.directionsPanelRef && this.props.directionsPanelRef.setDestination) {
+                this.props.directionsPanelRef.setDestination(coordinates);
+                // Close all popups after setting destination
+                this.popups.closeAllPopups();
+            }
+        };
 
         
         // Native Mapbox map controls
@@ -819,50 +1610,90 @@ class Map extends Component {
             this.map.addControl(geolocate, 'bottom-right');
             
             
-            this.map.addControl(new mapboxgl.FullscreenControl({
-                container: document.querySelector('body')
-            }), 'bottom-right');
+            // this.map.addControl(new mapboxgl.FullscreenControl({
+            //     container: document.querySelector('body')
+            // }), 'bottom-right');
         }
 
         this.loadImages();
         
         // Listeners
 
-        this.map.on('style.load', () => {
+        // Try to be sure this will only be called once
+        const styleLoadHandler = () => {
             console.debug('style.load');
             this.initLayers();
-        });
+            this.map.off('style.load', styleLoadHandler);
+        };
+        this.map.on('style.load', styleLoadHandler);
 
         
-        // Initialize map data center
-        
+        // Initialize map center
         this.reverseGeocode(this.props.center);
     }
 
     loadImages() {
-        this.map.loadImage( commentIcon, (error, image) => {
-            if (error) throw error;
-            this.map.addImage('commentIcon', image);
-        }); 
-
-        Object.keys(iconsMap).forEach(key => {
-            this.map.loadImage( iconsMap[key], (error, image) => {
+        // Load comment icon if not already loaded
+        if (!this.map.hasImage('commentIcon')) {
+            this.map.loadImage( commentIcon, (error, image) => {
                 if (error) throw error;
-                this.map.addImage(key, image);
+                this.map.addImage('commentIcon', image);
             });
+        }
+
+        // Load all other icons if not already loaded
+        Object.keys(iconsMap).forEach(key => {
+            if (!this.map.hasImage(key)) {
+                this.map.loadImage( iconsMap[key], (error, image) => {
+                    if (error) throw error;
+                    this.map.addImage(key, image);
+                });
+            }
         });
     }
 
+
     initLayers() {
+        // The order in which layers are initialized will define their paint order
         this.initGeojsonLayers(this.props.layers);
+        this.initDirectionsLayers();
+        this.initOverlappingCyclepathsLayer();
             
         if (ENABLE_COMMENTS) {
-            this.addCommentsLayers();
+            this.initCommentsLayer();
+        }
+
+        // Restore current directions if they exist
+        if (this.props.directions) {
+            this.updateDirectionsLayer(this.props.directions);
+            
+            // Restore selected and hovered route states
+            if (this.props.selectedRouteIndex !== null && this.props.selectedRouteIndex !== undefined) {
+                this.updateSelectedRoute(this.props.selectedRouteIndex);
+            }
+            if (this.props.hoveredRouteIndex !== null && this.props.hoveredRouteIndex !== undefined) {
+                this.updateHoveredRoute(this.props.hoveredRouteIndex);
+            }
+        }
+
+        // Restore overlapping cyclepaths if they exist
+        if (this.props.routeCoverageData && this.props.routeCoverageData.length > 0) {
+            this.updateOverlappingCyclepathsLayer(this.props.routeCoverageData);
         }
 
         this.onMapMoved();
 
+        // Set initial cyclable paths opacity based on current directions state
+        this.updateCyclablePathsOpacity();
+
         this.map.on('moveend', this.onMapMoved);
+    }
+
+    componentWillUnmount() {
+        if (this.popups) {
+            this.popups.clearRouteTooltips();
+        }
+        document.removeEventListener('newComment', this.newComment);
     }
 
     newComment() {
@@ -898,9 +1729,28 @@ class Map extends Component {
                         onCancel={this.hideCommentModal}
                     />
                 }
+
             </>
         )
     }
 }
 
-export default Map;
+// Wrapper component to use the directions context with the class component
+const MapWrapper = (props) => {
+    const directionsContext = useDirections();
+    
+    return (
+        <Map
+            {...props}
+            directions={directionsContext.directions}
+            selectedRouteIndex={directionsContext.selectedRouteIndex}
+            hoveredRouteIndex={directionsContext.hoveredRouteIndex}
+            routeCoverageData={directionsContext.routeCoverageData}
+            onRouteSelected={directionsContext.selectRoute}
+            onRouteHovered={directionsContext.hoverRoute}
+            isInRouteMode={directionsContext.isInRouteMode}
+        />
+    );
+};
+
+export default MapWrapper;
