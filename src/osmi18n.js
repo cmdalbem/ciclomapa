@@ -1,13 +1,84 @@
-export const osmi18n = {
+/*
+ * Brazilian Portuguese translations for common OSM tags,
+ * used to detailed information in the popups.
+ */
+export const osmi18n = {    
+    /*
+     * Cycleway tags
+     */
+    lit: 'Iluminado',
+    
+    // Surface types
+    surface: 'Superfície',
+    asphalt: 'Asfalto',
+    concrete: 'Concreto',
+    gravel: 'Pedra',
+    dirt: 'Solo',
+    grass: 'Grama',
+    sand: 'Areia',
+    paving_stones: "Caminho de pedra",
+    paved: 'Pavimento',
+
+    // Properties
+    maxspeed: 'Velocidade máxima',
+    oneway: 'Sentido único?',
+    "oneway:bicycle": 'Sentido único para bicicletas?',
+    
+    // Road types
+    // highway: 'Estrada',
+    // track: 'Estrada',
+    path: 'Caminho',
+    // cycleway: 'Caminho para bicicletas',
+    // footway: 'Caminho para pedestres',
+    // sidewalk: 'Caminho para pedestres',
+    "cycleway:left": 'Tipo de caminho para bicicletas na esquerda',
+    "cycleway:right": 'Tipo de caminho para bicicletas na direita',
+    "cycleway:both": 'Tipo de caminho para bicicletas em ambos lados',
+    "cycleway:opposite": 'Tipo de caminho para bicicletas (lado oposto)',
+    "cycleway:opposite:left": 'Tipo de caminho para bicicletas (lado oposto esquerdo)',
+    "cycleway:opposite:right": 'Tipo de caminho para bicicletas (lado oposto direito)',
+    "cycleway:opposite:both": 'Tipo de caminho para bicicletas (lado oposto, ambos lados)',
+    tertiary: 'Terciária',
+    secondary: 'Secundária',
+    primary: 'Primária',
+    // motorway: 'Estrada',
+    trunk: 'Rodovia',
+    unclassified: 'Não classificada',
+    living_street: 'Residencial',
+    residential: 'Residencial',
+    service: 'Serviço',
+    tunnel: 'Túnel?',
+    pedestrian: 'Passeio',
+    // bicycle: 'Bicicleta',
+    // foot: 'Passeio',
+    lane: 'Faixa',
+    // lanes: 'Nro de faixas',
+    buffered_lane: 'Faixa bufferizada',
+    shared_lane: 'Faixa compartilhada',
+    share_busway: 'Faixa compartilhada com ônibus',
+    opposite_share_busway: 'Faixa oposta compartilhada com ônibus',
+    sidepath: 'Caminho lateral',
+    opposite_track: 'Caminho oposto',
+    opposite_lane: 'Faixa oposta',
+    opposite_buffered_lane: 'Faixa oposta bufferizada',
+    opposite_shared_lane: 'Faixa oposta compartilhada',
+    opposite_share_busway: 'Faixa oposta compartilhada com ônibus',
+
+
+
+    /*
+     * POI tags
+     */
+
     // Bike parking
-    covered: 'Coberto',
+    covered: 'Coberto?',
     access: 'Acesso',
     capacity: 'Capacidade',
     cyclestreets_id: '',
     maxstay: 'Estadia máxima',
-    surveillance: 'Vigilado',
-    supervised: 'Supervisionado',
-    lit: 'Iluminado',
+    surveillance: 'Vigilado?',
+    supervised: 'Supervisionado?',
+    lit: 'Iluminado?',
     bicycle_parking: 'Tipo',
     
     // Bike parking types
@@ -21,7 +92,7 @@ export const osmi18n = {
     shed: 'Abrigo',
     bollard: '',
     lockers: 'Armários',
-    building: 'Prédio',
+    // building: 'Prédio',
     informal: 'Informal',
     streetpod: '',
     tree: 'Árvore',
@@ -34,11 +105,11 @@ export const osmi18n = {
     ref: 'Referência',
     network: 'Rede',
     description: 'Descrição',
-    'payment:cash': 'Pagamento por dinheiro',
-    'payment:credit_cards': 'Pagamento por cartão de crédito',
-    'payment:debit_cards': 'Pagamento por cartão de débito',
-    'payment:bilhete_único': 'Pagamento por Bilhete Único',
-    'payment:mobile_app': 'Pagamento por App',
+    'payment:cash': 'Pagamento por dinheiro?',
+    'payment:credit_cards': 'Pagamento por cartão de crédito?',
+    'payment:debit_cards': 'Pagamento por cartão de débito?',
+    'payment:bilhete_único': 'Pagamento por Bilhete Único?',
+    'payment:mobile_app': 'Pagamento por App?',
     operator: 'Operador',
     'operator:type': 'Tipo de operador',
 
@@ -58,39 +129,39 @@ export const osmi18n = {
     'phone:3': 'Telefone 3',
     level: 'Andar',
     start_date: 'Desde',
-    'service:bicycle:chaintool': 'Chave de corrente',
-    'service:bicycle:repair': 'Conserto',
-    'service:bicycle:rental': 'Aluguel',
-    'service:bicycle:pump': 'Bomba',
-    'service:bicycle:diy': 'DIY',
-    'service:bicycle:cleaning': 'Limpeza',
-    'service:bicycle:second_hand': 'Revenda',
-    'service:bicycle:charging': 'Carregamento',
-    'service:bicycle:retail': 'Venda de bikes',
-    'service:bicycle:parts': 'Venda de peças',
+    'service:bicycle:chaintool': 'Chave de corrente?',
+    'service:bicycle:repair': 'Conserto?',
+    'service:bicycle:rental': 'Aluguel?',
+    'service:bicycle:pump': 'Bomba?',
+    'service:bicycle:diy': 'DIY (faça-você-mesmo)?',
+    'service:bicycle:cleaning': 'Limpeza?',
+    'service:bicycle:second_hand': 'Revenda?',
+    'service:bicycle:charging': 'Carregamento?',
+    'service:bicycle:retail': 'Venda de bikes?',
+    'service:bicycle:parts': 'Venda de peças?',
     'service:bicycle:tools': 'Ferramentas disponíveis',
 
     //////////////////////////
 
     // Generic
     website: 'Site',
-    opening_hours: 'Horários de funcionamento',
+    opening_hours: 'Horários',
     note: 'Comentário',
     'note:pt': 'Comentário',
     email: 'Email',
-    wheelchair: 'Cadeira de rodas',
+    wheelchair: 'Acessível por cadeira de rodas?',
     yes: 'Sim',
     no: 'Não',
     unknown: 'Desconhecido',
-    free: 'Grátis',
-    fee: 'Pago',
+    free: 'Grátis?',
+    fee: 'Pago?',
     only: 'Somente isso',
     tyres: 'Pneus',
-    public: 'Público',
-    private: 'Privado',
+    public: 'Público?',
+    private: 'Privado?',
     limited: 'Limitado',
     designated: '',
-    permissive: 'Permissivo',
+    permissive: 'Permissivo?',
     customers: 'Clientes',
     'addr:street': 'Rua',
     'addr:housenumber': 'Número',
@@ -98,9 +169,13 @@ export const osmi18n = {
     // Custom internal tags (not from OSM!)
     'ciclomapa:address': 'Endereço',
 
+    
     //////////////////////////
 
-    // Ignored tags
+
+    /*
+     * Ignored OSM tags
+     */
     'id':  null,
     'amenity':  null,
     'name': null,

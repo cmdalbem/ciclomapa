@@ -102,3 +102,50 @@ export function timeSince(date) {
 String.prototype.removeAccents = function() {
     return this.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
+
+// Adjust HEX color brightness by a percentage (-1 to 1)
+// Positive values brighten, negative values darken
+export function adjustColorBrightness(hexColor, percentage = 0.3) {
+    // Remove # if present
+    hexColor = hexColor.replace('#', '');
+    
+    // Convert to RGB
+    const r = parseInt(hexColor.substr(0, 2), 16);
+    const g = parseInt(hexColor.substr(2, 2), 16);
+    const b = parseInt(hexColor.substr(4, 2), 16);
+    
+    let newR, newG, newB;
+    
+    if (percentage > 0) {
+        // Brighten by moving towards white (255, 255, 255)
+        newR = Math.round(r + (255 - r) * percentage);
+        newG = Math.round(g + (255 - g) * percentage);
+        newB = Math.round(b + (255 - b) * percentage);
+    } else {
+        // Darken by moving towards black (0, 0, 0)
+        newR = Math.round(r * (1 + percentage));
+        newG = Math.round(g * (1 + percentage));
+        newB = Math.round(b * (1 + percentage));
+    }
+    
+    // Clamp values to valid RGB range
+    newR = Math.max(0, Math.min(255, newR));
+    newG = Math.max(0, Math.min(255, newG));
+    newB = Math.max(0, Math.min(255, newB));
+    
+    // Convert back to HEX
+    const toHex = (n) => {
+        const hex = n.toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    };
+    
+    return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+}
+
+// Generate OSM editor URL with proper zoom compensation
+export function getOsmUrl(lat, lng, zoom) {
+    // Compensate different zoom levels from Mapbox to OSM Editor
+    zoom = Math.ceil(zoom) + 1;
+
+    return `https://www.openstreetmap.org/edit#map=${zoom}/${lat}/${lng}`;
+}

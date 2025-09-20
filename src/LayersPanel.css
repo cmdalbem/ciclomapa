@@ -1,3 +1,8 @@
+
+.ant-popover-inner {
+    overflow: hidden;
+}
+
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {
@@ -23,5 +28,9 @@
 
     .layer-miniature {
         min-width: 12px;
+    }
+
+    #layersPanelMobileButton {
+        background: #1c1717;
     }
 }
