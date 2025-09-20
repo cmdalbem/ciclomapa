@@ -582,9 +582,16 @@ class App extends Component {
     }
 
     onLayersChange(id, newVal) {
-        let newLayers = Object.assign([], this.state.layers);
-        let modifiedLayer = newLayers.filter(l => l.id === id)[0];
-        modifiedLayer.isActive = newVal;
+        // Find the layer index first
+        const layerIndex = this.state.layers.findIndex(layer => layer.id === id);
+        if (layerIndex === -1) {
+            console.warn(`onLayersChange: Layer with id ${id} not found`);
+            return;
+        }
+
+        // Create new layers array with only the changed layer replaced
+        const newLayers = [...this.state.layers];
+        newLayers[layerIndex] = { ...newLayers[layerIndex], isActive: newVal };
 
         this.setState({ layers: newLayers });
     }
