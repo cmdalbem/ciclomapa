@@ -208,7 +208,7 @@ class MapPopups {
 
         let html = `
             <div class="text-2xl mt-3 mb-5">
-                <img src="${iconSrc}" class="inline-block align-bottom mr-1" alt=""/>
+                <img src="${iconSrc}" class="inline-block align-bottom mr-1 w-8" alt=""/>
                     ${properties.name
                         ? properties.name
                         : `<span class="italic opacity-50">${poiTypeMap[poiType]} </span>`
