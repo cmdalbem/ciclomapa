@@ -46,7 +46,7 @@ class DirectionsManager {
                 }
                 
                 routesWithScores = directions.routes.map((route, index) => {
-                    console.debug(`Route ${index} geometry:`, route.geometry);
+                    // console.debug(`Route ${index} geometry:`, route.geometry);
                     
                     let coverageData = {
                         coverage: 0,
