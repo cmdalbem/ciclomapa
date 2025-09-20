@@ -175,7 +175,7 @@ class OSMController {
                             
                             resolve(areaId);
                         } else {
-                            reject();
+                            reject(new Error('Area not found'));
                         }
                         
                     })
@@ -186,7 +186,7 @@ class OSMController {
                             description: 'Ops, erro na API do Nominatim. Abra o console para ver mais detalhes.',
                         });
     
-                        reject();
+                        reject(e);
                     });
             }
         });
@@ -275,7 +275,7 @@ class OSMController {
                 .catch(e => {
                     if (!isAborted) {
                         console.error(e);
-                        reject();
+                        reject(e);
                     }
                 });
         });
