@@ -161,7 +161,7 @@ class Storage {
                     })
                     .catch(error => {
                         console.error("[Firebase] Error saving lengths: ", error);
-                        reject();
+                        reject(error);
                     });  
 
                 // Save GeoJSON data
@@ -192,7 +192,7 @@ class Storage {
                                 resolve();
                             }).catch(error => {
                                 console.error(`[Firebase] Error saving GeoJSON ${name} (2/2): `, error);
-                                reject();
+                                reject(error);
                             });
                         }).catch(error => {
                             console.debug('[Firestore] Failed to save GeoJSON in 2 parts, splitting in 4...')
@@ -221,25 +221,25 @@ class Storage {
                                             resolve();
                                         }).catch(error => {
                                             console.error(`[Firebase] Error saving GeoJSON ${name} (4/4): `, error);
-                                            reject();
+                                            reject(error);
                                         });
                                     }).catch(error => {
                                         console.error(`[Firebase] Error saving GeoJSON ${name} (3/4): `, error);
-                                        reject();
+                                        reject(error);
                                     });
                                 }).catch(error => {
                                     console.error(`[Firebase] Error saving GeoJSON ${name} (2/4): `, error);
-                                    reject();
+                                    reject(error);
                                 });
                             }).catch(error => {
                                 console.error(`[Firebase] Error saving GeoJSON ${name} (1/4): `, error);
-                                reject();
+                                reject(error);
                             });   
                         });        
                     });
             } catch (e) {
                 console.error(e);
-                reject();
+                reject(e);
             }
         });
     }
@@ -336,7 +336,7 @@ class Storage {
             }
         }).catch(error => {
             console.error(`[Firebase] Error getting document: ${slug}`, error);
-            reject();
+            reject(error);
         });
     }
 
