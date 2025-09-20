@@ -114,6 +114,9 @@ class Map extends Component {
             comments: [],
         };
 
+        // Track geojson feature IDs to hide from pmtiles layers
+        this.geojsonFeatureIds = new Set();
+
         // Create debounced map state sync function (only syncs if place name has been consistent for 3+ seconds)
         this.debouncedMapStateSync = debounce((placeName) => {
             console.debug('Syncing map state with consistent place:', placeName);
@@ -254,8 +257,8 @@ class Map extends Component {
         this.props.onMapMoved(ret);
     }
 
-    convertFilterToMapboxFilter(l) {
-        return [
+    convertFilterToMapboxFilter(l, sourceId = null) {
+        const baseFilter = [
             "any",
             ...l.filters.map(f =>
                 typeof f[0] === 'string' ?
@@ -268,10 +271,58 @@ class Map extends Component {
                     ]
             ),
         ];
+
+        // For pmtiles layers, combine with geojson feature ID hiding filter
+        if (sourceId === 'pmtiles-source' && this.geojsonFeatureIds.size > 0) {
+            const idsToHide = Array.from(this.geojsonFeatureIds);
+            const hideFilter = [
+                '!',
+                ['in', ['get', '@id'], ['literal', idsToHide]]
+            ];
+            return ['all', baseFilter, hideFilter];
+        }
+
+        return baseFilter;
+    }
+
+    hideGeoJsonFromPmtiles(geoJsonData) {
+        // Extract feature IDs from geojson data
+        const featureIds = new Set();
+        
+        if (geoJsonData && geoJsonData.features) {
+            geoJsonData.features.forEach(feature => {
+                if (feature.id !== undefined) {
+                    featureIds.add(feature.id);
+                }
+            });
+        }
+        
+        this.geojsonFeatureIds = featureIds;
+
+        // Update filters for existing pmtiles layers
+        if (!this.map || !this.pmtilesLoadedSuccessfully) {
+            return;
+        }
+
+        this.props.layers.forEach(layer => {
+            if (!layer.type || layer.type === 'way') {
+                const layerId = layer.id + '--pmtiles';
+                if (this.map.getLayer(layerId)) {
+                    const newFilter = this.convertFilterToMapboxFilter(layer, 'pmtiles-source');
+                    this.map.setFilter(layerId, newFilter);
+                }
+            } else if (layer.type === 'poi' && layer.filters) {
+                const layerId = layer.id + '--pmtiles';
+                if (this.map.getLayer(layerId)) {
+                    const newFilter = this.convertFilterToMapboxFilter(layer, 'pmtiles-source');
+                    this.map.setFilter(layerId, newFilter);
+                }
+            }
+        });
     }
 
     initPOILayerForSource(l, sourceId) {
-        const filters = this.convertFilterToMapboxFilter(l);
+        const filters = this.convertFilterToMapboxFilter(l, sourceId);
 
         const sourceLayer = sourceId === 'osmdata' ? '' : 'default';
         const sourceSuffix = sourceId === 'osmdata' ? '' : '--pmtiles';
@@ -515,7 +566,7 @@ class Map extends Component {
     // }
 
     initCyclepathLayerForSource(l, sourceId) {
-        const filters = this.convertFilterToMapboxFilter(l);
+        const filters = this.convertFilterToMapboxFilter(l, sourceId);
         const dashedLineStyle = { 'line-dasharray': [1, 1] };
         // Will be used as "beforeId" prop in AddLayer
         const layerUnderneathName = 
@@ -530,8 +581,6 @@ class Map extends Component {
         const interactiveLayerId = l.id + '--interactive' + sourceSuffix;
         const normalLayerId = l.id + sourceSuffix;
         const routesActiveLayerId = l.id + '--routes-active' + sourceSuffix;
-
-        console.debug('initCyclepathLayerForSource', normalLayerId);
 
         // Interactive layer is wider than the actual layer to improve usability
         this.map.addLayer({
@@ -583,7 +632,7 @@ class Map extends Component {
                     "interpolate",
                         ["exponential", 1.5],
                         ["zoom"],
-                        10, Math.max(1, l.style.lineWidth/4),
+                        10, Math.max(1, l.style.lineWidth/5),
                         18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
                     ],
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
@@ -822,6 +871,9 @@ class Map extends Component {
             });
         }
 
+        // Hide geojson features from pmtiles layers
+        this.hideGeoJsonFromPmtiles(this.props.data);
+
         try {
             const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'all.pmtiles';
             console.log('Loading PMTiles from S3:', PMTILES_URL);
@@ -962,12 +1014,35 @@ class Map extends Component {
                 });
             }
 
-            this.initializeLayersForBothSources(layers);
+            // layers.json is ordered from most to least important, but we 
+            //   want the most important ones to be on top so we add in reverse.
+            // Slice is used here to don't destructively reverse the original array.
+            layers.slice().reverse().forEach(l => {
+                if (!l.type || l.type === 'way') {
+                    if (this.pmtilesLoadedSuccessfully) {
+                        this.initCyclepathLayerForSource(l, 'pmtiles-source');
+                    }
+                    
+                    this.initCyclepathLayerForSource(l, 'osmdata');
+                } else if (l.type === 'poi' && l.filters) {
+                    if (this.pmtilesLoadedSuccessfully) {
+                        this.initPOILayerForSource(l, 'pmtiles-source');
+                    }
+
+                    this.initPOILayerForSource(l, 'osmdata');
+                }
+            });
             
             // this.initBoundaryLayer();
 
-            if (!this.props.embedMode) {
-                this.addInteractiveCapitalsLayer();
+            // if (!this.props.embedMode) {
+            //     this.addInteractiveCapitalsLayer();
+            // }
+            if (map.getLayer('capitais-br')) {
+                map.setLayoutProperty(
+                    'capitais-br',
+                    'visibility',
+                    'visible');
             }
 
         } else {
@@ -982,26 +1057,6 @@ class Map extends Component {
         }
     }
 
-    initializeLayersForBothSources(layers) {
-        // layers.json is ordered from most to least important, but we 
-        //   want the most important ones to be on top so we add in reverse.
-        // Slice is used here to don't destructively reverse the original array.
-        layers.slice().reverse().forEach(l => {
-            if (!l.type || l.type === 'way') {
-                if (this.pmtilesLoadedSuccessfully) {
-                    this.initCyclepathLayerForSource(l, 'pmtiles-source');
-                }
-                
-                this.initCyclepathLayerForSource(l, 'osmdata');
-            } else if (l.type === 'poi' && l.filters) {
-                if (this.pmtilesLoadedSuccessfully) {
-                    this.initPOILayerForSource(l, 'pmtiles-source');
-                }
-
-                this.initPOILayerForSource(l, 'osmdata');
-            }
-        });
-    }
 
     createRouteLayerSet(map, sourceId, layerType) {
         const suffix = layerType === 'top' ? '-selected' : 's-unselected';
@@ -1207,6 +1262,8 @@ class Map extends Component {
             if (map.getSource("osmdata")) {
                 map.getSource("osmdata").setData(this.props.data);
             }
+            
+            this.hideGeoJsonFromPmtiles(this.props.data);
         }
 
         if (this.props.style !== prevProps.style) {
