@@ -4,7 +4,7 @@ import {
     useNavigate,
     useParams,
   } from "react-router-dom";
-  
+  import debounce from 'lodash.debounce';
 
 import { notification } from 'antd';
 
@@ -82,9 +82,11 @@ class App extends Component {
         this.toggleTheme = this.toggleTheme.bind(this);
         this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
         this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
+        this.debouncedUpdateURL = debounce(this.updateURL, 300);
 
         this.initState();
     }
+
 
     initState() {
         const urlParams = this.getParamsFromURL();
@@ -95,13 +97,40 @@ class App extends Component {
         const isDarkMode = this.getSystemThemePreference();
         console.log('Theme preference:', isDarkMode ? 'dark' : 'light', '(system preference)');
 
+        // Parse route data from URL
+        let fromPoint = null;
+        let toPoint = null;
+        
+        if (urlParams.from) {
+            const [lng, lat] = urlParams.from.split(',').map(Number);
+            if (!isNaN(lng) && !isNaN(lat)) {
+                fromPoint = {
+                    result: {
+                        center: [lng, lat],
+                        place_name: 'Origem carregada da URL'
+                    }
+                };
+            }
+        }
+        
+        if (urlParams.to) {
+            const [lng, lat] = urlParams.to.split(',').map(Number);
+            if (!isNaN(lng) && !isNaN(lat)) {
+                toPoint = {
+                    result: {
+                        center: [lng, lat],
+                        place_name: 'Destino carregado da URL'
+                    }
+                };
+            }
+        }
+
         this.state = {
             area: prev.area || '',
             showSatellite: prev.showSatellite !== undefined ? prev.showSatellite : false,
             zoom: prev.zoom || urlParams.z || DEFAULT_ZOOM,
-            center: [
-                parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
-                parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT],
+            lat: parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
+            lng: parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
             geoJson: null,
             debugMode: urlParams.debug || false,
             loading: false,
@@ -118,10 +147,13 @@ class App extends Component {
             map: null,
             isDarkMode: isDarkMode,
             mapKey: 0,
+            fromPoint: fromPoint,
+            toPoint: toPoint,
         };
 
         this.updateData();
     }
+
 
     onChangeStrategy(event) {
         this.setState({ lengthCalculationStrategy: event.target.value });
@@ -215,7 +247,7 @@ class App extends Component {
     }
 
     getParamsFromURL() {
-        const possibleParams = [ 'z', 'lat', 'lng', 'embed', 'debug' ];
+        const possibleParams = [ 'z', 'lat', 'lng', 'embed', 'debug', 'from', 'to' ];
         const urlParams = new URLSearchParams(this.props.location.search);
         let paramsObj = {}
 
@@ -230,6 +262,56 @@ class App extends Component {
 
         return paramsObj;
     }
+
+    updateURL() {
+        const currentParams = new URLSearchParams(window.location.search);
+        
+        currentParams.set('lat', this.state.lat.toFixed(7));
+        currentParams.set('lng', this.state.lng.toFixed(7));
+        currentParams.set('z', this.state.zoom.toFixed(2));
+        
+        if (this.state.debugMode) {
+            currentParams.set('debug', 'true');
+        } else {
+            currentParams.delete('debug');
+        }
+        
+        if (this.state.embedMode) {
+            currentParams.set('embed', 'true');
+        } else {
+            currentParams.delete('embed');
+        }
+        
+        if (this.state.fromPoint && this.state.toPoint) {
+            currentParams.set('from', `${this.state.fromPoint.result.center[0]},${this.state.fromPoint.result.center[1]}`);
+            currentParams.set('to', `${this.state.toPoint.result.center[0]},${this.state.toPoint.result.center[1]}`);
+        } else {
+            currentParams.delete('from');
+            currentParams.delete('to');
+        }
+
+        const newSearch = currentParams.toString();
+        
+        // Determine the base path - use /routes/ when there are route parameters, otherwise keep current path
+        let basePath = window.location.pathname;
+        const hasRouteParams = this.state.fromPoint && this.state.toPoint;
+        
+        if (hasRouteParams) {
+            // If we have route parameters, ensure we're on /routes/ path
+            if (!basePath.endsWith('/routes/') && !basePath.endsWith('/routes')) {
+                basePath = basePath.endsWith('/') ? basePath + 'routes/' : basePath + '/routes/';
+            }
+        } else {
+            // If no route parameters, remove /routes/ from path if it exists
+            basePath = basePath.replace(/\/routes\/?$/, '') || '/';
+        }
+        
+        const newUrl = `${basePath}${newSearch ? '?' + newSearch : ''}`;
+        
+        // Use browser history API directly for reliable URL updates
+        window.history.replaceState(null, '', newUrl);
+    }
+
 
     isDataFresh(data) {
         const now = new Date();
@@ -576,25 +658,13 @@ class App extends Component {
             }
         }
         
-        if (this.state.zoom !== prevState.zoom ||
-            this.state.lat !== prevState.lat ||
-            this.state.lng !== prevState.lng) {
-                let params = '?';
-                params += `lat=${this.state.lat.toFixed(7)}`;
-                params += `&lng=${this.state.lng.toFixed(7)}`;
-                params += `&z=${this.state.zoom.toFixed(2)}`;
-                if (this.state.debugMode) {
-                    params += `&debug=true`;
-                }
-                if (this.state.embedMode) {
-                    params += `&embed=true`;
-                }
-                if (this.props.router && this.props.router.navigate) {
-                    this.props.router.navigate({
-                        search: params
-                    }, { replace: true });
-                }
-        }
+            if (this.state.zoom !== prevState.zoom ||
+                this.state.lat !== prevState.lat ||
+                this.state.lng !== prevState.lng ||
+                this.state.fromPoint !== prevState.fromPoint ||
+                this.state.toPoint !== prevState.toPoint) {
+                this.debouncedUpdateURL();
+            }
 
         if (this.state.lengthCalculationStrategy !== prevState.lengthCalculationStrategy) {
             // @todo olha a gambiarra!
@@ -678,6 +748,11 @@ class App extends Component {
             this.currentOSMRequest.abort();
             this.currentOSMRequest = null;
         }
+        
+        // Cancel any pending debounced URL updates
+        if (this.debouncedUpdateURL) {
+            this.debouncedUpdateURL.cancel();
+        }
     }
 
     onRouteChanged() {
@@ -686,11 +761,12 @@ class App extends Component {
     }
 
     onMapMoved(newState) {
+        // Update App state to reflect map position for URL updates
+        // This does NOT control the map - the map manages its own position
         requestAnimationFrame(() => {
             this.setState(newState);
         });
     }
-
 
     setMapRef(map) {
         this.setState({ map });
@@ -698,6 +774,18 @@ class App extends Component {
 
     setDirectionsPanelRef(directionsPanel) {
         this.directionsPanel = directionsPanel;
+    }
+
+    setFromPoint = (point) => {
+        this.setState({ fromPoint: point });
+    }
+
+    setToPoint = (point) => {
+        this.setState({ toPoint: point });
+    }
+
+    clearRoutePoints = () => {
+        this.setState({ fromPoint: null, toPoint: null });
     }
 
     forceMapReinitialization() {
@@ -745,7 +833,8 @@ class App extends Component {
                             layers={this.state.layers}
                             style={this.state.mapStyle}
                             zoom={this.state.zoom}
-                            center={this.state.center}
+                            lat={this.state.lat}
+                            lng={this.state.lng}
                             showSatellite={this.state.showSatellite}
                             location={this.state.area}
                             onMapMoved={this.onMapMoved}
@@ -806,6 +895,11 @@ class App extends Component {
                     map={this.state.map}
                     geoJson={this.state.geoJson}
                     layers={this.state.layers}
+                    fromPoint={this.state.fromPoint}
+                    toPoint={this.state.toPoint}
+                    onFromPointChange={this.setFromPoint}
+                    onToPointChange={this.setToPoint}
+                    onClearRoutePoints={this.clearRoutePoints}
                 />
 
                 <AboutModal

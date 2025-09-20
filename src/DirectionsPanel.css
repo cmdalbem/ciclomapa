@@ -25,6 +25,7 @@
     
     .mapboxgl-ctrl-geocoder--input {
         border-radius: 8px;
+        font-size: 14px;
     }
     
     .directions--legLabel {
@@ -108,7 +109,6 @@
         width: calc(100% - 16px);
 
         .mapboxgl-ctrl-geocoder--input {
-            font-size: 14px;
             height: 36px;
             padding: 0 38px;
         }
