@@ -355,9 +355,9 @@ class App extends Component {
         b_minus_a = [...b_minus_a];
         a_intersect_b = [...a_intersect_b];
 
-        console.debug('Removed:', a_minus_b);
-        console.debug('Added:', b_minus_a);
-        console.debug('Might\'ve changed:', a_intersect_b);
+        // console.debug('Removed:', a_minus_b);
+        // console.debug('Added:', b_minus_a);
+        // console.debug('Might\'ve changed:', a_intersect_b);
 
         notification.success({
             message: 'Dados atualizados com sucesso',
@@ -461,11 +461,12 @@ class App extends Component {
                                     });
                                 }
                             }).catch(e => {
-                                notification['error']({
-                                    message: 'Erro ao atualizar banco de dados',
-                                    description:
-                                        'Por alguma razão não conseguimos atualizar o banco de dados com esta versão dos dados. Por favor tente novamente ou contate os desenvolvedores.',
-                                });
+                                console.error('Error saving lengths to database:', e);
+                                // notification['error']({
+                                //     message: 'Erro ao atualizar banco de dados',
+                                //     description:
+                                //         'Por alguma razão não conseguimos atualizar o banco de dados com esta versão dos dados. Por favor tente novamente ou contate os desenvolvedores.',
+                                // });
                             });
                     }
 
