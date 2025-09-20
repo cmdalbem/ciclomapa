@@ -32,8 +32,6 @@ class DirectionsPanel extends Component {
         super(props);
         this.state = {
             collapsed: IS_MOBILE,
-            fromPoint: null,
-            toPoint: null,
             fromGeocoderAttached: false,
             toGeocoderAttached: false,
             focusedInput: null,
@@ -73,6 +71,12 @@ class DirectionsPanel extends Component {
             }
         }, 100);
 
+        if (this.props.fromPoint) {
+            this.reverseGeocode({ lng: this.props.fromPoint.result.center[0], lat: this.props.fromPoint.result.center[1] }, 'from');
+        }
+        if (this.props.toPoint) {
+            this.reverseGeocode({ lng: this.props.toPoint.result.center[0], lat: this.props.toPoint.result.center[1] }, 'to');
+        }
     }
 
     componentDidUpdate(prevProps) {
@@ -92,6 +96,13 @@ class DirectionsPanel extends Component {
         if (this.props.map && !this.mapClickListener) {
             console.debug('Map available but no click listener, setting up');
             this.setupMapClickListener();
+        }
+
+        if (this.props.fromPoint !== prevProps.fromPoint || this.props.toPoint !== prevProps.toPoint) {
+            console.debug('From or to point changed, recalculating directions');
+            if (this.props.fromPoint && this.props.toPoint) {
+                this.requestDirectionsCalculation();
+            }
         }
     }
 
@@ -156,12 +167,12 @@ class DirectionsPanel extends Component {
 
         this.fromGeocoder.on('clear', () => {
             this.removeMarker('from');
-            this.setState({ fromPoint: null });
+            this.props.onFromPointChange(null);
         });
 
         this.toGeocoder.on('clear', () => {
             this.removeMarker('to');
-            this.setState({ toPoint: null });
+            this.props.onToPointChange(null);
         });
 
         this.setState({
@@ -173,13 +184,17 @@ class DirectionsPanel extends Component {
     handleGeocoderResult(result, type) {
         this.addMarker(type, result.result.center);
         
-        this.setState({ [type + 'Point']: result }, () => {
-            this.requestDirectionsCalculation();
-            
-            if (type === 'from' && !this.state.toPoint) {
-                this.autoFocusDestinationInput();
-            }
-        });
+        if (type === 'from') {
+            this.props.onFromPointChange(result);
+        } else {
+            this.props.onToPointChange(result);
+        }
+        
+        this.requestDirectionsCalculation();
+        
+        if (type === 'from' && !this.props.toPoint) {
+            this.autoFocusDestinationInput();
+        }
     }
 
     autoFocusDestinationInput() {
@@ -348,20 +363,19 @@ class DirectionsPanel extends Component {
     }
 
     requestDirectionsCalculation() {
-        if (this.state.fromPoint && this.state.toPoint) {
-            const fromCoords = this.state.fromPoint.result.center;
-            const toCoords = this.state.toPoint.result.center;
+        if (this.props.fromPoint && this.props.toPoint) {
+            const fromCoords = this.props.fromPoint.result.center;
+            const toCoords = this.props.toPoint.result.center;
             
             console.debug('Requesting directions calculation from:', fromCoords, 'to:', toCoords);
             this.calculateDirections(fromCoords, toCoords, this.state.selectedProvider);
+        } else {
+            console.debug('No from or to point, skipping directions calculation');
         }
     }
 
     clearDirections() {
-        this.setState({ 
-            fromPoint: null,
-            toPoint: null
-        });
+        this.props.onClearRoutePoints();
         
         this.cleanup();
         
@@ -375,36 +389,36 @@ class DirectionsPanel extends Component {
         }
     }
 
+
+
     swapOriginDestination() {
-        const { fromPoint, toPoint } = this.state;
+        const { fromPoint, toPoint } = this.props;
         
         if (!fromPoint || !toPoint) {
             return;
         }
 
         // Swap the points
-        this.setState({
-            fromPoint: toPoint,
-            toPoint: fromPoint
-        }, () => {
-            // Update geocoder inputs
-            if (this.fromGeocoder && this.fromGeocoder.setInput) {
-                this.fromGeocoder.setInput(toPoint.result.place_name);
-            }
-            if (this.toGeocoder && this.toGeocoder.setInput) {
-                this.toGeocoder.setInput(fromPoint.result.place_name);
-            }
+        this.props.onFromPointChange(toPoint);
+        this.props.onToPointChange(fromPoint);
+        
+        // Update geocoder inputs
+        if (this.fromGeocoder && this.fromGeocoder.setInput) {
+            this.fromGeocoder.setInput(toPoint.result.place_name);
+        }
+        if (this.toGeocoder && this.toGeocoder.setInput) {
+            this.toGeocoder.setInput(fromPoint.result.place_name);
+        }
 
-            // Swap markers
-            const fromCoords = toPoint.result.center;
-            const toCoords = fromPoint.result.center;
-            
-            this.addMarker('from', fromCoords);
-            this.addMarker('to', toCoords);
+        // Swap markers
+        const fromCoords = toPoint.result.center;
+        const toCoords = fromPoint.result.center;
+        
+        this.addMarker('from', fromCoords);
+        this.addMarker('to', toCoords);
 
-            // Recalculate directions with swapped points
-            this.requestDirectionsCalculation();
-        });
+        // Recalculate directions with swapped points
+        this.requestDirectionsCalculation();
     }
 
     handleProviderChange(provider) {
@@ -413,9 +427,9 @@ class DirectionsPanel extends Component {
         });
         
         // Recalculate directions with the new provider if we have both points
-        if (this.state.fromPoint && this.state.toPoint) {
-            const fromCoords = this.state.fromPoint.result.center;
-            const toCoords = this.state.toPoint.result.center;
+        if (this.props.fromPoint && this.props.toPoint) {
+            const fromCoords = this.props.fromPoint.result.center;
+            const toCoords = this.props.toPoint.result.center;
             this.calculateDirections(fromCoords, toCoords, provider);
         }
     }
@@ -426,31 +440,23 @@ class DirectionsPanel extends Component {
         });
     }
 
-    setDestination(coordinates) {
-        // Set the destination point programmatically
-        const newPoint = {
-            result: {
-                center: coordinates,
-                place_name: 'Destino selecionado'
-            }
-        };
+    setDestinationFromMapClick(coordinates) {
+        this.addMarker('to', coordinates);
 
-        this.setState({ toPoint: newPoint }, () => {
-            this.addMarker('to', coordinates);
+        // Perform reverse geocoding to get the address and update state
+        this.reverseGeocode({ lng: coordinates[0], lat: coordinates[1] }, 'to');
+
+        // Check if we have both origin and destination for directions calculation
+        const hasFromPoint = this.props.fromPoint;
+        
+        if (hasFromPoint) {
+            // Calculate directions with the new destination
+            const fromCoords = hasFromPoint.result.center;
+            const toCoords = coordinates;
             
-            // Set the geocoder input if available
-            if (this.toGeocoder && this.toGeocoder.setInput) {
-                this.toGeocoder.setInput('Destino selecionado');
-            }
-
-            // Perform reverse geocoding to get the address
-            this.reverseGeocode({ lng: coordinates[0], lat: coordinates[1] }, 'to');
-
-            // If we have both origin and destination, calculate directions
-            if (this.state.fromPoint && this.state.toPoint) {
-                this.requestDirectionsCalculation();
-            }
-        });
+            console.debug('Requesting directions calculation from map click from:', fromCoords, 'to:', toCoords);
+            this.calculateDirections(fromCoords, toCoords, this.state.selectedProvider);
+        }
     }
 
     selectRoute(index) {
@@ -480,17 +486,8 @@ class DirectionsPanel extends Component {
         const coordinates = marker.getLngLat();
         console.debug(`${type} marker dragged to:`, coordinates);
 
-        const newPoint = {
-            result: {
-                center: [coordinates.lng, coordinates.lat],
-                place_name: 'Arrastado para nova posição'
-            }
-        };
 
-        this.setState({ [type + 'Point']: newPoint }, () => {
-            this.reverseGeocode(coordinates, type);
-            this.requestDirectionsCalculation();
-        });
+        this.reverseGeocode(coordinates, type);
     }
 
     reverseGeocode(coordinates, type) {
@@ -517,8 +514,10 @@ class DirectionsPanel extends Component {
                     
                     const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
                     console.debug(`Setting input for ${type} geocoder:`, address);
-                    if (geocoder && geocoder.setInput) {
+                    if (geocoder && geocoder.setInput && this[`${type}GeocoderElement`]) {
                         geocoder.setInput(address);
+                    } else {
+                        console.warn(`No geocoder found for ${type} geocoder`);
                     }
 
                     const newPoint = {
@@ -529,7 +528,12 @@ class DirectionsPanel extends Component {
                         }
                     };
 
-                    this.setState({ [type + 'Point']: newPoint });
+                    // Update route state via hook
+                    if (type === 'from') {
+                        this.props.onFromPointChange(newPoint);
+                    } else {
+                        this.props.onToPointChange(newPoint);
+                    }
                 } else {
                     const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
                     console.debug(`Setting fallback input for ${type} geocoder`);
@@ -546,8 +550,6 @@ class DirectionsPanel extends Component {
                 }
             });
     }
-
-
 
     setupMapClickListener() {
         if (!this.props.map) {
@@ -638,7 +640,6 @@ class DirectionsPanel extends Component {
         
         const coordinates = [e.lngLat.lng, e.lngLat.lat];
         const focusedInput = this.state.focusedInput; // Store the focused input before clearing it
-        console.debug(`${focusedInput} point set by map click:`, coordinates);
         
         const newPoint = {
             result: {
@@ -649,19 +650,21 @@ class DirectionsPanel extends Component {
         
         this.addMarker(focusedInput, coordinates);
         
-        this.setState({ [focusedInput + 'Point']: newPoint }, () => {
-            this.reverseGeocode(e.lngLat, focusedInput);
-            this.requestDirectionsCalculation();
-            
-            if (focusedInput === 'from' && !this.state.toPoint) {
-                this.autoFocusDestinationInput();
-            }
-        });
-        
-        this.setState({ focusedInput: null });
-        if (this.props.map) {
-            this.props.map.getCanvas().style.cursor = '';
+        if (focusedInput === 'from') {
+            this.props.onFromPointChange(newPoint);
+        } else {
+            this.props.onToPointChange(newPoint);
         }
+        
+        this.reverseGeocode(e.lngLat, focusedInput);
+        this.requestDirectionsCalculation();
+        
+        if (focusedInput === 'from' && !this.props.toPoint) {
+            this.autoFocusDestinationInput();
+        } else {
+            this.setState({ focusedInput: null });
+        }
+        
     }
 
     attachGeocoderToDOM(geocoderType, containerId, attachedStateKey) {
@@ -761,17 +764,18 @@ class DirectionsPanel extends Component {
                             </h3>
 
                             <div className="flex items-start" style={{marginTop: '-5px'}}>
-                                {(directions || this.state.fromPoint || this.state.toPoint) && (
+                                {(directions || this.props.fromPoint || this.props.toPoint) && (
                                     <Button
                                     onClick={this.clearDirections}
                                     type="text" 
+                                    shape="circle"
                                     icon={<IconTrash style={{
                                         display: 'inline-block',
                                     }}/>}
                                     >
                                     </Button>
                                 )}
-                                {this.state.fromPoint && this.state.toPoint && (
+                                {this.props.fromPoint && this.props.toPoint && (
                                     <Button 
                                         type="text"
                                         shape="circle"
@@ -832,7 +836,7 @@ class DirectionsPanel extends Component {
                                 type="primary"
                                 onClick={this.calculateDirections}
                                 loading={loading}
-                                disabled={!this.state.fromPoint || !this.state.toPoint}
+                                disabled={!this.props.fromPoint || !this.props.toPoint}
                                 block
                                 // size="large"
                                 className="mt-2 bg-green-600 hover:bg-green-700"

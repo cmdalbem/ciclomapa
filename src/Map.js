@@ -240,9 +240,10 @@ class Map extends Component {
     }
 
     syncMapState(newArea) {
+        const center = this.map.getCenter();
         const ret = {
-            lat: this.map.getCenter().lat,
-            lng: this.map.getCenter().lng,
+            lat: center.lat,
+            lng: center.lng,
             zoom: this.map.getZoom(),
         };
 
@@ -1222,13 +1223,6 @@ class Map extends Component {
         }
 
 
-        // if (this.props.zoom !== prevProps.zoom) {
-        //     map.setZoom(this.props.zoom);
-        // }
-
-        if (this.props.center !== prevProps.center) {
-            map.setCenter(this.props.center);
-        }
 
         // Compare only 'isActive' field of layers
         const currentActiveStatuses = this.props.layers.map(l => l.isActive).join();
@@ -1712,7 +1706,7 @@ class Map extends Component {
             //         lightPreset: this.props.style === MAP_STYLES.DARK ? "night" : "daytime",
             //     }
             // },
-            center: this.props.center,
+            center: [this.props.lng, this.props.lat],
             zoom: this.props.zoom,
             attributionControl: false,
             dragRotate: false,
@@ -1735,8 +1729,8 @@ class Map extends Component {
         
         // Set up global function for popup routing button
         window.setDestinationFromPopup = (coordinates) => {
-            if (this.props.directionsPanelRef && this.props.directionsPanelRef.setDestination) {
-                this.props.directionsPanelRef.setDestination(coordinates);
+            if (this.props.directionsPanelRef && this.props.directionsPanelRef.setDestinationFromMapClick) {
+                this.props.directionsPanelRef.setDestinationFromMapClick(coordinates);
                 // Close all popups after setting destination
                 this.popups.closeAllPopups();
             }
@@ -1748,7 +1742,7 @@ class Map extends Component {
         this.initializeMapAfterStyleLoad();
         
         // Initialize map center
-        this.reverseGeocode(this.props.center)
+        this.reverseGeocode([this.props.lng, this.props.lat])
             .then(result => {
                 this.syncMapState(result.place_name);
             });
