@@ -1209,7 +1209,6 @@ class Map extends Component {
             }
         }
 
-
         if (this.props.style !== prevProps.style) {
             console.debug('new style', this.props.style);
             map.setStyle(this.props.style);
@@ -1222,13 +1221,13 @@ class Map extends Component {
                 this.props.showSatellite ? 'visible' : 'none');
         }
 
-
-
-        // Compare only 'isActive' field of layers
-        const currentActiveStatuses = this.props.layers.map(l => l.isActive).join();
-        const prevActiveStatus = prevProps.layers.map(l => l.isActive).join();
-        if (currentActiveStatuses !== prevActiveStatus) {
-            // Use the unified layer visibility update method
+        const layersChanged = this.props.layers.some((layer, index) => {
+            const prevLayer = prevProps.layers[index];
+            return !prevLayer || layer.isActive !== prevLayer.isActive;
+        });
+        
+        if (layersChanged) {
+            console.debug('Layer visibility changed, updating...');
             this.updateLayerVisibility();
         }
 
@@ -1624,7 +1623,7 @@ class Map extends Component {
             }
         });
         
-        console.debug(`Updated layer visibility - routes active: ${hasRoutes}`);
+        // console.debug(`Updated layer visibility - routes active: ${hasRoutes}`);
     }
 
     updateCyclablePathsOpacity() {

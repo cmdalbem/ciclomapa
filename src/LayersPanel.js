@@ -34,7 +34,7 @@ class LayersPanel extends Component {
     constructor(props) {
         super(props);
 
-        this.toggleCollapse = this.toggleCollapse.bind(this);
+        this.toggleMobileCollapse = this.toggleMobileCollapse.bind(this);
         
         this.state = {
             hover: false,
@@ -46,7 +46,7 @@ class LayersPanel extends Component {
         this.props.onLayersChange(id, newVal)
     }
 
-    toggleCollapse() {
+    toggleMobileCollapse() {
         this.setState({
             collapsed: !this.state.collapsed
         });
@@ -68,7 +68,7 @@ class LayersPanel extends Component {
                             className={`
                                 p-4 border border-white border-opacity-20 rounded-full text-lg fixed
                                 ${this.state.collapsed ? 'collapsed text-gray-300' : 'expanded text-gray-900 bg-gray-100'}`}
-                            onClick={this.toggleCollapse}
+                            onClick={this.toggleMobileCollapse}
                             style={{
                                 bottom: 30,
                                 left: 8,
