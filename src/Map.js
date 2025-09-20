@@ -393,7 +393,7 @@ class Map extends Component {
                         POI_ZOOM_THRESHOLD,
                         true
                     ],
-                    'icon-size': 1,
+                    'icon-size': 0.5,
                     'icon-image': [
                         'step',
                         ['zoom'],
@@ -609,7 +609,7 @@ class Map extends Component {
                     "case",
                     ["boolean", ["feature-state", "hover"], false],
                     adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3), // On hover
-                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0 : -0.1)
+                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.1 : -0.1) // Default
                 ],
                 "line-offset": [
                     "interpolate",
@@ -654,7 +654,7 @@ class Map extends Component {
                     "interpolate",
                         ["exponential", 1.5],
                         ["zoom"],
-                        10, Math.max(1, l.style.lineWidth/4),
+                        10, Math.max(1, l.style.lineWidth/5),
                         18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
                     ],
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
@@ -1088,11 +1088,11 @@ class Map extends Component {
             layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: {
                 'line-color': layerType === 'top' 
-                    ? (this.props.isDarkMode ? '#ffffff' : '#211F1C') // Selected route border
+                    ? (this.props.isDarkMode ? '#ffffff' : '#1a1a1a') // Selected route border
                     : [
                         'case',
                         ['boolean', ['feature-state', 'hover'], false],
-                            this.props.isDarkMode ? '#ffffff' : '#211F1C', // On hover
+                            this.props.isDarkMode ? '#ffffff' : '#1a1a1a', // On hover
                             this.props.isDarkMode ? '#999999' : '#7A7A78', // Default
                     ],
                 "line-width": [
