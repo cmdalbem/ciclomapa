@@ -7,8 +7,12 @@ body {
     transition: background-color 0.3s ease;
 }
 
+button.ant-btn {
+  border-radius: 99px !important;
+}
+
 .theme-dark body {
-    background: #211f1c;
+    background: #1a1a1a;
 }
 
 *, .mapboxgl-ctrl-geocoder--input {
@@ -24,9 +28,11 @@ body {
     left: 0;
     pointer-events: none;
     transition: box-shadow 0.3s ease;
+
+    display: none;
     
-    // background: linear-gradient(90deg, #211f1c 0%, transparent 30%, transparent 70%, #282622 100%);
-    // background: radial-gradient(circle, transparent 60%, #211f1c 100%);
+    // background: linear-gradient(90deg, #1a1a1a 0%, transparent 30%, transparent 70%, #282622 100%);
+    // background: radial-gradient(circle, transparent 60%, #1a1a1a 100%);
 }
 
 .theme-light #gradient-backdrop {
@@ -34,7 +40,7 @@ body {
 }
 
 .theme-dark #gradient-backdrop {
-    box-shadow: inset 0px 60px 100px 0px #211f1c;
+    box-shadow: inset 0px 60px 100px 0px #1a1a1a;
 }
 
 .loader-container {
@@ -183,6 +189,24 @@ body {
   100% {
     left: 107%;
     right: -8%;
+  }
+}
+
+.glass-bg {
+  backdrop-filter: blur(10px);
+}
+
+.theme-light {
+  .glass-bg {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+}
+
+.theme-dark {
+  .glass-bg {
+      background: rgba(23, 23, 23, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
 

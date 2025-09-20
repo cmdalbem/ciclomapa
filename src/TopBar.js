@@ -169,6 +169,7 @@ class TopBar extends Component {
                                 <div className={`flex mb-1 sm:mb-1`}>
                                     <div className={`relative ${IS_MOBILE && 'w-full'}`}>
                                         <Button
+                                            className="glass-bg"
                                             block={IS_MOBILE}
                                             size={IS_MOBILE ? "large" : "middle"}
                                             onClick={this.showCityPicker}
@@ -250,19 +251,19 @@ class TopBar extends Component {
                                     </Button>
 
                                     <Dropdown overlay={collaborateMenu}>
-                                        <Button className="ml-2">
+                                        <Button className="glass-bg ml-2">
                                             <span className="mr-2"> Colaborar </span>
                                             <IconCaret className="text-green-300" />
                                         </Button>
                                     </Dropdown>
                                     
-                                    <Button className="ml-2" onClick={downloadData}>
+                                    <Button className="glass-bg ml-2" onClick={downloadData}>
                                         <IconDownload /> Dados
                                     </Button>
 
                                     {
                                         !this.props.isSidebarOpen &&
-                                        <Button className="ml-2" onClick={() => this.props.toggleSidebar(true)}>
+                                        <Button className="glass-bg ml-2" onClick={() => this.props.toggleSidebar(true)}>
                                             <IconAnalytics/> Métricas
                                         </Button>
                                     }

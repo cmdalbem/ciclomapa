@@ -749,7 +749,7 @@ class DirectionsPanel extends Component {
                 <div
                     id="directionsPanel"
                     className={`
-                        fixed text-white cursor-pointer
+                        glass-bg fixed text-white cursor-pointer
                         ${this.state.collapsed ? 'hidden' : ''}
                     `}
                 >

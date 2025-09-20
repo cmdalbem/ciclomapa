@@ -30,13 +30,17 @@ body.theme-dark .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder--input {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.mapboxgl-ctrl-group {
+  box-shadow: none !important;
+}
+
 .mapboxgl-ctrl-group button {
   filter: invert(1);
 }
 
-.mapboxgl-ctrl-group button+button {
+/* .mapboxgl-ctrl-group button+button {
   border: none;
-}
+} */
 
 .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl {
   margin-right: 24px;

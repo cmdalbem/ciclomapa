@@ -33,7 +33,6 @@
 }
 
 .theme-light .ant-btn:not(.ant-btn-text) {
-  background: #ffffff !important;
   color: rgba(0, 0, 0, 0.85) !important;
 }
 
