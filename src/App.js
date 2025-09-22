@@ -22,6 +22,7 @@ import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
 import TopBar from './TopBar.js'
 import MapStyleSwitcher from './MapStyleSwitcher.js'
 import LayersPanel from './LayersPanel.js'
+import LayersBar from './LayersBar.js'
 import DirectionsPanel from './DirectionsPanel.js'
 import AnalyticsSidebar from './AnalyticsSidebar.js'
 import OSMController from './OSMController.js'
@@ -585,17 +586,28 @@ class App extends Component {
         this.setState({ showSatellite: showSatellite });
     }
 
-    onLayersChange(id, newVal) {
-        // Find the layer index first
-        const layerIndex = this.state.layers.findIndex(layer => layer.id === id);
-        if (layerIndex === -1) {
-            console.warn(`onLayersChange: Layer with id ${id} not found`);
-            return;
+    onLayersChange(idOrChanges, newVal) {
+        let newLayers = [...this.state.layers];
+        
+        // Handle batch updates (array of {id, isActive} objects)
+        if (Array.isArray(idOrChanges)) {
+            idOrChanges.forEach(change => {
+                const layerIndex = newLayers.findIndex(layer => layer.id === change.id);
+                if (layerIndex === -1) {
+                    console.warn(`onLayersChange: Layer with id ${change.id} not found`);
+                    return;
+                }
+                newLayers[layerIndex] = { ...newLayers[layerIndex], isActive: change.isActive };
+            });
+        } else {
+            // Handle single layer update (backward compatibility)
+            const layerIndex = newLayers.findIndex(layer => layer.id === idOrChanges);
+            if (layerIndex === -1) {
+                console.warn(`onLayersChange: Layer with id ${idOrChanges} not found`);
+                return;
+            }
+            newLayers[layerIndex] = { ...newLayers[layerIndex], isActive: newVal };
         }
-
-        // Create new layers array with only the changed layer replaced
-        const newLayers = [...this.state.layers];
-        newLayers[layerIndex] = { ...newLayers[layerIndex], isActive: newVal };
 
         this.setState({ layers: newLayers });
     }
@@ -893,6 +905,15 @@ class App extends Component {
 
                 <CitySwitcherBackdrop/>
 
+                {
+                    IS_MOBILE &&
+                    <LayersBar
+                        layers={this.state.layers}
+                        onLayersChange={this.onLayersChange}
+                        embedMode={this.state.embedMode}
+                    />
+                }
+                
                 <LayersPanel
                     layers={this.state.layers}
                     lengths={this.state.lengths}
