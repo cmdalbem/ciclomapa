@@ -137,7 +137,7 @@ class App extends Component {
             mapStyle: isDarkMode ? 
                 MAP_STYLES.DARK : 
                 MAP_STYLES.LIGHT,
-            layers: this.initLayers(prev.layersStates, urlParams.debug || false),
+            layers: this.initLayers(prev.layersStates, isDarkMode, urlParams.debug || false),
             lengths: {},
             embedMode: urlParams.embed,
             isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : !IS_PROD,
@@ -181,7 +181,10 @@ class App extends Component {
         //     this.setState({ mapStyle: newMapStyle });
         // }
 
-        this.setState({ isDarkMode: newIsDark }, () => {
+        this.setState({ 
+            layers: this.initLayers(this.state.layers, newIsDark, this.state.debugMode),
+            isDarkMode: newIsDark
+        }, () => {
             // TEMP while we don't update everything dynamically
             // window.location.reload();
             this.forceMapReinitialization();
@@ -203,14 +206,14 @@ class App extends Component {
         })
     }
 
-    initLayers(layersStates, debugMode) {
-        const layers = OSMController.getLayers(debugMode); 
+    initLayers(prevLayersStates, isDarkMode, isDebugMode) {
+        const layers = OSMController.getLayers(isDarkMode, isDebugMode); 
 
         // Merge with locally saved state
-        if (layersStates && Object.keys(layersStates).length > 0) {
+        if (prevLayersStates && Object.keys(prevLayersStates).length > 0) {
             layers.forEach(l => {
-                if (layersStates[l.id] !== undefined) {
-                    l.isActive = layersStates[l.id];
+                if (prevLayersStates[l.id] !== undefined) {
+                    l.isActive = prevLayersStates[l.id];
                 }
             });
         }

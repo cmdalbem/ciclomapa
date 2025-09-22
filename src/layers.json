@@ -125,25 +125,10 @@
             ["cycleway:right", "opposite_track"]
         ],
         "style": {
-            "lineColor": "#059669",
-            "lineWidth": 8
-        }
-    },
-    {
-        "name": "Ciclofaixa",
-        "displayName": "Ciclofaixas",
-        "description": "Vias exclusivas para bicicletas porém sem segregação física, apenas demarcada por faixa pintada no chão ou outra sinalização",
-        "filters": [
-            ["cycleway", "lane"],
-            ["cycleway:left", "lane"],
-            ["cycleway:right", "lane"],
-            ["cycleway:both", "lane"],
-            ["cycleway", "opposite_lane"],
-            ["cycleway:right", "opposite_lane"],
-            ["cycleway:left", "opposite_lane"]
-        ],
-        "style": {
-            "lineColor": "#A1C181",
+            "lineColor": "#386641",
+            "lineColorDark": "#A7C957",
+            "textColor": "#FFFFFF",
+            "textColorDark": "#000000",
             "lineWidth": 8
         }
     },
@@ -160,7 +145,32 @@
             ["cycleway:right", "sidepath"]
         ],
         "style": {
-            "lineColor": "#E9C46A",
+            "lineColor": "#386641",
+            "lineColorDark": "#A7C957",
+            "textColor": "#FFFFFF",
+            "textColorDark": "#000000",
+            "lineWidth": 8,
+            "lineStyle": "dashed"
+        }
+    },
+    {
+        "name": "Ciclofaixa",
+        "displayName": "Ciclofaixas",
+        "description": "Vias exclusivas para bicicletas porém sem segregação física, apenas demarcada por faixa pintada no chão ou outra sinalização",
+        "filters": [
+            ["cycleway", "lane"],
+            ["cycleway:left", "lane"],
+            ["cycleway:right", "lane"],
+            ["cycleway:both", "lane"],
+            ["cycleway", "opposite_lane"],
+            ["cycleway:right", "opposite_lane"],
+            ["cycleway:left", "opposite_lane"]
+        ],
+        "style": {
+            "lineColor": "#A7C957",
+            "lineColorDark": "#386641",
+            "textColor": "#000000",
+            "textColorDark": "#FFFFFF",
             "lineWidth": 8
         }
     },
@@ -181,8 +191,12 @@
             ["cycleway", "opposite_share_busway"]
         ],
         "style": {
-            "lineColor": "#E76F51",
-            "lineWidth": 8
+            "lineColor": "#A7C957",
+            "lineColorDark": "#386641",
+            "textColor": "#000000",
+            "textColorDark": "#FFFFFF",
+            "lineWidth": 8,
+            "lineStyle": "dashed"
         }
     },
     {
@@ -195,8 +209,9 @@
             [["highway","living_street"],["bicycle","yes"]]
         ],
         "style": {
-            "lineColor": "#FF8A00",
-            "lineWidth": 2,
+            "lineColor": "#4FA0AD",
+            "textColor": "#FFFFFF",
+            "lineWidth": 4,
             "lineStyle": "dashed"
         }
     },
@@ -212,7 +227,9 @@
             [["highway","path"],["bicycle","yes"]]
         ],
         "style": {
-            "lineColor": "#996633",
+            "lineColor": "#583707",
+            "lineColorDark": "#DC7C3B",
+            "textColor": "#FFFFFF",
             "lineWidth": 2,
             "lineStyle": "dashed"
         }
@@ -227,7 +244,8 @@
             ["bicycle", "dismount"]
         ],
         "style": {
-            "lineColor": "#F5222D",
+            "lineColor": "#B61815",
+            "textColor": "#FFFFFF",
             "lineWidth": 2,
             "lineStyle": "dashed"
         }
