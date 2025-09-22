@@ -375,8 +375,16 @@ class Map extends Component {
                     'text-field': [ 'step', ['zoom'], '', POI_ZOOM_THRESHOLD, ['get', 'name'], ],
                     'text-font': ['IBM Plex Sans Medium'],
                     'text-letter-spacing': 0.05,
-                    "text-offset": [0, 1.5],
+                    "text-offset": [0, 0.7],
                     "text-max-width": 8,
+                    // 'icon-size': 0.5,
+                    'icon-size': [
+                        "interpolate",
+                            ["exponential", 1.5],
+                            ["zoom"], 
+                            10, 0.2,
+                            15, 0.5 
+                    ],
                     'text-size': [
                         "interpolate",
                             ["exponential", 1.5],
@@ -386,6 +394,13 @@ class Map extends Component {
                     ],
                     'text-variable-anchor': ['top'],
                     "icon-padding": 0,
+                    "icon-offset": [
+                        'step',
+                        ['zoom'],
+                        [0, 0],
+                        POI_ZOOM_THRESHOLD,
+                        [0, -14]
+                    ],
                     "icon-allow-overlap": [
                         'step',
                         ['zoom'],
@@ -393,7 +408,6 @@ class Map extends Component {
                         POI_ZOOM_THRESHOLD,
                         true
                     ],
-                    'icon-size': 0.5,
                     'icon-image': [
                         'step',
                         ['zoom'],
@@ -1823,17 +1837,17 @@ class Map extends Component {
 
     initMapControls() {
         if (!this.props.embedMode) {
-            if (!IS_MOBILE) {
-                this.searchBar = new MapboxGeocoder({
-                    accessToken: mapboxgl.accessToken,
-                    mapboxgl: mapboxgl,
-                    language: 'pt-br',
-                    placeholder: 'Buscar endereços, estabelecimentos, ...',
-                    countries: IS_PROD ? 'br' : '',
-                    collapsed: true
-                });
-                this.map.addControl(this.searchBar, 'bottom-right');
-            }
+            // if (!IS_MOBILE) {
+            //     this.searchBar = new MapboxGeocoder({
+            //         accessToken: mapboxgl.accessToken,
+            //         mapboxgl: mapboxgl,
+            //         language: 'pt-br',
+            //         placeholder: 'Buscar endereços, estabelecimentos, ...',
+            //         countries: IS_PROD ? 'br' : '',
+            //         collapsed: true
+            //     });
+            //     this.map.addControl(this.searchBar, 'bottom-right');
+            // }
     
             const cityPicker = new MapboxGeocoder({
                 accessToken: mapboxgl.accessToken,
