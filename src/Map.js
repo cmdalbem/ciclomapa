@@ -567,7 +567,7 @@ class Map extends Component {
 
     initCyclepathLayerForSource(l, sourceId) {
         const filters = this.convertFilterToMapboxFilter(l, sourceId);
-        const dashedLineStyle = { 'line-dasharray': [1, 1] };
+        
         // Will be used as "beforeId" prop in AddLayer
         const layerUnderneathName = 
             this.map.getLayer('road-label-small') ? 'road-label-small'
@@ -581,6 +581,21 @@ class Map extends Component {
         const interactiveLayerId = l.id + '--interactive' + sourceSuffix;
         const normalLayerId = l.id + sourceSuffix;
         const routesActiveLayerId = l.id + '--routes-active' + sourceSuffix;
+
+        const dashedLineStyle = { 'line-dasharray': [1, 1] };
+        // const dashedLineStyle = { 
+        //     'line-dasharray': [
+        //         "step",
+        //         ["zoom"],
+        //         ["literal", [0.5, 1]],
+        //         15,
+        //         ["literal", [1.75, 1]],
+        //         16,
+        //         ["literal", [1, 0.75]],
+        //         17,
+        //         ["literal", [1, 0.5]]
+        //     ]
+        // };
 
         // Interactive layer is wider than the actual layer to improve usability
         this.map.addLayer({
@@ -609,7 +624,7 @@ class Map extends Component {
                     "case",
                     ["boolean", ["feature-state", "hover"], false],
                     adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3), // On hover
-                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.1 : -0.1) // Default
+                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.1 : -0.1) // Default
                 ],
                 "line-offset": [
                     "interpolate",
@@ -713,11 +728,13 @@ class Map extends Component {
                     }, { hover: false });
                 }
                 self.hoveredCycleway = e.features[0].id;
-                self.map.setFeatureState({
-                    source: sourceId,
-                    sourceLayer: sourceLayer,
-                    id: self.hoveredCycleway
-                }, { hover: true });
+
+                // @todo TEMP disable temporarily while it's buggy
+                // self.map.setFeatureState({
+                //     source: sourceId,
+                //     sourceLayer: sourceLayer,
+                //     id: self.hoveredCycleway
+                // }, { hover: true });
             } else {
                 if (self.hoveredCycleway && !self.selectedCycleway) {
                     self.map.setFeatureState({
@@ -1841,7 +1858,7 @@ class Map extends Component {
                 this.map.flyTo({
                     center: flyToPos,
                     zoom: DEFAULT_ZOOM,
-                    speed: 2,
+                    speed: 2.2,
                     minZoom: 6
                 });
     
@@ -1858,17 +1875,19 @@ class Map extends Component {
             // Doesn't matter where we add this, it's customized via CSS
             this.map.addControl(cityPicker, 'top-left');
     
-            this.map.addControl(
-                new mapboxgl.NavigationControl({
-                    showCompass: false
-                }),
-                'bottom-right'
-            );
+            // this.map.addControl(
+            //     new mapboxgl.NavigationControl({
+            //         showCompass: true
+            //     }),
+            //     'bottom-right'
+            // );
+
             const geolocate = new mapboxgl.GeolocateControl({
                 positionOptions: {
                     enableHighAccuracy: true
                 },
-                trackUserLocation: false
+                trackUserLocation: false,
+                showUserHeading: true
             });
             geolocate.on('geolocate', result => {
                 console.debug('geolocate', result);

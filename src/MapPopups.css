@@ -38,7 +38,7 @@
   color: var(--popup-text-color);
 }
 
-.popup-big .mapboxgl-popup .mapboxgl-popup-tip {
+.popup-big.mapboxgl-popup .mapboxgl-popup-tip {
   border-top-color: var(--popup-bg-color);
   border-bottom-color: var(--popup-bg-color);
 }

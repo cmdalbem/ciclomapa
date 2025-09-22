@@ -117,7 +117,7 @@ class OSMController {
         `;
     }
 
-    static getLayers(debugMode) {
+    static getLayers(isDarkMode, isDebugMode) {
         let layers = layersDefinitions.default;
         
         layers.forEach(l => {
@@ -128,16 +128,19 @@ class OSMController {
             l.isActive = l.isActive !== undefined ? l.isActive : true;
             l.type = l.type || 'way';
             if (l.style) {
+                l.style.lineColor = isDarkMode && l.style.lineColorDark ? l.style.lineColorDark : l.style.lineColor;
+                l.style.textColor = isDarkMode && l.style.textColorDark ? l.style.textColorDark : l.style.textColor;
+ 
                 l.style.lineStyle = l.style.lineStyle || 'solid';
 
-                if (l.style.borderColor) {
+                if (l.style.borderColor) { 
                     l.style.borderStyle = l.style.borderStyle || 'solid';
                     l.style.borderWidth = l.style.borderWidth || DEFAULT_BORDER_WIDTH;
                 }
             }
         });
 
-        if (!debugMode) {
+        if (!isDebugMode) {
             layers = layers.filter(l => !l.onlyDebug || l.onlyDebug && l.onlyDebug === false);
         }
 
