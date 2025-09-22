@@ -103,16 +103,16 @@ class MapPopups {
             }).join('');
 
         return `
-            <div class="mt-2 text-sm grid grid-cols-2 gap-2">
+            <div class="mt-2 md:text-sm text-xs grid grid-cols-2 md:gap-2">
                 ${propertiesHtml}
             </div>`;
     }
 
     getFooter(osmUrl, color='black', coordinates = null) {
         return `
-            <div class="-mb-6 -mx-4 mt-10 p-4 pt-4 rounded-bl-lg rounded-br-lg" style="background-color: rgba(0,0,0,0.04)">
+            <div class="-mb-6 -mx-4 md:mt-10 mt-5 p-4 pt-4 rounded-bl-lg rounded-br-lg" style="background-color: rgba(0,0,0,0.04)">
                 ${coordinates && `
-                    <button class="text-${color} border border-opacity-25 border-${color} px-2 py-0.5 rounded-xl mr-1"
+                    <button class="border border-opacity-25 border-${color} px-2 py-0.5 rounded-xl mr-1"
                         onclick="window.setDestinationFromPopup && window.setDestinationFromPopup(${JSON.stringify(coordinates)})"
                     >
                         <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-0.5" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.62515 0.569498C5.38448 -0.189833 6.61582 -0.189833 7.37515 0.569498L11.4308 4.62516C12.19 5.38451 12.1901 6.61589 11.4308 7.37516L7.37515 11.4308C6.61588 12.1901 5.38449 12.19 4.62515 11.4308L0.569489 7.37516C-0.189836 6.61584 -0.189824 5.38449 0.569489 4.62516L4.62515 0.569498ZM7.00015 5.00016H4.50015C3.67173 5.00016 3.00015 5.67173 3.00015 6.50016V8.00016H4.00015V6.50016C4.00015 6.22402 4.22401 6.00016 4.50015 6.00016H7.00015V8.65153L9.10074 5.50016L7.00015 2.34879V5.00016Z"/></svg>
@@ -120,7 +120,7 @@ class MapPopups {
                     </button>
                 ` || ''}
 
-                <a class="text-${color} border border-opacity-25 border-${color} px-2 py-1 rounded-xl mr-1"
+                <a class="border border-opacity-25 border-${color} px-2 py-1 rounded-xl mr-1"
                     target="_BLANK" rel="noopener"
                     href="${osmUrl}"
                 >
@@ -129,7 +129,7 @@ class MapPopups {
                 </a>
 
                 <a  href="#"
-                    class="text-${color} border border-opacity-25 border-${color} px-2 py-1 rounded-xl"
+                    class="border border-opacity-25 border-${color} px-2 py-1 rounded-xl"
                     onClick="document.dispatchEvent(new Event('newComment'));"
                 >
                     <svg fill="currentColor" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-0.5"><path d="M10.3887 0.677734C10.6833 0.677734 10.9664 0.793706 11.1748 1C11.383 1.20617 11.4999 1.48584 11.5 1.77734V7.40039C11.4999 7.69189 11.383 7.97154 11.1748 8.17773C10.9664 8.38404 10.6833 8.5 10.3887 8.5H4.27734L3.16699 10.9004L1.5 12V1.77734C1.50013 1.48583 1.61701 1.20617 1.8252 1C2.03357 0.793706 2.31664 0.677734 2.61133 0.677734H10.3887ZM6 2V4H4V5H6V7H7V5H9V4H7V2H6Z"/></svg>
@@ -207,8 +207,8 @@ class MapPopups {
         };
 
         let html = `
-            <div class="text-2xl mt-3 mb-5">
-                <img src="${iconSrc}" class="inline-block align-bottom mr-1 w-8" alt=""/>
+            <div class="md:text-2xl text-lg mt-3 md:mb-5 mb-3 flex items-center">
+                <img src="${iconSrc}" class="inline-block align-bottom mr-2 md:w-8 md:h-8 w-6 h-6" alt=""/>
                     ${properties.name
                         ? properties.name
                         : `<span class="italic opacity-50">${poiTypeMap[poiType]} </span>`
@@ -246,11 +246,11 @@ class MapPopups {
 
 
         let html = `
-            <div class="text-black">
+            <div>
                 <div class="relative inline-block mt-3 group">
                     <div
-                        class="inline-flex items-center py-0 px-2 rounded-full bg-black font-semibold tracking-wide cursor-pointer"
-                        style="color: ${layer.style.lineColor}"
+                        class="inline-flex items-center py-0 px-2 rounded-full font-semibold tracking-wide cursor-pointer"
+                        style="background-color: var(--popup-text-color); color: var(--popup-bg-color);"
                     >
                         ${layer.name}
                     </div>
@@ -262,7 +262,7 @@ class MapPopups {
                     ` : ''}
                 </div>
 
-                <div class="text-2xl mt-2 mb-5 tracking-tight">
+                <div class="md:text-2xl text-lg mt-2 md:mb-5 mb-3 tracking-tight">
                     ${properties.name ?
                         properties.name :
                         '<span class="italic opacity-50">Via sem nome</span>'}
@@ -278,7 +278,16 @@ class MapPopups {
             .setLngLat(coords)
             .setHTML(html)
             .addTo(this.map);
-        this.cyclewayPopup.addClassName(bgClass); 
+        this.cyclewayPopup.addClassName(bgClass);
+        
+        document.querySelector('.popup-big.mapboxgl-popup').style.setProperty("--popup-bg-color", layer.style.lineColor);
+        document.querySelector('.popup-big.mapboxgl-popup').style.setProperty("--popup-text-color", layer.style.textColor);
+
+        // document.querySelector('.mapboxgl-popup-content').style.backgroundColor = layer.style.lineColor;
+        // document.querySelector('.mapboxgl-popup-tip').style.borderTopColor = layer.style.lineColor;
+        // document.querySelector('.mapboxgl-popup-tip').style.borderBottomColor = layer.style.lineColor;
+        // document.querySelector('.mapboxgl-popup-content').style.color = layer.style.textColor;
+        // document.querySelector('.mapboxgl-popup-close-button').style.color = layer.style.textColor;
 
         Analytics.event('view_item', {
             items: [{

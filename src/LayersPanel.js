@@ -67,7 +67,7 @@ class LayersPanel extends Component {
                             id="layersPanelMobileButton"
                             className={`
                                 p-4 border border-white border-opacity-20 rounded-full text-lg fixed
-                                ${this.state.collapsed ? 'collapsed text-gray-300' : 'expanded text-gray-900 bg-gray-100'}`}
+                                ${this.state.collapsed ? 'collapsed' : 'expanded'}`}
                             onClick={this.toggleMobileCollapse}
                             style={{
                                 bottom: 30,
