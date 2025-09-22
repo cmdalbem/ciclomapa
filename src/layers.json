@@ -201,6 +201,7 @@
     },
     {
         "name": "Baixa velocidade",
+        "displayName": "Residenciais",
         "description": "Vias com limite de velocidade regulamentado de até 30km/h.",
         "isActive": false,
         "filters": [
