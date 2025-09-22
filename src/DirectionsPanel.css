@@ -63,30 +63,33 @@
     opacity: 0.5;
 }
 
+
 /* DirectionsPanel light mode overrides */
-  .theme-light #layersPanelMobileButton.collapsed,
-  .theme-light .directions-panel-mobile-button.collapsed {
+
+.theme-light #layersPanelMobileButton,
+.theme-light .directions-panel-mobile-button {
+    border: 0;
+}
+
+.theme-light #layersPanelMobileButton.collapsed,
+.theme-light .directions-panel-mobile-button.collapsed {
     color: black !important;
     background: #ffffff !important;
-    border: 0;
-  }
-  
-  .theme-light #layersPanelMobileButton.expanded,
-  .theme-light .directions-panel-mobile-button.expanded {
+}
+
+.theme-light #layersPanelMobileButton.expanded,
+.theme-light .directions-panel-mobile-button.expanded {
     color: #111827 !important;
     background: #f3f4f6 !important;
-  }
-  
-  /* Additional global overrides for any remaining dark styles */
-  .theme-light {
-    /* Ensure all text is dark in light mode */
+}
+
+.theme-light {
     color: rgba(0, 0, 0, 0.85) !important;
-  }
-  
-  .theme-light * {
-    /* Override any remaining dark text colors */
+}
+
+.theme-light * {
     color: inherit;
-  }
+}
 
 /* Mobile */
 @media (min-width: 320px) and (max-width: 480px) {
@@ -124,6 +127,7 @@
         z-index: 2;
     }
 
+    #layersPanelMobileButton,
     .directions-panel-mobile-button {
         padding: 1rem;
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -136,11 +140,13 @@
         z-index: 1;
     }
 
+    #layersPanelMobileButton.collapsed,
     .directions-panel-mobile-button.collapsed {
         color: #d1d5db;
         background: #1c1717;
     }
 
+    #layersPanelMobileButton.expanded,
     .directions-panel-mobile-button.expanded {
         color: #111827;
         background: #f3f4f6;

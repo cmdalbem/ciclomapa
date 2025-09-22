@@ -13,6 +13,16 @@
   animation: popupFadeIn 300ms ease-out;
 }
 
+.popup-big.mapboxgl-popup {
+  --popup-bg-color: black;
+  --popup-text-color: white;
+}
+
+.popup-big .mapboxgl-popup-content {
+  background: var(--popup-bg-color);
+  color: var(--popup-text-color);
+}
+
 .popup-big .mapboxgl-popup-content {
   padding: 24px 16px;
   min-width: 420px;
@@ -25,39 +35,26 @@
   font-size: 18px;
   width: 42px;
   height: 42px;
-  color: white;
+  color: var(--popup-text-color);
 }
 
-.theme-light .popup-big .mapboxgl-popup-close-button {
-  color: black;
+.popup-big .mapboxgl-popup .mapboxgl-popup-tip {
+  border-top-color: var(--popup-bg-color);
+  border-bottom-color: var(--popup-bg-color);
 }
 
-.theme-dark .popup-big .mapboxgl-popup-content {
-  background: #333;
-  color: white;
+.theme-dark .popup-big.mapboxgl-popup {
+  --popup-bg-color: black;
+  --popup-text-color: white;
 }
 
-.theme-light .popup-big .mapboxgl-popup-content {
-  background: #ffffff;
+.theme-light .popup-big.mapboxgl-popup {
+  --popup-bg-color: white;
+  --popup-text-color: black;
 }
 
-.theme-dark .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
-  border-top-color: #333;
-}
 
-.theme-dark .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
-  border-bottom-color: #333;
-}
-
-.theme-light .popup-big .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
-  border-top-color: #ffffff;
-}
-
-.theme-light .popup-big .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
-  border-bottom-color: #ffffff;
-}
-
-.popup-big.proibido .mapboxgl-popup-content { background: #F56565; }
+/* .popup-big.proibido .mapboxgl-popup-content { background: #F56565; }
 .popup-big.proibido .mapboxgl-popup-tip { border-top-color: #F56565; }
 .popup-big.proibido .mapboxgl-popup-tip { border-bottom-color: #F56565; }
 .popup-big.proibido .mapboxgl-popup-close-button { color: black; }
@@ -72,25 +69,25 @@
 .popup-big.baixa-velocidade .mapboxgl-popup-tip { border-bottom-color: #FF8A00; }
 .popup-big.baixa-velocidade .mapboxgl-popup-close-button { color: black; }
 
-.popup-big.ciclorrota .mapboxgl-popup-content { background: #E76F51; }
-.popup-big.ciclorrota .mapboxgl-popup-tip { border-top-color: #E76F51; }
-.popup-big.ciclorrota .mapboxgl-popup-tip { border-bottom-color: #E76F51; }
-.popup-big.ciclorrota .mapboxgl-popup-close-button { color: black; }
-
-.popup-big.calcada-compartilhada .mapboxgl-popup-content { background: #E9C46A; }
-.popup-big.calcada-compartilhada .mapboxgl-popup-tip { border-top-color: #E9C46A; }
-.popup-big.calcada-compartilhada .mapboxgl-popup-tip { border-bottom-color: #E9C46A; }
+.popup-big.calcada-compartilhada .mapboxgl-popup-content { background: #E76F51; }
+.popup-big.calcada-compartilhada .mapboxgl-popup-tip { border-top-color: #E76F51; }
+.popup-big.calcada-compartilhada .mapboxgl-popup-tip { border-bottom-color: #E76F51; }
 .popup-big.calcada-compartilhada .mapboxgl-popup-close-button { color: black; }
 
-.popup-big.ciclofaixa .mapboxgl-popup-content { background: #A1C181; }
-.popup-big.ciclofaixa .mapboxgl-popup-tip { border-top-color: #A1C181; }
-.popup-big.ciclofaixa .mapboxgl-popup-tip { border-bottom-color: #A1C181; }
+.popup-big.ciclorrota .mapboxgl-popup-content { background: #E9C46A; }
+.popup-big.ciclorrota .mapboxgl-popup-tip { border-top-color: #E9C46A; }
+.popup-big.ciclorrota .mapboxgl-popup-tip { border-bottom-color: #E9C46A; }
+.popup-big.ciclorrota .mapboxgl-popup-close-button { color: black; }
+
+.popup-big.ciclofaixa .mapboxgl-popup-content { background: #A7C957; }
+.popup-big.ciclofaixa .mapboxgl-popup-tip { border-top-color: #A7C957; }
+.popup-big.ciclofaixa .mapboxgl-popup-tip { border-bottom-color: #A7C957; }
 .popup-big.ciclofaixa .mapboxgl-popup-close-button { color: black; }
 
-.popup-big.ciclovia .mapboxgl-popup-content { background: #10B981; }
-.popup-big.ciclovia .mapboxgl-popup-tip { border-top-color: #10B981; }
-.popup-big.ciclovia .mapboxgl-popup-tip { border-bottom-color: #10B981; }
-.popup-big.ciclovia .mapboxgl-popup-close-button { color: black; }
+.popup-big.ciclovia .mapboxgl-popup-content { background: #386641; }
+.popup-big.ciclovia .mapboxgl-popup-tip { border-top-color: #386641; }
+.popup-big.ciclovia .mapboxgl-popup-tip { border-bottom-color: #386641; }
+.popup-big.ciclovia .mapboxgl-popup-close-button { color: black; } */
 
 
 /* Mobile */
@@ -98,12 +95,13 @@
 @media (min-width: 320px) and (max-width: 480px) {
   .popup-big.mapboxgl-popup {
     position: fixed;
-    bottom: 8px;
-    left: 8px;
-    right: 8px;
+    bottom: 0;
+    left: 0;
+    right: 0;
     transform: none !important;
     top: unset;
     z-index: 10;
+    max-width: 100% !important;
     /* box-shadow: 0 -8px 30px #1c1a17; */
   }
 
@@ -116,8 +114,10 @@
   }
 
   .popup-big .mapboxgl-popup-content {
-      min-width: auto;
-      width: calc(100vw - 16px);
+    min-width: auto;
+    width: 100vw;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
 }
 
