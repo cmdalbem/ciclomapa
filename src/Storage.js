@@ -305,6 +305,7 @@ class Storage {
                     this.dataBuffer = {};
                     this.dataBuffer.geoJson = data.geoJson; 
                     this.dataBuffer.updatedAt = data.updatedAt; 
+                    this.dataBuffer.lengths = data.lengths;
                     return this.getDataFromDB(slug, resolve, reject, 2);
                 } else if (data.part >= 2) {
                     // Recursion iteration n
@@ -318,6 +319,7 @@ class Storage {
                 if (!!part) {
                     let ret = {};
                     ret.updatedAt = this.dataBuffer.updatedAt.toDate();
+                    ret.lengths = this.dataBuffer.lengths;
     
                     try {
                         ret.geoJson = parse(this.dataBuffer.geoJson);
