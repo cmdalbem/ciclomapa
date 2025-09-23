@@ -16,7 +16,6 @@ import {
     ENABLE_COMMENTS,
     IS_PROD,
     DEFAULT_LINE_WIDTH_MULTIPLIER,
-    POI_ZOOM_THRESHOLD,
     COMMENTS_ZOOM_THRESHOLD,
     DIRECTIONS_LINE_WIDTH,
     DIRECTIONS_LINE_BORDER_WIDTH,
@@ -344,7 +343,7 @@ class Map extends Component {
             //             ['linear'],
             //             ['zoom'],
             //             12, 2,
-            //             POI_ZOOM_THRESHOLD, 7
+            //             l.zoomThreshold, 7
             //         ],
             //         'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.2 : 0.2),
             //         'circle-stroke-width': [
@@ -352,7 +351,7 @@ class Map extends Component {
             //             ['linear'],
             //             ['zoom'],
             //             12, 0,
-            //             POI_ZOOM_THRESHOLD, 3
+            //             l.zoomThreshold, 3
             //         ],
             //         'circle-opacity': ['case',
             //             ['boolean', ['feature-state', 'hover'], false],
@@ -372,7 +371,7 @@ class Map extends Component {
                 "filter": filters,
                 "description": l.description,
                 'layout': {
-                    'text-field': [ 'step', ['zoom'], '', POI_ZOOM_THRESHOLD, ['get', 'name'], ],
+                    'text-field': [ 'step', ['zoom'], '', l.zoomThreshold, ['get', 'name'], ],
                     'text-font': ['IBM Plex Sans Medium'],
                     'text-letter-spacing': 0.05,
                     "text-offset": [0, 0.7],
@@ -398,21 +397,21 @@ class Map extends Component {
                         'step',
                         ['zoom'],
                         [0, 0],
-                        POI_ZOOM_THRESHOLD,
+                        l.zoomThreshold,
                         [0, -14]
                     ],
                     "icon-allow-overlap": [
                         'step',
                         ['zoom'],
                         false,
-                        POI_ZOOM_THRESHOLD,
+                        l.zoomThreshold,
                         true
                     ],
                     'icon-image': [
                         'step',
                         ['zoom'],
                         this.props.isDarkMode ? `${l.icon}-mini` : `${l.icon}-mini--light`,
-                        POI_ZOOM_THRESHOLD,
+                        l.zoomThreshold,
                         this.props.isDarkMode ? `${l.icon}` : `${l.icon}--light`,
                     ],
                 },

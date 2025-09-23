@@ -5,7 +5,8 @@ import {
     HiOutlineTrendingUp as IconTrendingUp,
     HiOutlineTrendingDown as IconTrendingDown
 } from "react-icons/hi";
-import { LuBike as IconBike, LuRoute as IconRoute } from "react-icons/lu";
+import { LuBike as IconBike } from "react-icons/lu";
+import { FaDirections as IconRoute } from "react-icons/fa";
 import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash, HiOutlineExclamationTriangle as IconNoData } from "react-icons/hi2";
 import { HiCog as IconCog } from "react-icons/hi";
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
