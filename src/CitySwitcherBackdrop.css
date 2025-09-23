@@ -6,7 +6,7 @@
     bottom: 0;
     right: 0;
     left: 0;
-    opacity: .7;
+    opacity: .9;
     z-index: 1;
     transition: background-color 0.3s ease;
 }
@@ -38,14 +38,26 @@ body.show-city-picker #backdrop * {
 }
 
 
+
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {
     .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
-      top: 20%;
+        top: 80px;
+        width: 90%;
+        margin-left: -45%;
+        font-size: 16px;
+        padding: inherit;
     }
 
     #closeBtn {
-      top: 20%;
+        top: 70px;
+    }
+
+    .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder--icon-search {
+        top: 15px;
+        left: 12px;
+        width: 22px;
+        height: 22px;
     }
 }

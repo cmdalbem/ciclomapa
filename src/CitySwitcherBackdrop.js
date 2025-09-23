@@ -20,7 +20,7 @@ class CitySwitcherBackdrop extends Component {
                     // shape="circle"
                     // icon="close"
                     type="link"
-                    size="large"
+                    // size="large"
                     onClick={this.onClose}
                 >
                     Cancelar
