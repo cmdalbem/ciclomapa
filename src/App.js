@@ -544,8 +544,10 @@ class App extends Component {
                         if (data) {
                             // @todo Improve this check - how fresh is the data? Add some threshold, like 1 month.
                             console.debug('Database data is fresh.');
+                            console.debug('Loaded lengths from Firebase:', data.lengths);
 
                             if (FORCE_RECALCULATE_LENGTHS_ALWAYS) {
+                                console.debug('FORCE_RECALCULATE_LENGTHS_ALWAYS is true, recalculating lengths...');
                                 data.lengths = calculateLayersLengths(data.geoJson, this.state.layers, this.state.lengthCalculationStrategy);
                             }
 
@@ -704,6 +706,10 @@ class App extends Component {
         this.setState({
             lengths: calculateLayersLengths(this.state.geoJson, this.state.layers, this.state.lengthCalculationStrategy)
         });
+    }
+
+    updateLengths = () => {
+        this.calculateLengths();
     }
 
     componentDidMount() {

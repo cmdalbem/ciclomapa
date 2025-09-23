@@ -14,7 +14,7 @@ import {
     MdDataUsage as IconAnalytics,
 } from "react-icons/md";
 
-import { removeAccents } from './utils.js';
+import { removeAccents, adjustColorBrightness } from './utils.js';
 import AirtableDatabase from './AirtableDatabase.js'
 
 import {
@@ -84,7 +84,12 @@ class AnalyticsSidebar extends Component {
                     .map(l => lengths && 
                         {
                             value: lengths[l.id],
-                            fill: l.style.lineColor
+                            // fill: l.style.lineStyle === 'solid' ? l.style.lineColor : `repeating-linear-gradient(90deg, ${l.style.lineColor}, ${l.style.lineColor} 4px, transparent 4px, transparent 6px)`
+                            fill: l.style.lineStyle === 'solid' ? l.style.lineColor : adjustColorBrightness(l.style.lineColor, 0.6),
+                            // fill: l.style.lineStyle === 'solid' ? l.style.lineColor : 'none',
+                            // stroke: l.style.lineStyle === 'solid' ? '' : l.style.lineColor,
+                            // strokeWidth: l.style.lineStyle === 'solid' ? 0 : 4,
+                            // strokeDasharray: l.style.lineStyle === 'dashed' ? '4 4' : '0'
                         }
                     )
             });
@@ -220,7 +225,7 @@ class AnalyticsSidebar extends Component {
                                 Para vias que tem estrutura dos dois lados nós desenvolvemos um método que automaticamente detecta estes casos e remove esta contagem dupla do total.
                             </p>
                             <p className="italic opacity-50 text-xs">
-                                Estes números podem não corresponder à realidade. Eles não são dados oficiais e dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap e da precisão do nosso método de detecção automática de contagens duplas.
+                                Estes números não são dados oficiais e podem não corresponder à realidade. Eles dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap.
                             </p>
                         </>}
                     >
@@ -269,7 +274,8 @@ class AnalyticsSidebar extends Component {
                                             key={l.name}
                                             length={lengths && lengths[l.id]}
                                             percent={lengths && lengths[l.id] * 100 / this.state.totalLength}
-                                            color={l.style.lineColor}
+                                            lineStyle={l.style.lineStyle}
+                                            lineColor={l.style.lineColor}
                                             unit="km"
                                         />
                                     )
@@ -280,11 +286,8 @@ class AnalyticsSidebar extends Component {
                     <Section
                         title="Pontos de interesse"
                         description={<>
-                            <p>
-                                Contagem total dos pontos de interesse do ciclista de cada um dos tipos com que o CicloMapa trabalha.
-                            </p>
                             <p className="italic opacity-50 text-xs">
-                                Estes números podem não corresponder à realidade. Eles não são dados oficiais e dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap.
+                                Estes números não são dados oficiais e podem não corresponder à realidade. Eles dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap.
                             </p>
                         </>}
                     >
@@ -316,12 +319,14 @@ const DataLineWithBarChart = (props) =>
     <div className="mb-2"> 
         <DataLine {...props}/>
 
-        <div className="w-full h-1 relative bg-white bg-opacity-10 mt-1">
+        <div className="w-full h-1 relative bg-white bg-opacity-10 mt-1 rounded-full">
             <div 
-                className="h-1"
+                className="h-1 rounded-full"
                 style={{ 
                     transition: 'width 1500ms ease',
-                    background: props.color,
+                    background: props.lineStyle === 'solid' 
+                        ? props.lineColor
+                        : `repeating-linear-gradient(90deg, ${props.lineColor}, ${props.lineColor} 4px, transparent 4px, transparent 6px)`,
                     width: (props.percent || 0) + '%'
                 }}> 
             </div>
