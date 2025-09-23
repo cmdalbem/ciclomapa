@@ -911,6 +911,7 @@ class App extends Component {
                         layers={this.state.layers}
                         onLayersChange={this.onLayersChange}
                         embedMode={this.state.embedMode}
+                        isDarkMode={this.state.isDarkMode}
                     />
                 }
                 
