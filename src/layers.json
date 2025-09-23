@@ -83,20 +83,9 @@
         ],
         "type": "poi",
         "icon": "poi-bikeshop",
+        "zoomThreshold": 14,
         "style": {
             "textColor": "#2A7BF4"
-        }
-    },
-    {
-    "name": "Estações",
-        "description": "Estações de compartilhamento de bicicletas (bike sharing) de diferentes operadoras.",
-        "filters": [
-            ["amenity", "bicycle_rental"]
-        ], 
-        "type": "poi",
-        "icon": "poi-rental",
-        "style": {
-            "textColor": "#E56119"
         }
     },
     {
@@ -107,8 +96,22 @@
         ],
         "type": "poi",
         "icon": "poi-bikeparking",
+        "zoomThreshold": 16,
         "style": {
             "textColor": "#2F904A"
+        }
+    },
+    {
+    "name": "Estações",
+        "description": "Estações de compartilhamento de bicicletas (bike sharing) de diferentes operadoras.",
+        "filters": [
+            ["amenity", "bicycle_rental"]
+        ], 
+        "type": "poi",
+        "icon": "poi-rental",
+        "zoomThreshold": 15,
+        "style": {
+            "textColor": "#E56119"
         }
     },
     {
@@ -124,6 +127,7 @@
             ["cycleway:left", "opposite_track"],
             ["cycleway:right", "opposite_track"]
         ],
+        "zoomThreshold": 15,
         "style": {
             "lineColor": "#386641",
             "lineColorDark": "#A7C957",
