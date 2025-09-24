@@ -314,6 +314,15 @@ class Map extends Component {
                 }
             } else if (layer.type === 'poi' && layer.filters) {
                 const layerId = layer.id + '--pmtiles';
+                const circlesLayerId = layerId + 'circles';
+                
+                // Update circles layer filter
+                if (this.map.getLayer(circlesLayerId)) {
+                    const newFilter = this.convertFilterToMapboxFilter(layer, 'pmtiles-source');
+                    this.map.setFilter(circlesLayerId, newFilter);
+                }
+                
+                // Update symbols layer filter
                 if (this.map.getLayer(layerId)) {
                     const newFilter = this.convertFilterToMapboxFilter(layer, 'pmtiles-source');
                     this.map.setFilter(layerId, newFilter);
@@ -344,7 +353,7 @@ class Map extends Component {
                     'interpolate',
                     ["exponential", 1.5],
                     ['zoom'],
-                    9, 0,
+                    7, 0,
                     15, 5
                 ],
                 'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.2 : 0.2),
@@ -379,7 +388,7 @@ class Map extends Component {
                 'text-font': ['IBM Plex Sans Medium'],
                 'text-letter-spacing': 0.05,
                 "text-offset": [0, 0.7],
-                "text-max-width": 8,
+                // "text-max-width": 8,
                 'icon-size': 0.5,
                 // 'icon-size': [
                 //     "interpolate",
@@ -395,9 +404,10 @@ class Map extends Component {
                         10, 10,
                         18, 14
                 ],
-                'text-variable-anchor': ['top'],
+                'text-variable-anchor': ['left'],
                 "icon-padding": 0,
                 "icon-offset": [0, -14],
+                "text-offset": [1, 0],
                 // "icon-allow-overlap": true,
                 'icon-image': this.props.isDarkMode ? `${l.icon}` : `${l.icon}--light`,
             },
@@ -421,15 +431,18 @@ class Map extends Component {
         // Interactions
         const self = this;
 
-        this.map.on('mouseenter', layerId, (e) => {
+        // Helper function to handle POI interactions
+        const handlePOIInteraction = (e, interactionType) => {
             if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
                 return;
             }
-            if (e.features.length > 0) {
-                if (self.props.isInRouteMode) {
-                    e.originalEvent.preventDefault();
-                    return;
-                }
+
+            if (self.props.isInRouteMode) {
+                e.originalEvent.preventDefault();
+                return;
+            }
+            
+            if (interactionType === 'mouseenter' && e.features.length > 0) {
                 self.map.getCanvas().style.cursor = 'pointer';
 
                 if (self.hoveredPOI) {
@@ -445,36 +458,35 @@ class Map extends Component {
                     sourceLayer: sourceLayer,
                     id: self.hoveredPOI },
                     { hover: true });
-            }
-            e.originalEvent.preventDefault();
-        });
+            } else if (interactionType === 'mouseleave') {
+                if (self.hoveredPOI) {
+                    self.map.getCanvas().style.cursor = '';
 
-        this.map.on('mouseleave', layerId, e => {
-            if (self.hoveredPOI) {
-                self.map.getCanvas().style.cursor = '';
-
-                self.map.setFeatureState({
-                    source: sourceId,
-                    sourceLayer: sourceLayer,
-                    id: self.hoveredPOI },
-                    { hover: false });
-            }
-            self.hoveredPOI = null;
-        });
-
-        this.map.on('click', layerId, e => {
-            if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
-                return;
-            }
-            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-                if (self.props.isInRouteMode) {
-                    e.originalEvent.preventDefault();
-                    return;
+                    self.map.setFeatureState({
+                        source: sourceId,
+                        sourceLayer: sourceLayer,
+                        id: self.hoveredPOI },
+                        { hover: false });
                 }
-                self.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
-                // e.originalEvent.preventDefault();
+                self.hoveredPOI = null;
+            } else if (interactionType === 'click') {
+                if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
+                    self.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
+                }
             }
-        });
+
+            e.originalEvent.preventDefault();
+        };
+
+        // Add interactions for circles layer (lower zoom levels)
+        this.map.on('mouseenter', layerId+'circles', (e) => handlePOIInteraction(e, 'mouseenter'));
+        this.map.on('mouseleave', layerId+'circles', (e) => handlePOIInteraction(e, 'mouseleave'));
+        this.map.on('click', layerId+'circles', (e) => handlePOIInteraction(e, 'click'));
+
+        // Add interactions for symbols layer (higher zoom levels)
+        this.map.on('mouseenter', layerId, (e) => handlePOIInteraction(e, 'mouseenter'));
+        this.map.on('mouseleave', layerId, (e) => handlePOIInteraction(e, 'mouseleave'));
+        this.map.on('click', layerId, (e) => handlePOIInteraction(e, 'click'));
 
     }
 
@@ -1685,6 +1697,14 @@ class Map extends Component {
                 
                 ['', '--pmtiles'].forEach(sourceSuffix => {
                     const layerId = layer.id + sourceSuffix;
+                    const circlesLayerId = layerId + 'circles';
+                    
+                    // Handle circles layer (lower zoom levels)
+                    if (map.getLayer(circlesLayerId)) {
+                        map.setLayoutProperty(circlesLayerId, 'visibility', status);
+                    }
+                    
+                    // Handle symbols layer (higher zoom levels)
                     if (map.getLayer(layerId)) {
                         map.setLayoutProperty(layerId, 'visibility', status);
                     }
