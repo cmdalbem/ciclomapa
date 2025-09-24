@@ -97,6 +97,7 @@ class AnalyticsSidebar extends Component {
                         l.id === 'ciclofaixa' ||
                         l.id === 'ciclorrota' ||
                         l.id === 'calcada-compartilhada')
+                    .filter(l => lengths && Math.floor(lengths[l.id]) > 0)
                     .map(l => lengths && 
                         {
                             value: lengths[l.id],
@@ -287,7 +288,7 @@ class AnalyticsSidebar extends Component {
                                             name={l.name}
                                             key={l.name}
                                             length={lengths && lengths[l.id]}
-                                            percent={lengths && lengths[l.id] * 100 / this.state.totalLength}
+                                            percent={lengths && Math.floor(lengths[l.id] * 100 / this.state.totalLength) || 0}
                                             lineStyle={l.style.lineStyle}
                                             lineColor={l.style.lineColor}
                                             unit="km"
@@ -334,16 +335,18 @@ const DataLineWithBarChart = (props) =>
         <DataLine {...props}/>
 
         <div className="w-full h-1 relative bg-white bg-opacity-10 mt-1 rounded-full">
-            <div 
-                className="h-1 rounded-full"
-                style={{ 
-                    transition: 'width 1500ms ease',
-                    background: props.lineStyle === 'solid' 
-                        ? props.lineColor
-                        : `repeating-linear-gradient(90deg, ${props.lineColor}, ${props.lineColor} 4px, transparent 4px, transparent 6px)`,
-                    width: (props.percent || 0) + '%'
-                }}> 
-            </div>
+            { props.percent > 0 &&
+                <div 
+                    className="h-1 rounded-full"
+                    style={{ 
+                        transition: 'width 1500ms ease',
+                        background: props.lineStyle === 'solid' 
+                            ? props.lineColor
+                            : `repeating-linear-gradient(90deg, ${props.lineColor}, ${props.lineColor} 4px, transparent 4px, transparent 6px)`,
+                        width: (props.percent || 0) + '%'
+                    }}> 
+                </div>
+            }
         </div>
     </div>
 
