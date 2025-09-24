@@ -1777,8 +1777,8 @@ class Map extends Component {
             center: [this.props.lng, this.props.lat],
             zoom: this.props.zoom,
             attributionControl: false,
-            dragRotate: false,
-            pitchWithRotate: false
+            // dragRotate: false,
+            // pitchWithRotate: false
         }).addControl(new mapboxgl.AttributionControl({
             compact: false
         }));
