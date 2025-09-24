@@ -200,19 +200,18 @@ class MapPopups {
             delete properties['addr:housenumber'];
         }
 
-        const poiTypeMap = {
+        const poiTypeMapFallback = {
             "poi-bikeshop": "Oficina/loja (sem nome)",
-            "poi-rental": "Estação de bicicleta (sem nome)",
-            "poi-bikeparking": "Bicicletário/paraciclo"
+            "poi-rental": "Estação de bicicleta (sem nome)"
         };
 
         let html = `
             <div class="md:text-2xl text-lg mt-3 md:mb-5 mb-3 flex items-center">
                 <img src="${iconSrc}" class="inline-block align-bottom mr-2 md:w-8 md:h-8 w-6 h-6" alt=""/>
-                    ${properties.name
-                        ? properties.name
-                        : `<span class="italic opacity-50">${poiTypeMap[poiType]} </span>`
-                    }
+                    ${properties.name ? properties.name
+                        : poiType === 'poi-bikeparking' ? "<span>Bicicletário/paraciclo</span>"
+                        : `<span class="italic opacity-50">${poiTypeMapFallback[poiType]} </span>`
+                    } 
             </div>
 
             ${this.renderProperties(properties)}
