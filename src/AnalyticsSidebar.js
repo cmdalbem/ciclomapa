@@ -66,6 +66,22 @@ class AnalyticsSidebar extends Component {
         }
     }
 
+    generatePatterns(layers) {
+        return layers
+            .filter(l => l.style && l.style.lineStyle === 'dashed')
+            .map(l => (
+                <pattern 
+                    key={`pattern-${l.id}`}
+                    id={`pattern-${l.id}`} 
+                    width="4" 
+                    height="4" 
+                    patternUnits="userSpaceOnUse" 
+                >
+                    <circle cx="2" cy="2" r="1.5" fill={l.style.lineColor} />
+                </pattern>
+            ));
+    }
+
     updateData() {
         const { lengths, layers } = this.props;
 
@@ -84,12 +100,7 @@ class AnalyticsSidebar extends Component {
                     .map(l => lengths && 
                         {
                             value: lengths[l.id],
-                            // fill: l.style.lineStyle === 'solid' ? l.style.lineColor : `repeating-linear-gradient(90deg, ${l.style.lineColor}, ${l.style.lineColor} 4px, transparent 4px, transparent 6px)`
-                            fill: l.style.lineStyle === 'solid' ? l.style.lineColor : adjustColorBrightness(l.style.lineColor, 0.6),
-                            // fill: l.style.lineStyle === 'solid' ? l.style.lineColor : 'none',
-                            // stroke: l.style.lineStyle === 'solid' ? '' : l.style.lineColor,
-                            // strokeWidth: l.style.lineStyle === 'solid' ? 0 : 4,
-                            // strokeDasharray: l.style.lineStyle === 'dashed' ? '4 4' : '0'
+                            fill: l.style.lineStyle === 'solid' ? l.style.lineColor : `url(#pattern-${l.id})`,
                         }
                     )
             });
@@ -236,6 +247,9 @@ class AnalyticsSidebar extends Component {
 
                         <div className="relative">
                             <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
+                                <defs>
+                                    {this.generatePatterns(layers)}
+                                </defs>
                                 <Pie
                                     data={this.state.chartsData} dataKey="value"
                                     cx={'50%'} cy={'50%'}
