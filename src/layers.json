@@ -71,7 +71,7 @@
     },
     {
         "name": "Comentários",
-        "description": "Comentários de usuários do CicloMapa sinalizando inconsistências no mapeamento das vias.",
+        "description": "Comentários de usuários do CicloMapa sinalizando inconsistências no mapeamento das vias. Se você edita no OSM, use eles como referência e depois nos avise para marcar como resolvido!",
         "type": "poi",
         "icon": "poi-comment"
     },
@@ -83,36 +83,40 @@
         ],
         "type": "poi",
         "icon": "poi-bikeshop",
+        "zoomThreshold": 13.5,
         "style": {
-            "textColor": "#33B6FF"
+            "textColor": "#2A7BF4"
         }
     },
     {
-        "name": "Estações de bicicleta",
-        "description": "Estações de compartilhamento de bicicletas (bike sharing).",
+    "name": "Estações",
+        "description": "Estações de compartilhamento de bicicletas (bike sharing) de diferentes operadoras.",
         "filters": [
             ["amenity", "bicycle_rental"]
         ], 
         "type": "poi",
         "icon": "poi-rental",
+        "zoomThreshold": 15,
         "style": {
-            "textColor": "#FF8933"
+            "textColor": "#E56119"
         }
     },
     {
         "name": "Bicicletários",
-        "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos.",
+        "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos. Sempre verifique a qualidade e segurança oferecida!",
         "filters": [
             ["amenity", "bicycle_parking"]
         ],
         "type": "poi",
         "icon": "poi-bikeparking",
+        "zoomThreshold": 16.5,
         "style": {
-            "textColor": "#4DB269"
+            "textColor": "#2F904A"
         }
     },
     {
         "name": "Ciclovia",
+        "displayName": "Ciclovias",
         "description": "Vias exclusivas para bicicletas separadas fisicamente por meio fio, muretas ou outros tipos de segregação fixa.",
         "filters": [
             ["highway", "cycleway"],
@@ -123,13 +127,39 @@
             ["cycleway:left", "opposite_track"],
             ["cycleway:right", "opposite_track"]
         ],
+        "zoomThreshold": 15,
         "style": {
-            "lineColor": "#059669",
+            "lineColor": "#386641",
+            "lineColorDark": "#A7C957",
+            "textColor": "#FFFFFF",
+            "textColorDark": "#000000",
             "lineWidth": 8
         }
     },
     {
+        "name": "Calçada compartilhada",
+        "displayName": "Calçadas",
+        "description": "Calçadas com sinalização para circulação compartilhada de bicicletas em que pedestres possuem a prioridade. Oferece boa segurança por estar segregada dos carros, mas não é tão conveniente e nem é muito legal pros pedestres, né?",
+        "filters": [
+            [["highway","footway"],["bicycle","designated"]],
+            [["highway","pedestrian"],["bicycle","designated"]],
+            [["highway","pedestrian"],["bicycle","yes"]],
+            ["cycleway", "sidepath"],
+            ["cycleway:left", "sidepath"],
+            ["cycleway:right", "sidepath"]
+        ],
+        "style": {
+            "lineColor": "#386641",
+            "lineColorDark": "#A7C957",
+            "textColor": "#FFFFFF",
+            "textColorDark": "#000000",
+            "lineWidth": 8,
+            "lineStyle": "dashed"
+        }
+    },
+    {
         "name": "Ciclofaixa",
+        "displayName": "Ciclofaixas",
         "description": "Vias exclusivas para bicicletas porém sem segregação física, apenas demarcada por faixa pintada no chão ou outra sinalização",
         "filters": [
             ["cycleway", "lane"],
@@ -141,12 +171,16 @@
             ["cycleway:left", "opposite_lane"]
         ],
         "style": {
-            "lineColor": "#A1C181",
-            "lineWidth": 6
+            "lineColor": "#A7C957",
+            "lineColorDark": "#386641",
+            "textColor": "#000000",
+            "textColorDark": "#FFFFFF",
+            "lineWidth": 8
         }
     },
     {
         "name": "Ciclorrota",
+        "displayName": "Ciclorrotas",
         "description": "Vias compartilhadas com veículos motorizados com sinalização especial indica a preferência das bicicletas.",
         "filters": [
             ["cycleway", "buffered_lane"],
@@ -161,28 +195,17 @@
             ["cycleway", "opposite_share_busway"]
         ],
         "style": {
-            "lineColor": "#E9C46A",
-            "lineWidth": 4
-        }
-    },
-    {
-        "name": "Calçada compartilhada",
-        "description": "Calçadas com sinalização para circulação compartilhada de bicicletas em que pedestres possuem a prioridade.",
-        "filters": [
-            [["highway","footway"],["bicycle","designated"]],
-            [["highway","pedestrian"],["bicycle","designated"]],
-            [["highway","pedestrian"],["bicycle","yes"]],
-            ["cycleway", "sidepath"],
-            ["cycleway:left", "sidepath"],
-            ["cycleway:right", "sidepath"]
-        ],
-        "style": {
-            "lineColor": "#E76F51",
-            "lineWidth": 4
+            "lineColor": "#A7C957",
+            "lineColorDark": "#386641",
+            "textColor": "#000000",
+            "textColorDark": "#FFFFFF",
+            "lineWidth": 8,
+            "lineStyle": "dashed"
         }
     },
     {
         "name": "Baixa velocidade",
+        "displayName": "Residenciais",
         "description": "Vias com limite de velocidade regulamentado de até 30km/h.",
         "isActive": false,
         "filters": [
@@ -191,13 +214,15 @@
             [["highway","living_street"],["bicycle","yes"]]
         ],
         "style": {
-            "lineColor": "#FF8A00",
-            "lineWidth": 2,
+            "lineColor": "#4FA0AD",
+            "textColor": "#FFFFFF",
+            "lineWidth": 4,
             "lineStyle": "dashed"
         }
     },
     {
         "name": "Trilha",
+        "displayName": "Trilhas",
         "description": "Caminhos geralmente não pavimentados com acesso permitido ou destinado a bicicleta.",
         "isActive": false,
         "filters": [
@@ -207,13 +232,16 @@
             [["highway","path"],["bicycle","yes"]]
         ],
         "style": {
-            "lineColor": "#996633",
+            "lineColor": "#583707",
+            "lineColorDark": "#DC7C3B",
+            "textColor": "#FFFFFF",
             "lineWidth": 2,
             "lineStyle": "dashed"
         }
     },
     {
         "name": "Proibido",
+        "displayName": "Proibidas",
         "description": "Vias onde é proibido pedalar em cima da bicicleta, mas você pode desmontar e passar empurrando ela.",
         "isActive": false,
         "filters": [
@@ -221,7 +249,8 @@
             ["bicycle", "dismount"]
         ],
         "style": {
-            "lineColor": "#F5222D",
+            "lineColor": "#B61815",
+            "textColor": "#FFFFFF",
             "lineWidth": 2,
             "lineStyle": "dashed"
         }

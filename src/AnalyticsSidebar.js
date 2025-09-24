@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import { Popover, Button } from 'antd';
 
+import './AnalyticsSidebar.css';
+
 import { PieChart, Pie } from 'recharts';
 
 import { 
@@ -12,7 +14,7 @@ import {
     MdDataUsage as IconAnalytics,
 } from "react-icons/md";
 
-import { removeAccents } from './utils.js';
+import { removeAccents, adjustColorBrightness } from './utils.js';
 import AirtableDatabase from './AirtableDatabase.js'
 
 import {
@@ -64,6 +66,22 @@ class AnalyticsSidebar extends Component {
         }
     }
 
+    generatePatterns(layers) {
+        return layers
+            .filter(l => l.style && l.style.lineStyle === 'dashed')
+            .map(l => (
+                <pattern 
+                    key={`pattern-${l.id}`}
+                    id={`pattern-${l.id}`} 
+                    width="4" 
+                    height="4" 
+                    patternUnits="userSpaceOnUse" 
+                >
+                    <circle cx="2" cy="2" r="1.5" fill={l.style.lineColor} />
+                </pattern>
+            ));
+    }
+
     updateData() {
         const { lengths, layers } = this.props;
 
@@ -79,10 +97,11 @@ class AnalyticsSidebar extends Component {
                         l.id === 'ciclofaixa' ||
                         l.id === 'ciclorrota' ||
                         l.id === 'calcada-compartilhada')
+                    .filter(l => lengths && Math.floor(lengths[l.id]) > 0)
                     .map(l => lengths && 
                         {
                             value: lengths[l.id],
-                            fill: l.style.lineColor
+                            fill: l.style.lineStyle === 'solid' ? l.style.lineColor : `url(#pattern-${l.id})`,
                         }
                     )
             });
@@ -133,9 +152,8 @@ class AnalyticsSidebar extends Component {
             <div
                 id="analyticsSidebar"
                 className={`
-                    background-black border-l border-opacity-10 border-white h-screen ${this.state.open ? 'w-60 overflow-y-auto flex-none' : ''}
+                    border-l border-opacity-10 border-white h-screen ${this.state.open ? 'w-60 overflow-y-auto flex-none' : ''}
                     transform transition-transform duration-500 ${this.state.open ? '' : 'translate-x-full'}`}
-                style={{background: '#211F1C'}}
             >
                 <div className="px-4">
                     <div className="flex w-full justify-between items-center pt-2 mt-1">
@@ -219,7 +237,7 @@ class AnalyticsSidebar extends Component {
                                 Para vias que tem estrutura dos dois lados nós desenvolvemos um método que automaticamente detecta estes casos e remove esta contagem dupla do total.
                             </p>
                             <p className="italic opacity-50 text-xs">
-                                Estes números podem não corresponder à realidade. Eles não são dados oficiais e dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap e da precisão do nosso método de detecção automática de contagens duplas.
+                                Estes números não são dados oficiais e podem não corresponder à realidade. Eles dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap.
                             </p>
                         </>}
                     >
@@ -230,6 +248,9 @@ class AnalyticsSidebar extends Component {
 
                         <div className="relative">
                             <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
+                                <defs>
+                                    {this.generatePatterns(layers)}
+                                </defs>
                                 <Pie
                                     data={this.state.chartsData} dataKey="value"
                                     cx={'50%'} cy={'50%'}
@@ -267,8 +288,9 @@ class AnalyticsSidebar extends Component {
                                             name={l.name}
                                             key={l.name}
                                             length={lengths && lengths[l.id]}
-                                            percent={lengths && lengths[l.id] * 100 / this.state.totalLength}
-                                            color={l.style.lineColor}
+                                            percent={lengths && Math.floor(lengths[l.id] * 100 / this.state.totalLength) || 0}
+                                            lineStyle={l.style.lineStyle}
+                                            lineColor={l.style.lineColor}
                                             unit="km"
                                         />
                                     )
@@ -279,11 +301,8 @@ class AnalyticsSidebar extends Component {
                     <Section
                         title="Pontos de interesse"
                         description={<>
-                            <p>
-                                Contagem total dos pontos de interesse do ciclista de cada um dos tipos com que o CicloMapa trabalha.
-                            </p>
                             <p className="italic opacity-50 text-xs">
-                                Estes números podem não corresponder à realidade. Eles não são dados oficiais e dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap.
+                                Estes números não são dados oficiais e podem não corresponder à realidade. Eles dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap.
                             </p>
                         </>}
                     >
@@ -315,15 +334,19 @@ const DataLineWithBarChart = (props) =>
     <div className="mb-2"> 
         <DataLine {...props}/>
 
-        <div className="w-full h-1 relative bg-white bg-opacity-10 mt-1">
-            <div 
-                className="h-1"
-                style={{ 
-                    transition: 'width 1500ms ease',
-                    background: props.color,
-                    width: (props.percent || 0) + '%'
-                }}> 
-            </div>
+        <div className="w-full h-1 relative bg-white bg-opacity-10 mt-1 rounded-full">
+            { props.percent > 0 &&
+                <div 
+                    className="h-1 rounded-full"
+                    style={{ 
+                        transition: 'width 1500ms ease',
+                        background: props.lineStyle === 'solid' 
+                            ? props.lineColor
+                            : `repeating-linear-gradient(90deg, ${props.lineColor}, ${props.lineColor} 4px, transparent 4px, transparent 6px)`,
+                        width: (props.percent || 0) + '%'
+                    }}> 
+                </div>
+            }
         </div>
     </div>
 

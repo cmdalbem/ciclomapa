@@ -1,0 +1,7 @@
+body.theme-dark #analyticsSidebar {
+    background: #1a1a1a;
+}
+
+body.theme-light #analyticsSidebar {
+    background: #ffffff;
+}

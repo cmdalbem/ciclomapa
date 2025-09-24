@@ -1,15 +1,26 @@
-// @import './theme.less';
+// Import dark theme by default (existing behavior)
 @import './antd.customize.less';
 
 body {
     margin: 0;
     padding: 0;
+    transition: background-color 0.3s ease;
+}
 
-    background: #211f1c;
+button.ant-btn {
+  border-radius: 99px !important;
+}
+
+.theme-dark body {
+    background: #1a1a1a;
 }
 
 *, .mapboxgl-ctrl-geocoder--input {
     font-family: 'IBM Plex Sans', sans-serif;
+}
+
+a {
+  color: inherit;
 }
 
 #gradient-backdrop {
@@ -20,40 +31,224 @@ body {
     right: 0;
     left: 0;
     pointer-events: none;
+    transition: box-shadow 0.3s ease;
+
+    display: none;
     
-    // background: linear-gradient(90deg, #211f1c 0%, transparent 30%, transparent 70%, #282622 100%);
-    // background: radial-gradient(circle, transparent 60%, #211f1c 100%);
-    box-shadow: inset 0px 60px 100px 0px #211f1c;
+    // background: linear-gradient(90deg, #1a1a1a 0%, transparent 30%, transparent 70%, #282622 100%);
+    // background: radial-gradient(circle, transparent 60%, #1a1a1a 100%);
+}
+
+.theme-light #gradient-backdrop {
+    box-shadow: inset 0px 60px 100px 0px #EDEEED;
+}
+
+.theme-dark #gradient-backdrop {
+    box-shadow: inset 0px 60px 100px 0px #1a1a1a;
+}
+
+.loader-container {
+    /* --color1: #65df97;
+    --color2: orange;
+    --color3: #996633;
+    --color4: red; */
+
+    --color1: #059669;
+    --color2: #b4fad0;
+    --color3: #f8c9ae;
+    --color4: #FFA500;
+    
+    --spinner-size: 60px;
+    --progress-bar-height: 4px;
+} 
+
+#spinnersvg {
+  width: var(--spinner-size);
+  animation: rotate 1.5s linear infinite;
+}
+
+#spinnersvg .path {
+  stroke-dasharray: 1, 200;
+  stroke-dashoffset: 0;
+  animation: dash 1s ease-in-out infinite, color 6s ease-in-out infinite;
+  stroke-linecap: round;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dash {
+  0% {
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 89, 200;
+    stroke-dashoffset: -35px;
+  }
+  100% {
+    stroke-dasharray: 89, 200;
+    stroke-dashoffset: -124px;
+  }
+}
+
+@keyframes color {
+  100%,
+  0% {
+    stroke: var(--color1);
+  }
+  40% {
+    stroke: var(--color2);
+  }
+  66% {
+    stroke: var(--color3);
+  }
+  80%,
+  90% {
+    stroke: var(--color4);
+  }
+}
+
+/* Thanks https://codepen.io/salazarr-js/pen/aJdmvw */
+.progress-materializecss {
+//   margin: 5px 0;
+  position: relative;
+  height: var(--progress-bar-height);
+  display: block;
+  width: 100%;
+//   background-color: #27272A;
+  /* border-radius: 2px; */
+//   margin: 0.5rem 0 1rem 0;
+  overflow: hidden;
+}
+.indeterminate {
+  animation: bgColors 6s ease-in-out infinite;
+}
+.indeterminate:before {
+  content:          '';
+  position:         absolute;
+  background-color: inherit;
+  top:              0;
+  left:             0;
+  bottom:           0;
+  will-change:      left, right;
+  animation:        indeterminate 2.1s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
+}
+.indeterminate:after {
+  content:          '';
+  position:         absolute;
+  background-color: inherit;
+  top:              0;
+  left:             0;
+  bottom:           0;
+  will-change:      left, right;
+  animation:        indeterminate-short 2.1s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+  animation-delay: 1.15s;
+}
+
+@keyframes bgColors {
+  100%,
+  0% {
+    background-color: var(--color1);
+  }
+  40% {
+    background-color: var(--color2);
+  }
+  66% {
+    background-color: var(--color3);
+  }
+  80%,
+  90% {
+    background-color: var(--color4);
+  }
+}
+
+@keyframes indeterminate {
+  0% {
+    left: -35%;
+    right: 100%;
+  }
+  60% {
+    left: 100%;
+    right: -90%;
+  }
+  100% {
+    left: 100%;
+    right: -90%;
+  }
+}
+
+@keyframes indeterminate-short {
+  0% {
+    left: -200%;
+    right: 100%;
+  }
+  60% {
+    left: 107%;
+    right: -8%;
+  }
+  100% {
+    left: 107%;
+    right: -8%;
+  }
+}
+
+.glass-bg {
+  backdrop-filter: blur(10px);
+}
+
+.theme-light {
+  .glass-bg {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+}
+
+.theme-dark {
+  .glass-bg {
+      background: rgba(23, 23, 23, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+  }
 }
 
 // Transition-in effect
-#ciclomapa #analyticsSidebar,
-#ciclomapa #mapSwitcher,
-#ciclomapa .mapboxgl-ctrl-group,
-#ciclomapa .mapboxgl-ctrl-geocoder,
-#ciclomapa #layersPanel,
-#ciclomapa #layersPanelMobileButton,
-#ciclomapa #topbar {
-    transition: transform 1000ms, opacity 1000ms;
-    transition-delay: 1s;
-    opacity: 1;
-}
+// #ciclomapa #analyticsSidebar,
+// #ciclomapa #mapSwitcher,
+// #ciclomapa .mapboxgl-ctrl-group,
+// #ciclomapa .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder,
+// #ciclomapa #layersPanel,
+// #ciclomapa #layersPanelMobileButton,
+// #ciclomapa #directionsPanel,
+// #ciclomapa #directionsPanelMobileButton,
+// #ciclomapa #topbar {
+//     transition: transform 1000ms, opacity 1000ms;
+//     transition-delay: 1s;
+//     opacity: 1;
+// }
 
-#ciclomapa.hideUI #topbar {
-    transform: translateY(-100%);
-    opacity: 0;
-}
+// // From the top
+// #ciclomapa.hideUI #topbar,
+// #ciclomapa.hideUI #directionsPanel {
+//     transform: translateY(-100%);
+//     opacity: 0;
+// }
 
-#ciclomapa.hideUI #layersPanel,
-#ciclomapa.hideUI #layersPanelMobileButton {
-    transform: translateX(-100%);
-    opacity: 0;
-}
+// // From the left
+// #ciclomapa.hideUI #layersPanel,
+// #ciclomapa.hideUI #directionsPanelMobileButton,
+// #ciclomapa.hideUI #layersPanelMobileButton {
+//     transform: translateX(-100%);
+//     opacity: 0;
+// }
 
-#ciclomapa.hideUI #mapSwitcher,
-#ciclomapa.hideUI #analyticsSidebar,
-#ciclomapa.hideUI .mapboxgl-ctrl-group,
-#ciclomapa.hideUI .mapboxgl-ctrl-geocoder {
-    transform: translateX(100%);
-    opacity: 0;
-}
+// // From the right
+// #ciclomapa.hideUI #mapSwitcher,
+// #ciclomapa.hideUI #analyticsSidebar,
+// #ciclomapa.hideUI .mapboxgl-ctrl-group,
+// #ciclomapa.hideUI .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder {
+//     transform: translateX(100%);
+//     opacity: 0;
+// }

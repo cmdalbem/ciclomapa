@@ -27,12 +27,15 @@ import {
     // HiChartPie as IconAnalytics,
     HiOutlineOfficeBuilding as IconCity,
     HiChatAlt as IconComment,
+    HiSun as IconSun,
+    HiMoon as IconMoon,
 } from "react-icons/hi"
 
 import { IconContext } from "react-icons";
 
 import {
-    timeSince
+    timeSince,
+    getOsmUrl
 } from './utils.js'
 
 import {
@@ -42,6 +45,7 @@ import {
 } from './constants'
 
 import EditModal from './EditModal.js'
+import Logo from './Logo.js'
 
 import './TopBar.css'
 
@@ -55,7 +59,6 @@ class TopBar extends Component {
         this.onEditModalCheckboxChange = this.onEditModalCheckboxChange.bind(this);
         
         this.handleMenuClick = this.handleMenuClick.bind(this);
-        this.getOsmUrl = this.getOsmUrl.bind(this);
 
         this.state = {
             editModal: false,
@@ -97,14 +100,6 @@ class TopBar extends Component {
         }
     }
 
-    getOsmUrl() {
-        let { lat, lng, z } = this.props;
-
-        // Compensate different zoom levels from Mapbox to OSM Editor
-        z = Math.ceil(z) + 1;
-
-        return `https://www.openstreetmap.org/edit#map=${z}/${lat}/${lng}`;
-    }
 
     render() {
         let {
@@ -112,7 +107,10 @@ class TopBar extends Component {
             lastUpdate,
             forceUpdate,
             downloadData,
-            embedMode
+            embedMode,
+            isDarkMode,
+            toggleTheme,
+            loading
         } = this.props;
 
         const parts = title.split(',');
@@ -139,7 +137,7 @@ class TopBar extends Component {
                             <a
                                 className="inline-block w-full hover:text-white"
                                 target="_BLANK" rel="noopener noreferrer"
-                                href={this.getOsmUrl()}
+                                href={getOsmUrl(this.props.lat, this.props.lng, this.props.z)}
                             >
                                 Editar no OSM
                             </a>
@@ -161,33 +159,46 @@ class TopBar extends Component {
                         {
                             !IS_MOBILE &&
                             <a href="/" className={embedMode ? 'opacity-25' : ''}>
-                                <img src="logo.svg" alt="CicloMapa"></img>
+                                <Logo />
                             </a>
                         }
 
                         {
                             !embedMode && 
                             <div className={`city-picker sm:text-center ${IS_MOBILE && 'w-full'}`}>
-                                <div className={`mb-1 sm:mb-1 ${IS_MOBILE && 'w-full'}`}>
-                                    <Button
-                                        block={IS_MOBILE}
-                                        onClick={this.showCityPicker}
-                                    >
-                                        <h3 className="flex items-center justify-between">
-                                            <span className="mr-3">
-                                                <span className="font-bold">
-                                                    {city},
+                                <div className={`flex mb-1 sm:mb-1`}>
+                                    <div className={`relative ${IS_MOBILE && 'w-full'} rounded-full overflow-hidden`}>
+                                        <Button
+                                            className="glass-bg"
+                                            block={IS_MOBILE}
+                                            size={IS_MOBILE ? "large" : "middle"}
+                                            onClick={this.showCityPicker}
+                                        >
+                                            <h3 className="flex items-center justify-between">
+                                                <span className="mr-3">
+                                                    <span className="font-bold">
+                                                        {city},
+                                                    </span>
+
+                                                    {state}
                                                 </span>
 
-                                                {state}
-                                            </span>
+                                                <IconCaret className="text-green-300"/>
+                                            </h3>
+                                        </Button>
+                                        {
+                                            loading &&
+                                            <div className="loader-container h-1 absolute bottom-0 left-0 right-0">
+                                                <div className="progress-materializecss">
+                                                    <div className="indeterminate"></div>
+                                                </div> 
+                                            </div>
+                                        } 
+                                    </div> 
 
-                                            <IconCaret className="text-green-300"/>
-                                        </h3>
-                                    </Button>
 
                                     {
-                                        lastUpdate && !IS_MOBILE &&
+                                        !IS_MOBILE &&
                                         <Popover
                                             trigger={IS_MOBILE ? 'click' : 'hover'}
                                             placement="bottom"
@@ -195,9 +206,12 @@ class TopBar extends Component {
                                             content={(
                                                 <div style={{ maxWidth: 250 }}>
                                                     <Space size="small" direction="vertical" >
-                                                        <div>
-                                                            O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
-                                                        </div> 
+                                                        {
+                                                            lastUpdate &&
+                                                            <div>
+                                                                O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
+                                                            </div> 
+                                                        }
 
                                                         <Button
                                                             size="small"
@@ -225,6 +239,10 @@ class TopBar extends Component {
                         <div className="nav-links font-white">
                             {
                                 !embedMode ? <div className="hidden sm:block">
+                                    <Button type="link" className="" shape="circle" onClick={() => toggleTheme()}>
+                                        {isDarkMode ? <IconSun /> : <IconMoon />}
+                                    </Button>
+
                                     <Button className="ml-2"
                                         type="link"
                                         onClick={this.props.openAboutModal}
@@ -233,19 +251,19 @@ class TopBar extends Component {
                                     </Button>
 
                                     <Dropdown overlay={collaborateMenu}>
-                                        <Button className="ml-2">
+                                        <Button className="glass-bg ml-2">
                                             <span className="mr-2"> Colaborar </span>
                                             <IconCaret className="text-green-300" />
                                         </Button>
                                     </Dropdown>
                                     
-                                    <Button className="ml-2" onClick={downloadData}>
+                                    <Button className="glass-bg ml-2" onClick={downloadData}>
                                         <IconDownload /> Dados
                                     </Button>
 
                                     {
                                         !this.props.isSidebarOpen &&
-                                        <Button className="ml-2" onClick={() => this.props.toggleSidebar(true)}>
+                                        <Button className="glass-bg ml-2" onClick={() => this.props.toggleSidebar(true)}>
                                             <IconAnalytics/> Métricas
                                         </Button>
                                     }
@@ -261,7 +279,9 @@ class TopBar extends Component {
 
                 <EditModal
                     visible={this.state.editModal}
-                    getOsmUrl={this.getOsmUrl}
+                    lat={this.props.lat}
+                    lng={this.props.lng}
+                    z={this.props.z}
                     onClose={this.closeEditModal}
                     onCheckboxChange={this.onEditModalCheckboxChange}
                 />

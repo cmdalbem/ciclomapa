@@ -4,21 +4,25 @@
   "private": true,
   "homepage": "https://ciclomapa.org.br",
   "engines": {
-  "node": ">=22.0.0 <23.0.0"
+    "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
     "@craco/craco": "^7.1.0",
     "@mapbox/mapbox-gl-geocoder": "^5.0.3",
     "@mapbox/mapbox-sdk": "^0.16.1",
     "@turf/length": "^7.2.0",
+    "@turf/line-overlap": "^7.2.0",
     "antd": "^4.14.0",
+    "aws-sdk": "^2.1692.0",
     "craco-less": "^3.0.1",
     "file-saver": "^2.0.5",
     "firebase": "^8.3.1",
     "gh-pages": "^6.3.0",
     "idb-keyval": "^6.2.1",
     "jquery": "^3.6.0",
+    "lodash.debounce": "^4.0.8",
     "mapbox-gl": "^3.9.2",
+    "mapbox-pmtiles": "^1.0.54",
     "osmtogeojson": "^3.0.0-beta.4",
     "pako": "^2.0.3",
     "react": "^18.0.0",
@@ -37,7 +41,8 @@
     "test": "craco test",
     "eject": "react-scripts eject",
     "predeploy": "yarn run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "dev:vercel": "vercel dev"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -53,5 +58,14 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.4",
+    "@babel/plugin-proposal-class-properties": "^7.18.6",
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@babel/preset-env": "^7.28.3",
+    "@babel/preset-typescript": "^7.27.1",
+    "babel-loader": "^10.0.0",
+    "vercel": "^48.0.1"
   }
 }

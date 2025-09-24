@@ -9,11 +9,9 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 
 // Render the app using the new root API
 root.render(
-  <React.StrictMode>
-    <Router>
-      <App ref={(app) => { window.ciclomapa = app }} />
-    </Router>
-  </React.StrictMode>
+  <Router>
+    <App ref={(app) => { window.ciclomapa = app }} />
+  </Router>
 );
 
 // If you want your app to work offline and load faster, you can change

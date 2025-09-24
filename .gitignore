@@ -8,3 +8,8 @@ yarn-debug.log*
 yarn-error.log*
 .npm/
 .vercel
+
+# Environment variables
+.env
+.env.local
+.env.production

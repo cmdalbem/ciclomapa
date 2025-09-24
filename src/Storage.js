@@ -32,6 +32,10 @@ class Storage {
     db;
     dataBuffer;
     
+    // Constants for new chunking strategy
+    static MAX_DOCUMENT_SIZE = 800 * 1024; // 800KB to stay under Firestore's 1MB limit
+    static ESTIMATED_OVERHEAD = 1000; // bytes for Firestore metadata
+    
     constructor() {
         if (!firebase.apps.length) {
             firebase.initializeApp({
@@ -148,98 +152,35 @@ class Storage {
                 updatedAt: now
             });
 
-            // Save to Firestore
+            // Save to Firestore using new chunked format
             try {
-                const compressed = this.compressJson(geoJson);
-
-                // Save calculated lengths
-                // @todo: add updatedAt field
-                console.debug(`[Firebase] Saving lengths for ${name}...`, lengths);
+                console.debug(`[Firebase] Saving GeoJSON ${name} using new chunked format...`);
+                
+                // Save calculated lengths first
                 this.saveStatsToFirestore(name, lengths)
                     .then(() => {
                         console.debug(`[Firebase] Lengths for ${name} saved successfully.`);
                     })
                     .catch(error => {
                         console.error("[Firebase] Error saving lengths: ", error);
-                        reject();
-                    });  
-
-                // Save GeoJSON data
-                // 
-                // @todo This looks horrible, I know. Here's how it could be improved:
-                //   - Better estimate package size and compare with Firestore limitations;
-                //   - Rewrite function to be generic (prob. a recursive approach is a good idea);
-                //   - Migrate storage to use other product or technology with less limitations.
-                // 
-                console.debug(`[Firebase] Saving GeoJSON ${name}...`, geoJson);
-                this.saveGeoJSONToFirestore(name, compressed, lengths)
-                    .then(() => {
-                        console.debug(`[Firebase] GeoJSON ${name} saved successfully.`);
-                        resolve();
-                    }).catch(error => {
-                        console.debug('[Firestore] Failed to save GeoJSON in 1 part, splitting in 2...')
-
-                        const part1 = compressed.slice(0, Math.ceil(compressed.length/2));
-                        const part2 = compressed.slice(Math.ceil(compressed.length/2));
-
-                        this.saveGeoJSONToFirestore(name, part1, lengths, 1) 
-                        .then(() => {
-                            console.debug(`[Firebase] GeoJSON ${name} (1/2) saved successfully.`);
-
-                            this.saveGeoJSONToFirestore(name, part2, lengths, 2)
-                            .then(() => {
-                                console.debug(`[Firebase] GeoJSON ${name} (2/2) saved successfully.`);
-                                resolve();
-                            }).catch(error => {
-                                console.error(`[Firebase] Error saving GeoJSON ${name} (2/2): `, error);
-                                reject();
-                            });
-                        }).catch(error => {
-                            console.debug('[Firestore] Failed to save GeoJSON in 2 parts, splitting in 4...')
-                            
-                            const divider = Math.ceil(compressed.length / 4);
-                            const partb1 = compressed.slice(0, divider);
-                            const partb2 = compressed.slice(divider, divider * 2);
-                            const partb3 = compressed.slice(divider * 2, divider * 3);
-                            const partb4 = compressed.slice(divider * 3, divider * 4);
-
-                            this.saveGeoJSONToFirestore(name, partb1, lengths, 1)
-                            .then(() => {
-                                console.debug(`[Firebase] GeoJSON ${name} (1/4) saved successfully.`);
-
-                                this.saveGeoJSONToFirestore(name, partb2, lengths, 2)
-                                .then(() => {
-                                    console.debug(`[Firebase] GeoJSON ${name} (2/4) saved successfully.`);
-
-                                    this.saveGeoJSONToFirestore(name, partb3, lengths, 3)
-                                    .then(() => {
-                                        console.debug(`[Firebase] GeoJSON ${name} (3/4) saved successfully.`);
-
-                                        this.saveGeoJSONToFirestore(name, partb4, lengths, 4)
-                                        .then(() => {
-                                            console.debug(`[Firebase] GeoJSON ${name} (4/4) saved successfully.`);
-                                            resolve();
-                                        }).catch(error => {
-                                            console.error(`[Firebase] Error saving GeoJSON ${name} (4/4): `, error);
-                                            reject();
-                                        });
-                                    }).catch(error => {
-                                        console.error(`[Firebase] Error saving GeoJSON ${name} (3/4): `, error);
-                                        reject();
-                                    });
-                                }).catch(error => {
-                                    console.error(`[Firebase] Error saving GeoJSON ${name} (2/4): `, error);
-                                    reject();
-                                });
-                            }).catch(error => {
-                                console.error(`[Firebase] Error saving GeoJSON ${name} (1/4): `, error);
-                                reject();
-                            });   
-                        });        
+                        reject(error);
+                        return;
                     });
+
+                // Save GeoJSON data using new chunking strategy
+                this.saveWithChunking(name, geoJson, lengths)
+                    .then(() => {
+                        console.debug(`[Firebase] GeoJSON ${name} saved successfully using new format.`);
+                        resolve();
+                    })
+                    .catch(error => {
+                        console.error(`[Firebase] Error saving GeoJSON ${name}: `, error);
+                        reject(error);
+                    });
+
             } catch (e) {
                 console.error(e);
-                reject();
+                reject(e);
             }
         });
     }
@@ -292,19 +233,159 @@ class Storage {
         // console.table(valuesTable);
     }
 
+    // New chunking strategy methods
+    async saveWithChunking(name, geoJson, lengths) {
+        const compressed = this.compressJson(geoJson);
+        const slug = slugify(name);
+        
+        // Calculate optimal chunk size
+        const chunkSize = this.calculateOptimalChunkSize(compressed);
+        const chunks = this.createChunks(compressed, chunkSize);
+        
+        console.debug(`[Storage] Splitting ${name} into ${chunks.length} chunks (${compressed.length} bytes total)`);
+        
+        // Save metadata first
+        await this.db.collection(DEFAULT_CITIES_COLLECTION)
+            .doc(`${slug}_metadata`)
+            .set({
+                name: name,
+                totalChunks: chunks.length,
+                totalSize: compressed.length,
+                lengths: lengths,
+                updatedAt: new Date(),
+                format: 'chunked_v1'
+            });
+        
+        // Save chunks in parallel
+        const chunkPromises = chunks.map((chunk, index) => 
+            this.db.collection(DEFAULT_CITIES_COLLECTION)
+                .doc(`${slug}_chunk_${index + 1}`)
+                .set({
+                    data: chunk,
+                    chunkNumber: index + 1,
+                    totalChunks: chunks.length
+                })
+        );
+        
+        await Promise.all(chunkPromises);
+        
+        // Clean up old format data if it exists
+        await this.cleanupOldFormat(name);
+        
+        console.debug(`[Storage] Successfully saved ${name} using new chunked format (${chunks.length} chunks)`);
+    }
+    
+    calculateOptimalChunkSize(compressed) {
+        const availableSize = Storage.MAX_DOCUMENT_SIZE - Storage.ESTIMATED_OVERHEAD;
+        const chunksNeeded = Math.ceil(compressed.length / availableSize);
+        return Math.ceil(compressed.length / chunksNeeded);
+    }
+    
+    createChunks(data, chunkSize) {
+        const chunks = [];
+        for (let i = 0; i < data.length; i += chunkSize) {
+            chunks.push(data.slice(i, i + chunkSize));
+        }
+        return chunks;
+    }
+    
+    async cleanupOldFormat(name) {
+        const slug = slugify(name);
+        
+        // Delete old format documents
+        const oldDocs = [
+            slug,           // Main document
+            slug + '2',     // Part 2
+            slug + '3',     // Part 3
+            slug + '4'      // Part 4
+        ];
+        
+        const deletePromises = oldDocs.map(docId => 
+            this.db.collection(DEFAULT_CITIES_COLLECTION).doc(docId).delete()
+                .catch(error => {
+                    // Ignore errors if document doesn't exist
+                    console.debug(`[Storage] Could not delete old document ${docId}:`, error.message);
+                })
+        );
+        
+        await Promise.all(deletePromises);
+        console.debug(`[Storage] Cleaned up old format documents for ${name}`);
+    }
+    
+    async tryLoadNewFormat(slug) {
+        try {
+            // Check if metadata document exists (indicates new format)
+            const metadataDoc = await this.db.collection(DEFAULT_CITIES_COLLECTION)
+                .doc(`${slug}_metadata`)
+                .get();
+                
+            if (!metadataDoc.exists) {
+                return null; // Old format
+            }
+            
+            const metadata = metadataDoc.data();
+            console.debug(`[Storage] Found new format metadata for ${slug}: ${metadata.totalChunks} chunks`);
+            
+            // Load all chunks in parallel
+            const chunkPromises = [];
+            for (let i = 1; i <= metadata.totalChunks; i++) {
+                chunkPromises.push(this.loadChunk(slug, i));
+            }
+            
+            const chunks = await Promise.all(chunkPromises);
+            
+            // Reassemble data
+            const compressed = chunks.join('');
+            const geoJson = this.decompressData(compressed);
+            
+            return {
+                geoJson: geoJson,
+                updatedAt: metadata.updatedAt.toDate(),
+                lengths: metadata.lengths
+            };
+            
+        } catch (error) {
+            console.debug(`[Storage] New format load failed for ${slug}:`, error);
+            return null;
+        }
+    }
+    
+    async loadChunk(slug, chunkNumber) {
+        const doc = await this.db.collection(DEFAULT_CITIES_COLLECTION)
+            .doc(`${slug}_chunk_${chunkNumber}`)
+            .get();
+            
+        if (!doc.exists) {
+            throw new Error(`Chunk ${chunkNumber} not found for ${slug}`);
+        }
+        
+        return doc.data().data;
+    }
+    
+    decompressData(compressed) {
+        try {
+            return parse(compressed); // Zipson
+        } catch (e) {
+            // Fallback to JSON.parse for old data
+            console.debug('[Storage] Zipson decompression failed, trying JSON.parse');
+            return JSON.parse(compressed);
+        }
+    }
+
     getDataFromDB(slug, resolve, reject, part) {
-        const slugWithPart = slug + (part ? part : '');
+        const slugWithPart = slug + (part || '');
         this.db.collection(DEFAULT_CITIES_COLLECTION).doc(slugWithPart).get().then(doc => {
             if (doc.exists) {
                 let data = doc.data();
 
-                console.debug("[Firebase] Document data:", data);
+                console.debug("[Firebase] Retrieved document data:", data);
 
                 if (!data.part || data.part === 1) {
                     // Recursion iteration 0
                     this.dataBuffer = {};
                     this.dataBuffer.geoJson = data.geoJson; 
                     this.dataBuffer.updatedAt = data.updatedAt; 
+                    this.dataBuffer.lengths = data.lengths;
                     return this.getDataFromDB(slug, resolve, reject, 2);
                 } else if (data.part >= 2) {
                     // Recursion iteration n
@@ -312,12 +393,13 @@ class Storage {
                     return this.getDataFromDB(slug, resolve, reject, data.part+1);
                 }
             } else {
-                console.debug("[Firebase] No document for: ", slug);
+                console.debug("[Firebase] No document for: ", slugWithPart);
 
                 // Check if recursion tail
                 if (!!part) {
                     let ret = {};
                     ret.updatedAt = this.dataBuffer.updatedAt.toDate();
+                    ret.lengths = this.dataBuffer.lengths;
     
                     try {
                         ret.geoJson = parse(this.dataBuffer.geoJson);
@@ -336,7 +418,7 @@ class Storage {
             }
         }).catch(error => {
             console.error(`[Firebase] Error getting document: ${slug}`, error);
-            reject();
+            reject(error);
         });
     }
 
@@ -349,11 +431,39 @@ class Storage {
                     if (local) {
                         resolve(local);
                     } else {
-                        this.getDataFromDB(slug, resolve, reject);
+                        // Try new chunked format first, then fallback to old format
+                        this.tryLoadNewFormat(slug)
+                            .then(data => {
+                                if (data) {
+                                    console.debug(`[Storage] Loaded ${name} using new chunked format`);
+                                    resolve(data);
+                                } else {
+                                    console.debug(`[Storage] Falling back to old format for ${name}`);
+                                    this.getDataFromDB(slug, resolve, reject);
+                                }
+                            })
+                            .catch(error => {
+                                console.error(`[Storage] Error loading ${name}:`, error);
+                                reject(error);
+                            });
                     }
                 })
             } else {
-                this.getDataFromDB(slug, resolve, reject);
+                // Try new chunked format first, then fallback to old format
+                this.tryLoadNewFormat(slug)
+                    .then(data => {
+                        if (data) {
+                            console.debug(`[Storage] Loaded ${name} using new chunked format`);
+                            resolve(data);
+                        } else {
+                            console.debug(`[Storage] Falling back to old format for ${name}`);
+                            this.getDataFromDB(slug, resolve, reject);
+                        }
+                    })
+                    .catch(error => {
+                        console.error(`[Storage] Error loading ${name}:`, error);
+                        reject(error);
+                    });
             }
         });
     }

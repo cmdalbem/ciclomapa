@@ -1,0 +1,1020 @@
+import React, { Component } from 'react';
+import { useDirections } from './DirectionsContext.js';
+import { Button, Input, Space, Divider, Tabs, Select } from 'antd';
+import { 
+    HiOutlineTrendingUp as IconTrendingUp,
+    HiOutlineTrendingDown as IconTrendingDown
+} from "react-icons/hi";
+import { LuBike as IconBike } from "react-icons/lu";
+import { FaDirections as IconRoute } from "react-icons/fa";
+import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash, HiOutlineExclamationTriangle as IconNoData } from "react-icons/hi2";
+import { HiCog as IconCog } from "react-icons/hi";
+import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
+import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
+import mapboxgl from 'mapbox-gl';
+import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
+import { Popover } from 'antd';
+
+
+import './DirectionsPanel.css';
+
+import { 
+    MAPBOX_ACCESS_TOKEN,
+    IS_PROD,
+    IS_MOBILE
+} from './constants.js'
+import DirectionsManager from './DirectionsManager.js'
+import { formatDistance, formatDuration } from './routeUtils.js'
+
+const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
+
+class DirectionsPanel extends Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            collapsed: IS_MOBILE,
+            fromGeocoderAttached: false,
+            toGeocoderAttached: false,
+            focusedInput: null,
+            selectedProvider: 'hybrid',
+            settingsVisible: false
+        };
+
+        this.fromMarker = null;
+        this.toMarker = null;
+        this.fromGeocoder = null;
+        this.toGeocoder = null;
+        this.blurTimeout = null;
+
+        this.toggleCollapse = this.toggleCollapse.bind(this);
+        this.clearDirections = this.clearDirections.bind(this);
+        this.selectRoute = this.selectRoute.bind(this);
+        this.handleRouteHover = this.handleRouteHover.bind(this);
+        this.handleRouteLeave = this.handleRouteLeave.bind(this);
+        this.handleRouteClick = this.handleRouteClick.bind(this);
+        this.handleMarkerDrag = this.handleMarkerDrag.bind(this);
+        this.handleInputFocus = this.handleInputFocus.bind(this);
+        this.handleInputBlur = this.handleInputBlur.bind(this);
+        this.handleMapClick = this.handleMapClick.bind(this);
+        this.attachGeocoderToDOM = this.attachGeocoderToDOM.bind(this);
+        this.calculateDirections = this.calculateDirections.bind(this);
+        this.swapOriginDestination = this.swapOriginDestination.bind(this);
+        this.handleProviderChange = this.handleProviderChange.bind(this);
+        this.toggleSettings = this.toggleSettings.bind(this);
+    }
+
+    componentDidMount() {
+        this.initGeocodersInterval = setInterval(() => {
+            if (this.props.map) {
+                this.initGeocoders();
+                this.setupMapClickListener();
+                clearInterval(this.initGeocodersInterval);
+            }
+        }, 100);
+
+        if (this.props.fromPoint) {
+            this.reverseGeocode({ lng: this.props.fromPoint.result.center[0], lat: this.props.fromPoint.result.center[1] }, 'from');
+        }
+        if (this.props.toPoint) {
+            this.reverseGeocode({ lng: this.props.toPoint.result.center[0], lat: this.props.toPoint.result.center[1] }, 'to');
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        if (this.props.map && !prevProps.map) {
+            console.debug('Map became available, initializing geocoders');
+            this.initGeocoders();
+            this.setupMapClickListener();
+        }
+        
+        if (this.props.map && prevProps.map && this.props.map !== prevProps.map) {
+            console.debug('Map reference changed, reattaching markers and click listener');
+            this.reattachMarkers();
+            this.setupMapClickListener();
+        }
+        
+        // Ensure map click listener is always attached when map is available
+        if (this.props.map && !this.mapClickListener) {
+            console.debug('Map available but no click listener, setting up');
+            this.setupMapClickListener();
+        }
+
+        if (this.props.fromPoint !== prevProps.fromPoint || this.props.toPoint !== prevProps.toPoint) {
+            console.debug('From or to point changed, recalculating directions');
+            if (this.props.fromPoint && this.props.toPoint) {
+                this.requestDirectionsCalculation();
+            }
+        }
+    }
+
+    componentWillUnmount() {
+        if (this.initGeocodersInterval) {
+            clearInterval(this.initGeocodersInterval);
+        }
+        if (this.blurTimeout) {
+            clearTimeout(this.blurTimeout);
+            this.blurTimeout = null;
+        }
+        this.cleanup();
+        this.removeMapClickListener();
+    }
+
+
+    initGeocoders() {
+        if (!this.props.map) {
+            console.debug('Map not available yet, waiting...');
+            return;
+        }
+
+        console.debug('Initializing geocoders with map:', this.props.map);
+
+        this.cleanup(false); // Don't remove map listener during geocoder reinit
+
+        // Initialize "From" geocoder
+        this.fromGeocoder = new MapboxGeocoder({
+            accessToken: MAPBOX_ACCESS_TOKEN,
+            mapboxgl: mapboxgl,
+            placeholder: 'Origem',
+            language: 'pt-BR',
+            flyTo: false,
+            countries: IS_PROD ? 'br' : '',
+            marker: false,
+            useBrowserFocus: true,
+            enableGeolocation: true
+        });
+
+        // Initialize "To" geocoder
+        this.toGeocoder = new MapboxGeocoder({
+            accessToken: MAPBOX_ACCESS_TOKEN,
+            mapboxgl: mapboxgl,
+            placeholder: 'Destino',
+            language: 'pt-BR',
+            flyTo: false,
+            countries: IS_PROD ? 'br' : '',
+            marker: false,
+            useBrowserFocus: true
+        });
+
+        // Add event listeners
+        this.fromGeocoder.on('result', (result) => {
+            console.debug('From point selected:', result);
+            this.handleGeocoderResult(result, 'from');
+        });
+
+        this.toGeocoder.on('result', (result) => {
+            console.debug('To point selected:', result);
+            this.handleGeocoderResult(result, 'to');
+        });
+
+        this.fromGeocoder.on('clear', () => {
+            this.removeMarker('from');
+            this.props.onFromPointChange(null);
+        });
+
+        this.toGeocoder.on('clear', () => {
+            this.removeMarker('to');
+            this.props.onToPointChange(null);
+        });
+
+        this.setState({
+            fromGeocoderAttached: false,
+            toGeocoderAttached: false
+        });
+    }
+
+    handleGeocoderResult(result, type) {
+        this.addMarker(type, result.result.center);
+        
+        if (type === 'from') {
+            this.props.onFromPointChange(result);
+        } else {
+            this.props.onToPointChange(result);
+        }
+        
+        this.requestDirectionsCalculation();
+        
+        if (type === 'from' && !this.props.toPoint) {
+            this.autoFocusDestinationInput();
+        }
+    }
+
+    autoFocusDestinationInput() {
+        // Wait for the geocoder to be attached to DOM
+        const tryFocus = () => {
+            const toGeocoderElement = this.toGeocoderElement;
+            if (toGeocoderElement) {
+                const destinationInput = toGeocoderElement.querySelector('input');
+                if (destinationInput) {
+                    if (this.blurTimeout) {
+                        clearTimeout(this.blurTimeout);
+                        this.blurTimeout = null;
+                    }
+                    
+                    destinationInput.focus();
+                    this.setState({ focusedInput: 'to' });
+                    console.debug('Auto-focused destination input after origin was set');
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        // Try immediately first
+        if (!tryFocus()) {
+            // If not available, try again after a short delay
+            setTimeout(() => {
+                if (!tryFocus()) {
+                    console.debug('Could not focus destination input - geocoder not ready');
+                }
+            }, 200);
+        }
+    }
+
+    addMarker(type, coordinates) {
+        this.removeMarker(type);
+        
+        const el = document.createElement('div');
+        el.className = `origin-destination-marker bg-white border border-white flex items-center justify-center rounded-full text-base text-black`;
+        el.innerHTML = type === 'from' ? 'A' : 'B';
+
+        el.addEventListener('mousedown', () => {
+            el.classList.add('custom-marker--dragging');
+        });
+
+        el.addEventListener('mouseup', () => {
+            el.classList.remove('custom-marker--dragging');
+        });
+
+        el.addEventListener('mouseleave', () => {
+            el.classList.remove('custom-marker--dragging');
+        });
+
+        const marker = new mapboxgl.Marker({
+            element: el,
+            draggable: true
+        }).setLngLat(coordinates);
+
+        marker.addTo(this.props.map);
+        marker.on('dragend', () => this.handleMarkerDrag(marker, type));
+        
+        this[`${type}Marker`] = marker;
+    }
+
+    removeMarker(type) {
+        const marker = this[`${type}Marker`];
+        if (marker) {
+            marker.remove();
+            this[`${type}Marker`] = null;
+        }
+    }
+
+    reattachMarkers() {
+        if (!this.props.map) return;
+
+        if (this.fromMarker) {
+            this.fromMarker.addTo(this.props.map);
+        }
+        if (this.toMarker) {
+            this.toMarker.addTo(this.props.map);
+        }
+    }
+
+    cleanup(removeMapListener = true) {
+        // Remove map click listener only if explicitly requested
+        if (removeMapListener) {
+            this.removeMapClickListener();
+        }
+        
+        // Remove geocoders from map if they exist
+        if (this.fromGeocoder && this.props.map) {
+            try {
+                this.fromGeocoder.onRemove(this.props.map);
+            } catch (error) {
+                console.debug('Error removing from geocoder:', error);
+            }
+        }
+        
+        if (this.toGeocoder && this.props.map) {
+            try {
+                this.toGeocoder.onRemove(this.props.map);
+            } catch (error) {
+                console.debug('Error removing to geocoder:', error);
+            }
+        }
+
+        // Remove custom markers
+        this.removeMarker('from');
+        this.removeMarker('to');
+
+        // Clear DOM containers
+        const fromContainer = document.getElementById('fromGeocoder');
+        const toContainer = document.getElementById('toGeocoder');
+        
+        if (fromContainer) {
+            fromContainer.innerHTML = '';
+        }
+        if (toContainer) {
+            toContainer.innerHTML = '';
+        }
+
+        this.setState({
+            fromGeocoderAttached: false,
+            toGeocoderAttached: false
+        });
+    }
+
+    toggleCollapse() {
+        this.clearDirections();
+        this.setState({
+            collapsed: !this.state.collapsed
+        });
+    }
+
+
+    async calculateDirections(fromCoords, toCoords, provider) {
+        if (this.props.setLoading) {
+            this.props.setLoading(true);
+        }
+        if (this.props.setError) {
+            this.props.setError(null);
+        }
+
+        try {
+            const result = await DirectionsManager.calculateDirections(
+                fromCoords, 
+                toCoords, 
+                provider, 
+                this.props.geoJson, 
+                this.props.layers
+            );
+
+            if (this.props.setDirectionsData) {
+                this.props.setDirectionsData(result);
+            }
+            
+        } catch (error) {
+            if (this.props.setError) {
+                this.props.setError(error.message);
+            }
+            if (this.props.setLoading) {
+                this.props.setLoading(false);
+            }
+            console.error('Directions error:', error);
+        }
+    }
+
+    requestDirectionsCalculation() {
+        if (this.props.fromPoint && this.props.toPoint) {
+            const fromCoords = this.props.fromPoint.result.center;
+            const toCoords = this.props.toPoint.result.center;
+            
+            console.debug('Requesting directions calculation from:', fromCoords, 'to:', toCoords);
+            this.calculateDirections(fromCoords, toCoords, this.state.selectedProvider);
+        } else {
+            console.debug('No from or to point, skipping directions calculation');
+        }
+    }
+
+    clearDirections() {
+        this.props.onClearRoutePoints();
+        
+        this.cleanup();
+        
+        // Reattach map click listener after cleanup
+        if (this.props.map) {
+            this.setupMapClickListener();
+        }
+        
+        if (this.props.onDirectionsCleared) {
+            this.props.onDirectionsCleared();
+        }
+    }
+
+
+
+    swapOriginDestination() {
+        const { fromPoint, toPoint } = this.props;
+        
+        if (!fromPoint || !toPoint) {
+            return;
+        }
+
+        // Swap the points
+        this.props.onFromPointChange(toPoint);
+        this.props.onToPointChange(fromPoint);
+        
+        // Update geocoder inputs
+        if (this.fromGeocoder && this.fromGeocoder.setInput) {
+            this.fromGeocoder.setInput(toPoint.result.place_name);
+        }
+        if (this.toGeocoder && this.toGeocoder.setInput) {
+            this.toGeocoder.setInput(fromPoint.result.place_name);
+        }
+
+        // Swap markers
+        const fromCoords = toPoint.result.center;
+        const toCoords = fromPoint.result.center;
+        
+        this.addMarker('from', fromCoords);
+        this.addMarker('to', toCoords);
+
+        // Recalculate directions with swapped points
+        this.requestDirectionsCalculation();
+    }
+
+    handleProviderChange(provider) {
+        this.setState({
+            selectedProvider: provider
+        });
+        
+        // Recalculate directions with the new provider if we have both points
+        if (this.props.fromPoint && this.props.toPoint) {
+            const fromCoords = this.props.fromPoint.result.center;
+            const toCoords = this.props.toPoint.result.center;
+            this.calculateDirections(fromCoords, toCoords, provider);
+        }
+    }
+
+    toggleSettings() {
+        this.setState({
+            settingsVisible: !this.state.settingsVisible
+        });
+    }
+
+    setDestinationFromMapClick(coordinates) {
+        this.addMarker('to', coordinates);
+
+        // Perform reverse geocoding to get the address and update state
+        this.reverseGeocode({ lng: coordinates[0], lat: coordinates[1] }, 'to');
+
+        // Check if we have both origin and destination for directions calculation
+        const hasFromPoint = this.props.fromPoint;
+        
+        if (hasFromPoint) {
+            // Calculate directions with the new destination
+            const fromCoords = hasFromPoint.result.center;
+            const toCoords = coordinates;
+            
+            console.debug('Requesting directions calculation from map click from:', fromCoords, 'to:', toCoords);
+            this.calculateDirections(fromCoords, toCoords, this.state.selectedProvider);
+        }
+    }
+
+    selectRoute(index) {
+        if (this.props.onRouteSelected) {
+            this.props.onRouteSelected(index);
+        }
+    }
+
+    handleRouteHover(routeIndex) {
+        if (this.props.onRouteHovered) {
+            this.props.onRouteHovered(routeIndex);
+        }
+    }
+
+    handleRouteLeave() {
+        if (this.props.onRouteHovered) {
+            this.props.onRouteHovered(null);
+        }
+    }
+
+    handleRouteClick(routeIndex) {
+        console.debug('Route clicked:', routeIndex);
+        this.selectRoute(routeIndex);
+    }
+
+    handleMarkerDrag(marker, type) {
+        const coordinates = marker.getLngLat();
+        console.debug(`${type} marker dragged to:`, coordinates);
+
+
+        this.reverseGeocode(coordinates, type);
+    }
+
+    reverseGeocode(coordinates, type) {
+        if (!coordinates) return;
+
+        const lngLat = [coordinates.lng, coordinates.lat];
+        console.debug(`Reverse geocoding for ${type} point:`, lngLat);
+
+        geocodingClient
+            .reverseGeocode({
+                query: lngLat,
+                types: ['address', 'poi', 'place'],
+                limit: 1,
+                language: ['pt-br']
+            })
+            .send()
+            .then(response => {
+                const features = response.body.features;
+                console.debug('Reverse geocode result:', features);
+
+                if (features && features[0]) {
+                    const place = features[0];
+                    const address = place.place_name || place.text || 'Nova posição';
+                    
+                    const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
+                    console.debug(`Setting input for ${type} geocoder:`, address);
+                    if (geocoder && geocoder.setInput && this[`${type}GeocoderElement`]) {
+                        geocoder.setInput(address);
+                    } else {
+                        console.warn(`No geocoder found for ${type} geocoder`);
+                    }
+
+                    const newPoint = {
+                        result: {
+                            center: lngLat,
+                            place_name: address,
+                            ...place
+                        }
+                    };
+
+                    // Update route state via hook
+                    if (type === 'from') {
+                        this.props.onFromPointChange(newPoint);
+                    } else {
+                        this.props.onToPointChange(newPoint);
+                    }
+                } else {
+                    const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
+                    console.debug(`Setting fallback input for ${type} geocoder`);
+                    if (geocoder && geocoder.setInput) {
+                        geocoder.setInput('Nova posição');
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Reverse geocoding error:', err);
+                const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
+                if (geocoder && geocoder.setInput) {
+                    geocoder.setInput('Nova posição');
+                }
+            });
+    }
+
+    setupMapClickListener() {
+        if (!this.props.map) {
+            console.debug('Map not available for click listener setup');
+            return;
+        }
+        
+        console.debug('Setting up map click listener');
+        
+        // Always remove existing listener first to ensure clean state
+        this.removeMapClickListener();
+        
+        // Add new click listener
+        this.mapClickListener = (e) => {
+            console.debug("Map clicked, focusedInput:", this.state.focusedInput);
+            if (this.state.focusedInput) {
+                this.handleMapClick(e);
+            } else {
+                console.debug("Map clicked but no input focused, ignoring");
+            }
+        };
+        
+        this.props.map.on('click', this.mapClickListener);
+        console.debug('Map click listener attached');
+    }
+
+    removeMapClickListener() {
+        if (this.props.map && this.mapClickListener) {
+            console.debug('Removing map click listener');
+            this.props.map.off('click', this.mapClickListener);
+        }
+        this.mapClickListener = null;
+    }
+
+    handleInputFocus(inputType) {
+        console.debug(`Input focused: ${inputType}`);
+        this.setState({ focusedInput: inputType });
+
+        if (this[`${inputType}GeocoderElement`]) {
+            this[`${inputType}GeocoderElement`].querySelector('input').placeholder = 'Digite ou clique no mapa';
+        }
+
+        // Notify parent that user is setting route points
+        if (this.props.onRouteModeChange) {
+            this.props.onRouteModeChange(true);
+        }
+    }
+
+    handleInputBlur(inputType) {
+        console.debug(`Input blurred: ${inputType}, current focused: ${this.state.focusedInput}`);
+        
+        // Clear any existing blur timeout
+        if (this.blurTimeout) {
+            clearTimeout(this.blurTimeout);
+            this.blurTimeout = null;
+        }
+        
+        // Only clear focus if it's the same input that's being blurred
+        if (this.state.focusedInput === inputType) {
+            // Delay to make sure that if the next click was on the map, it'll set the point
+            this.blurTimeout = setTimeout(() => {
+                this.setState({ focusedInput: null });
+                console.debug('Focus cleared, resetting cursor');
+                
+                this.blurTimeout = null;
+
+                if (this[`${inputType}GeocoderElement`]) {
+                    this[`${inputType}GeocoderElement`].querySelector('input').placeholder = inputType === 'from' ? 'Origem' : 'Destino';
+                }
+
+                // Notify parent that user is no longer setting route points
+                if (this.props.onRouteModeChange) {
+                    this.props.onRouteModeChange(false);
+                }
+            }, 500);
+        } else {
+            console.debug('Blur ignored - different input is focused');
+        }
+    }
+
+    handleMapClick(e) {
+        console.debug('handleMapClick called, focusedInput:', this.state.focusedInput);
+        
+        if (!this.state.focusedInput) {
+            console.debug('No input focused, ignoring map click');
+            return;
+        }
+        
+        const coordinates = [e.lngLat.lng, e.lngLat.lat];
+        const focusedInput = this.state.focusedInput; // Store the focused input before clearing it
+        
+        const newPoint = {
+            result: {
+                center: coordinates,
+                place_name: 'Ponto selecionado no mapa'
+            }
+        };
+        
+        this.addMarker(focusedInput, coordinates);
+        
+        if (focusedInput === 'from') {
+            this.props.onFromPointChange(newPoint);
+        } else {
+            this.props.onToPointChange(newPoint);
+        }
+        
+        this.reverseGeocode(e.lngLat, focusedInput);
+        this.requestDirectionsCalculation();
+        
+        if (focusedInput === 'from' && !this.props.toPoint) {
+            this.autoFocusDestinationInput();
+        } else {
+            this.setState({ focusedInput: null });
+        }
+        
+    }
+
+    attachGeocoderToDOM(geocoderType, containerId, attachedStateKey) {
+        return (el) => {
+            if (el && !el.hasChildNodes() && !this.state[attachedStateKey]) {
+                console.debug(`Attaching ${geocoderType} geocoder to DOM`);
+                try {
+                    const geocoder = this[`${geocoderType}Geocoder`];
+                    if (geocoder) {
+                        const geocoderElement = geocoder.onAdd(this.props.map);
+                        el.appendChild(geocoderElement);
+                        
+                        this[`${geocoderType}GeocoderElement`] = geocoderElement;
+                        
+                        const input = geocoderElement.querySelector('input');
+                        if (input) {
+                            const focusHandler = () => this.handleInputFocus(geocoderType);
+                            const blurHandler = () => this.handleInputBlur(geocoderType);
+                            
+                            input.addEventListener('focus', focusHandler);
+                            input.addEventListener('blur', blurHandler);
+                        }
+                        
+                        this.setState({ [attachedStateKey]: true });
+                    }
+                } catch (error) {
+                    console.debug(`Error attaching ${geocoderType} geocoder:`, error);
+                }
+            }
+        };
+    }
+
+    renderSettingsContent() {
+        return (
+            <div className="text-white" style={{ width: 200 }}>
+                <h3 className="font-semibold mb-3">Serviço de Rotas</h3>
+                
+                <Select
+                    value={this.state.selectedProvider}
+                    onChange={this.handleProviderChange}
+                    className="w-full"
+                    size="small"
+                    options={[
+                        {
+                            value: 'hybrid',
+                            label: '✨ Combinado',
+                        },
+                        {
+                            value: 'valhalla',
+                            label: 'Valhalla',
+                        },
+                        {
+                            value: 'graphhopper',
+                            label: 'GraphHopper',
+                        },
+                        {
+                            value: 'mapbox',
+                            label: 'Mapbox',
+                        }
+                    ]}
+                />
+            </div>
+        );
+    }
+
+    render() {
+        const { directions, directionsLoading, directionsError } = this.props;
+        const { routeCoverageData } = this.props;
+        
+        return (
+            <>
+                {
+                    IS_MOBILE &&
+                        <div
+                            id="directionsPanelMobileButton"
+                            className={`directions-panel-mobile-button ${this.state.collapsed ? 'collapsed' : 'expanded'}`}
+                            onClick={this.toggleCollapse}
+                        >
+                            <IconRoute/>
+                        </div>
+                }
+                <div
+                    id="directionsPanel"
+                    className={`
+                        glass-bg fixed text-white cursor-pointer
+                        ${this.state.collapsed ? 'hidden' : ''}
+                    `}
+                >
+                    <div className="p-4">
+                        <div id="directionsPanel--header" className="flex justify-between items-start h-6 mb-3">
+                            <h3 className=" font-semibold flex items-center mb-0">
+                                <IconRoute className="mr-2" />
+                                Rotas de bici
+                                <span className="bg-white opacity-50 ml-1 px-1 py-0 rounded-full text-black text-xs leading-normal tracking-wider" style={{fontSize: 10}}>
+                                    BETA
+                                </span>
+                            </h3>
+
+                            <div className="flex items-start" style={{marginTop: '-5px'}}>
+                                {(directions || this.props.fromPoint || this.props.toPoint) && (
+                                    <Button
+                                    onClick={this.clearDirections}
+                                    type="text" 
+                                    shape="circle"
+                                    icon={<IconTrash style={{
+                                        display: 'inline-block',
+                                    }}/>}
+                                    >
+                                    </Button>
+                                )}
+                                {this.props.fromPoint && this.props.toPoint && (
+                                    <Button 
+                                        type="text"
+                                        shape="circle"
+                                        icon={
+                                            <IconSwap style={{
+                                                display: 'inline-block',
+                                            }}/>}
+                                        onClick={this.swapOriginDestination}
+                                        className="swap-button flex-shrink-0 text-white"
+                                        title="Trocar origem e destino"
+                                    />
+                                )}
+                                
+                                <Popover
+                                    content={this.renderSettingsContent()}
+                                    title={null}
+                                    trigger="click"
+                                    open={this.state.settingsVisible}
+                                    onOpenChange={this.toggleSettings}
+                                    placement="bottomRight"
+                                >
+                                    <Button 
+                                        type="text"
+                                        shape="circle"
+                                        icon={<IconCog style={{
+                                            display: 'inline-block',
+                                        }}/>}
+                                        className="flex-shrink-0 text-white"
+                                        title="Configurações do serviço"
+                                    />
+                                </Popover>
+                                
+                                {/* Put this back after we have a trigger to open the panel */}
+                                {/* <Button
+                                    onClick={this.toggleCollapse}
+                                    type="text" 
+                                    size="small"
+                                    icon={<IconClose />}
+                                /> */}
+                            </div>
+                        </div>
+
+
+                        <Space direction="vertical" size="small" className="w-full">
+                            <div 
+                                id="fromGeocoder"
+                                className='flex'
+                                ref={this.attachGeocoderToDOM('from', 'fromGeocoder', 'fromGeocoderAttached')}
+                            />
+
+                            <div 
+                                id="toGeocoder"
+                                className='flex flex-1'
+                                ref={this.attachGeocoderToDOM('to', 'toGeocoder', 'toGeocoderAttached')}
+                            />
+
+                            {/* <Button
+                                type="primary"
+                                onClick={this.calculateDirections}
+                                loading={loading}
+                                disabled={!this.props.fromPoint || !this.props.toPoint}
+                                block
+                                // size="large"
+                                className="mt-2 bg-green-600 hover:bg-green-700"
+                            >
+                                Calcular rota
+                            </Button> */}
+                        </Space>
+
+                        {directionsLoading && (
+                            <div className="mt-3 space-y-1">
+                                {[1, 2, 3, 4, 5].map((index) => (
+                                    <div key={index} className={`rounded-lg h-14 bg-gray-600 animate-pulse-2x ${
+                                        index === 1 ? 'bg-opacity-90' : 
+                                        index === 2 ? 'bg-opacity-70' : 
+                                        index === 3 ? 'bg-opacity-50' :
+                                        index === 4 ? 'bg-opacity-30' :
+                                        index === 5 ? 'bg-opacity-10' :
+                                        ''
+                                    }`}/>
+                                ))}
+                            </div>
+                        )}
+
+                        {directionsError && (
+                            <div className="mt-3 p-2 bg-red-600 bg-opacity-20 border border-red-500 rounded text-red-200 text-sm">
+                                Erro: {directionsError}
+                            </div>
+                        )}
+
+                        {directions && !directionsLoading && (
+                            <div id="directionsPanel--results" className="mt-3">
+                                <div className="space-y-1">
+                                    {directions.routes && directions.routes.map((route, index) => (
+                                        <div
+                                            key={index}
+                                            className={`rounded-lg p-2 cursor-pointer transition-colors ${
+                                                this.props.selectedRouteIndex === index ? 'bg-white bg-opacity-10 border-opacity-60' : ''
+                                            } ${
+                                                this.props.hoveredRouteIndex === index ? 'bg-white bg-opacity-5' : ''
+                                            }`}
+                                            onMouseEnter={() => this.handleRouteHover(index)}
+                                            onMouseLeave={this.handleRouteLeave}
+                                            onClick={() => this.handleRouteClick(index)}
+                                        >
+                                            <div className="flex justify-between gap-1">
+                                                {/* Left column */}
+                                                <div className="flex items-start">
+                                                    {(routeCoverageData[index] || {}).score !== null ? (
+                                                        <div 
+                                                            className={`flex items-center mr-2 ${(routeCoverageData[index] || {}).scoreClass || 'bg-gray-600'} px-1.5 py-1.5 rounded-md text-sm leading-none font-mono text-center`} 
+                                                            style={{color: 'white'}}>
+                                                            {(routeCoverageData[index] || {}).score}
+                                                        </div>
+                                                    ) : (
+                                                        <IconBike 
+                                                            className="w-4 h-4 mr-2" 
+                                                            title="Dados de cobertura não disponíveis" 
+                                                        />
+                                                    )}
+
+                                                    <div className="flex flex-col flex-end">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="directions--legLabel text-sm">
+                                                                {
+                                                                // route.legs && route.legs.length > 0 && route.legs[0].summary.length > 0 ? route.legs[0].summary :
+                                                                //     route.summary ? route.summary :
+                                                                    `Opção ${index + 1}`
+                                                                }
+                                                            </span>
+                                                            {route.provider && (
+                                                                <span className="text-xs px-1 bg-gray-600 bg-opacity-50 rounded text-gray-300 font-mono">
+                                                                    {route.provider}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* {(route.ascend !== undefined || route.descend !== undefined) && (
+                                                            <span className="flex flex-row font-normal items-center text-gray-400">
+                                                                {route.ascend !== undefined && 
+                                                                    <span className="flex items-center mr-2">
+                                                                        <IconTrendingUp className="mr-1"/>{Math.round(route.ascend)}m
+                                                                    </span>
+                                                                }
+                                                                {route.descend !== undefined && 
+                                                                    <span className="flex items-center">
+                                                                        <IconTrendingDown className="mr-1"/>{Math.round(route.descend)}m
+                                                                    </span>
+                                                                }
+                                                            </span>
+                                                        )} */}
+
+                                                        {/* {this.props.selectedRouteIndex === index &&
+                                                            (routeCoverageData[index] || {}).coverageBreakdown : */}
+                                                            {(routeCoverageData[index] || {}).coverageBreakdownSimple || null}
+                                                        {/* } */}
+                                                    </div>
+                                                </div>
+
+                                                {/* Right column */}
+                                                <div className="flex flex-col flex-end flex-shrink-0">
+                                                    <span className="text-sm text-right mb-1">
+                                                        {formatDuration(route.duration)}
+                                                    </span>
+                                                    <span className="text-sm text-gray-400 text-right">
+                                                        {formatDistance(route.distance)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        )
+                                    )}
+                                </div>
+                                
+                                {/* Disclaimer */}
+                                <div className="p-2 text-gray-500 text-xs gap-2 flex flex-col">
+                                    <div>
+                                        As rotas são sugestões automáticas. Sempre verifique as condições das vias, sinalização e segurança antes de pedalar :)
+                                    </div>
+                                    <Popover
+                                        content={(
+                                            <div className="text-sm text-white" style={{width: 320}}>
+                                                <h3 className="font-semibold">
+                                                    Como calculamos as notas?
+                                                </h3>
+                                                <p>
+                                                    Consideramos o quanto cada rota está coberta por diferentes tipos de infraestrutura cicloviária para calcular uma nota que indique a sua qualidade.
+                                                </p>
+                                                <p>
+                                                    Por exemplo: uma nota perfeita é uma rota 100% coberta por ciclovias. Porém se fosse por ciclorrotas a nota seria bem menor, já que a pessoa ciclista precisa compartilhar a via com carros.
+                                                </p>
+                                                <p>
+                                                    <code>
+                                                        nota = pCiclovia*1.0 + pCiclofaixa*0.8 + pCalcadaCompartilhada*0.6 + pCiclorrota*0.4
+                                                    </code>
+                                                </p>
+                                            </div>
+                                        )}
+                                    >
+                                        <div className="underline">
+                                            Leia mais sobre as notas
+                                        </div>
+                                    </Popover>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </>
+        )
+    }
+}
+
+// Wrapper component to use the directions context with the class component
+const DirectionsPanelWrapper = React.forwardRef((props, ref) => {
+    const directionsContext = useDirections();
+    
+    return (
+        <DirectionsPanel
+            ref={ref}
+            {...props}
+            directions={directionsContext.directions}
+            directionsLoading={directionsContext.directionsLoading}
+            directionsError={directionsContext.directionsError}
+            selectedRouteIndex={directionsContext.selectedRouteIndex}
+            hoveredRouteIndex={directionsContext.hoveredRouteIndex}
+            routeCoverageData={directionsContext.routeCoverageData}
+            onRouteSelected={directionsContext.selectRoute}
+            onRouteHovered={directionsContext.hoverRoute}
+            onDirectionsCleared={directionsContext.clearDirections}
+            onRouteModeChange={directionsContext.setRoutePointsMode}
+            setLoading={directionsContext.setLoading}
+            setError={directionsContext.setError}
+            setDirectionsData={directionsContext.setDirectionsData}
+            geoJson={props.geoJson}
+            layers={props.layers}
+        />
+    );
+});
+
+export default DirectionsPanelWrapper;
