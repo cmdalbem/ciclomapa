@@ -34,7 +34,7 @@ import {
     DEFAULT_LAT,
     DEFAULT_LNG,
     DEFAULT_ZOOM,
-    OSM_DATA_MAX_AGE_MS,
+    OSM_DATA_MAX_AGE_DAYS,
     SAVE_TO_FIREBASE,
     DISABLE_DATA_HEALTY_TEST,
     IS_PROD,
@@ -317,11 +317,19 @@ class App extends Component {
     }
 
 
-    isDataFresh(data) {
+    isDataFresh(lastUpdatedAt) {
         const now = new Date();
-        const dataLastUpdate = new Date(data.updatedAt);
+        const dataLastUpdate = new Date(lastUpdatedAt);
+        const ageInDays = Math.round((now - dataLastUpdate) / (24 * 60 * 60 * 1000));
+        const isFresh = ageInDays < OSM_DATA_MAX_AGE_DAYS;
 
-        return now - dataLastUpdate < OSM_DATA_MAX_AGE_MS;
+        if (isFresh) {
+            console.debug(`Database data is fresh (${ageInDays} days old).`);
+        } else {
+            console.debug(`Database data is stale (${ageInDays} days old), fetching fresh data from OSM...`);
+        }
+
+        return isFresh;
     }
 
     forceUpdate() {
@@ -542,12 +550,18 @@ class App extends Component {
                 this.storage.load(this.state.area)
                     .then(data => {
                         if (data) {
-                            // @todo Improve this check - how fresh is the data? Add some threshold, like 1 month.
-                            console.debug('Database data is fresh.');
-                            console.debug('Loaded lengths from Firebase:', data.lengths);
+                            if (!this.isDataFresh(data.updatedAt)) {
+                                this.setState({
+                                    geoJson: null,
+                                    lengths: {},
+                                })
+                                
+                                this.getDataFromOSM();
+                                return;
+                            }
 
-                            if (FORCE_RECALCULATE_LENGTHS_ALWAYS) {
-                                console.debug('FORCE_RECALCULATE_LENGTHS_ALWAYS is true, recalculating lengths...');
+                            if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
+                                console.debug('Recalculating lengths...');
                                 data.lengths = calculateLayersLengths(data.geoJson, this.state.layers, this.state.lengthCalculationStrategy);
                             }
 

@@ -83,8 +83,8 @@ export const FORCE_RECALCULATE_LENGTHS_ALWAYS = false;
 
 // Other
 
-const ONE_DAY_MS = 1000 * 60 * 60 * 24;
-export const OSM_DATA_MAX_AGE_MS = 7 * ONE_DAY_MS;
+export const OSM_DATA_MAX_AGE_DAYS = 30;
+
 export const LENGTH_CALCULATE_STRATEGIES = [
     'random',       // Consider a random side each time
     'optimistic',   // Consider always the side the longest
