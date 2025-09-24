@@ -7,7 +7,7 @@ export const OSM_DATA_MAX_AGE_DAYS = 30;
 export const HYBRID_MAX_RESULTS = 5;
 
 export const WHITELISTED_CITIES = [
-    'Barcelona, Barcelona, Espanha'
+    // 'Barcelona, Barcelona, Espanha'
 ];
 
 export const LENGTH_CALCULATE_STRATEGIES = [
