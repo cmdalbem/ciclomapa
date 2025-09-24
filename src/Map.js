@@ -10,7 +10,8 @@ import { PmTilesSource } from 'mapbox-pmtiles';
 
 import {
     MAPBOX_ACCESS_TOKEN,
-    IS_MOBILE,
+    USE_GEOJSON_SOURCE,
+    USE_PMTILES_SOURCE,
     INTERACTIVE_LAYERS_ZOOM_THRESHOLD,
     DEFAULT_ZOOM,
     ENABLE_COMMENTS,
@@ -95,6 +96,7 @@ class Map extends Component {
 
         // Bind functions that'll be used as callbacks with Mapbox
         this.onMapMoveEnded = this.onMapMoveEnded.bind(this);
+        this.debouncedOnMapMoveEnded = debounce(this.onMapMoveEnded, 300);
         this.newComment = this.newComment.bind(this);
         this.initCommentsLayer = this.initCommentsLayer.bind(this);
         this.afterCommentCreate = this.afterCommentCreate.bind(this);
@@ -890,7 +892,7 @@ class Map extends Component {
             });
         }
 
-        if (!this.map.getSource("osmdata")) {
+        if (!this.map.getSource("osmdata") && USE_GEOJSON_SOURCE) {
             this.map.addSource("osmdata", {
                 "type": "geojson",
                 "data": this.props.data || {
@@ -901,52 +903,48 @@ class Map extends Component {
             });
         }
 
-        // Hide geojson features from pmtiles layers
-        this.hideGeoJsonFromPmtiles(this.props.data);
+        if (USE_PMTILES_SOURCE) {
+            try {
+                const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'all.pmtiles';
+                console.log('Loading PMTiles from S3:', PMTILES_URL);
+                
+                const header = await PmTilesSource.getHeader(PMTILES_URL);
+                console.log('PMTiles loaded - bounds:', [header.minLon, header.minLat, header.maxLon, header.maxLat], 'zoom:', header.minZoom + '-' + header.maxZoom);
+                
+                const bounds = [
+                    header.minLon,
+                    header.minLat,
+                    header.maxLon,
+                    header.maxLat,
+                ];
 
-        try {
-            const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'all.pmtiles';
-            console.log('Loading PMTiles from S3:', PMTILES_URL);
-            
-            const header = await PmTilesSource.getHeader(PMTILES_URL);
-            console.log('PMTiles loaded - bounds:', [header.minLon, header.minLat, header.maxLon, header.maxLat], 'zoom:', header.minZoom + '-' + header.maxZoom);
-            
-            const bounds = [
-                header.minLon,
-                header.minLat,
-                header.maxLon,
-                header.maxLat,
-            ];
+                this.map.addSource('pmtiles-source', {
+                    type: PmTilesSource.SOURCE_TYPE,
+                    url: PMTILES_URL,
+                    minzoom: header.minZoom,
+                    maxzoom: header.maxZoom,
+                    bounds: bounds,
+                });
 
-            this.map.addSource('pmtiles-source', {
-                type: PmTilesSource.SOURCE_TYPE,
-                url: PMTILES_URL,
-                minzoom: header.minZoom,
-                maxzoom: header.maxZoom,
-                bounds: bounds,
-            });
+                console.log('PMTiles source added successfully');
+                this.pmtilesLoadedSuccessfully = true;
 
-            console.log('PMTiles source added successfully');
-            this.pmtilesLoadedSuccessfully = true;
-        } catch (error) {
-            console.error('Error setting up PmTiles for cyclepaths:', error);
-            this.pmtilesLoadedSuccessfully = false;
+                // Hide geojson features from pmtiles layers
+                this.hideGeoJsonFromPmtiles(this.props.data);
+            } catch (error) {
+                console.error('Error setting up PmTiles for cyclepaths:', error);
+                this.pmtilesLoadedSuccessfully = false;
+            }
         }
     }
 
-    onPMTilesLoaded() {
-        this.pmtilesLoadedSuccessfully = true;
-
-        document.querySelector('.city-picker').setAttribute('style', 'visibility: hidden;');
-    }
-
-    isPmtilesAvailable() {
-        console.debug('pmtilesLoadedSuccessfully = ', this.pmtilesLoadedSuccessfully);
-        if (this.pmtilesLoadedSuccessfully === undefined) {
-            console.error('PmTiles loaded successfully status is undefined, this should not happen');
-        }
-        return this.pmtilesLoadedSuccessfully === true;
-    }
+    // isPmtilesAvailable() {
+    //     console.debug('pmtilesLoadedSuccessfully = ', this.pmtilesLoadedSuccessfully);
+    //     if (this.pmtilesLoadedSuccessfully === undefined) {
+    //         console.error('PmTiles loaded successfully status is undefined, this should not happen');
+    //     }
+    //     return this.pmtilesLoadedSuccessfully === true;
+    // }
 
     addInteractiveCapitalsLayer() {
         this.map.addSource(
@@ -2017,7 +2015,7 @@ class Map extends Component {
         // Set initial cyclable paths opacity based on current directions state
         this.updateCyclablePathsOpacity();
 
-        this.map.on('moveend', this.onMapMoveEnded);
+        this.map.on('moveend', this.debouncedOnMapMoveEnded);
     }
 
     componentWillUnmount() {
@@ -2025,6 +2023,14 @@ class Map extends Component {
             this.popups.clearRouteTooltips();
         }
         document.removeEventListener('newComment', this.newComment);
+
+        // Cancel any pending debounced calls
+        if (this.debouncedOnMapMoveEnded) {
+            this.debouncedOnMapMoveEnded.cancel();
+        }
+        if (this.debouncedMapStateSync) {
+            this.debouncedMapStateSync.cancel();
+        }
 
         if (this.map) {
             // Remove all event listeners to prevent memory leaks
