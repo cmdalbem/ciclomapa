@@ -329,111 +329,94 @@ class Map extends Component {
         const sourceSuffix = sourceId === 'osmdata' ? '' : '--pmtiles';
         const layerId = l.id + sourceSuffix;
 
-        // @TODO temporary debug layer while we don't know what's wrong with Mapbox and symbol layers
-        if (sourceId !== 'osmdata') {
-            // this.map.addLayer({
-            //     'id': layerId,
-            //     "name": l.name,
-            //     'source': sourceId,
-            //     'source-layer': sourceLayer,
-            //     "filter": filters,
-            //     "description": l.description,
-            //     type: 'circle',
-            //     'paint': {
-            //         'circle-radius': [
-            //             'interpolate',
-            //             ['linear'],
-            //             ['zoom'],
-            //             12, 2,
-            //             l.zoomThreshold, 7
-            //         ],
-            //         'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.2 : 0.2),
-            //         'circle-stroke-width': [
-            //             'interpolate',
-            //             ['linear'],
-            //             ['zoom'],
-            //             12, 0,
-            //             l.zoomThreshold, 3
-            //         ],
-            //         'circle-opacity': ['case',
-            //             ['boolean', ['feature-state', 'hover'], false],
-            //             0.7,
-            //             1.0
-            //         ],
-            //         'circle-stroke-color': this.props.isDarkMode ? '#000000' : '#ffffff'
-            //     }
-            // });
-        } else {
-            this.map.addLayer({
-                'id': layerId,
-                "name": l.name,
-                'type': 'symbol',
-                'source': sourceId,
-                'source-layer': sourceLayer,
-                "filter": filters,
-                "description": l.description,
-                'layout': {
-                    'text-field': [ 'step', ['zoom'], '', l.zoomThreshold, ['get', 'name'], ],
-                    'text-font': ['IBM Plex Sans Medium'],
-                    'text-letter-spacing': 0.05,
-                    "text-offset": [0, 0.7],
-                    "text-max-width": 8,
-                    // 'icon-size': 0.5,
-                    'icon-size': [
-                        "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"], 
-                            10, 0.2,
-                            15, 0.5 
-                    ],
-                    'text-size': [
-                        "interpolate",
-                            ["exponential", 1.5],
-                            ["zoom"], 
-                            10, 10,
-                            18, 14
-                    ],
-                    'text-variable-anchor': ['top'],
-                    "icon-padding": 0,
-                    "icon-offset": [
-                        'step',
-                        ['zoom'],
-                        [0, 0],
-                        l.zoomThreshold,
-                        [0, -14]
-                    ],
-                    "icon-allow-overlap": [
-                        'step',
-                        ['zoom'],
-                        false,
-                        l.zoomThreshold,
-                        true
-                    ],
-                    'icon-image': [
-                        'step',
-                        ['zoom'],
-                        this.props.isDarkMode ? `${l.icon}-mini` : `${l.icon}-mini--light`,
-                        l.zoomThreshold,
-                        this.props.isDarkMode ? `${l.icon}` : `${l.icon}--light`,
-                    ],
-                },
-                'paint': {
-                    'text-color': l.style.textColor || 'white',
-                    'text-halo-width': 1,
-                    'text-opacity': ['case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                        0.7,
-                        1.0
-                    ],
-                    'icon-opacity': ['case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                        0.7,
-                        1.0
-                    ],
-                    'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#ffffff',
-                }
-            });
-        }
+        // Circles (lower zoom levels)
+        this.map.addLayer({
+            'id': layerId+'circles',
+            "name": l.name,
+            'source': sourceId,
+            'source-layer': sourceLayer,
+            "filter": filters,
+            "description": l.description,
+            type: 'circle',
+            maxzoom: l.zoomThreshold,
+            'paint': {
+                'circle-radius': [
+                    'interpolate',
+                    ["exponential", 1.5],
+                    ['zoom'],
+                    9, 0,
+                    15, 5
+                ],
+                'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.2 : 0.2),
+                'circle-stroke-width': [
+                    'interpolate',
+                    ["exponential", 1.5],
+                    ['zoom'],
+                    12, 0,
+                    15, 2
+                ],
+                'circle-opacity': ['case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                    0.7,
+                    1.0
+                ],
+                'circle-stroke-color': this.props.isDarkMode ? '#000000' : '#ffffff',
+            }
+        });
+
+        // Icons (higher zoom levels)
+        this.map.addLayer({
+            'id': layerId,
+            "name": l.name,
+            'type': 'symbol',
+            'source': sourceId,
+            'source-layer': sourceLayer,
+            "filter": filters,
+            "description": l.description,
+            minzoom: l.zoomThreshold+0.01,
+            'layout': {
+                'text-field': l.name !== 'Estações' ? ['get', 'name'] : '',
+                'text-font': ['IBM Plex Sans Medium'],
+                'text-letter-spacing': 0.05,
+                "text-offset": [0, 0.7],
+                "text-max-width": 8,
+                'icon-size': 0.5,
+                // 'icon-size': [
+                //     "interpolate",
+                //         ["exponential", 1.5],
+                //         ["zoom"], 
+                //         10, 0.2,
+                //         15, 0.5 
+                // ],
+                'text-size': [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"], 
+                        10, 10,
+                        18, 14
+                ],
+                'text-variable-anchor': ['top'],
+                "icon-padding": 0,
+                "icon-offset": [0, -14],
+                // "icon-allow-overlap": true,
+                'icon-image': this.props.isDarkMode ? `${l.icon}` : `${l.icon}--light`,
+            },
+            'paint': {
+                'text-color': l.style.textColor || 'white',
+                'text-halo-width': 1,
+                'text-opacity': ['case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                    0.7,
+                    1.0
+                ],
+                'icon-opacity': ['case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                    0.7,
+                    1.0
+                ],
+                'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#ffffff',
+            }
+        });
 
         // Interactions
         const self = this;
@@ -1053,9 +1036,10 @@ class Map extends Component {
                     
                     this.initCyclepathLayerForSource(l, 'osmdata');
                 } else if (l.type === 'poi' && l.filters) {
-                    if (this.pmtilesLoadedSuccessfully) {
-                        this.initPOILayerForSource(l, 'pmtiles-source');
-                    }
+                    // Mapbox doesn't support symbol layers for pmtiles
+                    // if (this.pmtilesLoadedSuccessfully) {
+                    //     this.initPOILayerForSource(l, 'pmtiles-source');
+                    // }
 
                     this.initPOILayerForSource(l, 'osmdata');
                 }

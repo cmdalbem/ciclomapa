@@ -83,22 +83,9 @@
         ],
         "type": "poi",
         "icon": "poi-bikeshop",
-        "zoomThreshold": 14,
+        "zoomThreshold": 13.5,
         "style": {
             "textColor": "#2A7BF4"
-        }
-    },
-    {
-        "name": "Bicicletários",
-        "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos. Sempre verifique a qualidade e segurança oferecida!",
-        "filters": [
-            ["amenity", "bicycle_parking"]
-        ],
-        "type": "poi",
-        "icon": "poi-bikeparking",
-        "zoomThreshold": 16,
-        "style": {
-            "textColor": "#2F904A"
         }
     },
     {
@@ -112,6 +99,19 @@
         "zoomThreshold": 15,
         "style": {
             "textColor": "#E56119"
+        }
+    },
+    {
+        "name": "Bicicletários",
+        "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos. Sempre verifique a qualidade e segurança oferecida!",
+        "filters": [
+            ["amenity", "bicycle_parking"]
+        ],
+        "type": "poi",
+        "icon": "poi-bikeparking",
+        "zoomThreshold": 16.5,
+        "style": {
+            "textColor": "#2F904A"
         }
     },
     {
