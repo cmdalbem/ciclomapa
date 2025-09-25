@@ -4,8 +4,6 @@
 
 export const OSM_DATA_MAX_AGE_DAYS = 30;
 
-export const HYBRID_MAX_RESULTS = 5;
-
 export const WHITELISTED_CITIES = [
     // 'Barcelona, Barcelona, Espanha'
 ];
@@ -37,31 +35,26 @@ export const AREA_ID_OVERRIDES = {
 };
 
 
-/* 
- * Mapbox
- */
-
-export const MAPBOX_ACCESS_TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
-
-export const MAP_STYLES = {
-    DARK: 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm',
-    LIGHT: 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'
-    // LIGHT: 'mapbox://styles/cmdalbem/cmf6j71jk00cv01sjezoh6fky'
-};
- 
 
 /* 
- * Routing providers
+ * Layout
  */
 
-export const OPENROUTESERVICE_API_KEY = process.env.REACT_APP_OPENROUTESERVICE_API_KEY;
-export const OPENROUTESERVICE_BASE_URL = 'https://api.openrouteservice.org/v2/directions';
 
-export const GRAPHHOPPER_API_KEY = process.env.REACT_APP_GRAPHHOPPER_API_KEY;
-export const GRAPHHOPPER_BASE_URL = 'https://graphhopper.com/api/1/route';
+export const MOBILE_MAX_WIDTH = '430px';
+export const IS_MOBILE = window.matchMedia && window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH})`).matches;
 
-export const VALHALLA_BASE_URL = 'https://valhalla1.openstreetmap.de/route';
+export const TOPBAR_HEIGHT = 64;
 
+
+/* 
+ * Routing
+ */
+
+
+// Settings
+
+export const HYBRID_MAX_RESULTS = IS_MOBILE ? 3 : 5;
 
 
 /* 
@@ -88,15 +81,6 @@ export const COMMENTS_ZOOM_THRESHOLD = 13;
 export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 11;
 
 
-/* 
- * Layout
- */
-
-export const TOPBAR_HEIGHT = 64;
-
-export const MOBILE_MAX_WIDTH = '430px';
-export const IS_MOBILE = window.matchMedia && window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH})`).matches;
-
 
 /* 
  * Debug & local development
@@ -112,3 +96,28 @@ export const FORCE_RECALCULATE_LENGTHS_ALWAYS = false;
 
 export const USE_GEOJSON_SOURCE = true;
 export const USE_PMTILES_SOURCE = true;
+
+
+// Providers
+
+export const OPENROUTESERVICE_API_KEY = process.env.REACT_APP_OPENROUTESERVICE_API_KEY;
+export const OPENROUTESERVICE_BASE_URL = 'https://api.openrouteservice.org/v2/directions';
+
+export const GRAPHHOPPER_API_KEY = process.env.REACT_APP_GRAPHHOPPER_API_KEY;
+export const GRAPHHOPPER_BASE_URL = 'https://graphhopper.com/api/1/route';
+
+export const VALHALLA_BASE_URL = 'https://valhalla1.openstreetmap.de/route';
+
+
+
+/* 
+ * Mapbox
+ */
+
+export const MAPBOX_ACCESS_TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
+
+export const MAP_STYLES = {
+    DARK: 'mapbox://styles/cmdalbem/ckgpww8gi2nk619kkl0zrlodm',
+    LIGHT: 'mapbox://styles/cmdalbem/cjxseldep7c0a1doc7ezn6aeb'
+    // LIGHT: 'mapbox://styles/cmdalbem/cmf6j71jk00cv01sjezoh6fky'
+};

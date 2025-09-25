@@ -21,7 +21,8 @@ import './DirectionsPanel.css';
 import { 
     MAPBOX_ACCESS_TOKEN,
     IS_PROD,
-    IS_MOBILE
+    IS_MOBILE,
+    HYBRID_MAX_RESULTS
 } from './constants.js'
 import DirectionsManager from './DirectionsManager.js'
 import { formatDistance, formatDuration } from './routeUtils.js'
@@ -325,11 +326,39 @@ class DirectionsPanel extends Component {
 
     toggleCollapse() {
         this.clearDirections();
+        const newCollapsedState = !this.state.collapsed;
         this.setState({
-            collapsed: !this.state.collapsed
+            collapsed: newCollapsedState
         });
+
+        // On mobile, when opening the panel (collapsed -> expanded), auto-trigger geolocation
+        if (IS_MOBILE && newCollapsedState === false) {
+            this.autoTriggerGeolocation();
+        }
     }
 
+    autoTriggerGeolocation() {
+        // Wait for the geocoder to be attached to DOM before trying to click the geolocate button
+        const tryGeolocate = () => {
+            const geolocateButton = document.querySelector('button[aria-label="Geolocate"]');
+            if (geolocateButton) {
+                console.debug('Auto-triggering geolocation on mobile');
+                geolocateButton.click();
+                return true;
+            }
+            return false;
+        };
+
+        // Try immediately first
+        if (!tryGeolocate()) {
+            // If not available, try again after a short delay
+            setTimeout(() => {
+                if (!tryGeolocate()) {
+                    console.debug('Could not find geolocate button - geocoder not ready');
+                }
+            }, 500);
+        }
+    }
 
     async calculateDirections(fromCoords, toCoords, provider) {
         if (this.props.setLoading) {
@@ -847,8 +876,8 @@ class DirectionsPanel extends Component {
                         </Space>
 
                         {directionsLoading && (
-                            <div className="mt-3 space-y-1">
-                                {[1, 2, 3, 4, 5].map((index) => (
+                            <div className="directionsPanel--results mt-3 space-y-1">
+                                {Array.from({ length: HYBRID_MAX_RESULTS }, (_, index) => index + 1).map((index) => (
                                     <div key={index} className={`rounded-lg h-14 bg-gray-600 animate-pulse-2x ${
                                         index === 1 ? 'bg-opacity-90' : 
                                         index === 2 ? 'bg-opacity-70' : 
@@ -887,7 +916,7 @@ class DirectionsPanel extends Component {
                                                 <div className="flex items-start">
                                                     {(routeCoverageData[index] || {}).score !== null ? (
                                                         <div 
-                                                            className={`flex items-center mr-2 ${(routeCoverageData[index] || {}).scoreClass || 'bg-gray-600'} px-1.5 py-1.5 rounded-md text-sm leading-none font-mono text-center`} 
+                                                            className={`flex items-center mr-2 ${(routeCoverageData[index] || {}).scoreClass || 'bg-gray-600'} px-1.5 py-1.5 rounded-md md:text-sm text-xs leading-none font-mono text-center`} 
                                                             style={{color: 'white'}}>
                                                             {(routeCoverageData[index] || {}).score}
                                                         </div>
@@ -900,7 +929,7 @@ class DirectionsPanel extends Component {
 
                                                     <div className="flex flex-col flex-end">
                                                         <div className="flex items-center gap-2 mb-1">
-                                                            <span className="directions--legLabel text-sm">
+                                                            <span className="directions--legLabel md:text-sm text-xs">
                                                                 {
                                                                 // route.legs && route.legs.length > 0 && route.legs[0].summary.length > 0 ? route.legs[0].summary :
                                                                 //     route.summary ? route.summary :
@@ -938,10 +967,10 @@ class DirectionsPanel extends Component {
 
                                                 {/* Right column */}
                                                 <div className="flex flex-col flex-end flex-shrink-0">
-                                                    <span className="text-sm text-right mb-1">
+                                                    <span className="md:text-sm text-xs text-right mb-1">
                                                         {formatDuration(route.duration)}
                                                     </span>
-                                                    <span className="text-sm text-gray-400 text-right">
+                                                    <span className="md:text-sm text-xs text-gray-400 text-right">
                                                         {formatDistance(route.distance)}
                                                     </span>
                                                 </div>
