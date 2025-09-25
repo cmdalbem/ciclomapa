@@ -354,15 +354,15 @@ class Map extends Component {
                     ["exponential", 1.5],
                     ['zoom'],
                     7, 0,
-                    15, 5
+                    14, 5
                 ],
-                'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.2 : 0.2),
+                'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.1 : 0.2),
                 'circle-stroke-width': [
                     'interpolate',
                     ["exponential", 1.5],
                     ['zoom'],
                     12, 0,
-                    15, 2
+                    14, 2
                 ],
                 'circle-opacity': ['case',
                     ['boolean', ['feature-state', 'hover'], false],
@@ -387,8 +387,7 @@ class Map extends Component {
                 'text-field': l.name !== 'Estações' ? ['get', 'name'] : '',
                 'text-font': ['IBM Plex Sans Medium'],
                 'text-letter-spacing': 0.05,
-                "text-offset": [0, 0.7],
-                // "text-max-width": 8,
+                "text-max-width": 8,
                 'icon-size': 0.5,
                 // 'icon-size': [
                 //     "interpolate",
@@ -404,11 +403,12 @@ class Map extends Component {
                         10, 10,
                         18, 14
                 ],
-                'text-variable-anchor': ['left'],
+                // 'text-variable-anchor': ['left'],
+                'text-variable-anchor': ['top'],
                 "icon-padding": 0,
                 "icon-offset": [0, -14],
-                "text-offset": [1, 0],
-                // "icon-allow-overlap": true,
+                "text-offset": [0, 1],
+                "icon-allow-overlap": true,
                 'icon-image': this.props.isDarkMode ? `${l.icon}` : `${l.icon}--light`,
             },
             'paint': {
