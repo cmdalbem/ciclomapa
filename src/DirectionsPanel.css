@@ -123,9 +123,9 @@
             max-height: 130px;
         }
 
-        #directionsPanel--header {
+        /* #directionsPanel--header {
             display: none;
-        }
+        } */
     }
 
     #directionsPanelMobileButton {

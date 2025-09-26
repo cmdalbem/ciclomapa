@@ -5,6 +5,7 @@ import {
     HiOutlineTrendingUp as IconTrendingUp,
     HiOutlineTrendingDown as IconTrendingDown
 } from "react-icons/hi";
+import { HiX as IconClose } from "react-icons/hi";
 import { LuBike as IconBike } from "react-icons/lu";
 import { FaDirections as IconRoute } from "react-icons/fa";
 import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash, HiOutlineExclamationTriangle as IconNoData } from "react-icons/hi2";
@@ -57,7 +58,7 @@ class DirectionsPanel extends Component {
         this.handleInputFocus = this.handleInputFocus.bind(this);
         this.handleInputBlur = this.handleInputBlur.bind(this);
         this.handleMapClick = this.handleMapClick.bind(this);
-        this.attachGeocoderToDOM = this.attachGeocoderToDOM.bind(this);
+        this.attachMapboxGeocoderToDOM = this.attachMapboxGeocoderToDOM.bind(this);
         this.calculateDirections = this.calculateDirections.bind(this);
         this.swapOriginDestination = this.swapOriginDestination.bind(this);
         this.handleProviderChange = this.handleProviderChange.bind(this);
@@ -73,12 +74,11 @@ class DirectionsPanel extends Component {
             }
         }, 100);
 
-        if (this.props.fromPoint) {
-            this.reverseGeocode({ lng: this.props.fromPoint.result.center[0], lat: this.props.fromPoint.result.center[1] }, 'from');
-        }
-        if (this.props.toPoint) {
-            this.reverseGeocode({ lng: this.props.toPoint.result.center[0], lat: this.props.toPoint.result.center[1] }, 'to');
-        }
+        // Store initial points for later processing after geocoders are attached
+        this.pendingInitialPoints = {
+            from: this.props.fromPoint,
+            to: this.props.toPoint
+        };
     }
 
     componentDidUpdate(prevProps) {
@@ -100,8 +100,14 @@ class DirectionsPanel extends Component {
             this.setupMapClickListener();
         }
 
-        if (this.props.fromPoint !== prevProps.fromPoint || this.props.toPoint !== prevProps.toPoint) {
-            console.debug('From or to point changed, recalculating directions');
+        if (
+            (this.props.map && !prevProps.map) ||
+            this.props.fromPoint !== prevProps.fromPoint ||
+            this.props.toPoint !== prevProps.toPoint ||
+            (this.props.geoJson && !prevProps.geoJson)
+        ) {
+            console.debug('From or to point changed, or geoJson became available, recalculating directions');
+            this.syncMarkersWithProps();
             if (this.props.fromPoint && this.props.toPoint) {
                 this.requestDirectionsCalculation();
             }
@@ -118,6 +124,33 @@ class DirectionsPanel extends Component {
         }
         this.cleanup();
         this.removeMapClickListener();
+    }
+
+    syncMarkersWithProps() {
+        if (!this.props.map) return;
+
+        const { fromPoint, toPoint } = this.props;
+        if (fromPoint) {
+            const fromCoords = fromPoint.result.center;
+            if (this.fromMarker) {
+                this.fromMarker.setLngLat(fromCoords).addTo(this.props.map);
+            } else {
+                this.addMarker('from', fromCoords);
+            }
+        } else {
+            this.removeMarker('from');
+        }
+
+        if (toPoint) {
+            const toCoords = toPoint.result.center;
+            if (this.toMarker) {
+                this.toMarker.setLngLat(toCoords).addTo(this.props.map);
+            } else {
+                this.addMarker('to', toCoords);
+            }
+        } else {
+            this.removeMarker('to');
+        }
     }
 
 
@@ -181,6 +214,14 @@ class DirectionsPanel extends Component {
             fromGeocoderAttached: false,
             toGeocoderAttached: false
         });
+
+        // If we have pending initial points, store them for processing after DOM attachment
+        if (!this.pendingInitialPoints) {
+            this.pendingInitialPoints = {
+                from: this.props.fromPoint,
+                to: this.props.toPoint
+            };
+        }
     }
 
     handleGeocoderResult(result, type) {
@@ -344,6 +385,10 @@ class DirectionsPanel extends Component {
             if (geolocateButton) {
                 console.debug('Auto-triggering geolocation on mobile');
                 geolocateButton.click();
+
+                setTimeout(() => {
+                    this.autoFocusDestinationInput();
+                }, 500);
                 return true;
             }
             return false;
@@ -394,6 +439,11 @@ class DirectionsPanel extends Component {
 
     requestDirectionsCalculation() {
         if (this.props.fromPoint && this.props.toPoint) {
+            if (!this.props.geoJson) {
+                console.debug('GeoJson data not ready yet, deferring directions calculation');
+                return;
+            }
+            
             const fromCoords = this.props.fromPoint.result.center;
             const toCoords = this.props.toPoint.result.center;
             
@@ -697,7 +747,7 @@ class DirectionsPanel extends Component {
         
     }
 
-    attachGeocoderToDOM(geocoderType, containerId, attachedStateKey) {
+    attachMapboxGeocoderToDOM(geocoderType, containerId, attachedStateKey) {
         return (el) => {
             if (el && !el.hasChildNodes() && !this.state[attachedStateKey]) {
                 console.debug(`Attaching ${geocoderType} geocoder to DOM`);
@@ -719,12 +769,28 @@ class DirectionsPanel extends Component {
                         }
                         
                         this.setState({ [attachedStateKey]: true });
+                        
+                        this.processPendingInitialPoints(geocoderType);
                     }
                 } catch (error) {
                     console.debug(`Error attaching ${geocoderType} geocoder:`, error);
                 }
             }
         };
+    }
+
+    processPendingInitialPoints(geocoderType) {
+        if (this.pendingInitialPoints && this.pendingInitialPoints[geocoderType]) {
+            const point = this.pendingInitialPoints[geocoderType];
+            console.debug(`Processing pending initial point for ${geocoderType}:`, point);
+            
+            // Always perform reverse geocoding to get the address and set the input
+            const coordinates = { lng: point.result.center[0], lat: point.result.center[1] };
+            console.debug(`Performing reverse geocoding for ${geocoderType} with coordinates:`, coordinates);
+            this.reverseGeocode(coordinates, geocoderType);
+            
+            this.pendingInitialPoints[geocoderType] = null;
+        }
     }
 
     renderSettingsContent() {
@@ -802,8 +868,7 @@ class DirectionsPanel extends Component {
                                     icon={<IconTrash style={{
                                         display: 'inline-block',
                                     }}/>}
-                                    >
-                                    </Button>
+                                    />
                                 )}
                                 {this.props.fromPoint && this.props.toPoint && (
                                     <Button 
@@ -839,12 +904,16 @@ class DirectionsPanel extends Component {
                                 </Popover>
                                 
                                 {/* Put this back after we have a trigger to open the panel */}
-                                {/* <Button
-                                    onClick={this.toggleCollapse}
-                                    type="text" 
-                                    size="small"
-                                    icon={<IconClose />}
-                                /> */}
+                                { IS_MOBILE && (
+                                    <Button
+                                        onClick={this.toggleCollapse}
+                                        type="text" 
+                                        shape="circle"
+                                        icon={<IconClose style={{
+                                            display: 'inline-block',
+                                        }}/>}
+                                    />
+                                )}
                             </div>
                         </div>
 
@@ -853,13 +922,13 @@ class DirectionsPanel extends Component {
                             <div 
                                 id="fromGeocoder"
                                 className='flex'
-                                ref={this.attachGeocoderToDOM('from', 'fromGeocoder', 'fromGeocoderAttached')}
+                                ref={this.attachMapboxGeocoderToDOM('from', 'fromGeocoder', 'fromGeocoderAttached')}
                             />
 
                             <div 
                                 id="toGeocoder"
                                 className='flex flex-1'
-                                ref={this.attachGeocoderToDOM('to', 'toGeocoder', 'toGeocoderAttached')}
+                                ref={this.attachMapboxGeocoderToDOM('to', 'toGeocoder', 'toGeocoderAttached')}
                             />
 
                             {/* <Button
@@ -878,14 +947,15 @@ class DirectionsPanel extends Component {
                         {directionsLoading && (
                             <div className="directionsPanel--results mt-3 space-y-1">
                                 {Array.from({ length: HYBRID_MAX_RESULTS }, (_, index) => index + 1).map((index) => (
-                                    <div key={index} className={`rounded-lg h-14 bg-gray-600 animate-pulse-2x ${
-                                        index === 1 ? 'bg-opacity-90' : 
-                                        index === 2 ? 'bg-opacity-70' : 
-                                        index === 3 ? 'bg-opacity-50' :
-                                        index === 4 ? 'bg-opacity-30' :
-                                        index === 5 ? 'bg-opacity-10' :
-                                        ''
-                                    }`}/>
+                                    <div key={index} className={`rounded-lg h-14 bg-white bg-opacity-10 animate-pulse-2x`}/>
+                                    // <div key={index} className={`rounded-lg h-14 bg-gray-700 animate-pulse-2x ${
+                                    //     index === 1 ? 'bg-opacity-90' : 
+                                    //     index === 2 ? 'bg-opacity-70' : 
+                                    //     index === 3 ? 'bg-opacity-50' :
+                                    //     index === 4 ? 'bg-opacity-30' :
+                                    //     index === 5 ? 'bg-opacity-10' :
+                                    //     ''
+                                    // }`}/>
                                 ))}
                             </div>
                         )}

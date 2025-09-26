@@ -119,8 +119,7 @@ class App extends Component {
             if (!isNaN(lng) && !isNaN(lat)) {
                 toPoint = {
                     result: {
-                        center: [lng, lat],
-                        place_name: 'Destino carregado da URL'
+                        center: [lng, lat]
                     }
                 };
             }
