@@ -15,6 +15,7 @@ import {
     INTERACTIVE_LAYERS_ZOOM_THRESHOLD,
     DEFAULT_ZOOM,
     ENABLE_COMMENTS,
+    IS_MOBILE,
     IS_PROD,
     DEFAULT_LINE_WIDTH_MULTIPLIER,
     COMMENTS_ZOOM_THRESHOLD,
@@ -75,6 +76,40 @@ const iconsMap = {
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 
+
+// @todo Move these to constants.js
+const ROUTE_FIXED_WIDTH = 8;
+const ROUTE_LINE_PADDING_WIDTH = 2;
+const ROUTE_LINE_BORDER_WIDTH = 1;
+
+const ROUTE_LINE_WIDTH = ROUTE_FIXED_WIDTH;
+const ROUTE_LINE_PADDING_GAP_WIDTH = ROUTE_FIXED_WIDTH + ROUTE_LINE_PADDING_WIDTH;
+const ROUTE_LINE_GAP_WIDTH = ROUTE_FIXED_WIDTH - ROUTE_LINE_BORDER_WIDTH - 1;
+
+// const ROUTE_MIN_WIDTH = 6;
+// const ROUTE_MAX_WIDTH = 12;
+// const ROUTE_LINE_WIDTH = [
+//     "interpolate",
+//         ["exponential", 1.5],
+//         ["zoom"],
+//         12, ROUTE_MIN_WIDTH,
+//         18, ROUTE_MAX_WIDTH
+// ];
+
+// const ROUTE_LINE_PADDING_GAP_WIDTH = [
+//     "interpolate",
+//         ["exponential", 1.5],
+//         ["zoom"],
+//         12, ROUTE_MIN_WIDTH+ROUTE_LINE_PADDING_WIDTH,
+//         18, ROUTE_MAX_WIDTH+ROUTE_LINE_PADDING_WIDTH
+// ];
+// const ROUTE_LINE_GAP_WIDTH = [
+//     "interpolate",
+//         ["exponential", 1.5],
+//         ["zoom"],
+//         12, ROUTE_MIN_WIDTH-ROUTE_LINE_BORDER_WIDTH,
+//         18, ROUTE_MAX_WIDTH-ROUTE_LINE_BORDER_WIDTH
+// ];
 
 class Map extends Component {
     map;
@@ -674,7 +709,7 @@ class Map extends Component {
             "description": l.description,
             "filter": filters,
             "paint": {
-                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.6 : 0.4),
+                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.6 : 0.6),
                 "line-width": [
                     "interpolate",
                         ["exponential", 1.5],
@@ -1093,39 +1128,8 @@ class Map extends Component {
             layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: {
                 'line-color': this.props.isDarkMode ? '#2d2e30' : '#FFFFFF',
-                "line-width": [
-                    "interpolate",
-                        ["exponential", 1.5],
-                        ["zoom"],
-                        10, Math.max(1, (DIRECTIONS_LINE_WIDTH+DIRECTIONS_LINE_BORDER_WIDTH*2)/4),
-                        18, (DIRECTIONS_LINE_WIDTH+DIRECTIONS_LINE_BORDER_WIDTH*2) * DEFAULT_LINE_WIDTH_MULTIPLIER
-                ]
-            },
-            filter: ['==', '$type', 'LineString']
-        });
-
-        // 2. Border layer
-        map.addLayer({
-            id: `route--border${suffix}`,
-            type: 'line',
-            source: sourceId,
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-                'line-color': layerType === 'top' 
-                    ? (this.props.isDarkMode ? '#ffffff' : '#1a1a1a') // Selected route border
-                    : [
-                        'case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                            this.props.isDarkMode ? '#ffffff' : '#1a1a1a', // On hover
-                            this.props.isDarkMode ? '#999999' : '#7A7A78', // Default
-                    ],
-                "line-width": [
-                    "interpolate",
-                    ["exponential", 1.5],
-                    ["zoom"],
-                    6, Math.max(1, DIRECTIONS_LINE_WIDTH/4),
-                    18, DIRECTIONS_LINE_WIDTH * DEFAULT_LINE_WIDTH_MULTIPLIER
-                ]
+                "line-width": ROUTE_LINE_PADDING_WIDTH,
+                "line-gap-width": ROUTE_LINE_PADDING_GAP_WIDTH
             },
             filter: ['==', '$type', 'LineString']
         });
@@ -1138,20 +1142,36 @@ class Map extends Component {
             layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: {
                 'line-color': layerType === 'top'
-                    ? (this.props.isDarkMode ? '#000000' : '#FFFFFF') // Selected route color
+                    ? (this.props.isDarkMode ? '#EA9010' : '#C8681E') // Selected route color
                     : [
                         'case',
                         ['boolean', ['feature-state', 'hover'], false],
                             this.props.isDarkMode ? '#000000' : '#FFFFFF', // On hover
-                            this.props.isDarkMode ? '#444547' : '#C5C3C1'  // Default unselected
+                            this.props.isDarkMode ? '#999999' : '#cac7c4'  // Default unselected
                     ],
-                "line-width": [
-                    "interpolate",
-                    ["exponential", 1.5],
-                    ["zoom"],
-                    10, Math.max(1, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH)/4),
-                    18, (DIRECTIONS_LINE_WIDTH-DIRECTIONS_LINE_BORDER_WIDTH) * DEFAULT_LINE_WIDTH_MULTIPLIER
-                ]
+                "line-width": ROUTE_LINE_WIDTH
+            },
+            filter: ['==', '$type', 'LineString']
+        });
+
+        // 2. Border layer
+        map.addLayer({
+            id: `route--border${suffix}`,
+            type: 'line',
+            source: sourceId,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': layerType === 'top' 
+                    ? (this.props.isDarkMode ? '#ffffff' : '#000000') // Selected route border
+                    : [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                            this.props.isDarkMode ? '#ffffff' : '#1a1a1a', // On hover
+                            this.props.isDarkMode ? '#ffffff' : '#000000', // Default
+                    ],
+                "line-width": ROUTE_LINE_BORDER_WIDTH,
+                "line-opacity": 0.5,
+                "line-gap-width": ROUTE_LINE_GAP_WIDTH
             },
             filter: ['==', '$type', 'LineString']
         });
@@ -1248,26 +1268,51 @@ class Map extends Component {
             }
         });
         
+        // Create mapping from cyclepath types to layer definitions
+        const cyclepathTypeToLayer = {};
+        this.props.layers.forEach(layer => {
+            if (layer.name === 'Ciclovia' || layer.name === 'Ciclofaixa' || 
+                layer.name === 'Ciclorrota' || layer.name === 'Calçada compartilhada') {
+                cyclepathTypeToLayer[layer.name] = layer;
+            }
+        });
+
+        // Build color expression using layer definitions
+        const colorExpression = [
+            'case',
+            ['==', ['get', 'type'], 'Ciclovia'], 
+            this.props.isDarkMode ? cyclepathTypeToLayer['Ciclovia'].style.lineColorDark : cyclepathTypeToLayer['Ciclovia'].style.lineColor,
+            ['==', ['get', 'type'], 'Ciclofaixa'], 
+            this.props.isDarkMode ? cyclepathTypeToLayer['Ciclofaixa'].style.lineColorDark : cyclepathTypeToLayer['Ciclofaixa'].style.lineColor,
+            ['==', ['get', 'type'], 'Ciclorrota'], 
+            this.props.isDarkMode ? cyclepathTypeToLayer['Ciclorrota'].style.lineColorDark : cyclepathTypeToLayer['Ciclorrota'].style.lineColor,
+            ['==', ['get', 'type'], 'Calçada compartilhada'], 
+            this.props.isDarkMode ? cyclepathTypeToLayer['Calçada compartilhada'].style.lineColorDark : cyclepathTypeToLayer['Calçada compartilhada'].style.lineColor,
+            '#00ff00' // Default fallback color
+        ];
+
         map.addLayer({
             id: 'overlapping-cyclepaths',
             type: 'line',
             source: 'overlapping-cyclepaths',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            // layout: { 'line-join': 'round', 'line-cap': 'round' },
+            layout: { 'line-join': 'round' },
             paint: {
-                'line-color': [
+                'line-color': colorExpression,
+                // 'line-color': [
+                //     'case',
+                //     ['==', ['get', 'type'], 'Ciclovia'], '#00A33F',
+                //     ['==', ['get', 'type'], 'Ciclofaixa'], '#84CC16',
+                //     ['==', ['get', 'type'], 'Ciclorrota'], '#F56743',
+                //     ['==', ['get', 'type'], 'Calçada compartilhada'], '#F6CA5D',
+                //     '#00ff00' // Default fallback color
+                // ],
+                'line-width': ROUTE_LINE_WIDTH,
+                'line-opacity': [
                     'case',
-                    ['==', ['get', 'type'], 'Ciclovia'], '#00A33F',
-                    ['==', ['get', 'type'], 'Ciclofaixa'], '#84CC16',
-                    ['==', ['get', 'type'], 'Ciclorrota'], '#F56743',
-                    ['==', ['get', 'type'], 'Calçada compartilhada'], '#F6CA5D',
-                    '#00ff00' // Default fallback color
-                ],
-                'line-width': [
-                    "interpolate",
-                        ["exponential", 1.5],
-                        ["zoom"],
-                        6, 2,
-                        18, 8
+                    ['boolean', ['feature-state', 'selected'], false],
+                    1.0,  // Full opacity for selected route's cyclepaths
+                    0.4   // Reduced opacity for unselected routes' cyclepaths
                 ]
             },
             filter: ['==', '$type', 'LineString']
@@ -1901,8 +1946,8 @@ class Map extends Component {
                 positionOptions: {
                     enableHighAccuracy: true
                 },
-                trackUserLocation: false,
-                showUserHeading: true
+                trackUserLocation: IS_MOBILE ? true : false,
+                showUserHeading: IS_MOBILE ? true : false
             });
             geolocate.on('geolocate', result => {
                 console.debug('geolocate', result);
