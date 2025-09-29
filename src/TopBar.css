@@ -14,13 +14,11 @@
 }
 
 .theme-dark .logo-svg {
-    fill: #B6F9D1;
-    stroke: #B6F9D1;
+    color: #A7C957;
 }
 
 .theme-light .logo-svg {
-    fill: #22C55E;
-    stroke: #22C55E;
+    color: #386641;
 }
 
 @media (min-width: 1400px) {
