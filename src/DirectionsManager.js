@@ -176,7 +176,8 @@ class DirectionsManager {
     async calculateHybridDirections(fromCoords, toCoords) {
         console.debug('Calculating hybrid directions using all providers');
         
-        const providers = ['mapbox', 'graphhopper', 'valhalla', 'openrouteservice'];
+        // const providers = ['mapbox', 'graphhopper', 'valhalla', 'openrouteservice'];
+        const providers = ['mapbox', 'graphhopper', 'valhalla'];
         const promises = providers.map(async (providerName) => {
             try {
                 this.directionsService.setProvider(providerName);
