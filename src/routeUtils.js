@@ -9,10 +9,10 @@ export const getRouteScore = (routeCoverageData, index) => {
     
     // Infrastructure quality weights (higher = better)
     const qualityWeights = {
-        'Ciclovia': 1.0,           // Perfect score
-        'Ciclofaixa': 0.8,         // Good but not perfect
-        'Calçada compartilhada': 0.6,         // Moderate quality
-        'Ciclorrota': 0.4  // Lower quality
+        'Ciclovia': 1.0,
+        'Calçada compartilhada': 0.8,
+        'Ciclofaixa': 0.6,
+        'Ciclorrota': 0.4
     };
     
     // Calculate weighted score

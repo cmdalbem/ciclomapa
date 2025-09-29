@@ -1053,32 +1053,33 @@ class DirectionsPanel extends Component {
                                 {/* Disclaimer */}
                                 <div className="p-2 text-gray-500 text-xs gap-2 flex flex-col">
                                     <div>
-                                        As rotas são sugestões automáticas. Sempre verifique as condições das vias, sinalização e segurança antes de pedalar :)
+                                        As rotas são sugestões automáticas, sempre verifique as condições das vias, sinalização e segurança antes de pedalar! :) 
+                                        <Popover
+                                            content={(
+                                                <div className="text-sm text-white" style={{width: 320}}>
+                                                    <h3 className="font-semibold">
+                                                        Como calculamos as notas?
+                                                    </h3>
+                                                    <p>
+                                                        As notas indicam o quanto cada opção de rota está coberta por diferentes tipos de infraestrutura cicloviária.
+                                                    </p>
+                                                    <p>
+                                                        Por exemplo: uma opção 100% coberta por ciclovias ganha a nota máxima 100. Porém se fosse por ciclorrotas a nota seria bem menor, já que a pessoa ciclista precisa compartilhar a via com carros.
+                                                    </p>
+                                                    <p>
+                                                        <code>
+                                                            nota = pCiclovia*1.0 + pCalcadaCompartilhada*0.8 + pCiclofaixa*0.6 + pCiclorrota*0.4
+                                                        </code>
+                                                    </p>
+                                                </div>
+                                            )}
+                                        >
+                                            {" "}
+                                            <span className="underline">
+                                                Leia mais sobre como calculamos as notas
+                                            </span>
+                                        </Popover>
                                     </div>
-                                    <Popover
-                                        content={(
-                                            <div className="text-sm text-white" style={{width: 320}}>
-                                                <h3 className="font-semibold">
-                                                    Como calculamos as notas?
-                                                </h3>
-                                                <p>
-                                                    Consideramos o quanto cada rota está coberta por diferentes tipos de infraestrutura cicloviária para calcular uma nota que indique a sua qualidade.
-                                                </p>
-                                                <p>
-                                                    Por exemplo: uma nota perfeita é uma rota 100% coberta por ciclovias. Porém se fosse por ciclorrotas a nota seria bem menor, já que a pessoa ciclista precisa compartilhar a via com carros.
-                                                </p>
-                                                <p>
-                                                    <code>
-                                                        nota = pCiclovia*1.0 + pCiclofaixa*0.8 + pCalcadaCompartilhada*0.6 + pCiclorrota*0.4
-                                                    </code>
-                                                </p>
-                                            </div>
-                                        )}
-                                    >
-                                        <div className="underline">
-                                            Leia mais sobre as notas
-                                        </div>
-                                    </Popover>
                                 </div>
                             </div>
                         )}
