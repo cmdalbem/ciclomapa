@@ -54,7 +54,7 @@ export const TOPBAR_HEIGHT = 64;
 
 // Settings
 
-export const HYBRID_MAX_RESULTS = IS_MOBILE ? 3 : 5;
+export const HYBRID_MAX_RESULTS = 3;
 
 
 /* 
