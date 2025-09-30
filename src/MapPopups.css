@@ -23,11 +23,7 @@
   border-bottom-color: black;
 }
 
-.popup-big.mapboxgl-popup {
-  --popup-bg-color: black;
-  --popup-text-color: white;
-}
-
+.route-tooltip-popup .mapboxgl-popup-content,
 .popup-big .mapboxgl-popup-content {
   background: var(--popup-bg-color);
   color: var(--popup-text-color);
@@ -48,19 +44,28 @@
   color: var(--popup-text-color);
 }
 
+.route-tooltip-popup.mapboxgl-popup .mapboxgl-popup-tip,
 .popup-big.mapboxgl-popup .mapboxgl-popup-tip {
   border-top-color: var(--popup-bg-color);
   border-bottom-color: var(--popup-bg-color);
 }
 
+.theme-dark .route-tooltip-popup.mapboxgl-popup,
 .theme-dark .popup-big.mapboxgl-popup {
   --popup-bg-color: black;
   --popup-text-color: white;
 }
 
+.theme-light .route-tooltip-popup.mapboxgl-popup,
 .theme-light .popup-big.mapboxgl-popup {
   --popup-bg-color: white;
   --popup-text-color: black;
+}
+
+.route-tooltip-popup .mapboxgl-popup-content {
+  /* background: inherit; */
+  padding: inherit;
+  box-shadow: inherit;
 }
 
 /* Mobile */
@@ -92,11 +97,4 @@
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
   }
-}
-
-/* Reset default styles from Mapbox */
-.route-tooltip-popup .mapboxgl-popup-content {
-  background: inherit;
-  padding: inherit;
-  box-shadow: inherit;
 }
