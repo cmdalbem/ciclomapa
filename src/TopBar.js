@@ -4,7 +4,6 @@ import {
     Space,
     Button,
     Popover,
-    Menu,
     Dropdown,
 } from 'antd';
 
@@ -123,30 +122,30 @@ class TopBar extends Component {
             updatedAtStr = lastUpdate.toLocaleString('pt-BR');
         }
 
-        const collaborateMenu = (
-            <Menu onClick={this.handleMenuClick}>
+        const collaborateMenu = {
+            items: [
                 {
-                    // ENABLE_COMMENTS &&
-                    <Menu.Item key="comment" icon={<IconComment/>}>
-                        Comentar
-                    </Menu.Item>
+                    key: 'comment',
+                    icon: <IconComment/>,
+                    label: 'Comentar',
+                },
+                {
+                    key: 'edit',
+                    icon: <IconEdit />,
+                    label: this.state.hasDismissedEditModal ?
+                        <a
+                            className="inline-block w-full hover:text-white"
+                            target="_BLANK" rel="noopener noreferrer"
+                            href={getOsmUrl(this.props.lat, this.props.lng, this.props.z)}
+                        >
+                            Editar no OSM
+                        </a>
+                        :
+                        "Editar no OSM"
                 }
-                <Menu.Item key="edit" icon={<IconEdit />}>
-                    {
-                        this.state.hasDismissedEditModal ?
-                            <a
-                                className="inline-block w-full hover:text-white"
-                                target="_BLANK" rel="noopener noreferrer"
-                                href={getOsmUrl(this.props.lat, this.props.lng, this.props.z)}
-                            >
-                                Editar no OSM
-                            </a>
-                            :
-                            "Editar no OSM"
-                    }
-                </Menu.Item>
-            </Menu>
-        )
+            ],
+            onClick: this.handleMenuClick
+        };
 
         return (
             <IconContext.Provider value={{ className: 'react-icon' }}>
@@ -250,7 +249,7 @@ class TopBar extends Component {
                                         Sobre
                                     </Button>
 
-                                    <Dropdown overlay={collaborateMenu}>
+                                    <Dropdown menu={collaborateMenu}>
                                         <Button className="glass-bg ml-2">
                                             <span className="mr-2"> Colaborar </span>
                                             <IconCaret className="text-green-300" />
@@ -278,7 +277,7 @@ class TopBar extends Component {
                 </div>
 
                 <EditModal
-                    visible={this.state.editModal}
+                    open={this.state.editModal}
                     lat={this.props.lat}
                     lng={this.props.lng}
                     z={this.props.z}
