@@ -13,7 +13,7 @@ class EditModal extends Component {
         return (
             <Modal
                 title="Editar no OSM"
-                visible={this.props.visible}
+                open={this.props.visible}
                 onCancel={this.props.onClose}
                 showCancel={false}
                 footer={[
