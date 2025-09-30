@@ -19,8 +19,6 @@ import {
     IS_PROD,
     DEFAULT_LINE_WIDTH_MULTIPLIER,
     COMMENTS_ZOOM_THRESHOLD,
-    DIRECTIONS_LINE_WIDTH,
-    DIRECTIONS_LINE_BORDER_WIDTH,
     MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
 } from './constants.js'
 
@@ -81,6 +79,7 @@ const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 const ROUTE_FIXED_WIDTH = 8;
 const ROUTE_LINE_PADDING_WIDTH = 2;
 const ROUTE_LINE_BORDER_WIDTH = 1;
+const ROUTE_LINE_BORDER_OPACITY = 0.3;
 
 const ROUTE_LINE_WIDTH = ROUTE_FIXED_WIDTH;
 const ROUTE_LINE_PADDING_GAP_WIDTH = ROUTE_FIXED_WIDTH + ROUTE_LINE_PADDING_WIDTH;
@@ -1170,7 +1169,7 @@ class Map extends Component {
                             this.props.isDarkMode ? '#ffffff' : '#000000', // Default
                     ],
                 "line-width": ROUTE_LINE_BORDER_WIDTH,
-                "line-opacity": 0.5,
+                "line-opacity": ROUTE_LINE_BORDER_OPACITY,
                 "line-gap-width": ROUTE_LINE_GAP_WIDTH
             },
             filter: ['==', '$type', 'LineString']
@@ -1277,20 +1276,6 @@ class Map extends Component {
             }
         });
 
-        // Build color expression using layer definitions
-        const colorExpression = [
-            'case',
-            ['==', ['get', 'type'], 'Ciclovia'], 
-            this.props.isDarkMode ? cyclepathTypeToLayer['Ciclovia'].style.lineColorDark : cyclepathTypeToLayer['Ciclovia'].style.lineColor,
-            ['==', ['get', 'type'], 'Ciclofaixa'], 
-            this.props.isDarkMode ? cyclepathTypeToLayer['Ciclofaixa'].style.lineColorDark : cyclepathTypeToLayer['Ciclofaixa'].style.lineColor,
-            ['==', ['get', 'type'], 'Ciclorrota'], 
-            this.props.isDarkMode ? cyclepathTypeToLayer['Ciclorrota'].style.lineColorDark : cyclepathTypeToLayer['Ciclorrota'].style.lineColor,
-            ['==', ['get', 'type'], 'Calçada compartilhada'], 
-            this.props.isDarkMode ? cyclepathTypeToLayer['Calçada compartilhada'].style.lineColorDark : cyclepathTypeToLayer['Calçada compartilhada'].style.lineColor,
-            '#00ff00' // Default fallback color
-        ];
-
         map.addLayer({
             id: 'overlapping-cyclepaths',
             type: 'line',
@@ -1298,25 +1283,70 @@ class Map extends Component {
             // layout: { 'line-join': 'round', 'line-cap': 'round' },
             layout: { 'line-join': 'round' },
             paint: {
-                'line-color': colorExpression,
-                // 'line-color': [
-                //     'case',
-                //     ['==', ['get', 'type'], 'Ciclovia'], '#00A33F',
-                //     ['==', ['get', 'type'], 'Ciclofaixa'], '#84CC16',
-                //     ['==', ['get', 'type'], 'Ciclorrota'], '#F56743',
-                //     ['==', ['get', 'type'], 'Calçada compartilhada'], '#F6CA5D',
-                //     '#00ff00' // Default fallback color
-                // ],
-                'line-width': ROUTE_LINE_WIDTH,
-                'line-opacity': [
+                'line-color': [
                     'case',
                     ['boolean', ['feature-state', 'selected'], false],
-                    1.0,  // Full opacity for selected route's cyclepaths
-                    0.4   // Reduced opacity for unselected routes' cyclepaths
-                ]
+                    // Selected route - use original colors
+                    ['case',
+                        ['==', ['get', 'type'], 'Ciclovia'], 
+                            this.props.isDarkMode ?
+                                cyclepathTypeToLayer['Ciclovia'].style.lineColorDark 
+                                : cyclepathTypeToLayer['Ciclovia'].style.lineColor,
+                        ['==', ['get', 'type'], 'Ciclofaixa'], 
+                            this.props.isDarkMode ?
+                                cyclepathTypeToLayer['Ciclofaixa'].style.lineColorDark 
+                                : cyclepathTypeToLayer['Ciclofaixa'].style.lineColor,
+                        ['==', ['get', 'type'], 'Ciclorrota'], 
+                            this.props.isDarkMode ?
+                                cyclepathTypeToLayer['Ciclorrota'].style.lineColorDark 
+                                : cyclepathTypeToLayer['Ciclorrota'].style.lineColor,
+                        ['==', ['get', 'type'], 'Calçada compartilhada'], 
+                            this.props.isDarkMode ?
+                                cyclepathTypeToLayer['Calçada compartilhada'].style.lineColorDark 
+                                : cyclepathTypeToLayer['Calçada compartilhada'].style.lineColor,
+                            '#00ff00' // Default fallback color
+                    ],
+                    // Unselected route - use adjusted colors (brighter in light mode, darker in dark mode)
+                    ['case',
+                        ['==', ['get', 'type'], 'Ciclovia'], 
+                            this.props.isDarkMode ?
+                                adjustColorBrightness(cyclepathTypeToLayer['Ciclovia'].style.lineColorDark, -0.6)
+                                : adjustColorBrightness(cyclepathTypeToLayer['Ciclovia'].style.lineColor, 0.6),
+                        ['==', ['get', 'type'], 'Ciclofaixa'], 
+                            this.props.isDarkMode ?
+                                adjustColorBrightness(cyclepathTypeToLayer['Ciclofaixa'].style.lineColorDark, -0.6)
+                                : adjustColorBrightness(cyclepathTypeToLayer['Ciclofaixa'].style.lineColor, 0.6),
+                        ['==', ['get', 'type'], 'Ciclorrota'], 
+                            this.props.isDarkMode ?
+                                adjustColorBrightness(cyclepathTypeToLayer['Ciclorrota'].style.lineColorDark, -0.6)
+                                : adjustColorBrightness(cyclepathTypeToLayer['Ciclorrota'].style.lineColor, 0.6),
+                        ['==', ['get', 'type'], 'Calçada compartilhada'], 
+                            this.props.isDarkMode ?
+                                adjustColorBrightness(cyclepathTypeToLayer['Calçada compartilhada'].style.lineColorDark, -0.6)
+                                : adjustColorBrightness(cyclepathTypeToLayer['Calçada compartilhada'].style.lineColor, 0.6),
+                            '#00ff00' // Default fallback color
+                    ]
+                ],
+                'line-width': ROUTE_LINE_WIDTH,
+                'line-opacity': 1.0
             },
             filter: ['==', '$type', 'LineString']
         // }, layerUnderneathName);
+        });
+
+        map.addLayer({
+            id: `overlapping-cyclepaths--border`,
+            type: 'line',
+            source: 'overlapping-cyclepaths',
+            // layout: { 'line-join': 'round', 'line-cap': 'round' },
+            layout: { 'line-join': 'round' },
+            paint: {
+                "line-color": this.props.isDarkMode ? '#ffffff' : '#000000',
+                "line-width": ROUTE_LINE_BORDER_WIDTH,
+                "line-opacity": ROUTE_LINE_BORDER_OPACITY,
+                "line-gap-width": ROUTE_LINE_GAP_WIDTH
+            },
+            filter: ['==', '$type', 'LineString']
         });
     }
 
@@ -1361,25 +1391,31 @@ class Map extends Component {
             map.resize();
         }
 
-        // Handle directions changes
-        if (this.props.directions !== prevProps.directions) {
+        // Handle directions-related changes
+        const directionsChanged = this.props.directions !== prevProps.directions;
+        const coverageDataChanged = this.props.routeCoverageData !== prevProps.routeCoverageData;
+        const selectedRouteChanged = this.props.selectedRouteIndex !== prevProps.selectedRouteIndex;
+        const hoveredRouteChanged = this.props.hoveredRouteIndex !== prevProps.hoveredRouteIndex;
+
+        if (directionsChanged) {
             this.updateDirectionsLayer(this.props.directions);
             this.updateCyclablePathsOpacity();
-            this.updateRouteTooltips();
         }
 
-        // Handle route coverage data changes (for showing all route overlaps)
-        if (this.props.routeCoverageData !== prevProps.routeCoverageData) {
+        if (coverageDataChanged) {
             this.updateOverlappingCyclepathsLayer(this.props.routeCoverageData);
         }
 
-        // Handle selected route changes
-        if (this.props.selectedRouteIndex !== prevProps.selectedRouteIndex) {
+        // Update tooltips when directions or coverage data changes
+        if (directionsChanged || coverageDataChanged) {
+            this.updateRouteTooltips();
+        }
+
+        if (selectedRouteChanged) {
             this.updateSelectedRoute(this.props.selectedRouteIndex);
         }
 
-        // Handle hovered route changes
-        if (this.props.hoveredRouteIndex !== prevProps.hoveredRouteIndex) {
+        if (hoveredRouteChanged) {
             this.updateHoveredRoute(this.props.hoveredRouteIndex);
         }
     }
@@ -1858,7 +1894,7 @@ class Map extends Component {
             this.props.setMapRef(this.map);
         }
 
-        this.popups = new MapPopups(this.map, this.props.debugMode);
+        this.popups = new MapPopups(this.map, this.props.debugMode, this.props.isDarkMode);
         
         // Set up global function for popup routing button
         window.setDestinationFromPopup = (coordinates) => {
@@ -2135,7 +2171,7 @@ class Map extends Component {
                     ENABLE_COMMENTS &&
                     <CommentModal
                         location={this.props.location}
-                        visible={this.state.showCommentModal}
+                        open={this.state.showCommentModal}
                         tagsList={this.state.tagsList}
                         coords={this.newCommentCoords}
                         airtableDatabase={this.airtableDatabase}
@@ -2150,11 +2186,12 @@ class Map extends Component {
 }
 
 // Wrapper component to use the directions context with the class component
-const MapWrapper = (props) => {
+const MapWrapper = React.forwardRef((props, ref) => {
     const directionsContext = useDirections();
     
     return (
         <Map
+            ref={ref}
             {...props}
             directions={directionsContext.directions}
             selectedRouteIndex={directionsContext.selectedRouteIndex}
@@ -2165,6 +2202,6 @@ const MapWrapper = (props) => {
             isInRouteMode={directionsContext.isInRouteMode}
         />
     );
-};
+});
 
 export default MapWrapper;
