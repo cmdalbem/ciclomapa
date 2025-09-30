@@ -100,17 +100,27 @@ class DirectionsPanel extends Component {
             this.setupMapClickListener();
         }
 
-        if (
-            (this.props.map && !prevProps.map) ||
-            this.props.fromPoint !== prevProps.fromPoint ||
-            this.props.toPoint !== prevProps.toPoint ||
-            (this.props.geoJson && !prevProps.geoJson)
-        ) {
-            console.debug('From or to point changed, or geoJson became available, recalculating directions');
+        // Sync markers when points change
+        const pointsChanged = this.props.fromPoint !== prevProps.fromPoint || 
+                             this.props.toPoint !== prevProps.toPoint;
+        if (pointsChanged && this.props.map) {
+            console.debug('From or to point changed, syncing markers');
             this.syncMarkersWithProps();
-            if (this.props.fromPoint && this.props.toPoint) {
-                this.requestDirectionsCalculation();
-            }
+        }
+
+        // Calculate directions only when both points exist and either:
+        // 1. Points changed, or
+        // 2. GeoJson just became available
+        const shouldCalculateDirections = (
+            this.props.fromPoint && 
+            this.props.toPoint && 
+            this.props.geoJson &&
+            (pointsChanged || (this.props.geoJson && !prevProps.geoJson))
+        );
+
+        if (shouldCalculateDirections) {
+            console.debug('Conditions met for directions calculation');
+            this.requestDirectionsCalculation();
         }
     }
 
@@ -225,15 +235,11 @@ class DirectionsPanel extends Component {
     }
 
     handleGeocoderResult(result, type) {
-        this.addMarker(type, result.result.center);
-        
         if (type === 'from') {
             this.props.onFromPointChange(result);
         } else {
             this.props.onToPointChange(result);
         }
-        
-        this.requestDirectionsCalculation();
         
         if (type === 'from' && !this.props.toPoint) {
             this.autoFocusDestinationInput();
@@ -489,16 +495,6 @@ class DirectionsPanel extends Component {
         if (this.toGeocoder && this.toGeocoder.setInput) {
             this.toGeocoder.setInput(fromPoint.result.place_name);
         }
-
-        // Swap markers
-        const fromCoords = toPoint.result.center;
-        const toCoords = fromPoint.result.center;
-        
-        this.addMarker('from', fromCoords);
-        this.addMarker('to', toCoords);
-
-        // Recalculate directions with swapped points
-        this.requestDirectionsCalculation();
     }
 
     handleProviderChange(provider) {
@@ -521,22 +517,8 @@ class DirectionsPanel extends Component {
     }
 
     setDestinationFromMapClick(coordinates) {
-        this.addMarker('to', coordinates);
-
         // Perform reverse geocoding to get the address and update state
         this.reverseGeocode({ lng: coordinates[0], lat: coordinates[1] }, 'to');
-
-        // Check if we have both origin and destination for directions calculation
-        const hasFromPoint = this.props.fromPoint;
-        
-        if (hasFromPoint) {
-            // Calculate directions with the new destination
-            const fromCoords = hasFromPoint.result.center;
-            const toCoords = coordinates;
-            
-            console.debug('Requesting directions calculation from map click from:', fromCoords, 'to:', toCoords);
-            this.calculateDirections(fromCoords, toCoords, this.state.selectedProvider);
-        }
     }
 
     selectRoute(index) {
@@ -719,32 +701,16 @@ class DirectionsPanel extends Component {
         }
         
         const coordinates = [e.lngLat.lng, e.lngLat.lat];
-        const focusedInput = this.state.focusedInput; // Store the focused input before clearing it
+        const focusedInput = this.state.focusedInput;
         
-        const newPoint = {
-            result: {
-                center: coordinates,
-                place_name: 'Ponto selecionado no mapa'
-            }
-        };
-        
-        this.addMarker(focusedInput, coordinates);
-        
-        if (focusedInput === 'from') {
-            this.props.onFromPointChange(newPoint);
-        } else {
-            this.props.onToPointChange(newPoint);
-        }
         
         this.reverseGeocode(e.lngLat, focusedInput);
-        this.requestDirectionsCalculation();
         
         if (focusedInput === 'from' && !this.props.toPoint) {
             this.autoFocusDestinationInput();
         } else {
             this.setState({ focusedInput: null });
         }
-        
     }
 
     attachMapboxGeocoderToDOM(geocoderType, containerId, attachedStateKey) {
