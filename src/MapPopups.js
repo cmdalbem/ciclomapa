@@ -17,9 +17,10 @@ class MapPopups {
     routeTooltips;
     previousCyclewayLayerClass;
 
-    constructor(map, debugMode) {
+    constructor(map, debugMode, isDarkMode = false) {
         this.map = map;
         this.debugMode = debugMode;
+        this.isDarkMode = isDarkMode;
 
         // "closeOnClick: false" enables chaining clicks continually
         //   from POI to POI, otherwise clicking on another POI would
@@ -308,16 +309,18 @@ class MapPopups {
     createRouteTooltipHTML(route, routeIndex, routeCoverageData, selectedRouteIndex = null) {
         const routeScore = routeCoverageData[routeIndex]?.score || null;
         const routeScoreClass = routeCoverageData[routeIndex]?.scoreClass || null;
-        const stateClass = this.getTooltipStateClass(routeIndex, selectedRouteIndex);
         
-        const baseClasses = "px-2 py-1 text-xs bg-black rounded-md font-medium shadow-lg cursor-pointer transition-all duration-200 max-w-[200px]";
+        // const stateClass = this.getTooltipStateClass(routeIndex, selectedRouteIndex);
+        const stateVariables = this.getTooltipStateVariables(routeIndex, selectedRouteIndex);
+        
+        const baseClasses = "px-2 py-1 text-xs font-medium shadow-lg cursor-pointer transition-all duration-200 max-w-[200px]";
         
         return `
-            <div class="route-tooltip-content ${stateClass}">
-                <div class="${baseClasses} text-white" data-route-index="${routeIndex}">
+            <div class="route-tooltip-content" style="--popup-bg-color: ${stateVariables.bgColor}; --popup-text-color: ${stateVariables.textColor}">
+                <div class="${baseClasses}" data-route-index="${routeIndex}">
                     <div class="flex items-center space-x-2">
                         ${routeScore !== null ? `
-                            <div class="${routeScoreClass} text-black px-1 py-0.5 rounded text-xs font-mono">
+                            <div class="${routeScoreClass} px-1 py-0.5 text-xs font-mono rounded" style="color: white">
                                 ${routeScore}
                             </div>
                         ` : ''}
@@ -333,11 +336,25 @@ class MapPopups {
         `;
     }
 
-    getTooltipStateClass(routeIndex, selectedRouteIndex) {
-        if (selectedRouteIndex === routeIndex) return '';
-        if (selectedRouteIndex !== null) return 'opacity-70 hover:opacity-100 ';
-        return '';
+    getTooltipStateVariables(routeIndex, selectedRouteIndex) {
+        // Selected route
+        if (selectedRouteIndex === routeIndex) {
+            return { 
+                bgColor: this.isDarkMode ? '#ffffff' : '#000000', 
+                textColor: this.isDarkMode ? '#000000' : '#ffffff' 
+            };
+        }
+
+        // Unselected route
+        if (selectedRouteIndex !== null) {
+            return { 
+                bgColor: this.isDarkMode ? '#000000' : '#f5f5f5', 
+                textColor: this.isDarkMode ? '#d1d1d1' : '#525252' 
+            };
+        }
+        return { bgColor: 'inherit', textColor: 'inherit' };
     }
+
 
     updateRouteTooltips(directions, routeCoverageData, onRouteSelected, selectedRouteIndex = null) {
         // Clear existing route tooltips
@@ -388,9 +405,11 @@ class MapPopups {
         if (!this.routeTooltips) return;
 
         this.routeTooltips.forEach((popup, index) => {
-            const contentDiv = popup.getElement()?.querySelector('.route-tooltip-content');
+            const contentDiv = popup.getElement();
             if (contentDiv) {
-                contentDiv.className = `route-tooltip-content ${this.getTooltipStateClass(index, selectedRouteIndex)}`;
+                const stateVariables = this.getTooltipStateVariables(index, selectedRouteIndex);
+                contentDiv.style.setProperty("--popup-bg-color", stateVariables.bgColor);
+                contentDiv.style.setProperty("--popup-text-color", stateVariables.textColor);
             }
         });
     }
