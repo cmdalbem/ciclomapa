@@ -59,7 +59,7 @@ class OSMController {
     static getQuery(constraints) {
         const bbox = constraints.bbox;
         const areaId = constraints.areaId;
-        const areaName = constraints.areaName;
+        // const areaName = constraints.areaName;
         const filteredLayers = layersDefinitions.default.filter(l => l.filters);
 
         const body = filteredLayers.map(l =>
@@ -80,35 +80,33 @@ class OSMController {
             ).join("")
         ).join("");
 
-        // Add boundary geometry query
-        const boundaryQuery = areaName ? (() => {
-            const { city, state, country } = parseAreaName(areaName);
-            return `
-                (
-                    rel
-                    ["boundary"="administrative"]
-                    ["admin_level"~"^(6|7|8|9|10)$"]
-                    ["name"="${city}"]
-                    ["is_in:state"="${state}"]
-                    ["is_in:country"="${country}"];
-                    rel
-                    ["boundary"="administrative"]
-                    ["admin_level"~"^(6|7|8|9|10)$"]
-                    ["name"="${city}"]
-                    ["is_in:country"="${country}"];
-                    rel
-                    ["boundary"="administrative"]
-                    ["admin_level"~"^(6|7|8|9|10)$"]
-                    ["name"="${city}"];
-                );
-                map_to_area ->.cityArea;
-                out geom;
-            `;
-        })() : '';
+        // const boundaryQuery = areaName ? (() => {
+        //     const { city, state, country } = parseAreaName(areaName);
+        //     return `
+        //         (
+        //             rel
+        //             ["boundary"="administrative"]
+        //             ["admin_level"~"^(6|7|8|9|10)$"]
+        //             ["name"="${city}"]
+        //             ["is_in:state"="${state}"]
+        //             ["is_in:country"="${country}"];
+        //             rel
+        //             ["boundary"="administrative"]
+        //             ["admin_level"~"^(6|7|8|9|10)$"]
+        //             ["name"="${city}"]
+        //             ["is_in:country"="${country}"];
+        //             rel
+        //             ["boundary"="administrative"]
+        //             ["admin_level"~"^(6|7|8|9|10)$"]
+        //             ["name"="${city}"];
+        //         );
+        //         map_to_area ->.cityArea;
+        //         out geom;
+        //     `;
+        // })() : '';
 
         return `
             [out:json][timeout:500];
-            ${boundaryQuery}
             ${!bbox && `area(${areaId})->.a;`}
             (
                 ${body}
