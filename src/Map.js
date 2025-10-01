@@ -350,17 +350,21 @@ class Map extends Component {
             } else if (layer.type === 'poi' && layer.filters) {
                 const layerId = layer.id + '--pmtiles';
                 const circlesLayerId = layerId + 'circles';
+                const polygonLayerId = layerId + 'polygon';
                 
-                // Update circles layer filter
                 if (this.map.getLayer(circlesLayerId)) {
                     const newFilter = this.convertFilterToMapboxFilter(layer, 'pmtiles-source');
                     this.map.setFilter(circlesLayerId, newFilter);
                 }
                 
-                // Update symbols layer filter
                 if (this.map.getLayer(layerId)) {
                     const newFilter = this.convertFilterToMapboxFilter(layer, 'pmtiles-source');
                     this.map.setFilter(layerId, newFilter);
+                }
+
+                if (this.map.getLayer(polygonLayerId)) {
+                    const newFilter = this.convertFilterToMapboxFilter(layer, 'pmtiles-source');
+                    this.map.setFilter(polygonLayerId, newFilter);
                 }
             }
         });
@@ -408,6 +412,20 @@ class Map extends Component {
             }
         });
 
+        this.map.addLayer({
+            'id': layerId+'polygon',
+            "name": l.name,
+            'source': sourceId,
+            'source-layer': sourceLayer,
+            "filter": filters,
+            "description": l.description,
+            type: 'fill',
+            'paint': {
+                'fill-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.1 : 0.2),
+                'fill-opacity': 0.2
+            }
+        });
+
         // Icons (higher zoom levels)
         this.map.addLayer({
             'id': layerId,
@@ -442,7 +460,7 @@ class Map extends Component {
                 'text-variable-anchor': ['top'],
                 "icon-padding": 0,
                 "icon-offset": [0, -14],
-                "text-offset": [0, 1],
+                "text-offset": [0, 0.5],
                 "icon-allow-overlap": true,
                 'icon-image': this.props.isDarkMode ? `${l.icon}` : `${l.icon}--light`,
             },
@@ -1780,15 +1798,18 @@ class Map extends Component {
                 ['', '--pmtiles'].forEach(sourceSuffix => {
                     const layerId = layer.id + sourceSuffix;
                     const circlesLayerId = layerId + 'circles';
+                    const polygonLayerId = layerId + 'polygon';
                     
-                    // Handle circles layer (lower zoom levels)
                     if (map.getLayer(circlesLayerId)) {
                         map.setLayoutProperty(circlesLayerId, 'visibility', status);
                     }
                     
-                    // Handle symbols layer (higher zoom levels)
                     if (map.getLayer(layerId)) {
                         map.setLayoutProperty(layerId, 'visibility', status);
+                    }
+
+                    if (map.getLayer(polygonLayerId)) {
+                        map.setLayoutProperty(polygonLayerId, 'visibility', status);
                     }
                 });
             }
