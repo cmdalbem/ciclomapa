@@ -519,7 +519,6 @@ class App extends Component {
                     notification.error({
                         message: 'Ops',
                         description: 'O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.',
-                        duration: 0
                     });
                 }
                 
