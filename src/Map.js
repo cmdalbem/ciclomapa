@@ -29,6 +29,7 @@ import NewCommentCursor from './NewCommentCursor.js'
 import MapPopups from './MapPopups.js'
 import { adjustColorBrightness } from './utils.js'
 import debounce from 'lodash.debounce'
+import { calculateSunPosition, getCurrentSunPosition, isCurrentlyDaytime } from './sunPositionUtils.js'
 
 import './Map.css'
 
@@ -1852,6 +1853,29 @@ class Map extends Component {
         }
     }
 
+    /**
+     * Set map lighting based on real sun position
+     */
+    setRealisticLighting() {
+        if (!this.map) return;
+
+        // Calculate current sun position for map location
+        const sunPosition = getCurrentSunPosition(this.props.lat, this.props.lng);
+        
+        if (sunPosition.isDaytime) {
+            this.map.setLight({
+                'anchor': 'viewport',
+                'color': '#ffffff',
+                'intensity': 1,
+                'position': [
+                    sunPosition.azimuthal, // azimuthal angle
+                    sunPosition.polar      // polar angle
+                ]
+            });
+            console.debug(`Set realistic lighting: azimuthal=${sunPosition.azimuthal.toFixed(1)}°, polar=${sunPosition.polar.toFixed(1)}°`);
+        }
+    }
+
     componentDidMount() {
         // Prevent multiple map initializations
         if (this.map) {
@@ -1915,6 +1939,9 @@ class Map extends Component {
             .then(result => {
                 this.syncMapState(result.place_name);
             });
+
+        // Set realistic lighting based on current sun position
+        this.setRealisticLighting();
     }
 
     initMapControls() {
@@ -1990,6 +2017,8 @@ class Map extends Component {
                 this.reverseGeocode([result.coords.longitude, result.coords.latitude])
                     .then(geocodeResult => {
                         this.syncMapState(geocodeResult.place_name);
+                        // Update lighting based on user's actual location
+                        this.setRealisticLighting();
                     });
             });
             this.map.addControl(geolocate, 'bottom-right');
