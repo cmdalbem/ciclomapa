@@ -34,7 +34,6 @@ class DirectionsManager {
             
             // Calculate coverage, scores, and prepare routes with all data in one pass
             let routesWithScores = [];
-            let routeCoverageData = [];
             
             // Check if coverage data is available once for all routes
             const hasCoverageData = geoJson && layers;
@@ -73,7 +72,8 @@ class DirectionsManager {
                     // Only calculate score if we have coverage data, otherwise return null
                     let routeScore, routeScoreClass;
                     if (hasCoverageData) {
-                        const scoreResult = getRouteScore([coverageData], 0);
+                        const routeWithCoverage = { ...route, ...coverageData };
+                        const scoreResult = getRouteScore(routeWithCoverage);
                         routeScore = scoreResult.score;
                         routeScoreClass = scoreResult.cssClass;
                     } else {
@@ -85,21 +85,13 @@ class DirectionsManager {
                     // Only calculate breakdowns if we have coverage data, otherwise return null
                     let coverageBreakdown, coverageBreakdownSimple;
                     if (hasCoverageData) {
-                        coverageBreakdown = getCoverageBreakdown([coverageData], 0);
-                        coverageBreakdownSimple = getCoverageBreakdownSimple([coverageData], 0);
+                        const routeWithCoverage = { ...route, ...coverageData };
+                        coverageBreakdown = getCoverageBreakdown(routeWithCoverage);
+                        coverageBreakdownSimple = getCoverageBreakdownSimple(routeWithCoverage);
                     } else {
                         coverageBreakdown = null;
                         coverageBreakdownSimple = null;
                     }
-                    
-                    // Store coverage data for this route
-                    routeCoverageData[index] = {
-                        ...coverageData,
-                        score: routeScore,
-                        scoreClass: routeScoreClass,
-                        coverageBreakdown,
-                        coverageBreakdownSimple
-                    };
                     
                     return {
                         ...route,
@@ -138,32 +130,35 @@ class DirectionsManager {
                 limitedSortedRoutes = sortedRoutesWithScores.slice(0, HYBRID_MAX_RESULTS);
             }
 
-            // Extract sorted routes and coverage data, adding sorted index
-            const sortedRoutes = limitedSortedRoutes.map(({ coverage, coverageByType, overlappingCyclepaths, score, scoreClass, coverageBreakdown, coverageBreakdownSimple, ...route }, sortedIndex) => ({
-                ...route,
-                sortedIndex
-            }));
-            const sortedRouteCoverageData = limitedSortedRoutes.map(({ coverage, coverageByType, overlappingCyclepaths, score, scoreClass, coverageBreakdown, coverageBreakdownSimple }, sortedIndex) => ({
-                coverage,
-                coverageByType,
-                overlappingCyclepaths,
-                score,
-                scoreClass,
-                coverageBreakdown,
-                coverageBreakdownSimple,
-                sortedIndex
+            // Create unified route data structure with integrated cyclepath information
+            const unifiedRoutes = limitedSortedRoutes.map((route, sortedIndex) => ({
+                // Original route properties
+                geometry: route.geometry,
+                distance: route.distance,
+                duration: route.duration,
+                provider: route.provider,
+                sortedIndex,
+                
+                // Integrated cyclepath data
+                overlappingCyclepaths: route.overlappingCyclepaths || [],
+                coverage: route.coverage || 0,
+                coverageByType: route.coverageByType || {},
+                hasCoverageData: route.hasCoverageData || false,
+                
+                // Scoring data
+                score: route.score,
+                scoreClass: route.scoreClass,
+                coverageBreakdown: route.coverageBreakdown,
+                coverageBreakdownSimple: route.coverageBreakdownSimple
             }));
 
             const result = {
-                directions: {
-                    ...directions,
-                    routes: sortedRoutes
-                },
-                routeCoverageData: sortedRouteCoverageData
+                routes: unifiedRoutes,
+                waypoints: directions.waypoints || [],
+                bbox: directions.bbox
             };
 
-            console.log('Directions calculated in DirectionsManager:', result.directions);
-            console.log('Route coverage data with scores calculated in DirectionsManager:', result.routeCoverageData);
+            console.log('Unified directions calculated in DirectionsManager:', result);
             
             return result;
             

@@ -794,7 +794,18 @@ class DirectionsPanel extends Component {
 
     render() {
         const { directions, directionsLoading, directionsError } = this.props;
-        const { routeCoverageData } = this.props;
+        
+        // Extract route coverage data from unified directions structure
+        const routeCoverageData = directions && directions.routes ? 
+            directions.routes.map(route => ({
+                score: route.score,
+                scoreClass: route.scoreClass,
+                coverageBreakdown: route.coverageBreakdown,
+                coverageBreakdownSimple: route.coverageBreakdownSimple,
+                coverage: route.coverage,
+                coverageByType: route.coverageByType,
+                overlappingCyclepaths: route.overlappingCyclepaths
+            })) : [];
         
         return (
             <>
@@ -1069,7 +1080,6 @@ const DirectionsPanelWrapper = React.forwardRef((props, ref) => {
             directionsError={directionsContext.directionsError}
             selectedRouteIndex={directionsContext.selectedRouteIndex}
             hoveredRouteIndex={directionsContext.hoveredRouteIndex}
-            routeCoverageData={directionsContext.routeCoverageData}
             onRouteSelected={directionsContext.selectRoute}
             onRouteHovered={directionsContext.hoverRoute}
             onDirectionsCleared={directionsContext.clearDirections}

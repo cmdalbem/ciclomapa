@@ -19,7 +19,6 @@ export const DirectionsProvider = ({ children }) => {
     const [directions, setDirections] = useState(null);
     const [selectedRouteIndex, setSelectedRouteIndex] = useState(null);
     const [hoveredRouteIndex, setHoveredRouteIndex] = useState(null);
-    const [routeCoverageData, setRouteCoverageData] = useState([]);
     const [directionsLoading, setDirectionsLoading] = useState(false);
     const [directionsError, setDirectionsError] = useState(null);
     
@@ -43,7 +42,6 @@ export const DirectionsProvider = ({ children }) => {
         setDirections(null);
         setSelectedRouteIndex(null);
         setHoveredRouteIndex(null);
-        setRouteCoverageData([]);
         setDirectionsError(null);
         setDirectionsLoading(false);
         setIsSettingRoutePoints(false);
@@ -58,8 +56,7 @@ export const DirectionsProvider = ({ children }) => {
     }, []);
 
     const setDirectionsData = useCallback((data) => {
-        setDirections(data.directions);
-        setRouteCoverageData(data.routeCoverageData || []);
+        setDirections(data);
         setSelectedRouteIndex(0);
         setDirectionsError(null);
         setDirectionsLoading(false);
@@ -82,7 +79,6 @@ export const DirectionsProvider = ({ children }) => {
         directions,
         selectedRouteIndex,
         hoveredRouteIndex,
-        routeCoverageData,
         directionsLoading,
         directionsError,
         isSettingRoutePoints,

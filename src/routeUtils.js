@@ -1,11 +1,23 @@
 // Shared utilities for route calculations and formatting
 
 export const getRouteScore = (routeCoverageData, index) => {
-    if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
-        return { score: null, cssClass: null };
+    // Handle both old array format and new unified format
+    let route;
+    if (Array.isArray(routeCoverageData)) {
+        // Old format: array with index
+        if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
+            return { score: null, cssClass: null };
+        }
+        route = routeCoverageData[index];
+    } else {
+        // New format: direct route object
+        if (!routeCoverageData || !routeCoverageData.coverageByType) {
+            return { score: null, cssClass: null };
+        }
+        route = routeCoverageData;
     }
     
-    const coverageByType = routeCoverageData[index].coverageByType;
+    const coverageByType = route.coverageByType;
     
     // Infrastructure quality weights (higher = better)
     const qualityWeights = {
@@ -28,65 +40,43 @@ export const getRouteScore = (routeCoverageData, index) => {
     
     // If no cycling infrastructure coverage, score is 0
     if (totalCoverage === 0) {
-        return { score: 0, cssClass: 'bg-red-600' };
+        return { score: 0, cssClass: 'bg-gray-600' };
     }
     
-    // Normalize score to 0-100 range
-    const score = Math.round(weightedScore);
+    // Calculate final score considering BOTH quality and coverage
+    // The score should be: (weighted average quality) * (actual route coverage percentage)
+    const weightedAverage = weightedScore / totalCoverage; // Quality score (0-1)
+    const routeCoveragePercentage = route.coverage || 0; // Actual coverage % (0-100)
+    const finalScore = Math.round(weightedAverage * routeCoveragePercentage);
+    
+    // Determine CSS class based on score
     let cssClass;
+    if (finalScore >= 80) cssClass = 'bg-green-600';
+    else if (finalScore >= 60) cssClass = 'bg-yellow-600';
+    else if (finalScore >= 40) cssClass = 'bg-orange-600';
+    else cssClass = 'bg-red-600';
     
-    // Score ranges
-    //   0-50: Bad
-    //   51-75: Good
-    //   76-100: Very good
-    if (score < 50) {
-        cssClass = 'bg-red-600';
-    } else if (score < 75) {
-        cssClass = 'bg-yellow-600';
-    } else {
-        cssClass = 'bg-green-600';
-    }
-    
-    return { score, cssClass };
-};
-
-export const getCoverageBreakdownSimple = (routeCoverageData, index) => {
-    if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
-        return null;
-    }
-    
-    const coverageByType = routeCoverageData[index].coverageByType;
-    const breakdown = [];
-    
-    // Map infrastructure type names to shorter display names
-    const typeNames = {
-        'Ciclovia': 'ciclovia',
-        'Ciclofaixa': 'ciclofaixa', 
-        'Ciclorrota': 'ciclorrota',
-        'Calçada compartilhada': 'calçada'
-    };
-    
-    Object.keys(coverageByType).forEach(type => {
-        const percentage = coverageByType[type];
-        if (percentage > 5) {
-            const shortName = typeNames[type] || type.toLowerCase();
-            breakdown.push(`${percentage.toFixed(0)}% ${shortName}`);
-        }
-    });
-    
-    return (
-        <span className="text-xs text-gray-400">
-            {breakdown.join('∙')}
-        </span>
-    );
+    return { score: finalScore, cssClass };
 };
 
 export const getCoverageBreakdown = (routeCoverageData, index) => {
-    if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
-        return [];
+    // Handle both old array format and new unified format
+    let route;
+    if (Array.isArray(routeCoverageData)) {
+        // Old format: array with index
+        if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
+            return [];
+        }
+        route = routeCoverageData[index];
+    } else {
+        // New format: direct route object
+        if (!routeCoverageData || !routeCoverageData.coverageByType) {
+            return [];
+        }
+        route = routeCoverageData;
     }
     
-    const coverageByType = routeCoverageData[index].coverageByType;
+    const coverageByType = route.coverageByType;
     const breakdown = [];
     
     const typeNames = {
@@ -130,6 +120,49 @@ export const getCoverageBreakdown = (routeCoverageData, index) => {
                 </span>
             ))}
         </div>
+    );
+};
+
+export const getCoverageBreakdownSimple = (routeCoverageData, index) => {
+    // Handle both old array format and new unified format
+    let route;
+    if (Array.isArray(routeCoverageData)) {
+        // Old format: array with index
+        if (!routeCoverageData || !routeCoverageData[index] || !routeCoverageData[index].coverageByType) {
+            return null;
+        }
+        route = routeCoverageData[index];
+    } else {
+        // New format: direct route object
+        if (!routeCoverageData || !routeCoverageData.coverageByType) {
+            return null;
+        }
+        route = routeCoverageData;
+    }
+    
+    const coverageByType = route.coverageByType;
+    const breakdown = [];
+    
+    // Map infrastructure type names to shorter display names
+    const typeNames = {
+        'Ciclovia': 'ciclovia',
+        'Ciclofaixa': 'ciclofaixa', 
+        'Ciclorrota': 'ciclorrota',
+        'Calçada compartilhada': 'calçada'
+    };
+    
+    Object.keys(coverageByType).forEach(type => {
+        const percentage = coverageByType[type];
+        if (percentage > 5) {
+            const shortName = typeNames[type] || type.toLowerCase();
+            breakdown.push(`${percentage.toFixed(0)}% ${shortName}`);
+        }
+    });
+    
+    return (
+        <span className="text-xs text-gray-400">
+            {breakdown.join('∙')}
+        </span>
     );
 };
 

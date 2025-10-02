@@ -306,9 +306,9 @@ class MapPopups {
     }
 
     // Route tooltip methods
-    createRouteTooltipHTML(route, routeIndex, routeCoverageData, selectedRouteIndex = null) {
-        const routeScore = routeCoverageData[routeIndex]?.score || null;
-        const routeScoreClass = routeCoverageData[routeIndex]?.scoreClass || null;
+    createRouteTooltipHTML(route, routeIndex, selectedRouteIndex = null) {
+        const routeScore = route.score || null;
+        const routeScoreClass = route.scoreClass || null;
         
         // const stateClass = this.getTooltipStateClass(routeIndex, selectedRouteIndex);
         const stateVariables = this.getTooltipStateVariables(routeIndex, selectedRouteIndex);
@@ -356,7 +356,7 @@ class MapPopups {
     }
 
 
-    updateRouteTooltips(directions, routeCoverageData, onRouteSelected, selectedRouteIndex = null) {
+    updateRouteTooltips(directions, onRouteSelected, selectedRouteIndex = null) {
         // Clear existing route tooltips
         this.clearRouteTooltips();
 
@@ -381,7 +381,7 @@ class MapPopups {
                     className: 'route-tooltip-popup'
                 })
                 .setLngLat(midPoint)
-                .setHTML(this.createRouteTooltipHTML(route, route.sortedIndex, routeCoverageData, selectedRouteIndex))
+                .setHTML(this.createRouteTooltipHTML(route, route.sortedIndex, selectedRouteIndex))
                 .addTo(this.map);
 
                 // Add click handler to the popup content
