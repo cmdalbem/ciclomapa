@@ -1960,9 +1960,6 @@ class Map extends Component {
             .then(result => {
                 this.syncMapState(result.place_name);
             });
-
-        // Set realistic lighting based on current sun position
-        this.setRealisticLighting();
     }
 
     initMapControls() {
@@ -2092,6 +2089,7 @@ class Map extends Component {
     async initializeAfterStyleLoad() {
         await this.initLayers();
         this.initMapControls();
+        this.setRealisticLighting();
     }
 
     loadImages() {
