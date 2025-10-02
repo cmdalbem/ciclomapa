@@ -1207,12 +1207,116 @@ class Map extends Component {
                 'line-occlusion-opacity': 0.5,
                 'line-color': layerType === 'top' 
                     ? (this.props.isDarkMode ? '#ffffff' : '#000000') // Selected route border
-                    : [
+                    : (this.props.isDarkMode ? '#ffffff' : '#000000'),
+                    // : [
+                    //     'case',
+                    //     ['boolean', ['feature-state', 'hover'], false],
+                    //         this.props.isDarkMode ? '#ffffff' : '#1a1a1a', // On hover
+                    //         this.props.isDarkMode ? '#ffffff' : '#000000', // Default
+                    // ],
+                "line-width": ROUTE_LINE_BORDER_WIDTH,
+                "line-opacity": ROUTE_LINE_BORDER_OPACITY,
+                "line-gap-width": ROUTE_LINE_GAP_WIDTH
+            },
+            filter: ['==', '$type', 'LineString']
+        });
+    }
+
+    createCyclepathLayerSet(map, sourceId, layerType) {
+        const suffix = layerType === 'top' ? '-selected' : 's-unselected';
+        
+        // Create mapping from cyclepath types to layer definitions
+        const cyclepathTypeToLayer = {};
+        this.props.layers.forEach(layer => {
+            if (layer.name === 'Ciclovia' || layer.name === 'Ciclofaixa' || 
+                layer.name === 'Ciclorrota' || layer.name === 'Calçada compartilhada') {
+                cyclepathTypeToLayer[layer.name] = layer;
+            }
+        });
+
+        // Main cyclepath layer
+        map.addLayer({
+            id: `overlapping-cyclepath${suffix}`,
+            type: 'line',
+            source: sourceId,
+            layout: {
+                'line-join': 'round',
+                'line-elevation-reference': 'ground',
+            },
+            paint: {
+                'line-occlusion-opacity': 0.5,
+                'line-color': layerType === 'top'
+                    ? [
+                        // Selected route - use original colors
                         'case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                            this.props.isDarkMode ? '#ffffff' : '#1a1a1a', // On hover
-                            this.props.isDarkMode ? '#ffffff' : '#000000', // Default
+                            ['==', ['get', 'type'], 'Ciclovia'], 
+                                this.props.isDarkMode ?
+                                    cyclepathTypeToLayer['Ciclovia'].style.lineColorDark 
+                                    : cyclepathTypeToLayer['Ciclovia'].style.lineColor,
+                            ['==', ['get', 'type'], 'Ciclofaixa'], 
+                                this.props.isDarkMode ?
+                                    cyclepathTypeToLayer['Ciclofaixa'].style.lineColorDark 
+                                    : cyclepathTypeToLayer['Ciclofaixa'].style.lineColor,
+                            ['==', ['get', 'type'], 'Ciclorrota'], 
+                                this.props.isDarkMode ?
+                                    cyclepathTypeToLayer['Ciclorrota'].style.lineColorDark 
+                                    : cyclepathTypeToLayer['Ciclorrota'].style.lineColor,
+                            ['==', ['get', 'type'], 'Calçada compartilhada'], 
+                                this.props.isDarkMode ?
+                                    cyclepathTypeToLayer['Calçada compartilhada'].style.lineColorDark 
+                                    : cyclepathTypeToLayer['Calçada compartilhada'].style.lineColor,
+                                '#00ff00' // Default fallback color
+                    ]
+                    : [
+                        // Unselected route - use adjusted colors (brighter in light mode, darker in dark mode)
+                        'case',
+                            ['==', ['get', 'type'], 'Ciclovia'], 
+                                this.props.isDarkMode ?
+                                    adjustColorBrightness(cyclepathTypeToLayer['Ciclovia'].style.lineColorDark, -0.6)
+                                    : adjustColorBrightness(cyclepathTypeToLayer['Ciclovia'].style.lineColor, 0.6),
+                            ['==', ['get', 'type'], 'Ciclofaixa'], 
+                                this.props.isDarkMode ?
+                                    adjustColorBrightness(cyclepathTypeToLayer['Ciclofaixa'].style.lineColorDark, -0.6)
+                                    : adjustColorBrightness(cyclepathTypeToLayer['Ciclofaixa'].style.lineColor, 0.6),
+                            ['==', ['get', 'type'], 'Ciclorrota'], 
+                                this.props.isDarkMode ?
+                                    adjustColorBrightness(cyclepathTypeToLayer['Ciclorrota'].style.lineColorDark, -0.6)
+                                    : adjustColorBrightness(cyclepathTypeToLayer['Ciclorrota'].style.lineColor, 0.6),
+                            ['==', ['get', 'type'], 'Calçada compartilhada'], 
+                                this.props.isDarkMode ?
+                                    adjustColorBrightness(cyclepathTypeToLayer['Calçada compartilhada'].style.lineColorDark, -0.6)
+                                    : adjustColorBrightness(cyclepathTypeToLayer['Calçada compartilhada'].style.lineColor, 0.6),
+                                '#00ff00' // Default fallback color
                     ],
+                'line-width': ROUTE_LINE_WIDTH,
+                // 'line-dasharray': ['case',
+                //     ['==', ['get', 'type'], 'Ciclovia'], 
+                //             cyclepathTypeToLayer['Ciclovia'].style.lineStyle === 'dashed' ? [1, 1] : [1, 0],
+                //     ['==', ['get', 'type'], 'Ciclofaixa'], 
+                //             cyclepathTypeToLayer['Ciclofaixa'].style.lineStyle === 'dashed' ? [1, 1] : [1, 0],
+                //     ['==', ['get', 'type'], 'Ciclorrota'], 
+                //             cyclepathTypeToLayer['Ciclorrota'].style.lineStyle === 'dashed' ? [1, 1] : [1, 0],
+                //     ['==', ['get', 'type'], 'Calçada compartilhada'], 
+                //             cyclepathTypeToLayer['Calçada compartilhada'].style.lineStyle === 'dashed' ? [1, 1] : [1, 0],
+                //     [1,0]
+                // ],
+                'line-opacity': 1.0
+            },
+            filter: ['==', '$type', 'LineString']
+        });
+
+        // Border layer
+        map.addLayer({
+            id: `overlapping-cyclepath${suffix}--border`,
+            type: 'line',
+            source: sourceId,
+            layout: {
+                'line-join': 'round',
+                'line-elevation-reference': 'ground',
+            },
+            paint: {
+                'line-occlusion-opacity': 0.5,
+                "line-color": this.props.isDarkMode ? '#ffffff' : '#000000',
                 "line-width": ROUTE_LINE_BORDER_WIDTH,
                 "line-opacity": ROUTE_LINE_BORDER_OPACITY,
                 "line-gap-width": ROUTE_LINE_GAP_WIDTH
@@ -1281,7 +1385,7 @@ class Map extends Component {
         });
     }
 
-    initDirectionsLayers() {
+    initRoutesLayers() {
         const map = this.map;
         if (!map || map.getSource("route-selected")) return;
 
@@ -1292,108 +1396,23 @@ class Map extends Component {
                 'features': []
             }
         }
+        
+        // Initialize route sources and layers
         map.addSource("route-selected", emptySource);
         map.addSource("routes-unselected", emptySource);
         this.createRouteLayerSet(map, 'routes-unselected', 'bottom');
         this.createRouteLayerSet(map, 'route-selected', 'top');
         this.setupRouteEventHandlers(map);
-    }
-
-    initOverlappingCyclepathsLayer() {
-        const map = this.map;
-        // const layerUnderneathName = this.map.getLayer('road-label-small') ? 'road-label-small' : '';
-        if (!map || map.getSource("overlapping-cyclepaths")) return;
-
-        map.addSource("overlapping-cyclepaths", {
-            "type": "geojson",
-            "data": {
-                'type': 'FeatureCollection',
-                'features': []
-            }
-        });
         
-        // Create mapping from cyclepath types to layer definitions
-        const cyclepathTypeToLayer = {};
-        this.props.layers.forEach(layer => {
-            if (layer.name === 'Ciclovia' || layer.name === 'Ciclofaixa' || 
-                layer.name === 'Ciclorrota' || layer.name === 'Calçada compartilhada') {
-                cyclepathTypeToLayer[layer.name] = layer;
-            }
-        });
-
-        map.addLayer({
-            id: 'overlapping-cyclepaths',
-            type: 'line',
-            source: 'overlapping-cyclepaths',
-            // layout: { 'line-join': 'round', 'line-cap': 'round' },
-            layout: { 'line-join': 'round' },
-            paint: {
-                'line-color': [
-                    'case',
-                    ['boolean', ['feature-state', 'selected'], false],
-                    // Selected route - use original colors
-                    ['case',
-                        ['==', ['get', 'type'], 'Ciclovia'], 
-                            this.props.isDarkMode ?
-                                cyclepathTypeToLayer['Ciclovia'].style.lineColorDark 
-                                : cyclepathTypeToLayer['Ciclovia'].style.lineColor,
-                        ['==', ['get', 'type'], 'Ciclofaixa'], 
-                            this.props.isDarkMode ?
-                                cyclepathTypeToLayer['Ciclofaixa'].style.lineColorDark 
-                                : cyclepathTypeToLayer['Ciclofaixa'].style.lineColor,
-                        ['==', ['get', 'type'], 'Ciclorrota'], 
-                            this.props.isDarkMode ?
-                                cyclepathTypeToLayer['Ciclorrota'].style.lineColorDark 
-                                : cyclepathTypeToLayer['Ciclorrota'].style.lineColor,
-                        ['==', ['get', 'type'], 'Calçada compartilhada'], 
-                            this.props.isDarkMode ?
-                                cyclepathTypeToLayer['Calçada compartilhada'].style.lineColorDark 
-                                : cyclepathTypeToLayer['Calçada compartilhada'].style.lineColor,
-                            '#00ff00' // Default fallback color
-                    ],
-                    // Unselected route - use adjusted colors (brighter in light mode, darker in dark mode)
-                    ['case',
-                        ['==', ['get', 'type'], 'Ciclovia'], 
-                            this.props.isDarkMode ?
-                                adjustColorBrightness(cyclepathTypeToLayer['Ciclovia'].style.lineColorDark, -0.6)
-                                : adjustColorBrightness(cyclepathTypeToLayer['Ciclovia'].style.lineColor, 0.6),
-                        ['==', ['get', 'type'], 'Ciclofaixa'], 
-                            this.props.isDarkMode ?
-                                adjustColorBrightness(cyclepathTypeToLayer['Ciclofaixa'].style.lineColorDark, -0.6)
-                                : adjustColorBrightness(cyclepathTypeToLayer['Ciclofaixa'].style.lineColor, 0.6),
-                        ['==', ['get', 'type'], 'Ciclorrota'], 
-                            this.props.isDarkMode ?
-                                adjustColorBrightness(cyclepathTypeToLayer['Ciclorrota'].style.lineColorDark, -0.6)
-                                : adjustColorBrightness(cyclepathTypeToLayer['Ciclorrota'].style.lineColor, 0.6),
-                        ['==', ['get', 'type'], 'Calçada compartilhada'], 
-                            this.props.isDarkMode ?
-                                adjustColorBrightness(cyclepathTypeToLayer['Calçada compartilhada'].style.lineColorDark, -0.6)
-                                : adjustColorBrightness(cyclepathTypeToLayer['Calçada compartilhada'].style.lineColor, 0.6),
-                            '#00ff00' // Default fallback color
-                    ]
-                ],
-                'line-width': ROUTE_LINE_WIDTH,
-                'line-opacity': 1.0
-            },
-            filter: ['==', '$type', 'LineString']
-        // }, layerUnderneathName);
-        });
-
-        map.addLayer({
-            id: `overlapping-cyclepaths--border`,
-            type: 'line',
-            source: 'overlapping-cyclepaths',
-            // layout: { 'line-join': 'round', 'line-cap': 'round' },
-            layout: { 'line-join': 'round' },
-            paint: {
-                "line-color": this.props.isDarkMode ? '#ffffff' : '#000000',
-                "line-width": ROUTE_LINE_BORDER_WIDTH,
-                "line-opacity": ROUTE_LINE_BORDER_OPACITY,
-                "line-gap-width": ROUTE_LINE_GAP_WIDTH
-            },
-            filter: ['==', '$type', 'LineString']
-        });
+        // Initialize overlapping cyclepaths sources and layers
+        map.addSource("overlapping-cyclepaths-selected", emptySource);
+        map.addSource("overlapping-cyclepaths-unselected", emptySource);
+        
+        // Create cyclepath layer sets
+        this.createCyclepathLayerSet(map, 'overlapping-cyclepaths-unselected', 'bottom');
+        this.createCyclepathLayerSet(map, 'overlapping-cyclepaths-selected', 'top');
     }
+
 
     componentDidUpdate(prevProps) {
         const map = this.map;
@@ -1436,23 +1455,18 @@ class Map extends Component {
             map.resize();
         }
 
-        // Handle directions-related changes
-        const directionsChanged = this.props.directions !== prevProps.directions;
-        const coverageDataChanged = this.props.routeCoverageData !== prevProps.routeCoverageData;
+        // Handle routes-related changes
+        const routesChanged = this.props.routes !== prevProps.routes;
         const selectedRouteChanged = this.props.selectedRouteIndex !== prevProps.selectedRouteIndex;
         const hoveredRouteChanged = this.props.hoveredRouteIndex !== prevProps.hoveredRouteIndex;
 
-        if (directionsChanged) {
-            this.updateDirectionsLayer(this.props.directions);
+        if (routesChanged) {
+            this.updateRoutesLayer(this.props.routes);
             this.updateCyclablePathsOpacity();
         }
 
-        if (coverageDataChanged) {
-            this.updateOverlappingCyclepathsLayer(this.props.routeCoverageData);
-        }
-
-        // Update tooltips when directions or coverage data changes
-        if (directionsChanged || coverageDataChanged) {
+        // Update tooltips when routes changes
+        if (routesChanged) {
             this.updateRouteTooltips();
         }
 
@@ -1465,19 +1479,19 @@ class Map extends Component {
         }
     }
 
-    updateDirectionsLayer(directions) {
+    updateRoutesLayer(routes) {
         const map = this.map;
         if (!map) return;
 
-        // Check if directions sources exist (they might not be initialized yet)
+        // Check if routes sources exist (they might not be initialized yet)
         if (!map.getSource('route-selected') || !map.getSource('routes-unselected')) {
-            console.warn('Directions sources not yet initialized, skipping update');
+            console.warn('Routes sources not yet initialized, skipping update');
             return;
         }
 
-        if (directions && directions.routes && directions.routes.length > 0) {
+        if (routes && routes.routes && routes.routes.length > 0) {
             // Create GeoJSON features for all routes
-            const routeFeatures = directions.routes.slice().reverse().map((route) => ({
+            const routeFeatures = routes.routes.slice().reverse().map((route) => ({
                 type: 'Feature',
                 id: route.sortedIndex, // Add explicit ID for feature state
                 properties: { 
@@ -1488,20 +1502,26 @@ class Map extends Component {
                 geometry: route.geometry
             }));
 
-            // Progressively add all routes
-            // this.progressivelyAddAllRoutes(routeFeatures, this.props.selectedRouteIndex);
-
             // Distribute routes between top and bottom layers based on current selection
             this.distributeRoutesBetweenLayers(routeFeatures);
             
-            if (directions.bbox) { 
-                map.fitBounds(directions.bbox, { padding: 100, duration: 2000 }); 
+            // Update overlapping cyclepaths with unified data
+            this.updateOverlappingCyclepathsFromUnifiedData(routes);
+            
+            if (routes.bbox) { 
+                map.fitBounds(routes.bbox, { padding: 100, duration: 2000 }); 
             }
         } else {
             // Clear both sources
             const emptyData = { type: 'FeatureCollection', features: [] };
             map.getSource('route-selected').setData(emptyData);
             map.getSource('routes-unselected').setData(emptyData);
+            
+            // Clear overlapping cyclepaths
+            if (map.getSource('overlapping-cyclepaths-selected') && map.getSource('overlapping-cyclepaths-unselected')) {
+                map.getSource('overlapping-cyclepaths-selected').setData(emptyData);
+                map.getSource('overlapping-cyclepaths-unselected').setData(emptyData);
+            }
         }
     }
 
@@ -1533,6 +1553,38 @@ class Map extends Component {
             map.getSource('routes-unselected').setData({
                 type: 'FeatureCollection',
                 features: routeFeatures
+            });
+        }
+    }
+
+    distributeCyclepathsBetweenLayers(cyclepathFeatures) {
+        const map = this.map;
+        const selectedRouteIndex = this.props.selectedRouteIndex;
+        
+        // If there's a selected route, put its cyclepaths in top layer and others in bottom
+        if (selectedRouteIndex !== null && selectedRouteIndex !== undefined) {
+            const selectedCyclepaths = cyclepathFeatures.filter(f => f.properties.routeIndex === selectedRouteIndex);
+            const otherCyclepaths = cyclepathFeatures.filter(f => f.properties.routeIndex !== selectedRouteIndex);
+            
+            map.getSource('overlapping-cyclepaths-selected').setData({
+                type: 'FeatureCollection',
+                features: selectedCyclepaths
+            });
+            
+            map.getSource('overlapping-cyclepaths-unselected').setData({
+                type: 'FeatureCollection',
+                features: otherCyclepaths
+            });
+        } else {
+            // No selection, put all cyclepaths in bottom layer
+            map.getSource('overlapping-cyclepaths-selected').setData({
+                type: 'FeatureCollection',
+                features: []
+            });
+            
+            map.getSource('overlapping-cyclepaths-unselected').setData({
+                type: 'FeatureCollection',
+                features: cyclepathFeatures
             });
         }
     }
@@ -1648,30 +1700,30 @@ class Map extends Component {
         });
     }
 
-    updateOverlappingCyclepathsLayer(routeCoverageData) {
+    updateOverlappingCyclepathsFromUnifiedData(routes) {
         const map = this.map;
         if (!map) return;
 
-        // Check if overlapping cyclepaths source exists (it might not be initialized yet)
-        if (!map.getSource('overlapping-cyclepaths')) {
-            console.warn('Overlapping cyclepaths source not yet initialized, skipping update');
+        // Check if overlapping cyclepaths sources exist (they might not be initialized yet)
+        if (!map.getSource('overlapping-cyclepaths-selected') || !map.getSource('overlapping-cyclepaths-unselected')) {
+            console.warn('Overlapping cyclepaths sources not yet initialized, skipping update');
             return;
         }
 
         let allOverlappingCyclepaths = [];
         let featureId = 0;
 
-        if (routeCoverageData && routeCoverageData.length > 0) {
-            // Process routeCoverageData array
-            routeCoverageData.forEach((routeData, routeIndex) => {
-                if (routeData && routeData.overlappingCyclepaths && routeData.overlappingCyclepaths.length > 0) {
-                    routeData.overlappingCyclepaths.forEach((segment) => {
+        if (routes && routes.routes && routes.routes.length > 0) {
+            // Process unified routes data
+            routes.routes.forEach((route, routeIndex) => {
+                if (route && route.overlappingCyclepaths && route.overlappingCyclepaths.length > 0) {
+                    route.overlappingCyclepaths.forEach((segment) => {
                         allOverlappingCyclepaths.push({
                             type: 'Feature',
                             id: featureId++,
                             properties: {
                                 ...segment.properties,
-                                routeIndex: routeIndex,
+                                routeIndex: route.sortedIndex, // Use sortedIndex for consistency
                                 // Use debug_cyclepath_type for styling since these are overlap segments
                                 type: segment.properties.debug_cyclepath_type || 'Unknown'
                             },
@@ -1682,16 +1734,8 @@ class Map extends Component {
             });
         }
 
-        const cyclepathsGeoJSON = {
-            type: 'FeatureCollection',
-            features: allOverlappingCyclepaths
-        };
-        
-        // Update the overlapping cyclepaths layer
-        map.getSource('overlapping-cyclepaths').setData(cyclepathsGeoJSON);
-        
-        // Update selected state after data is loaded
-        this.updateOverlappingCyclepathsSelectedState(this.props.selectedRouteIndex);
+        // Distribute cyclepaths between top and bottom layers based on current selection
+        this.distributeCyclepathsBetweenLayers(allOverlappingCyclepaths);
     }
 
     updateSelectedRoute(selectedRouteIndex) {
@@ -1713,9 +1757,9 @@ class Map extends Component {
         });
 
         // Redistribute routes between layers based on new selection
-        // We need to reconstruct the route features from the original directions data
-        if (this.props.directions && this.props.directions.routes) {
-            const routeFeatures = this.props.directions.routes.slice().reverse().map((route) => ({
+        // We need to reconstruct the route features from the original routes data
+        if (this.props.routes && this.props.routes.routes) {
+            const routeFeatures = this.props.routes.routes.slice().reverse().map((route) => ({
                 type: 'Feature',
                 id: route.sortedIndex,
                 properties: { 
@@ -1726,11 +1770,11 @@ class Map extends Component {
                 geometry: route.geometry
             }));
             this.distributeRoutesBetweenLayers(routeFeatures);
+            
+            // Also redistribute cyclepaths when route selection changes
+            this.updateOverlappingCyclepathsFromUnifiedData(this.props.routes);
         }
 
-        // Update overlapping cyclepaths selected states
-        this.updateOverlappingCyclepathsSelectedState(selectedRouteIndex);
-        
         // Update tooltip selected states
         this.updateTooltipSelectedState(selectedRouteIndex);
     }
@@ -1792,9 +1836,9 @@ class Map extends Component {
         const map = this.map;
         if (!map) return;
 
-        const hasRoutes = this.props.directions && 
-                         this.props.directions.routes && 
-                         this.props.directions.routes.length > 0;
+        const hasRoutes = this.props.routes && 
+                         this.props.routes.routes && 
+                         this.props.routes.routes.length > 0;
 
         this.props.layers.forEach(layer => {
             if (layer.type === 'way') {
@@ -1851,8 +1895,7 @@ class Map extends Component {
     updateRouteTooltips() {
         if (this.popups) {
             this.popups.updateRouteTooltips(
-                this.props.directions,
-                this.props.routeCoverageData,
+                this.props.routes,
                 this.props.onRouteSelected,
                 this.props.selectedRouteIndex
             );
@@ -1862,41 +1905,6 @@ class Map extends Component {
     updateTooltipSelectedState(selectedRouteIndex) {
         if (this.popups) {
             this.popups.updateTooltipSelectedState(selectedRouteIndex);
-        }
-    }
-
-    updateOverlappingCyclepathsSelectedState(selectedRouteIndex) {
-        const map = this.map;
-        if (!map || !map.getSource('overlapping-cyclepaths')) {
-            return;
-        }
-
-        // Get features from the source - this will be empty if data isn't loaded yet
-        const features = map.querySourceFeatures('overlapping-cyclepaths');
-        if (features.length === 0) {
-            // Data not loaded yet, try again after a short delay
-            setTimeout(() => this.updateOverlappingCyclepathsSelectedState(selectedRouteIndex), 50);
-            return;
-        }
-
-        // Clear all selected states
-        features.forEach((feature) => {
-            map.setFeatureState(
-                { source: 'overlapping-cyclepaths', id: feature.id },
-                { selected: false }
-            );
-        });
-
-        // Set selected state for cyclepaths belonging to the selected route
-        if (selectedRouteIndex !== null && selectedRouteIndex !== undefined) {
-            features.forEach((feature) => {
-                if (feature.properties && feature.properties.routeIndex === selectedRouteIndex) {
-                    map.setFeatureState(
-                        { source: 'overlapping-cyclepaths', id: feature.id },
-                        { selected: true }
-                    );
-                }
-            });
         }
     }
 
@@ -2143,17 +2151,15 @@ class Map extends Component {
         // The order in which layers are initialized will define their paint order
         await this.initGeojsonLayers(this.props.layers);
         
-        this.initDirectionsLayers();
-        
-        this.initOverlappingCyclepathsLayer();
+        this.initRoutesLayers();
             
         if (ENABLE_COMMENTS) {
             this.initCommentsLayer();
         }
 
-        // Restore current directions if they exist
-        if (this.props.directions) {
-            this.updateDirectionsLayer(this.props.directions);
+        // Restore current routes if they exist
+        if (this.props.routes) {
+            this.updateRoutesLayer(this.props.routes);
             
             // Restore selected and hovered route states
             if (this.props.selectedRouteIndex !== null && this.props.selectedRouteIndex !== undefined) {
@@ -2165,13 +2171,13 @@ class Map extends Component {
         }
 
         // Restore overlapping cyclepaths if they exist
-        if (this.props.routeCoverageData && this.props.routeCoverageData.length > 0) {
-            this.updateOverlappingCyclepathsLayer(this.props.routeCoverageData);
+        if (this.props.routes && this.props.routes.routes && this.props.routes.routes.length > 0) {
+            this.updateOverlappingCyclepathsFromUnifiedData(this.props.routes);
         }
 
         this.syncMapState();
 
-        // Set initial cyclable paths opacity based on current directions state
+        // Set initial cyclable paths opacity based on current routes state
         this.updateCyclablePathsOpacity();
 
         this.map.on('moveend', this.debouncedOnMapMoveEnded);
@@ -2267,10 +2273,9 @@ const MapWrapper = React.forwardRef((props, ref) => {
         <Map
             ref={ref}
             {...props}
-            directions={directionsContext.directions}
+            routes={directionsContext.directions}
             selectedRouteIndex={directionsContext.selectedRouteIndex}
             hoveredRouteIndex={directionsContext.hoveredRouteIndex}
-            routeCoverageData={directionsContext.routeCoverageData}
             onRouteSelected={directionsContext.selectRoute}
             onRouteHovered={directionsContext.hoverRoute}
             isInRouteMode={directionsContext.isInRouteMode}
