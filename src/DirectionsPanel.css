@@ -1,7 +1,6 @@
 #directionsPanel {
     border-radius: 8px;
     /* box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); */
-    z-index: 1;
     position: absolute;
     top: 64px;  
     left: 24px;
@@ -33,16 +32,18 @@
 }
 
 .theme-dark {
-    .mapboxgl-ctrl-geocoder--input {
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-    }
+    #directionsPanel {
+        .mapboxgl-ctrl-geocoder--input {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
 
-    .mapboxgl-ctrl-geocoder.mapboxgl-ctrl {
-        background: rgba(28, 23, 23, 0.5);
+        .mapboxgl-ctrl-geocoder.mapboxgl-ctrl {
+            background: rgba(28, 23, 23, 0.5);
 
-        .mapboxgl-ctrl-geocoder--button {
-            background: none !important;
+            .mapboxgl-ctrl-geocoder--button {
+                background: none !important;
+            }
         }
     }
 }
@@ -94,6 +95,7 @@
 /* Mobile */
 @media (min-width: 320px) and (max-width: 480px) {
     #directionsPanel {
+        z-index: 1;
         left: 0;
         right: 0;
         top: 0;
