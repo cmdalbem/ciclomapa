@@ -79,8 +79,8 @@ const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 // @todo Move these to constants.js
 const ROUTE_FIXED_WIDTH = 8;
 const ROUTE_LINE_PADDING_WIDTH = 2;
-const ROUTE_LINE_BORDER_WIDTH = 1;
-const ROUTE_LINE_BORDER_OPACITY = 0.3;
+const ROUTE_LINE_BORDER_WIDTH = 0.5;
+const ROUTE_LINE_BORDER_OPACITY = 0.6;
 
 const ROUTE_LINE_WIDTH = ROUTE_FIXED_WIDTH;
 const ROUTE_LINE_PADDING_GAP_WIDTH = ROUTE_FIXED_WIDTH + ROUTE_LINE_PADDING_WIDTH;
@@ -395,7 +395,7 @@ class Map extends Component {
                     7, 0,
                     14, 5
                 ],
-                'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.1 : 0.2),
+                'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? 0 : 0.2),
                 'circle-stroke-width': [
                     'interpolate',
                     ["exponential", 1.5],
@@ -668,6 +668,7 @@ class Map extends Component {
             'source-layer': sourceLayer,
             "filter": filters,
             "paint": {
+                "line-occlusion-opacity": 0.5,
                 "line-opacity": 0,
                 "line-color": 'yellow',
                 "line-width": 20
@@ -683,6 +684,7 @@ class Map extends Component {
             "description": l.description,
             "filter": filters,
             "paint": {
+                "line-occlusion-opacity": 0.5,
                 "line-color": [
                     "case",
                     ["boolean", ["feature-state", "hover"], false],
@@ -715,7 +717,10 @@ class Map extends Component {
                     ],
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
-                "layout": (l.style.lineStyle === 'dashed') ? {} : { "line-join": "round", "line-cap": "round" },
+                "layout": {
+                    "line-elevation-reference": "ground",
+                    ...(l.style.lineStyle === 'dashed' ? {} : { "line-join": "round", "line-cap": "round" }),
+                },
             }, layerUnderneathName);
 
         this.map.addLayer({
@@ -727,7 +732,8 @@ class Map extends Component {
             "description": l.description,
             "filter": filters,
             "paint": {
-                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.6 : 0.6),
+                "line-occlusion-opacity": 0.5,
+                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.5 : 0.6),
                 "line-width": [
                     "interpolate",
                         ["exponential", 1.5],
@@ -738,6 +744,7 @@ class Map extends Component {
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
                 "layout": {
+                    "line-elevation-reference": "ground",
                     ...(l.style.lineStyle === 'dashed' ? {} : { "line-join": "round", "line-cap": "round" }),
                     "visibility": "none"
                 },
@@ -1143,8 +1150,13 @@ class Map extends Component {
             id: `route-padding${suffix}`,
             type: 'line',
             source: sourceId,
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            layout: {
+                'line-join': 'round',
+                'line-cap': 'round',
+                'line-elevation-reference': 'ground'
+            },
             paint: {
+                'line-occlusion-opacity': 0.5,
                 'line-color': this.props.isDarkMode ? '#2d2e30' : '#FFFFFF',
                 "line-width": ROUTE_LINE_PADDING_WIDTH,
                 "line-gap-width": ROUTE_LINE_PADDING_GAP_WIDTH
@@ -1157,16 +1169,25 @@ class Map extends Component {
             id: `route${suffix}`,
             type: 'line',
             source: sourceId,
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            layout: {
+                'line-join': 'round',
+                'line-cap': 'round',
+                'line-elevation-reference': 'ground',
+            },
             paint: {
+                'line-occlusion-opacity': 0.5,
                 'line-color': layerType === 'top'
-                    ? (this.props.isDarkMode ? '#EA9010' : '#C8681E') // Selected route color
-                    : [
-                        'case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                            this.props.isDarkMode ? '#000000' : '#FFFFFF', // On hover
-                            this.props.isDarkMode ? '#999999' : '#cac7c4'  // Default unselected
-                    ],
+                    // ? (this.props.isDarkMode ? '#EA9010' : '#C8681E') // Selected route color
+                    ? (this.props.isDarkMode ? '#3170EF' : '#00A5CF') // Selected route color
+                    // : this.props.isDarkMode ? '#999999' : '#cac7c4',
+                    : this.props.isDarkMode ? '#6083B8' : '#BEE7F3',
+                    // : [
+                    //     'case',
+                    //     ['boolean', ['feature-state', 'hover'], false],
+                    //         this.props.isDarkMode ? '#000000' : '#FFFFFF', // On hover
+                    //         this.props.isDarkMode ? '#6083B8' : '#C1CDF8'  // Default unselected
+                    //         // this.props.isDarkMode ? '#999999' : '#cac7c4'  // Default unselected
+                    // ],
                 "line-width": ROUTE_LINE_WIDTH
             },
             filter: ['==', '$type', 'LineString']
@@ -1177,8 +1198,13 @@ class Map extends Component {
             id: `route--border${suffix}`,
             type: 'line',
             source: sourceId,
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            layout: {
+                'line-join': 'round',
+                'line-cap': 'round',
+                'line-elevation-reference': 'ground',
+            },
             paint: {
+                'line-occlusion-opacity': 0.5,
                 'line-color': layerType === 'top' 
                     ? (this.props.isDarkMode ? '#ffffff' : '#000000') // Selected route border
                     : [
