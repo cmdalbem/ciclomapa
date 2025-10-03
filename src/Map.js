@@ -1918,14 +1918,21 @@ class Map extends Component {
         const sunPosition = getCurrentSunPosition(this.props.lat, this.props.lng);
         
         if (sunPosition.isDaytime) {
+            // Convert spherical coordinates to Cartesian coordinates
+            // azimuthal: horizontal angle (0-360 degrees)
+            // polar: vertical angle (0-90 degrees)
+            const azimuthRad = sunPosition.azimuthal * Math.PI / 180;
+            const polarRad = sunPosition.polar * Math.PI / 180;
+            
+            const x = Math.sin(polarRad) * Math.cos(azimuthRad);
+            const y = Math.sin(polarRad) * Math.sin(azimuthRad);
+            const z = Math.cos(polarRad);
+            
             this.map.setLight({
                 'anchor': 'viewport',
                 'color': '#ffffff',
                 'intensity': 1,
-                'position': [
-                    sunPosition.azimuthal, // azimuthal angle
-                    sunPosition.polar      // polar angle
-                ]
+                'position': [x, y, z]
             });
             console.debug(`Set realistic lighting: azimuthal=${sunPosition.azimuthal.toFixed(1)}°, polar=${sunPosition.polar.toFixed(1)}°`);
         }
