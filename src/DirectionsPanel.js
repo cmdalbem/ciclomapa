@@ -825,7 +825,7 @@ class DirectionsPanel extends Component {
             })) : [];
         
         // Check if we should show results view on mobile
-        const showResultsOnMobile = IS_MOBILE && directions && !directionsLoading;
+        const showResultsOnMobile = IS_MOBILE && (directions || directionsLoading);
         
         return (
             <>
@@ -850,12 +850,13 @@ class DirectionsPanel extends Component {
                     `}
                 >
                     <div className="p-4">
-                        <div id="directionsPanel--header" className="flex justify-between items-start h-6 mb-3">
+                        <div id="directionsPanel--header" className="flex justify-between items-start h-6">
                             {showResultsOnMobile ? (
                                 // Mobile results header with Back button
                                 <Button
                                     onClick={this.clearDirections}
                                     type="text"
+                                    size="small"
                                     className="text-white flex items-center"
                                     icon={<IconBack className="mr-1" style={{
                                         display: 'inline-block',
@@ -935,7 +936,7 @@ class DirectionsPanel extends Component {
                         </div>
 
                         {!showResultsOnMobile && (
-                            <Space direction="vertical" size="small" className="w-full">
+                            <Space direction="vertical" size="small" className="w-full mt-3">
                                 <div 
                                     id="fromGeocoder"
                                     className='flex'
@@ -963,7 +964,7 @@ class DirectionsPanel extends Component {
                         )}
 
                         {directionsLoading && (
-                            <div className="directionsPanel--results mt-3 space-y-1">
+                            <div className="directionsPanel--results md:mt-3 space-y-1">
                                 {Array.from({ length: HYBRID_MAX_RESULTS }, (_, index) => index + 1).map((index) => (
                                     <div key={index} className={`rounded-lg h-14 bg-white bg-opacity-10 animate-pulse-2x`}/>
                                     // <div key={index} className={`rounded-lg h-14 bg-gray-700 animate-pulse-2x ${
