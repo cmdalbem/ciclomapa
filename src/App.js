@@ -83,6 +83,7 @@ class App extends Component {
         this.toggleTheme = this.toggleTheme.bind(this);
         this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
         this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
+        this.onDirectionsPanelToggle = this.onDirectionsPanelToggle.bind(this);
         this.debouncedUpdateURL = debounce(this.updateURL, 300);
 
         this.initState();
@@ -149,6 +150,7 @@ class App extends Component {
             mapKey: 0,
             fromPoint: fromPoint,
             toPoint: toPoint,
+            isDirectionsPanelOpen: false,
         };
 
         this.updateData();
@@ -817,6 +819,10 @@ class App extends Component {
         this.directionsPanel = directionsPanel;
     }
 
+    onDirectionsPanelToggle(isOpen) {
+        this.setState({ isDirectionsPanelOpen: isOpen });
+    }
+
     setFromPoint = (point) => {
         this.setState({ fromPoint: point });
     }
@@ -848,25 +854,27 @@ class App extends Component {
                 
                 <div className="flex">
                     <div className="relative w-full">
-                        <TopBar
-                            title={this.state.area}
-                            lastUpdate={this.state.dataUpdatedAt}
-                            lat={this.state.lat}
-                            lng={this.state.lng}
-                            z={this.state.zoom}
-                            downloadData={this.downloadData}
-                            // isDownloadUnavailable={this.state.isDownloadUnavailable}
-                            onMapMoved={this.onMapMoved}
-                            forceUpdate={this.forceUpdate}
-                            isSidebarOpen={this.state.isSidebarOpen}
-                            toggleSidebar={this.toggleSidebar}
-                            embedMode={this.state.embedMode}
-                            openAboutModal={this.openAboutModal}
-                            isDarkMode={this.state.isDarkMode}
-                            toggleTheme={this.toggleTheme}
-                            loading={this.state.loading}
-                        />
-
+                        { 
+                            IS_MOBILE && this.state.isDirectionsPanelOpen ? '' :
+                            <TopBar
+                                title={this.state.area}
+                                lastUpdate={this.state.dataUpdatedAt}
+                                lat={this.state.lat}
+                                lng={this.state.lng}
+                                z={this.state.zoom}
+                                downloadData={this.downloadData}
+                                // isDownloadUnavailable={this.state.isDownloadUnavailable}
+                                onMapMoved={this.onMapMoved}
+                                forceUpdate={this.forceUpdate}
+                                isSidebarOpen={this.state.isSidebarOpen}
+                                toggleSidebar={this.toggleSidebar}
+                                embedMode={this.state.embedMode}
+                                openAboutModal={this.openAboutModal}
+                                isDarkMode={this.state.isDarkMode}
+                                toggleTheme={this.toggleTheme}
+                                loading={this.state.loading}
+                            />
+                        }
                         <Map
                             key={this.state.mapKey}
                             ref={(map) => { window.map = map }}
@@ -924,7 +932,7 @@ class App extends Component {
                 <CitySwitcherBackdrop/>
 
                 {
-                    IS_MOBILE &&
+                    IS_MOBILE && this.state.isDirectionsPanelOpen ? '' :
                     <LayersBar
                         layers={this.state.layers}
                         onLayersChange={this.onLayersChange}
@@ -951,6 +959,7 @@ class App extends Component {
                     onFromPointChange={this.setFromPoint}
                     onToPointChange={this.setToPoint}
                     onClearRoutePoints={this.clearRoutePoints}
+                    onDirectionsPanelToggle={this.onDirectionsPanelToggle}
                 />
 
                 <AboutModal

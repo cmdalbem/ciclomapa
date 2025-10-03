@@ -5,7 +5,7 @@ import {
     HiOutlineTrendingUp as IconTrendingUp,
     HiOutlineTrendingDown as IconTrendingDown
 } from "react-icons/hi";
-import { HiX as IconClose } from "react-icons/hi";
+import { HiX as IconClose, HiOutlineArrowLeft as IconBack } from "react-icons/hi";
 import { LuBike as IconBike } from "react-icons/lu";
 import { FaDirections as IconRoute } from "react-icons/fa";
 import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash, HiOutlineExclamationTriangle as IconNoData } from "react-icons/hi2";
@@ -79,6 +79,11 @@ class DirectionsPanel extends Component {
             from: this.props.fromPoint,
             to: this.props.toPoint
         };
+
+        // Notify parent component about initial panel state
+        if (this.props.onDirectionsPanelToggle) {
+            this.props.onDirectionsPanelToggle(!this.state.collapsed);
+        }
     }
 
     componentDidUpdate(prevProps) {
@@ -372,16 +377,25 @@ class DirectionsPanel extends Component {
     }
 
     toggleCollapse() {
-        this.clearDirections();
         const newCollapsedState = !this.state.collapsed;
+        
+        // Only clear directions when closing the panel
+        if (newCollapsedState) {
+            this.clearDirections();
+        }
         this.setState({
             collapsed: newCollapsedState
         });
 
-        // On mobile, when opening the panel (collapsed -> expanded), auto-trigger geolocation
-        if (IS_MOBILE && newCollapsedState === false) {
-            this.autoTriggerGeolocation();
+        // Notify parent component about panel state change
+        if (this.props.onDirectionsPanelToggle) {
+            this.props.onDirectionsPanelToggle(!newCollapsedState);
         }
+
+        // On mobile, when opening the panel (collapsed -> expanded), auto-trigger geolocation
+        // if (IS_MOBILE && newCollapsedState === false) {
+        //     this.autoTriggerGeolocation();
+        // }
     }
 
     autoTriggerGeolocation() {
@@ -517,7 +531,10 @@ class DirectionsPanel extends Component {
     }
 
     setDestinationFromMapClick(coordinates) {
-        // Perform reverse geocoding to get the address and update state
+        if (this.state.collapsed) {
+            this.toggleCollapse();
+        }
+        
         this.reverseGeocode({ lng: coordinates[0], lat: coordinates[1] }, 'to');
     }
 
@@ -807,6 +824,9 @@ class DirectionsPanel extends Component {
                 overlappingCyclepaths: route.overlappingCyclepaths
             })) : [];
         
+        // Check if we should show results view on mobile
+        const showResultsOnMobile = IS_MOBILE && directions && !directionsLoading;
+        
         return (
             <>
                 {
@@ -823,103 +843,124 @@ class DirectionsPanel extends Component {
                     id="directionsPanel"
                     className={`
                         glass-bg fixed text-white cursor-pointer
-                        ${this.state.collapsed ? 'hidden' : ''}
+                        ${IS_MOBILE ? 
+                            (this.state.collapsed ? '' : 'directions-panel-open') : 
+                            (this.state.collapsed ? 'hidden' : '')
+                        }
                     `}
                 >
                     <div className="p-4">
                         <div id="directionsPanel--header" className="flex justify-between items-start h-6 mb-3">
-                            <h3 className=" font-semibold flex items-center mb-0">
-                                <IconRoute className="mr-2" />
-                                Rotas de bici
-                                <span className="bg-white opacity-50 ml-1 px-1 py-0 rounded-full text-black text-xs leading-normal tracking-wider" style={{fontSize: 10}}>
-                                    BETA
-                                </span>
-                            </h3>
-
-                            <div className="flex items-start" style={{marginTop: '-5px'}}>
-                                {(directions || this.props.fromPoint || this.props.toPoint) && (
-                                    <Button
+                            {showResultsOnMobile ? (
+                                // Mobile results header with Back button
+                                <Button
                                     onClick={this.clearDirections}
-                                    type="text" 
-                                    shape="circle"
-                                    icon={<IconTrash style={{
+                                    type="text"
+                                    className="text-white flex items-center"
+                                    icon={<IconBack className="mr-1" style={{
                                         display: 'inline-block',
                                     }}/>}
-                                    />
-                                )}
-                                {this.props.fromPoint && this.props.toPoint && (
-                                    <Button 
-                                        type="text"
-                                        shape="circle"
-                                        icon={
-                                            <IconSwap style={{
+                                >
+                                    Voltar
+                                </Button>
+                            ) : (
+                                // Default header
+                                <>
+                                    <h3 className=" font-semibold flex items-center mb-0">
+                                        <IconRoute className="mr-2" />
+                                        Rotas de bici
+                                        <span className="bg-white opacity-50 ml-1 px-1 py-0 rounded-full text-black text-xs leading-normal tracking-wider" style={{fontSize: 10}}>
+                                            BETA
+                                        </span>
+                                    </h3>
+
+                                    <div className="flex items-start" style={{marginTop: '-5px'}}>
+                                        {(directions || this.props.fromPoint || this.props.toPoint) && (
+                                            <Button
+                                            onClick={this.clearDirections}
+                                            type="text" 
+                                            shape="circle"
+                                            icon={<IconTrash style={{
                                                 display: 'inline-block',
                                             }}/>}
-                                        onClick={this.swapOriginDestination}
-                                        className="swap-button flex-shrink-0 text-white"
-                                        title="Trocar origem e destino"
-                                    />
-                                )}
-                                
-                                <Popover
-                                    content={this.renderSettingsContent()}
-                                    title={null}
-                                    trigger="click"
-                                    open={this.state.settingsVisible}
-                                    onOpenChange={this.toggleSettings}
-                                    placement="bottomRight"
-                                >
-                                    <Button 
-                                        type="text"
-                                        shape="circle"
-                                        icon={<IconCog style={{
-                                            display: 'inline-block',
-                                        }}/>}
-                                        className="flex-shrink-0 text-white"
-                                        title="Configurações do serviço"
-                                    />
-                                </Popover>
-                                
-                                {/* Put this back after we have a trigger to open the panel */}
-                                { IS_MOBILE && (
-                                    <Button
-                                        onClick={this.toggleCollapse}
-                                        type="text" 
-                                        shape="circle"
-                                        icon={<IconClose style={{
-                                            display: 'inline-block',
-                                        }}/>}
-                                    />
-                                )}
-                            </div>
+                                            />
+                                        )}
+                                        {this.props.fromPoint && this.props.toPoint && (
+                                            <Button 
+                                                type="text"
+                                                shape="circle"
+                                                icon={
+                                                    <IconSwap style={{
+                                                        display: 'inline-block',
+                                                    }}/>}
+                                                onClick={this.swapOriginDestination}
+                                                className="swap-button flex-shrink-0 text-white"
+                                                title="Trocar origem e destino"
+                                            />
+                                        )}
+                                        
+                                        <Popover
+                                            content={this.renderSettingsContent()}
+                                            title={null}
+                                            trigger="click"
+                                            open={this.state.settingsVisible}
+                                            onOpenChange={this.toggleSettings}
+                                            placement="bottomRight"
+                                        >
+                                            <Button 
+                                                type="text"
+                                                shape="circle"
+                                                icon={<IconCog style={{
+                                                    display: 'inline-block',
+                                                }}/>}
+                                                className="flex-shrink-0 text-white"
+                                                title="Configurações do serviço"
+                                            />
+                                        </Popover>
+                                        
+                                        {/* Put this back after we have a trigger to open the panel */}
+                                        { IS_MOBILE && (
+                                            <Button
+                                                onClick={this.toggleCollapse}
+                                                type="text" 
+                                                shape="circle"
+                                                icon={<IconClose style={{
+                                                    display: 'inline-block',
+                                                }}/>}
+                                            />
+                                        )}
+                                    </div>
+                                </>
+                            )}
                         </div>
 
+                        {!showResultsOnMobile && (
+                            <Space direction="vertical" size="small" className="w-full">
+                                <div 
+                                    id="fromGeocoder"
+                                    className='flex'
+                                    ref={this.attachMapboxGeocoderToDOM('from', 'fromGeocoder', 'fromGeocoderAttached')}
+                                />
 
-                        <Space direction="vertical" size="small" className="w-full">
-                            <div 
-                                id="fromGeocoder"
-                                className='flex'
-                                ref={this.attachMapboxGeocoderToDOM('from', 'fromGeocoder', 'fromGeocoderAttached')}
-                            />
+                                <div 
+                                    id="toGeocoder"
+                                    className='flex flex-1'
+                                    ref={this.attachMapboxGeocoderToDOM('to', 'toGeocoder', 'toGeocoderAttached')}
+                                />
 
-                            <div 
-                                id="toGeocoder"
-                                className='flex flex-1'
-                                ref={this.attachMapboxGeocoderToDOM('to', 'toGeocoder', 'toGeocoderAttached')}
-                            />
-
-                            {/* <Button
-                                type="primary"
-                                onClick={this.calculateDirections}
-                                loading={loading}
-                                disabled={!this.props.fromPoint || !this.props.toPoint}
-                                block
-                                // size="large"
-                                className="mt-2 bg-green-600 hover:bg-green-700"
-                            >
-                                Calcular rota
-                            </Button> */}
-                        </Space>
+                                {/* <Button
+                                    type="primary"
+                                    onClick={this.calculateDirections}
+                                    loading={loading}
+                                    disabled={!this.props.fromPoint || !this.props.toPoint}
+                                    block
+                                    // size="large"
+                                    className="mt-2 bg-green-600 hover:bg-green-700"
+                                >
+                                    Calcular rota
+                                </Button> */}
+                            </Space>
+                        )}
 
                         {directionsLoading && (
                             <div className="directionsPanel--results mt-3 space-y-1">
