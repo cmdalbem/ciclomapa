@@ -811,20 +811,7 @@ class DirectionsPanel extends Component {
 
     render() {
         const { directions, directionsLoading, directionsError } = this.props;
-        
-        // Extract route coverage data from unified directions structure
-        const routeCoverageData = directions && directions.routes ? 
-            directions.routes.map(route => ({
-                score: route.score,
-                scoreClass: route.scoreClass,
-                coverageBreakdown: route.coverageBreakdown,
-                coverageBreakdownSimple: route.coverageBreakdownSimple,
-                coverage: route.coverage,
-                coverageByType: route.coverageByType,
-                overlappingCyclepaths: route.overlappingCyclepaths
-            })) : [];
-        
-        // Check if we should show results view on mobile
+        const routes = directions && directions.routes ? directions.routes : [];
         const showResultsOnMobile = IS_MOBILE && (directions || directionsLoading);
         
         return (
@@ -967,14 +954,6 @@ class DirectionsPanel extends Component {
                             <div className="directionsPanel--results md:mt-3 space-y-1">
                                 {Array.from({ length: HYBRID_MAX_RESULTS }, (_, index) => index + 1).map((index) => (
                                     <div key={index} className={`rounded-lg h-14 bg-white bg-opacity-10 animate-pulse-2x`}/>
-                                    // <div key={index} className={`rounded-lg h-14 bg-gray-700 animate-pulse-2x ${
-                                    //     index === 1 ? 'bg-opacity-90' : 
-                                    //     index === 2 ? 'bg-opacity-70' : 
-                                    //     index === 3 ? 'bg-opacity-50' :
-                                    //     index === 4 ? 'bg-opacity-30' :
-                                    //     index === 5 ? 'bg-opacity-10' :
-                                    //     ''
-                                    // }`}/>
                                 ))}
                             </div>
                         )}
@@ -1003,7 +982,7 @@ class DirectionsPanel extends Component {
                                             <div className="flex justify-between gap-1">
                                                 {/* Left column */}
                                                 <div className="flex items-start">
-                                                    {(routeCoverageData[index] || {}).score !== null ? (
+                                                    {(routes[index] || {}).score !== null ? (
                                                         <div 
                                                             className={`flex items-center mr-2 ${(routeCoverageData[index] || {}).scoreClass || 'bg-gray-600'} px-1.5 py-1.5 rounded-md md:text-sm text-xs leading-none font-mono text-center`} 
                                                             style={{color: 'white'}}>
@@ -1047,10 +1026,11 @@ class DirectionsPanel extends Component {
                                                             </span>
                                                         )} */}
 
-                                                        {/* {this.props.selectedRouteIndex === index &&
-                                                            (routeCoverageData[index] || {}).coverageBreakdown : */}
-                                                            {(routeCoverageData[index] || {}).coverageBreakdownSimple || null}
-                                                        {/* } */}
+                                                        {
+                                                            // this.props.selectedRouteIndex === index ?
+                                                            //     (routes[index] || {}).coverageBreakdown :
+                                                                (routes[index] || {}).coverageBreakdownSimple || null
+                                                        }
                                                     </div>
                                                 </div>
 
