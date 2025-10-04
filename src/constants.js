@@ -55,10 +55,32 @@ export const TOPBAR_HEIGHT = 64;
 // Settings
 
 export const HYBRID_MAX_RESULTS = 3;
+export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 3;
+
+export const ROUTE_COLORS = {
+    DARK: {
+        SELECTED: '#C8681E',
+        // SELECTED: '#000000',
+        UNSELECTED: '#999999'
+        
+        // SELECTED: '#3170EF',
+        // UNSELECTED: '#6083B8'
+    },
+    LIGHT: {
+        SELECTED: '#EA9010',
+        // SELECTED: '#FFFFFF',
+        UNSELECTED: '#cac7c4'
+
+        // SELECTED: '#00A5CF',
+        // UNSELECTED: '#BEE7F3'
+    }
+};
+
+
 
 
 /* 
- * Layers
+ * Map Layers
  */
 
 export const DEFAULT_BORDER_WIDTH = 3;
@@ -67,6 +89,40 @@ export const LINE_WIDTH_MULTIPLIER_HOVER = 2;
 
 export const DIRECTIONS_LINE_WIDTH = 24;
 export const DIRECTIONS_LINE_BORDER_WIDTH = 4;
+
+export const ROUTE_FIXED_WIDTH = 8;
+export const ROUTE_LINE_PADDING_WIDTH = 2;
+export const ROUTE_LINE_BORDER_WIDTH = 1;
+export const ROUTE_LINE_BORDER_OPACITY = 0.6;
+
+export const ROUTE_LINE_WIDTH = ROUTE_FIXED_WIDTH;
+export const ROUTE_LINE_PADDING_GAP_WIDTH = ROUTE_FIXED_WIDTH + ROUTE_LINE_PADDING_WIDTH;
+export const ROUTE_LINE_GAP_WIDTH = ROUTE_FIXED_WIDTH - ROUTE_LINE_BORDER_WIDTH - 1;
+
+// const ROUTE_MIN_WIDTH = 6;
+// const ROUTE_MAX_WIDTH = 12;
+// const ROUTE_LINE_WIDTH = [
+//     "interpolate",
+//         ["exponential", 1.5],
+//         ["zoom"],
+//         12, ROUTE_MIN_WIDTH,
+//         18, ROUTE_MAX_WIDTH
+// ];
+
+// const ROUTE_LINE_PADDING_GAP_WIDTH = [
+//     "interpolate",
+//         ["exponential", 1.5],
+//         ["zoom"],
+//         12, ROUTE_MIN_WIDTH+ROUTE_LINE_PADDING_WIDTH,
+//         18, ROUTE_MAX_WIDTH+ROUTE_LINE_PADDING_WIDTH
+// ];
+// const ROUTE_LINE_GAP_WIDTH = [
+//     "interpolate",
+//         ["exponential", 1.5],
+//         ["zoom"],
+//         12, ROUTE_MIN_WIDTH-ROUTE_LINE_BORDER_WIDTH,
+//         18, ROUTE_MAX_WIDTH-ROUTE_LINE_BORDER_WIDTH
+// ];
 
 /* 
  * Map
@@ -107,7 +163,6 @@ export const GRAPHHOPPER_API_KEY = process.env.REACT_APP_GRAPHHOPPER_API_KEY;
 export const GRAPHHOPPER_BASE_URL = 'https://graphhopper.com/api/1/route';
 
 export const VALHALLA_BASE_URL = 'https://valhalla1.openstreetmap.de/route';
-
 
 
 /* 

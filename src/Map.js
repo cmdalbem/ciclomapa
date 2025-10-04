@@ -20,6 +20,13 @@ import {
     DEFAULT_LINE_WIDTH_MULTIPLIER,
     COMMENTS_ZOOM_THRESHOLD,
     MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
+    ROUTE_COLORS,
+    ROUTE_LINE_WIDTH,
+    ROUTE_LINE_PADDING_GAP_WIDTH,
+    ROUTE_LINE_GAP_WIDTH,
+    ROUTE_LINE_BORDER_WIDTH,
+    ROUTE_LINE_BORDER_OPACITY,
+    ROUTE_LINE_PADDING_WIDTH,
 } from './constants.js'
 
 import Analytics from './Analytics.js'
@@ -74,42 +81,6 @@ const iconsMap = {
 }
 
 const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
-
-
-// @todo Move these to constants.js
-const ROUTE_FIXED_WIDTH = 8;
-const ROUTE_LINE_PADDING_WIDTH = 2;
-const ROUTE_LINE_BORDER_WIDTH = 0.5;
-const ROUTE_LINE_BORDER_OPACITY = 0.6;
-
-const ROUTE_LINE_WIDTH = ROUTE_FIXED_WIDTH;
-const ROUTE_LINE_PADDING_GAP_WIDTH = ROUTE_FIXED_WIDTH + ROUTE_LINE_PADDING_WIDTH;
-const ROUTE_LINE_GAP_WIDTH = ROUTE_FIXED_WIDTH - ROUTE_LINE_BORDER_WIDTH - 1;
-
-// const ROUTE_MIN_WIDTH = 6;
-// const ROUTE_MAX_WIDTH = 12;
-// const ROUTE_LINE_WIDTH = [
-//     "interpolate",
-//         ["exponential", 1.5],
-//         ["zoom"],
-//         12, ROUTE_MIN_WIDTH,
-//         18, ROUTE_MAX_WIDTH
-// ];
-
-// const ROUTE_LINE_PADDING_GAP_WIDTH = [
-//     "interpolate",
-//         ["exponential", 1.5],
-//         ["zoom"],
-//         12, ROUTE_MIN_WIDTH+ROUTE_LINE_PADDING_WIDTH,
-//         18, ROUTE_MAX_WIDTH+ROUTE_LINE_PADDING_WIDTH
-// ];
-// const ROUTE_LINE_GAP_WIDTH = [
-//     "interpolate",
-//         ["exponential", 1.5],
-//         ["zoom"],
-//         12, ROUTE_MIN_WIDTH-ROUTE_LINE_BORDER_WIDTH,
-//         18, ROUTE_MAX_WIDTH-ROUTE_LINE_BORDER_WIDTH
-// ];
 
 class Map extends Component {
     map;
@@ -1177,17 +1148,8 @@ class Map extends Component {
             paint: {
                 'line-occlusion-opacity': 0.5,
                 'line-color': layerType === 'top'
-                    // ? (this.props.isDarkMode ? '#EA9010' : '#C8681E') // Selected route color
-                    ? (this.props.isDarkMode ? '#3170EF' : '#00A5CF') // Selected route color
-                    // : this.props.isDarkMode ? '#999999' : '#cac7c4',
-                    : this.props.isDarkMode ? '#6083B8' : '#BEE7F3',
-                    // : [
-                    //     'case',
-                    //     ['boolean', ['feature-state', 'hover'], false],
-                    //         this.props.isDarkMode ? '#000000' : '#FFFFFF', // On hover
-                    //         this.props.isDarkMode ? '#6083B8' : '#C1CDF8'  // Default unselected
-                    //         // this.props.isDarkMode ? '#999999' : '#cac7c4'  // Default unselected
-                    // ],
+                    ? (this.props.isDarkMode ? ROUTE_COLORS.DARK.SELECTED : ROUTE_COLORS.LIGHT.SELECTED)
+                    : this.props.isDarkMode ? ROUTE_COLORS.DARK.UNSELECTED : ROUTE_COLORS.LIGHT.UNSELECTED,
                 "line-width": ROUTE_LINE_WIDTH
             },
             filter: ['==', '$type', 'LineString']
@@ -1241,6 +1203,7 @@ class Map extends Component {
             source: sourceId,
             layout: {
                 'line-join': 'round',
+                'line-cap': 'round',
                 'line-elevation-reference': 'ground',
             },
             paint: {
