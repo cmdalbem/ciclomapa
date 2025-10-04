@@ -1397,20 +1397,18 @@ class Map extends Component {
             }
         }
         
-        // Initialize route sources and layers
         map.addSource("route-selected", emptySource);
         map.addSource("routes-unselected", emptySource);
-        this.createRouteLayerSet(map, 'routes-unselected', 'bottom');
-        this.createRouteLayerSet(map, 'route-selected', 'top');
-        this.setupRouteEventHandlers(map);
-        
-        // Initialize overlapping cyclepaths sources and layers
         map.addSource("overlapping-cyclepaths-selected", emptySource);
         map.addSource("overlapping-cyclepaths-unselected", emptySource);
-        
-        // Create cyclepath layer sets
+
+        // Order here is important for layer stacking
+        this.createRouteLayerSet(map, 'routes-unselected', 'bottom');
         this.createCyclepathLayerSet(map, 'overlapping-cyclepaths-unselected', 'bottom');
+        this.createRouteLayerSet(map, 'route-selected', 'top');
         this.createCyclepathLayerSet(map, 'overlapping-cyclepaths-selected', 'top');
+
+        this.setupRouteEventHandlers(map);
     }
 
 
