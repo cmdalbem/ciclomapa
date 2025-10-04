@@ -47,6 +47,7 @@ class DirectionsPanel extends Component {
         this.fromGeocoder = null;
         this.toGeocoder = null;
         this.blurTimeout = null;
+        this.geocodersInitialized = false;
 
         this.toggleCollapse = this.toggleCollapse.bind(this);
         this.clearDirections = this.clearDirections.bind(this);
@@ -67,7 +68,7 @@ class DirectionsPanel extends Component {
 
     componentDidMount() {
         this.initGeocodersInterval = setInterval(() => {
-            if (this.props.map) {
+            if (this.props.map && !this.geocodersInitialized) {
                 this.initGeocoders();
                 this.setupMapClickListener();
                 clearInterval(this.initGeocodersInterval);
@@ -87,7 +88,7 @@ class DirectionsPanel extends Component {
     }
 
     componentDidUpdate(prevProps) {
-        if (this.props.map && !prevProps.map) {
+        if (this.props.map && !prevProps.map && !this.geocodersInitialized) {
             console.debug('Map became available, initializing geocoders');
             this.initGeocoders();
             this.setupMapClickListener();
@@ -175,6 +176,13 @@ class DirectionsPanel extends Component {
             return;
         }
 
+        // Check if geocoders are already properly initialized
+        if (this.fromGeocoder && this.toGeocoder && 
+            this.fromGeocoderElement && this.toGeocoderElement) {
+            console.debug('Geocoders already initialized, skipping reinit');
+            return;
+        }
+
         console.debug('Initializing geocoders with map:', this.props.map);
 
         this.cleanup(false); // Don't remove map listener during geocoder reinit
@@ -237,6 +245,9 @@ class DirectionsPanel extends Component {
                 to: this.props.toPoint
             };
         }
+
+        // Mark geocoders as initialized
+        this.geocodersInitialized = true;
     }
 
     handleGeocoderResult(result, type) {
@@ -355,6 +366,9 @@ class DirectionsPanel extends Component {
             }
         }
 
+        // Reset initialization flag when cleaning up
+        this.geocodersInitialized = false;
+
         // Remove custom markers
         this.removeMarker('from');
         this.removeMarker('to');
@@ -439,7 +453,8 @@ class DirectionsPanel extends Component {
                 toCoords, 
                 provider, 
                 this.props.geoJson, 
-                this.props.layers
+                this.props.layers,
+                this.props.isDarkMode
             );
 
             if (this.props.setDirectionsData) {
@@ -498,17 +513,11 @@ class DirectionsPanel extends Component {
             return;
         }
 
-        // Swap the points
         this.props.onFromPointChange(toPoint);
         this.props.onToPointChange(fromPoint);
         
-        // Update geocoder inputs
-        if (this.fromGeocoder && this.fromGeocoder.setInput) {
-            this.fromGeocoder.setInput(toPoint.result.place_name);
-        }
-        if (this.toGeocoder && this.toGeocoder.setInput) {
-            this.toGeocoder.setInput(fromPoint.result.place_name);
-        }
+        this.safeSetGeocoderInput(this.fromGeocoder, toPoint.result.place_name, 'from');
+        this.safeSetGeocoderInput(this.toGeocoder, fromPoint.result.place_name, 'to');
     }
 
     handleProviderChange(provider) {
@@ -593,8 +602,8 @@ class DirectionsPanel extends Component {
                     
                     const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
                     console.debug(`Setting input for ${type} geocoder:`, address);
-                    if (geocoder && geocoder.setInput && this[`${type}GeocoderElement`]) {
-                        geocoder.setInput(address);
+                    if (geocoder && this[`${type}GeocoderElement`]) {
+                        this.safeSetGeocoderInput(geocoder, address, type);
                     } else {
                         console.warn(`No geocoder found for ${type} geocoder`);
                     }
@@ -616,16 +625,16 @@ class DirectionsPanel extends Component {
                 } else {
                     const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
                     console.debug(`Setting fallback input for ${type} geocoder`);
-                    if (geocoder && geocoder.setInput) {
-                        geocoder.setInput('Nova posição');
+                    if (geocoder) {
+                        this.safeSetGeocoderInput(geocoder, 'Nova posição', type);
                     }
                 }
             })
             .catch(err => {
                 console.error('Reverse geocoding error:', err);
                 const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
-                if (geocoder && geocoder.setInput) {
-                    geocoder.setInput('Nova posição');
+                if (geocoder) {
+                    this.safeSetGeocoderInput(geocoder, 'Nova posição', type);
                 }
             });
     }
@@ -728,6 +737,42 @@ class DirectionsPanel extends Component {
         } else {
             this.setState({ focusedInput: null });
         }
+    }
+
+    safeSetGeocoderInput(geocoder, value, geocoderType, maxRetries = 10) {
+        if (!geocoder || !geocoder.setInput) {
+            console.warn('Geocoder or setInput method not available');
+            return false;
+        }
+
+        const trySetInput = (retryCount = 0) => {
+            try {
+                // Use the stored geocoder element reference
+                const geocoderElement = this[`${geocoderType}GeocoderElement`];
+                if (geocoderElement) {
+                    const input = geocoderElement.querySelector('input');
+                    if (input) {
+                        geocoder.setInput(value);
+                        return true;
+                    }
+                }
+                
+                // If input not ready and we have retries left, try again
+                if (retryCount < maxRetries) {
+                    setTimeout(() => trySetInput(retryCount + 1), 100);
+                } else {
+                    console.warn(`Failed to set geocoder input after ${maxRetries} retries`);
+                }
+            } catch (error) {
+                console.warn('Error setting geocoder input:', error);
+                if (retryCount < maxRetries) {
+                    setTimeout(() => trySetInput(retryCount + 1), 100);
+                }
+            }
+            return false;
+        };
+
+        return trySetInput();
     }
 
     attachMapboxGeocoderToDOM(geocoderType, containerId, attachedStateKey) {
@@ -1027,8 +1072,8 @@ class DirectionsPanel extends Component {
                                                         )} */}
 
                                                         {
-                                                            // this.props.selectedRouteIndex === index ?
-                                                            //     (routes[index] || {}).coverageBreakdown :
+                                                            this.props.selectedRouteIndex === index ?
+                                                                (routes[index] || {}).coverageBreakdown :
                                                                 (routes[index] || {}).coverageBreakdownSimple || null
                                                         }
                                                     </div>
