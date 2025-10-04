@@ -1,5 +1,32 @@
 // Shared utilities for route calculations and formatting
 
+import { MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY, ROUTE_COLORS } from './constants.js';
+import { hexToRgba } from './utils.js';
+import * as layersDefinitions from './layers.json';
+
+// Get layer colors from layers.json configuration
+const getLayerColors = () => {
+    const layers = layersDefinitions.default;
+    const colors = {};
+    
+    layers.forEach(layer => {
+        if (layer.style && layer.style.lineColor) {
+            // Map layer names to their colors
+            if (layer.name === 'Ciclovia') {
+                colors.ciclovia = layer.style.lineColor;
+            } else if (layer.name === 'Ciclofaixa') {
+                colors.ciclofaixa = layer.style.lineColor;
+            } else if (layer.name === 'Ciclorrota') {
+                colors.ciclorrota = layer.style.lineColor;
+            } else if (layer.name === 'Calçada compartilhada') {
+                colors.calçada = layer.style.lineColor;
+            }
+        }
+    });
+    
+    return colors;
+};
+
 export const getRouteScore = (routeCoverageData, index) => {
     // Handle both old array format and new unified format
     let route;
@@ -61,7 +88,7 @@ export const getRouteScore = (routeCoverageData, index) => {
     return { score: finalScore, cssClass: cssClass };
 };
 
-export const getCoverageBreakdown = (routeCoverageData, index) => {
+export const getCoverageBreakdown = (routeCoverageData, index, isDarkMode = false) => {
     // Handle both old array format and new unified format
     let route;
     if (Array.isArray(routeCoverageData)) {
@@ -103,19 +130,21 @@ export const getCoverageBreakdown = (routeCoverageData, index) => {
         breakdown.push(`${totalPercentage.toFixed(0)}% rua`);
     }
     
+    const layerColors = getLayerColors();
+    
     return (
-        <div className="flex flex-wrap gap-1 mt-1"> {
+        <div className="flex flex-wrap gap-1 "> {
             breakdown.map((item, index) => (
                 <span
                     key={index}
-                    className="text-xs bg-white bg-opacity-10 text-white rounded-md px-1 py-0.5"
+                    className={`text-xs rounded-md px-1 py-0.5`}
                     style={{
                         backgroundColor: 
-                            item.includes('ciclovia') ? '#4A5D5A'
-                            : item.includes('ciclofaixa') ? '#6B7A6B'
-                            : item.includes('calçada') ? '#7A7568'
-                            : item.includes('ciclorrota') ? '#7A6B6A'
-                            : '#FF9999'
+                            item.includes('ciclovia') ? hexToRgba(layerColors.ciclovia, 0.3)
+                            : item.includes('ciclofaixa') ? hexToRgba(layerColors.ciclofaixa, 0.3)
+                            : item.includes('calçada') ? hexToRgba(layerColors.calçada, 0.3)
+                            : item.includes('ciclorrota') ? hexToRgba(layerColors.ciclorrota, 0.3)
+                            : isDarkMode ? hexToRgba(ROUTE_COLORS.DARK.SELECTED, 0.3) : hexToRgba(ROUTE_COLORS.LIGHT.SELECTED, 0.2)
                     }}
                 >
                     {item}
