@@ -984,9 +984,9 @@ class DirectionsPanel extends Component {
                                                 <div className="flex items-start">
                                                     {(routes[index] || {}).score !== null ? (
                                                         <div 
-                                                            className={`flex items-center mr-2 ${(routeCoverageData[index] || {}).scoreClass || 'bg-gray-600'} px-1.5 py-1.5 rounded-md md:text-sm text-xs leading-none font-mono text-center`} 
+                                                            className={`flex items-center mr-2 ${(routes[index] || {}).scoreClass || 'bg-gray-600'} px-1.5 py-1.5 rounded-md md:text-sm text-xs leading-none font-mono text-center`} 
                                                             style={{color: 'white'}}>
-                                                            {(routeCoverageData[index] || {}).score}
+                                                            {(routes[index] || {}).score}
                                                         </div>
                                                     ) : (
                                                         <IconBike 
