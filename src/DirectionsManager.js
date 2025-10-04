@@ -13,7 +13,7 @@ class DirectionsManager {
         this.directionsService = directionsServiceModule.default;
     }
 
-    async calculateDirections(fromCoords, toCoords, provider = 'graphhopper', geoJson, layers) {
+    async calculateDirections(fromCoords, toCoords, provider = 'graphhopper', geoJson, layers, isDarkMode = false) {
         if (!this.directionsService) {
             await this.initialize();
         }
@@ -86,7 +86,7 @@ class DirectionsManager {
                     let coverageBreakdown, coverageBreakdownSimple;
                     if (hasCoverageData) {
                         const routeWithCoverage = { ...route, ...coverageData };
-                        coverageBreakdown = getCoverageBreakdown(routeWithCoverage);
+                        coverageBreakdown = getCoverageBreakdown(routeWithCoverage, undefined, isDarkMode);
                         coverageBreakdownSimple = getCoverageBreakdownSimple(routeWithCoverage);
                     } else {
                         coverageBreakdown = null;

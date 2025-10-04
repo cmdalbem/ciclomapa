@@ -1072,8 +1072,8 @@ class DirectionsPanel extends Component {
                                                         )} */}
 
                                                         {
-                                                            this.props.selectedRouteIndex === index ?
-                                                                (routes[index] || {}).coverageBreakdown :
+                                                            // this.props.selectedRouteIndex === index ?
+                                                                // (routes[index] || {}).coverageBreakdown :
                                                                 (routes[index] || {}).coverageBreakdownSimple || null
                                                         }
                                                     </div>

@@ -103,6 +103,14 @@ String.prototype.removeAccents = function() {
     return this.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+// Helper function to convert hex color to rgba with alpha
+export function hexToRgba(hex, alpha = 1) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // Adjust HEX color brightness by a percentage (-1 to 1)
 // Positive values brighten, negative values darken
 export function adjustColorBrightness(hexColor, percentage = 0.3) {
