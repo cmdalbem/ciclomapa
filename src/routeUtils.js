@@ -51,12 +51,14 @@ export const getRouteScore = (routeCoverageData, index) => {
     
     // Determine CSS class based on score
     let cssClass;
-    if (finalScore >= 80) cssClass = 'bg-green-600';
-    else if (finalScore >= 60) cssClass = 'bg-yellow-600';
-    else if (finalScore >= 40) cssClass = 'bg-orange-600';
-    else cssClass = 'bg-red-600';
-    
-    return { score: finalScore, cssClass };
+    if (finalScore < 50) {
+        cssClass = 'bg-red-600';
+    } else if (finalScore < 75) {
+        cssClass = 'bg-yellow-600';
+    } else {
+        cssClass = 'bg-green-600';
+    }   
+    return { score: finalScore, cssClass: cssClass };
 };
 
 export const getCoverageBreakdown = (routeCoverageData, index) => {
