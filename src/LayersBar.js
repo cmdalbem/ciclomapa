@@ -136,10 +136,10 @@ class LayersBar extends Component {
         };
     }
 
-    renderLayerButton({ id, onClick, isActive, icon, lineStyle, label, className = '' }) {
+    renderLayerButton({ id, onClick, isActive, icon, lineStyle, label, className = '', isNextActive = false }) {
         const baseClasses = 'flex items-center space-x-2 px-3 py-2 rounded-full text-xs transition-all duration-200 glass-bg flex-shrink-0';
         const activeClasses = isActive 
-            ? 'text-white bg-black bg-opacity-50' 
+            ? 'text-white bg-black bg-opacity-50'
             : 'text-gray-500';
         
         return (
@@ -147,6 +147,12 @@ class LayersBar extends Component {
                 key={id}
                 onClick={onClick}
                 className={`${baseClasses} ${activeClasses} ${className}`}
+                style={isActive && isNextActive ? {
+                    marginRight: '-16px',
+                    borderTopRightRadius: '0',
+                    borderBottomRightRadius: '0',
+                    paddingRight: '16px'
+                } : {}}
             >
                 <span className={`flex ${isActive ? '' : 'opacity-50'}`}>
                     {icon ? (
@@ -205,26 +211,45 @@ class LayersBar extends Component {
                         
                         if (!hasLayers) return null;
                         
+                        // Check if the next button (first individual layer) is active
+                        const isNextActive = individualLayers.length > 0 && individualLayers[0].isActive;
+                        
                         return this.renderLayerButton({
                             id: 'pontos',
                             onClick: () => this.toggleCategory('pontos'),
                             isActive,
                             icon: config.icon,
                             lineStyle: config.style,
-                            label: config.label
+                            label: config.label,
+                            isNextActive
                         });
                     })()}
                     
                     {/* Individual layer buttons */}
-                    {individualLayers.map(layer => {
+                    {individualLayers.map((layer, index) => {
                         const displayName = layer.displayName || layer.name;
+                        
+                        // Check if the next button is active
+                        // Next could be the next individual layer, or the Outras button, or the first Outras layer
+                        let isNextActive = false;
+                        if (index < individualLayers.length - 1) {
+                            // Next is another individual layer
+                            isNextActive = individualLayers[index + 1].isActive;
+                        } else {
+                            // This is the last individual layer, check if Outras layers are shown and first one is active
+                            const hasActiveOutrasLayers = categories.outras.some(layer => layer.isActive);
+                            if (hasActiveOutrasLayers && categories.outras.length > 0) {
+                                isNextActive = categories.outras[0].isActive;
+                            }
+                        }
                         
                         return this.renderLayerButton({
                             id: layer.id,
                             onClick: () => this.toggleLayer(layer.id),
                             isActive: layer.isActive,
                             lineStyle: layer.style,
-                            label: displayName
+                            label: displayName,
+                            isNextActive
                         });
                     })}
                     
@@ -254,8 +279,13 @@ class LayersBar extends Component {
                         
                         if (!shouldShowIndividual) return null;
                         
-                        return categories.outras.map(layer => {
+                        return categories.outras.map((layer, index) => {
                             const displayName = layer.displayName || layer.name;
+                            
+                            // Check if the next Outras layer is active
+                            const isNextActive = index < categories.outras.length - 1 
+                                ? categories.outras[index + 1].isActive 
+                                : false;
                             
                             return this.renderLayerButton({
                                 id: layer.id,
@@ -263,7 +293,8 @@ class LayersBar extends Component {
                                 isActive: layer.isActive,
                                 lineStyle: layer.style,
                                 label: displayName,
-                                className: 'ml-2'
+                                className: 'ml-2',
+                                isNextActive
                             });
                         });
                     })()}
