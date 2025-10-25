@@ -1,19 +1,19 @@
 import React, { Component } from 'react';
 import { useDirections } from './DirectionsContext.js';
-import { Button, Input, Space, Divider, Tabs, Select } from 'antd';
+import { Button, Input, Space, Divider, Tabs, Select, AutoComplete } from 'antd';
 import { 
     HiOutlineTrendingUp as IconTrendingUp,
     HiOutlineTrendingDown as IconTrendingDown
 } from "react-icons/hi";
-import { HiX as IconClose, HiOutlineArrowLeft as IconBack } from "react-icons/hi";
+import { HiX as IconClose, HiOutlineArrowLeft as IconBack, HiLocationMarker as IconLocation } from "react-icons/hi";
+import { MdGpsFixed as IconGPS } from "react-icons/md";
 import { LuBike as IconBike } from "react-icons/lu";
 import { FaDirections as IconRoute } from "react-icons/fa";
 import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash, HiOutlineExclamationTriangle as IconNoData } from "react-icons/hi2";
 import { HiCog as IconCog } from "react-icons/hi";
-import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
-import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
+import { HiSearch as IconSearch } from "react-icons/hi";
+import GooglePlacesGeocoder from './GooglePlacesGeocoder.js';
 import mapboxgl from 'mapbox-gl';
-import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 import { Popover } from 'antd';
 
 
@@ -21,6 +21,7 @@ import './DirectionsPanel.css';
 
 import { 
     MAPBOX_ACCESS_TOKEN,
+    GOOGLE_PLACES_API_KEY,
     IS_PROD,
     IS_MOBILE,
     HYBRID_MAX_RESULTS
@@ -28,7 +29,105 @@ import {
 import DirectionsManager from './DirectionsManager.js'
 import { formatDistance, formatDuration } from './routeUtils.js'
 
-const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
+// LocationSearchInput component to encapsulate AutoComplete logic
+class LocationSearchInput extends Component {
+    render() {
+        const { 
+            inputType, 
+            parentComponent,
+            className = "w-full"
+        } = this.props;
+
+        const state = parentComponent.state;
+        const handlers = parentComponent;
+
+        const isFrom = inputType === 'from';
+        const placeholder = isFrom ? 'Origem' : 'Destino';
+        const showGeolocation = isFrom; // Only show GPS button for origin
+
+        return (
+            <AutoComplete
+                value={state[`${inputType}SearchValue`]}
+                onChange={(value) => parentComponent.setState({ [`${inputType}SearchValue`]: value })}
+                onSearch={(value) => handlers.handleSearch(value, inputType)}
+                loading={state[`${inputType}SearchLoading`]}
+                options={state[`${inputType}Suggestions`].map(suggestion => {
+                    const mainText = suggestion.properties?.structured_formatting?.main_text || suggestion.place_name;
+                    const secondaryText = suggestion.properties?.structured_formatting?.secondary_text;
+                    
+                    return {
+                        value: suggestion.place_name,
+                        label: (
+                            <div className="flex items-center gap-3 py-1">
+                                <span className="text-lg flex-shrink-0 opacity-70">
+                                    {googlePlacesGeocoder.getPlaceTypeIcon(suggestion.properties.types)}
+                                </span>
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <span className="text-sm font-medium truncate">{mainText}</span>
+                                    {secondaryText && (
+                                        <span className="text-xs text-gray-400 truncate">{secondaryText}</span>
+                                    )}
+                                </div>
+                            </div>
+                        ),
+                        key: suggestion.id,
+                        suggestion: suggestion
+                    };
+                })}
+                onSelect={(value, option) => handlers.handleSelect(option.suggestion, inputType)}
+                className={className}
+                size="large"
+                allowClear={true}
+                onClear={() => handlers.handleClearInput(inputType)}
+            >
+                <Input
+                    placeholder={state.focusedInput === inputType ? 'Digite ou clique no mapa' : placeholder}
+                    prefix={
+                        <IconSearch className="text-white opacity-30" style={{
+                            display: 'inline-block',
+                        }}/>
+                    }
+                    suffix={
+                        showGeolocation && (
+                            <Button
+                                type="text"
+                                shape="circle"
+                                icon={<IconGPS className="text-white" style={{
+                                    display: 'inline-block',
+                                }}/>}
+                                onClick={() => handlers.handleGeolocation(inputType)}
+                                className="text-white border-0"
+                                title="Usar localização atual"
+                                size="small"
+                            />
+                        )
+                    }
+                    onFocus={() => handlers.handleInputFocus(inputType)}
+                    onBlur={() => handlers.handleInputBlur(inputType)}
+                />
+            </AutoComplete>
+        );
+    }
+}
+
+const googlePlacesGeocoder = new GooglePlacesGeocoder({
+    apiKey: GOOGLE_PLACES_API_KEY,
+    language: 'pt-BR',
+    region: 'br'
+});
+
+// Initialize the geocoder when needed
+let geocoderInitialized = false;
+const ensureGeocoderReady = async () => {
+    if (!geocoderInitialized) {
+        try {
+            await googlePlacesGeocoder.loadGoogleMapsAPI();
+            geocoderInitialized = true;
+        } catch (error) {
+            console.error('Failed to initialize Google Places Geocoder:', error);
+        }
+    }
+};
 
 class DirectionsPanel extends Component {
     constructor(props) {
@@ -39,13 +138,17 @@ class DirectionsPanel extends Component {
             toGeocoderAttached: false,
             focusedInput: null,
             selectedProvider: 'hybrid',
-            settingsVisible: false
+            settingsVisible: false,
+            fromSuggestions: [],
+            toSuggestions: [],
+            fromSearchValue: '',
+            toSearchValue: '',
+            fromSearchLoading: false,
+            toSearchLoading: false
         };
 
         this.fromMarker = null;
         this.toMarker = null;
-        this.fromGeocoder = null;
-        this.toGeocoder = null;
         this.blurTimeout = null;
         this.geocodersInitialized = false;
 
@@ -59,7 +162,10 @@ class DirectionsPanel extends Component {
         this.handleInputFocus = this.handleInputFocus.bind(this);
         this.handleInputBlur = this.handleInputBlur.bind(this);
         this.handleMapClick = this.handleMapClick.bind(this);
-        this.attachMapboxGeocoderToDOM = this.attachMapboxGeocoderToDOM.bind(this);
+        this.handleSearch = this.handleSearch.bind(this);
+        this.handleSelect = this.handleSelect.bind(this);
+        this.handleGeolocation = this.handleGeolocation.bind(this);
+        this.handleClearInput = this.handleClearInput.bind(this);
         this.calculateDirections = this.calculateDirections.bind(this);
         this.swapOriginDestination = this.swapOriginDestination.bind(this);
         this.handleProviderChange = this.handleProviderChange.bind(this);
@@ -67,19 +173,21 @@ class DirectionsPanel extends Component {
     }
 
     componentDidMount() {
-        this.initGeocodersInterval = setInterval(() => {
-            if (this.props.map && !this.geocodersInitialized) {
-                this.initGeocoders();
-                this.setupMapClickListener();
-                clearInterval(this.initGeocodersInterval);
-            }
-        }, 100);
+        this.setupMapClickListener();
 
-        // Store initial points for later processing after geocoders are attached
+        // Store initial points for later processing
         this.pendingInitialPoints = {
             from: this.props.fromPoint,
             to: this.props.toPoint
         };
+
+        // Initialize search input values if points are already set (e.g., from URL)
+        if (this.props.fromPoint && this.props.fromPoint.result && this.props.fromPoint.result.place_name) {
+            this.setState({ fromSearchValue: this.props.fromPoint.result.place_name });
+        }
+        if (this.props.toPoint && this.props.toPoint.result && this.props.toPoint.result.place_name) {
+            this.setState({ toSearchValue: this.props.toPoint.result.place_name });
+        }
 
         // Notify parent component about initial panel state
         if (this.props.onDirectionsPanelToggle) {
@@ -88,9 +196,8 @@ class DirectionsPanel extends Component {
     }
 
     componentDidUpdate(prevProps) {
-        if (this.props.map && !prevProps.map && !this.geocodersInitialized) {
-            console.debug('Map became available, initializing geocoders');
-            this.initGeocoders();
+        if (this.props.map && !prevProps.map) {
+            console.debug('Map became available, setting up map click listener');
             this.setupMapClickListener();
         }
         
@@ -131,9 +238,6 @@ class DirectionsPanel extends Component {
     }
 
     componentWillUnmount() {
-        if (this.initGeocodersInterval) {
-            clearInterval(this.initGeocodersInterval);
-        }
         if (this.blurTimeout) {
             clearTimeout(this.blurTimeout);
             this.blurTimeout = null;
@@ -153,8 +257,14 @@ class DirectionsPanel extends Component {
             } else {
                 this.addMarker('from', fromCoords);
             }
+            
+            // Update search input value if place_name exists
+            if (fromPoint.result.place_name) {
+                this.setState({ fromSearchValue: fromPoint.result.place_name });
+            }
         } else {
             this.removeMarker('from');
+            this.setState({ fromSearchValue: '' });
         }
 
         if (toPoint) {
@@ -164,90 +274,158 @@ class DirectionsPanel extends Component {
             } else {
                 this.addMarker('to', toCoords);
             }
+            
+            // Update search input value if place_name exists
+            if (toPoint.result.place_name) {
+                this.setState({ toSearchValue: toPoint.result.place_name });
+            }
         } else {
             this.removeMarker('to');
+            this.setState({ toSearchValue: '' });
         }
     }
 
 
-    initGeocoders() {
-        if (!this.props.map) {
-            console.debug('Map not available yet, waiting...');
+    async handleSearch(value, inputType) {
+        if (!value || value.length < 3) {
+            this.setState({ [`${inputType}Suggestions`]: [] });
             return;
         }
 
-        // Check if geocoders are already properly initialized
-        if (this.fromGeocoder && this.toGeocoder && 
-            this.fromGeocoderElement && this.toGeocoderElement) {
-            console.debug('Geocoders already initialized, skipping reinit');
-            return;
+        this.setState({ [`${inputType}SearchLoading`]: true });
+
+        try {
+            await ensureGeocoderReady();
+            const results = await googlePlacesGeocoder.search(value, {
+                proximity: this.props.map ? [this.props.map.getCenter().lng, this.props.map.getCenter().lat] : null,
+                limit: 5
+            });
+
+            this.setState({ 
+                [`${inputType}Suggestions`]: results,
+                [`${inputType}SearchLoading`]: false 
+            });
+        } catch (error) {
+            console.error(`${inputType} search error:`, error);
+            this.setState({ 
+                [`${inputType}Suggestions`]: [],
+                [`${inputType}SearchLoading`]: false 
+            });
         }
+    }
 
-        console.debug('Initializing geocoders with map:', this.props.map);
 
-        this.cleanup(false); // Don't remove map listener during geocoder reinit
+    async handleSelect(result, inputType) {
+        console.debug(`${inputType} point selected:`, result);
+        
+        try {
+            // If this is a Places API prediction, we need to get the coordinates
+            if (result.properties && result.properties.place_id && !result.center) {
+                await ensureGeocoderReady();
+                const placeDetails = await googlePlacesGeocoder.getPlaceDetails(result.properties.place_id);
+                
+                // Create a complete result with coordinates
+                const completeResult = {
+                    ...result,
+                    center: placeDetails.coordinates,
+                    geometry: {
+                        coordinates: placeDetails.coordinates
+                    },
+                    properties: {
+                        ...result.properties,
+                        formatted_address: placeDetails.formatted_address,
+                        name: placeDetails.name,
+                        types: placeDetails.types
+                    }
+                };
+                
+                this.handleGeocoderResult({ result: completeResult }, inputType);
+            } else {
+                // If it already has coordinates, use it directly
+                this.handleGeocoderResult({ result }, inputType);
+            }
+            
+            this.setState({ 
+                [`${inputType}Suggestions`]: [],
+                [`${inputType}SearchValue`]: result.place_name 
+            });
 
-        // Initialize "From" geocoder
-        this.fromGeocoder = new MapboxGeocoder({
-            accessToken: MAPBOX_ACCESS_TOKEN,
-            mapboxgl: mapboxgl,
-            placeholder: 'Origem',
-            language: 'pt-BR',
-            flyTo: false,
-            countries: IS_PROD ? 'br' : '',
-            marker: false,
-            useBrowserFocus: true,
-            enableGeolocation: true
-        });
+            // Auto-focus to destination input if origin is selected and no destination is set
+            if (inputType === 'from' && !this.props.toPoint) {
+                setTimeout(() => {
+                    this.setState({ focusedInput: 'to' });
+                    console.debug('Auto-focused destination input after origin selection');
+                }, 500);
+            }
+        } catch (error) {
+            console.error('Error getting place details:', error);
+            // Fallback to the original result
+            this.handleGeocoderResult({ result }, inputType);
+            this.setState({ 
+                [`${inputType}Suggestions`]: [],
+                [`${inputType}SearchValue`]: result.place_name 
+            });
+        }
+    }
 
-        // Initialize "To" geocoder
-        this.toGeocoder = new MapboxGeocoder({
-            accessToken: MAPBOX_ACCESS_TOKEN,
-            mapboxgl: mapboxgl,
-            placeholder: 'Destino',
-            language: 'pt-BR',
-            flyTo: false,
-            countries: IS_PROD ? 'br' : '',
-            marker: false,
-            useBrowserFocus: true
-        });
 
-        // Add event listeners
-        this.fromGeocoder.on('result', (result) => {
-            console.debug('From point selected:', result);
-            this.handleGeocoderResult(result, 'from');
-        });
-
-        this.toGeocoder.on('result', (result) => {
-            console.debug('To point selected:', result);
-            this.handleGeocoderResult(result, 'to');
-        });
-
-        this.fromGeocoder.on('clear', () => {
-            this.removeMarker('from');
-            this.props.onFromPointChange(null);
-        });
-
-        this.toGeocoder.on('clear', () => {
-            this.removeMarker('to');
-            this.props.onToPointChange(null);
-        });
-
+    handleClearInput(inputType) {
+        console.debug(`Clearing ${inputType} input`);
+        
+        // Clear the input value
         this.setState({
-            fromGeocoderAttached: false,
-            toGeocoderAttached: false
+            [`${inputType}SearchValue`]: '',
+            [`${inputType}Suggestions`]: []
         });
+        
+        // Clear the corresponding point
+        if (inputType === 'from') {
+            this.props.onFromPointChange(null);
+            this.removeMarker('from');
+        } else {
+            this.props.onToPointChange(null);
+            this.removeMarker('to');
+        }
+    }
 
-        // If we have pending initial points, store them for processing after DOM attachment
-        if (!this.pendingInitialPoints) {
-            this.pendingInitialPoints = {
-                from: this.props.fromPoint,
-                to: this.props.toPoint
-            };
+    handleGeolocation(inputType) {
+        if (!navigator.geolocation) {
+            console.error('Geolocation is not supported by this browser');
+            return;
         }
 
-        // Mark geocoders as initialized
-        this.geocodersInitialized = true;
+        console.debug(`Getting current location for ${inputType}`);
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const coordinates = {
+                    lng: position.coords.longitude,
+                    lat: position.coords.latitude
+                };
+                
+                console.debug('Current location:', coordinates);
+                
+                // Set the point and perform reverse geocoding
+                this.reverseGeocode(coordinates, inputType);
+                
+                // Auto-focus to destination if this was the origin
+                if (inputType === 'from' && !this.props.toPoint) {
+                    setTimeout(() => {
+                        this.setState({ focusedInput: 'to' });
+                        console.debug('Auto-focused destination input after geolocation');
+                    }, 1000);
+                }
+            },
+            (error) => {
+                console.error('Geolocation error:', error);
+                // You could show a user-friendly error message here
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000 // 5 minutes
+            }
+        );
     }
 
     handleGeocoderResult(result, type) {
@@ -263,35 +441,11 @@ class DirectionsPanel extends Component {
     }
 
     autoFocusDestinationInput() {
-        // Wait for the geocoder to be attached to DOM
-        const tryFocus = () => {
-            const toGeocoderElement = this.toGeocoderElement;
-            if (toGeocoderElement) {
-                const destinationInput = toGeocoderElement.querySelector('input');
-                if (destinationInput) {
-                    if (this.blurTimeout) {
-                        clearTimeout(this.blurTimeout);
-                        this.blurTimeout = null;
-                    }
-                    
-                    destinationInput.focus();
-                    this.setState({ focusedInput: 'to' });
-                    console.debug('Auto-focused destination input after origin was set');
-                    return true;
-                }
-            }
-            return false;
-        };
-
-        // Try immediately first
-        if (!tryFocus()) {
-            // If not available, try again after a short delay
-            setTimeout(() => {
-                if (!tryFocus()) {
-                    console.debug('Could not focus destination input - geocoder not ready');
-                }
-            }, 200);
-        }
+        // Auto-focus to destination input
+        setTimeout(() => {
+            this.setState({ focusedInput: 'to' });
+            console.debug('Auto-focused destination input after origin was set');
+        }, 1000);
     }
 
     addMarker(type, coordinates) {
@@ -348,46 +502,10 @@ class DirectionsPanel extends Component {
         if (removeMapListener) {
             this.removeMapClickListener();
         }
-        
-        // Remove geocoders from map if they exist
-        if (this.fromGeocoder && this.props.map) {
-            try {
-                this.fromGeocoder.onRemove(this.props.map);
-            } catch (error) {
-                console.debug('Error removing from geocoder:', error);
-            }
-        }
-        
-        if (this.toGeocoder && this.props.map) {
-            try {
-                this.toGeocoder.onRemove(this.props.map);
-            } catch (error) {
-                console.debug('Error removing to geocoder:', error);
-            }
-        }
-
-        // Reset initialization flag when cleaning up
-        this.geocodersInitialized = false;
 
         // Remove custom markers
         this.removeMarker('from');
         this.removeMarker('to');
-
-        // Clear DOM containers
-        const fromContainer = document.getElementById('fromGeocoder');
-        const toContainer = document.getElementById('toGeocoder');
-        
-        if (fromContainer) {
-            fromContainer.innerHTML = '';
-        }
-        if (toContainer) {
-            toContainer.innerHTML = '';
-        }
-
-        this.setState({
-            fromGeocoderAttached: false,
-            toGeocoderAttached: false
-        });
     }
 
     toggleCollapse() {
@@ -516,8 +634,11 @@ class DirectionsPanel extends Component {
         this.props.onFromPointChange(toPoint);
         this.props.onToPointChange(fromPoint);
         
-        this.safeSetGeocoderInput(this.fromGeocoder, toPoint.result.place_name, 'from');
-        this.safeSetGeocoderInput(this.toGeocoder, fromPoint.result.place_name, 'to');
+        // Update the search input values
+        this.setState({
+            fromSearchValue: toPoint.result.place_name,
+            toSearchValue: fromPoint.result.place_name
+        });
     }
 
     handleProviderChange(provider) {
@@ -578,65 +699,47 @@ class DirectionsPanel extends Component {
         this.reverseGeocode(coordinates, type);
     }
 
-    reverseGeocode(coordinates, type) {
+    async reverseGeocode(coordinates, type) {
         if (!coordinates) return;
 
         const lngLat = [coordinates.lng, coordinates.lat];
         console.debug(`Reverse geocoding for ${type} point:`, lngLat);
 
-        geocodingClient
-            .reverseGeocode({
-                query: lngLat,
-                types: ['address', 'poi', 'place'],
-                limit: 1,
-                language: ['pt-br']
-            })
-            .send()
-            .then(response => {
-                const features = response.body.features;
-                console.debug('Reverse geocode result:', features);
-
-                if (features && features[0]) {
-                    const place = features[0];
-                    const address = place.place_name || place.text || 'Nova posição';
-                    
-                    const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
-                    console.debug(`Setting input for ${type} geocoder:`, address);
-                    if (geocoder && this[`${type}GeocoderElement`]) {
-                        this.safeSetGeocoderInput(geocoder, address, type);
-                    } else {
-                        console.warn(`No geocoder found for ${type} geocoder`);
-                    }
-
-                    const newPoint = {
-                        result: {
-                            center: lngLat,
-                            place_name: address,
-                            ...place
-                        }
-                    };
-
-                    // Update route state via hook
-                    if (type === 'from') {
-                        this.props.onFromPointChange(newPoint);
-                    } else {
-                        this.props.onToPointChange(newPoint);
-                    }
-                } else {
-                    const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
-                    console.debug(`Setting fallback input for ${type} geocoder`);
-                    if (geocoder) {
-                        this.safeSetGeocoderInput(geocoder, 'Nova posição', type);
-                    }
-                }
-            })
-            .catch(err => {
-                console.error('Reverse geocoding error:', err);
-                const geocoder = type === 'from' ? this.fromGeocoder : this.toGeocoder;
-                if (geocoder) {
-                    this.safeSetGeocoderInput(geocoder, 'Nova posição', type);
-                }
+        try {
+            await ensureGeocoderReady();
+            const result = await googlePlacesGeocoder.reverseGeocode(lngLat, {
+                language: 'pt-BR'
             });
+
+            console.debug('Reverse geocode result:', result);
+
+            const address = result.place_name || 'Nova posição';
+            
+            // Update the search input value
+            this.setState({
+                [`${type}SearchValue`]: address
+            });
+
+            const newPoint = {
+                result: {
+                    center: lngLat,
+                    place_name: address,
+                    ...result
+                }
+            };
+
+            // Update route state via hook
+            if (type === 'from') {
+                this.props.onFromPointChange(newPoint);
+            } else {
+                this.props.onToPointChange(newPoint);
+            }
+        } catch (error) {
+            console.error('Reverse geocoding error:', error);
+            this.setState({
+                [`${type}SearchValue`]: 'Nova posição'
+            });
+        }
     }
 
     setupMapClickListener() {
@@ -676,10 +779,6 @@ class DirectionsPanel extends Component {
         console.debug(`Input focused: ${inputType}`);
         this.setState({ focusedInput: inputType });
 
-        if (this[`${inputType}GeocoderElement`]) {
-            this[`${inputType}GeocoderElement`].querySelector('input').placeholder = 'Digite ou clique no mapa';
-        }
-
         // Notify parent that user is setting route points
         if (this.props.onRouteModeChange) {
             this.props.onRouteModeChange(true);
@@ -698,21 +797,29 @@ class DirectionsPanel extends Component {
         // Only clear focus if it's the same input that's being blurred
         if (this.state.focusedInput === inputType) {
             // Delay to make sure that if the next click was on the map, it'll set the point
+            // Also check if the blur was caused by clicking on a suggestion
             this.blurTimeout = setTimeout(() => {
-                this.setState({ focusedInput: null });
-                console.debug('Focus cleared, resetting cursor');
+                // Check if the active element is still within the autocomplete dropdown
+                const activeElement = document.activeElement;
+                const isDropdownActive = activeElement && (
+                    activeElement.closest('.ant-select-dropdown') ||
+                    activeElement.closest('.ant-select-item')
+                );
+                
+                if (!isDropdownActive) {
+                    this.setState({ focusedInput: null });
+                    console.debug('Focus cleared, resetting cursor');
+                    
+                    // Notify parent that user is no longer setting route points
+                    if (this.props.onRouteModeChange) {
+                        this.props.onRouteModeChange(false);
+                    }
+                } else {
+                    console.debug('Blur ignored - dropdown is active');
+                }
                 
                 this.blurTimeout = null;
-
-                if (this[`${inputType}GeocoderElement`]) {
-                    this[`${inputType}GeocoderElement`].querySelector('input').placeholder = inputType === 'from' ? 'Origem' : 'Destino';
-                }
-
-                // Notify parent that user is no longer setting route points
-                if (this.props.onRouteModeChange) {
-                    this.props.onRouteModeChange(false);
-                }
-            }, 500);
+            }, 200); // Reduced timeout for better responsiveness
         } else {
             console.debug('Blur ignored - different input is focused');
         }
@@ -736,88 +843,6 @@ class DirectionsPanel extends Component {
             this.autoFocusDestinationInput();
         } else {
             this.setState({ focusedInput: null });
-        }
-    }
-
-    safeSetGeocoderInput(geocoder, value, geocoderType, maxRetries = 10) {
-        if (!geocoder || !geocoder.setInput) {
-            console.warn('Geocoder or setInput method not available');
-            return false;
-        }
-
-        const trySetInput = (retryCount = 0) => {
-            try {
-                // Use the stored geocoder element reference
-                const geocoderElement = this[`${geocoderType}GeocoderElement`];
-                if (geocoderElement) {
-                    const input = geocoderElement.querySelector('input');
-                    if (input) {
-                        geocoder.setInput(value);
-                        return true;
-                    }
-                }
-                
-                // If input not ready and we have retries left, try again
-                if (retryCount < maxRetries) {
-                    setTimeout(() => trySetInput(retryCount + 1), 100);
-                } else {
-                    console.warn(`Failed to set geocoder input after ${maxRetries} retries`);
-                }
-            } catch (error) {
-                console.warn('Error setting geocoder input:', error);
-                if (retryCount < maxRetries) {
-                    setTimeout(() => trySetInput(retryCount + 1), 100);
-                }
-            }
-            return false;
-        };
-
-        return trySetInput();
-    }
-
-    attachMapboxGeocoderToDOM(geocoderType, containerId, attachedStateKey) {
-        return (el) => {
-            if (el && !el.hasChildNodes() && !this.state[attachedStateKey]) {
-                console.debug(`Attaching ${geocoderType} geocoder to DOM`);
-                try {
-                    const geocoder = this[`${geocoderType}Geocoder`];
-                    if (geocoder) {
-                        const geocoderElement = geocoder.onAdd(this.props.map);
-                        el.appendChild(geocoderElement);
-                        
-                        this[`${geocoderType}GeocoderElement`] = geocoderElement;
-                        
-                        const input = geocoderElement.querySelector('input');
-                        if (input) {
-                            const focusHandler = () => this.handleInputFocus(geocoderType);
-                            const blurHandler = () => this.handleInputBlur(geocoderType);
-                            
-                            input.addEventListener('focus', focusHandler);
-                            input.addEventListener('blur', blurHandler);
-                        }
-                        
-                        this.setState({ [attachedStateKey]: true });
-                        
-                        this.processPendingInitialPoints(geocoderType);
-                    }
-                } catch (error) {
-                    console.debug(`Error attaching ${geocoderType} geocoder:`, error);
-                }
-            }
-        };
-    }
-
-    processPendingInitialPoints(geocoderType) {
-        if (this.pendingInitialPoints && this.pendingInitialPoints[geocoderType]) {
-            const point = this.pendingInitialPoints[geocoderType];
-            console.debug(`Processing pending initial point for ${geocoderType}:`, point);
-            
-            // Always perform reverse geocoding to get the address and set the input
-            const coordinates = { lng: point.result.center[0], lat: point.result.center[1] };
-            console.debug(`Performing reverse geocoding for ${geocoderType} with coordinates:`, coordinates);
-            this.reverseGeocode(coordinates, geocoderType);
-            
-            this.pendingInitialPoints[geocoderType] = null;
         }
     }
 
@@ -969,29 +994,18 @@ class DirectionsPanel extends Component {
 
                         {!showResultsOnMobile && (
                             <Space direction="vertical" size="small" className="w-full mt-3">
-                                <div 
-                                    id="fromGeocoder"
-                                    className='flex'
-                                    ref={this.attachMapboxGeocoderToDOM('from', 'fromGeocoder', 'fromGeocoderAttached')}
-                                />
+                                <div className="flex gap-2">
+                                    <LocationSearchInput
+                                        inputType="from"
+                                        parentComponent={this}
+                                        className="flex-1"
+                                    />
+                                </div>
 
-                                <div 
-                                    id="toGeocoder"
-                                    className='flex flex-1'
-                                    ref={this.attachMapboxGeocoderToDOM('to', 'toGeocoder', 'toGeocoderAttached')}
+                                <LocationSearchInput
+                                    inputType="to"
+                                    parentComponent={this}
                                 />
-
-                                {/* <Button
-                                    type="primary"
-                                    onClick={this.calculateDirections}
-                                    loading={loading}
-                                    disabled={!this.props.fromPoint || !this.props.toPoint}
-                                    block
-                                    // size="large"
-                                    className="mt-2 bg-green-600 hover:bg-green-700"
-                                >
-                                    Calcular rota
-                                </Button> */}
                             </Space>
                         )}
 
@@ -1049,11 +1063,11 @@ class DirectionsPanel extends Component {
                                                                     `Opção ${index + 1}`
                                                                 }
                                                             </span>
-                                                            {route.provider && (
+                                                            {/* {route.provider && (
                                                                 <span className="text-xs px-1 bg-gray-600 bg-opacity-50 rounded text-gray-300 font-mono">
                                                                     {route.provider}
                                                                 </span>
-                                                            )}
+                                                            )} */}
                                                         </div>
 
                                                         {/* {(route.ascend !== undefined || route.descend !== undefined) && (

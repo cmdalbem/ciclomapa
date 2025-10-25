@@ -43,7 +43,8 @@ import {
     FORCE_RECALCULATE_LENGTHS_ALWAYS,
     DEFAULT_LENGTH_CALCULATE_STRATEGIES,
     MAP_STYLES,
-    WHITELISTED_CITIES
+    WHITELISTED_CITIES,
+    MAPBOX_ACCESS_TOKEN
 } from './constants.js'
 
 import './App.less';
@@ -120,7 +121,8 @@ class App extends Component {
             if (!isNaN(lng) && !isNaN(lat)) {
                 toPoint = {
                     result: {
-                        center: [lng, lat]
+                        center: [lng, lat],
+                        place_name: 'Destino carregado da URL'
                     }
                 };
             }
@@ -266,6 +268,55 @@ class App extends Component {
         console.debug('url params obj:', paramsObj);
 
         return paramsObj;
+    }
+
+    async reverseGeocodeURLPoints() {
+        // Reverse geocode URL-loaded points to get proper place names
+        if (this.state.fromPoint && this.state.fromPoint.result.place_name === 'Origem carregada da URL') {
+            try {
+                const response = await fetch(
+                    `https://api.mapbox.com/geocoding/v5/mapbox.places/${this.state.fromPoint.result.center[0]},${this.state.fromPoint.result.center[1]}.json?access_token=${MAPBOX_ACCESS_TOKEN}&language=pt-BR`
+                );
+                const data = await response.json();
+                if (data.features && data.features.length > 0) {
+                    const placeName = data.features[0].place_name;
+                    this.setState({
+                        fromPoint: {
+                            ...this.state.fromPoint,
+                            result: {
+                                ...this.state.fromPoint.result,
+                                place_name: placeName
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error reverse geocoding from point:', error);
+            }
+        }
+
+        if (this.state.toPoint && this.state.toPoint.result.place_name === 'Destino carregado da URL') {
+            try {
+                const response = await fetch(
+                    `https://api.mapbox.com/geocoding/v5/mapbox.places/${this.state.toPoint.result.center[0]},${this.state.toPoint.result.center[1]}.json?access_token=${MAPBOX_ACCESS_TOKEN}&language=pt-BR`
+                );
+                const data = await response.json();
+                if (data.features && data.features.length > 0) {
+                    const placeName = data.features[0].place_name;
+                    this.setState({
+                        toPoint: {
+                            ...this.state.toPoint,
+                            result: {
+                                ...this.state.toPoint.result,
+                                place_name: placeName
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error reverse geocoding to point:', error);
+            }
+        }
     }
 
     updateURL() {
@@ -763,6 +814,9 @@ class App extends Component {
         window.addEventListener('beforeunload', e => {
             this.saveStateToLocalStorage();
         });
+
+        // Reverse geocode URL-loaded points to get proper place names
+        this.reverseGeocodeURLPoints();
 
         // if (!this.state.debugMode) {
         //     const emptyFunc = () => {};
