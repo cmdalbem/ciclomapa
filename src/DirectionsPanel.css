@@ -11,19 +11,42 @@
         position: relative;
     }
 
-    .mapboxgl-ctrl-geocoder {
+    /* AutoComplete styles for the new geocoder structure */
+    .ant-select {
         width: 100%;
-        max-width: none;
+    }
+    
+    .ant-select .ant-select-selector {
+        border-radius: 8px;
+        font-size: 14px;
+        background: rgba(28, 23, 23, 0.5);
+        border: none;
+        color: white;
+        height: 36px;
+        min-height: 36px;
+    }
+
+    .ant-input-prefix {
+        margin-right: 8px;
+    }
+
+    .ant-input:focus {
+        outline: none;
+        border: none;
+        box-shadow: none !important;
+    }
+    
+    .ant-select-focused .ant-select-selector {
+        border: none;
         box-shadow: none;
     }
     
-    .mapboxgl-ctrl-geocoder.mapboxgl-ctrl {
-        border-radius: 8px;
+    .ant-select .ant-select-selection-placeholder {
+        color: rgba(255, 255, 255, 0.6);
     }
     
-    .mapboxgl-ctrl-geocoder--input {
-        border-radius: 8px;
-        font-size: 14px;
+    .ant-select .ant-select-selection-item {
+        color: white;
     }
     
     .directions--legLabel {
@@ -33,17 +56,48 @@
 
 .theme-dark {
     #directionsPanel {
-        .mapboxgl-ctrl-geocoder--input {
-            background: rgba(255, 255, 255, 0.1);
+        .ant-select .ant-select-selector {
+            background: rgba(28, 23, 23, 0.5);
+            color: white;
+            border: none;
+            height: 36px;
+            min-height: 36px;
+        }
+        
+        .ant-select-focused .ant-select-selector {
+            border: none;
+            box-shadow: none;
+        }
+        
+        .ant-select .ant-select-selection-placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .ant-select .ant-select-selection-item {
             color: white;
         }
-
-        .mapboxgl-ctrl-geocoder.mapboxgl-ctrl {
-            background: rgba(28, 23, 23, 0.5);
-
-            .mapboxgl-ctrl-geocoder--button {
-                background: none !important;
-            }
+        
+        /* Input prefix and suffix icons */
+        .ant-input-affix-wrapper {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            height: 36px;
+            min-height: 36px;
+        }
+        
+        .ant-input-affix-wrapper-focused {
+            border: none;
+            box-shadow: none;
+        }
+        
+        .ant-input-affix-wrapper .ant-input {
+            background: transparent;
+            color: white;
+        }
+        
+        .ant-input-affix-wrapper .ant-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
         }
     }
 }
@@ -92,6 +146,59 @@
     color: inherit;
 }
 
+.theme-light {
+    #directionsPanel {
+        .ant-select .ant-select-selector {
+            background: rgba(255, 255, 255, 0.9);
+            color: rgba(0, 0, 0, 0.85);
+            border: none;
+            height: 36px;
+            min-height: 36px;
+        }
+        
+        .ant-select-focused .ant-select-selector {
+            border: none;
+            box-shadow: none;
+        }
+        
+        .ant-select .ant-select-selection-placeholder {
+            color: rgba(0, 0, 0, 0.4);
+        }
+        
+        .ant-select .ant-select-selection-item {
+            color: rgba(0, 0, 0, 0.85);
+        }
+        
+        /* Input prefix and suffix icons */
+        .ant-input-affix-wrapper {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            color: rgba(0, 0, 0, 0.85);
+            height: 36px;
+            min-height: 36px;
+        }
+        
+        .ant-input-affix-wrapper-focused {
+            border: none;
+            box-shadow: none;
+        }
+        
+        .ant-input-affix-wrapper .ant-input {
+            background: transparent;
+            color: rgba(0, 0, 0, 0.85);
+        }
+        
+        .ant-input-affix-wrapper .ant-input::placeholder {
+            color: rgba(0, 0, 0, 0.4);
+        }
+
+        .ant-select-clear {
+            background: white;
+            color: black;
+        }
+    }
+}
+
 /* Mobile */
 @media (min-width: 320px) and (max-width: 480px) {
     #directionsPanel {
@@ -110,20 +217,13 @@
         opacity: 1;
     }
 
-    #directionsPanel .mapboxgl-ctrl-geocoder--input {
-        height: 36px;
-        padding: 0 30px;
+    #directionsPanel .ant-input-affix-wrapper {
+        height: 44px;
         font-size: 12px;
     }
 
-    #directionsPanel .mapboxgl-ctrl-geocoder--icon-search {
-        top: 8px;
-        left: 8px;
-        width: 16px;
-    }
-
-    #directionsPanel .mapboxgl-ctrl-geocoder--icon-geolocate {
-        margin: 0;
+    #directionsPanel .ant-input-affix-wrapper .ant-input {
+        font-size: 12px;
     }
     
     #directionsPanel #directionsPanel--results {
@@ -136,12 +236,6 @@
         z-index: 2;
     }
 
-    .mapboxgl-ctrl-geocoder--icon-close {
-        width: 12px;
-        height: 12px;
-        margin-top: 4px;
-        margin-right: 4px;
-    }
 
     #layersPanelMobileButton,
     .directions-panel-mobile-button {
