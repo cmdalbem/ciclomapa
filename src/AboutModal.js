@@ -42,7 +42,7 @@ class AboutModal extends Component {
                         </Button>
 
                         <div className="mt-16">
-                            <hr className="border-black border-opacity-20"/>
+                            <hr style={{opacity: .2}}/>
 
                             <div className='flex h-10 mt-6 mb-6 gap-4 justify-between'>
                                 <a className="h-full b-and-w"
@@ -65,7 +65,7 @@ class AboutModal extends Component {
                                 </a>
                             </div>
 
-                            <hr className="border-black border-opacity-20"/>
+                            <hr style={{opacity: .2}}/>
 
                             <p className="flex gap-8 mt-6 mb-6 justify-center">
                                 <a className="underline" href="https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/" title="CicloMapa | UCB - União de Ciclistas do Brasil" target="_blank" rel="noopener noreferrer">
