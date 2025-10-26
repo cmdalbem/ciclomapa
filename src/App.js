@@ -602,13 +602,8 @@ class App extends Component {
                     .then(data => {
                         if (data) {
                             if (!this.isDataFresh(data.updatedAt)) {
-                                this.setState({
-                                    geoJson: null,
-                                    lengths: {},
-                                })
-                                
+                                // If data is not fresh, fetch fresh data from OSM assync
                                 this.getDataFromOSM();
-                                return;
                             }
 
                             if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
