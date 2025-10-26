@@ -16,6 +16,7 @@ import {
 } from "react-icons/md";
 
 import AboutModal from './AboutModal.js'
+import LayersLegendModal from './LayersLegendModal.js'
 import Analytics from './Analytics.js'
 import Map from './Map.js'
 import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
@@ -79,6 +80,8 @@ class App extends Component {
         this.toggleSidebar = this.toggleSidebar.bind(this);
         this.openAboutModal = this.openAboutModal.bind(this);
         this.closeAboutModal = this.closeAboutModal.bind(this);
+        this.openLayersLegendModal = this.openLayersLegendModal.bind(this);
+        this.closeLayersLegendModal = this.closeLayersLegendModal.bind(this);
         this.onChangeStrategy = this.onChangeStrategy.bind(this);
         this.setMapRef = this.setMapRef.bind(this);
         this.toggleTheme = this.toggleTheme.bind(this);
@@ -146,6 +149,7 @@ class App extends Component {
             isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : !IS_PROD,
             hideUI: !urlParams.embed,
             aboutModal: false,
+            layersLegendModal: false,
             lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
             map: null,
             isDarkMode: isDarkMode,
@@ -208,6 +212,14 @@ class App extends Component {
             aboutModal: false,
             hideUI: false
         })
+    }
+
+    openLayersLegendModal() {
+        this.setState({ layersLegendModal: true })
+    }
+
+    closeLayersLegendModal() {
+        this.setState({ layersLegendModal: false })
     }
 
     initLayers(prevLayersStates, isDarkMode, isDebugMode) {
@@ -987,6 +999,7 @@ class App extends Component {
                         onLayersChange={this.onLayersChange}
                         embedMode={this.state.embedMode}
                         isDarkMode={this.state.isDarkMode}
+                        openLayersLegendModal={this.openLayersLegendModal}
                     />
                 }
                 
@@ -1015,6 +1028,13 @@ class App extends Component {
                 <AboutModal
                     visible={this.state.aboutModal}
                     onClose={this.closeAboutModal}
+                    openLayersLegendModal={this.openLayersLegendModal}
+                />
+
+                <LayersLegendModal
+                    visible={this.state.layersLegendModal}
+                    onClose={this.closeLayersLegendModal}
+                    layers={this.state.layers}
                 />
 
                 </div>

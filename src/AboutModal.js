@@ -37,9 +37,16 @@ class AboutModal extends Component {
                             </p>
                         </div>
 
-                        <Button type="primary" size="large" onClick={onClose}>
-                            Começar
-                        </Button>
+                        <div className="flex gap-3">
+                            <Button type="primary" size="large" onClick={onClose}>
+                                Começar
+                            </Button>
+                            <Button size="large" onClick={this.props.openLayersLegendModal}>
+                                <span style={{color: 'white'}}>
+                                    Legenda do mapa
+                                </span>
+                            </Button>
+                        </div>
 
                         <div className="mt-16">
                             <hr style={{opacity: .2}}/>
