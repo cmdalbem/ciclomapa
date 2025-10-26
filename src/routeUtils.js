@@ -119,7 +119,7 @@ export const getCoverageBreakdown = (routeCoverageData, index, isDarkMode) => {
     
     Object.keys(coverageByType).forEach(type => {
         const percentage = coverageByType[type];
-        if (percentage > 1) {
+        if (percentage > MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY) {
             const shortName = typeNames[type] || type.toLowerCase();
             breakdown.push(`${percentage.toFixed(0)}% ${shortName}`);
             totalPercentage -= percentage;
