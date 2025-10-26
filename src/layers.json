@@ -70,12 +70,6 @@
         }
     },
     {
-        "name": "Comentários",
-        "description": "Comentários de usuários do CicloMapa sinalizando inconsistências no mapeamento das vias. Se você edita no OSM, use eles como referência e depois nos avise para marcar como resolvido!",
-        "type": "poi",
-        "icon": "poi-comment"
-    },
-    {
         "name": "Oficinas & lojas",
         "description": "Oficinas e lojas especializadas em bicicletas e equipamentos.",
         "filters": [
@@ -113,6 +107,12 @@
         "style": {
             "textColor": "#2F904A"
         }
+    },
+    {
+        "name": "Comentários",
+        "description": "Comentários de usuários do CicloMapa sinalizando inconsistências no mapeamento das vias. Se você edita no OSM, use eles como referência e depois nos avise para marcar como resolvido!",
+        "type": "poi",
+        "icon": "poi-comment"
     },
     {
         "name": "Ciclovia",
