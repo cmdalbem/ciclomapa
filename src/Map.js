@@ -366,7 +366,7 @@ class Map extends Component {
                     7, 0,
                     14, 5
                 ],
-                'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? 0 : 0.2),
+                'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? 0.2 : 0.2),
                 'circle-stroke-width': [
                     'interpolate',
                     ["exponential", 1.5],
@@ -383,6 +383,7 @@ class Map extends Component {
             }
         });
 
+        // Polygons for area POIs (e.g. bike parkings)
         this.map.addLayer({
             'id': layerId+'polygon',
             "name": l.name,
@@ -660,7 +661,7 @@ class Map extends Component {
                     "case",
                     ["boolean", ["feature-state", "hover"], false],
                     adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3), // On hover
-                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.1 : -0.1) // Default
+                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.1 : -0.1, 'hsl') // Default
                 ],
                 "line-offset": [
                     "interpolate",
@@ -694,6 +695,8 @@ class Map extends Component {
                 },
             }, layerUnderneathName);
 
+        // Layer for routes active
+        // It is hidden by default and is shown when a route is selected
         this.map.addLayer({
             "id": routesActiveLayerId,
             "type": "line",
@@ -704,7 +707,11 @@ class Map extends Component {
             "filter": filters,
             "paint": {
                 "line-occlusion-opacity": 0.5,
-                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.5 : 0.6),
+                "line-color": adjustColorBrightness(
+                    this.props.layers.find(layer => layer.name === "Ciclovia").style.lineColor,
+                    this.props.isDarkMode ? -0.5 : 0.6,
+                    'hsl'
+                ),
                 "line-width": [
                     "interpolate",
                         ["exponential", 1.5],

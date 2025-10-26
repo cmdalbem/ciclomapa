@@ -111,9 +111,67 @@ export function hexToRgba(hex, alpha = 1) {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+// Helper function to convert RGB to HSL
+function rgbToHsl(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    
+    if (max === min) {
+        h = s = 0; // achromatic
+    } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        
+        switch (max) {
+            case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+            case g: h = ((b - r) / d + 2) / 6; break;
+            case b: h = ((r - g) / d + 4) / 6; break;
+        }
+    }
+    
+    return [h * 360, s, l];
+}
+
+// Helper function to convert HSL to RGB
+function hslToRgb(h, s, l) {
+    h /= 360;
+    let r, g, b;
+    
+    if (s === 0) {
+        r = g = b = l; // achromatic
+    } else {
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1/6) return p + (q - p) * 6 * t;
+            if (t < 1/2) return q;
+            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+        };
+        
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+    }
+    
+    return [
+        Math.round(r * 255),
+        Math.round(g * 255),
+        Math.round(b * 255)
+    ];
+}
+
 // Adjust HEX color brightness by a percentage (-1 to 1)
 // Positive values brighten, negative values darken
-export function adjustColorBrightness(hexColor, percentage = 0.3) {
+// method: 'linear' (default) or 'hsl' for different adjustment techniques
+export function adjustColorBrightness(hexColor, percentage = 0.3, method = 'linear') {
     // Remove # if present
     hexColor = hexColor.replace('#', '');
     
@@ -124,16 +182,36 @@ export function adjustColorBrightness(hexColor, percentage = 0.3) {
     
     let newR, newG, newB;
     
-    if (percentage > 0) {
-        // Brighten by moving towards white (255, 255, 255)
-        newR = Math.round(r + (255 - r) * percentage);
-        newG = Math.round(g + (255 - g) * percentage);
-        newB = Math.round(b + (255 - b) * percentage);
+    if (method === 'hsl') {
+        // HSL-based adjustment: adjusts lightness while preserving hue and saturation
+        const [h, s, l] = rgbToHsl(r, g, b);
+        let newL;
+        
+        if (percentage > 0) {
+            // Brighten by increasing lightness
+            newL = Math.min(1, l + percentage);
+        } else {
+            // Darken by decreasing lightness
+            newL = Math.max(0, l * (1 + percentage));
+        }
+        
+        const rgb = hslToRgb(h, s, newL);
+        newR = rgb[0];
+        newG = rgb[1];
+        newB = rgb[2];
     } else {
-        // Darken by moving towards black (0, 0, 0)
-        newR = Math.round(r * (1 + percentage));
-        newG = Math.round(g * (1 + percentage));
-        newB = Math.round(b * (1 + percentage));
+        // Default linear method
+        if (percentage > 0) {
+            // Brighten by moving towards white (255, 255, 255)
+            newR = Math.round(r + (255 - r) * percentage);
+            newG = Math.round(g + (255 - g) * percentage);
+            newB = Math.round(b + (255 - b) * percentage);
+        } else {
+            // Darken by moving towards black (0, 0, 0)
+            newR = Math.round(r * (1 + percentage));
+            newG = Math.round(g * (1 + percentage));
+            newB = Math.round(b * (1 + percentage));
+        }
     }
     
     // Clamp values to valid RGB range
