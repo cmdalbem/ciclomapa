@@ -56,6 +56,7 @@ export const TOPBAR_HEIGHT = 64;
 
 export const HYBRID_MAX_RESULTS = 3;
 export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 3;
+export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
 
 export const ROUTE_COLORS = {
     DARK: {

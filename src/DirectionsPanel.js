@@ -24,7 +24,8 @@ import {
     GOOGLE_PLACES_API_KEY,
     IS_PROD,
     IS_MOBILE,
-    HYBRID_MAX_RESULTS
+    HYBRID_MAX_RESULTS,
+    ENABLE_MAP_CLICK_TO_SET_POINTS
 } from './constants.js'
 import DirectionsManager from './DirectionsManager.js'
 import { formatDistance, formatDuration } from './routeUtils.js'
@@ -81,7 +82,7 @@ class LocationSearchInput extends Component {
                 onClear={() => handlers.handleClearInput(inputType)}
             >
                 <Input
-                    placeholder={state.focusedInput === inputType ? 'Digite ou clique no mapa' : placeholder}
+                    placeholder={state.focusedInput === inputType ? (ENABLE_MAP_CLICK_TO_SET_POINTS ? 'Digite ou clique no mapa' : 'Comece a digitar para buscar') : placeholder}
                     prefix={
                         <IconSearch className="text-white opacity-30" style={{
                             display: 'inline-block',
@@ -151,6 +152,7 @@ class DirectionsPanel extends Component {
         this.toMarker = null;
         this.blurTimeout = null;
         this.geocodersInitialized = false;
+        this.isDraggingMarker = false;
 
         this.toggleCollapse = this.toggleCollapse.bind(this);
         this.clearDirections = this.clearDirections.bind(this);
@@ -218,6 +220,12 @@ class DirectionsPanel extends Component {
                              this.props.toPoint !== prevProps.toPoint;
         if (pointsChanged && this.props.map) {
             console.debug('From or to point changed, syncing markers');
+            
+            // Reset dragging flag if it was set
+            if (this.isDraggingMarker) {
+                this.isDraggingMarker = false;
+            }
+            
             this.syncMarkersWithProps();
         }
 
@@ -339,10 +347,10 @@ class DirectionsPanel extends Component {
                     }
                 };
                 
-                this.handleGeocoderResult({ result: completeResult }, inputType);
+                this.handleGeocoderResult({ result: completeResult }, inputType, true);
             } else {
                 // If it already has coordinates, use it directly
-                this.handleGeocoderResult({ result }, inputType);
+                this.handleGeocoderResult({ result }, inputType, true);
             }
             
             this.setState({ 
@@ -428,9 +436,17 @@ class DirectionsPanel extends Component {
         );
     }
 
-    handleGeocoderResult(result, type) {
+    handleGeocoderResult(result, type, fromAutocomplete = false) {
         if (type === 'from') {
             this.props.onFromPointChange(result);
+            
+            if (fromAutocomplete && this.props.map) {
+                this.props.map.flyTo({
+                    center: result.result.center,
+                    zoom: Math.max(this.props.map.getZoom(), 16),
+                    duration: 1500
+                });
+            }
         } else {
             this.props.onToPointChange(result);
         }
@@ -473,6 +489,9 @@ class DirectionsPanel extends Component {
         }).setLngLat(coordinates);
 
         marker.addTo(this.props.map);
+        marker.on('dragstart', () => {
+            this.isDraggingMarker = true;
+        });
         marker.on('dragend', () => this.handleMarkerDrag(marker, type));
         
         this[`${type}Marker`] = marker;
@@ -695,7 +714,6 @@ class DirectionsPanel extends Component {
         const coordinates = marker.getLngLat();
         console.debug(`${type} marker dragged to:`, coordinates);
 
-
         this.reverseGeocode(coordinates, type);
     }
 
@@ -826,6 +844,12 @@ class DirectionsPanel extends Component {
     }
 
     handleMapClick(e) {
+        // Check if map click to set points is enabled
+        if (!ENABLE_MAP_CLICK_TO_SET_POINTS) {
+            console.debug('Map click to set points is disabled');
+            return;
+        }
+        
         console.debug('handleMapClick called, focusedInput:', this.state.focusedInput);
         
         if (!this.state.focusedInput) {
@@ -957,25 +981,27 @@ class DirectionsPanel extends Component {
                                             />
                                         )}
                                         
-                                        <Popover
-                                            content={this.renderSettingsContent()}
-                                            title={null}
-                                            trigger="click"
-                                            open={this.state.settingsVisible}
-                                            onOpenChange={this.toggleSettings}
-                                            placement="bottomRight"
-                                        >
-                                            <Button 
-                                                type="text"
-                                                shape="circle"
-                                                icon={<IconCog style={{
-                                                    display: 'inline-block',
-                                                }}/>}
-                                                className="flex-shrink-0 text-white"
-                                                title="Configurações do serviço"
-                                            />
-                                        </Popover>
-                                        
+                                        { !IS_MOBILE && (
+                                            <Popover
+                                                content={this.renderSettingsContent()}
+                                                title={null}
+                                                trigger="click"
+                                                open={this.state.settingsVisible}
+                                                onOpenChange={this.toggleSettings}
+                                                placement="bottomRight"
+                                            >
+                                                <Button 
+                                                    type="text"
+                                                    shape="circle"
+                                                    icon={<IconCog style={{
+                                                        display: 'inline-block',
+                                                    }}/>}
+                                                    className="flex-shrink-0 text-white"
+                                                    title="Configurações do serviço"
+                                                />
+                                            </Popover>
+                                        )}
+
                                         {/* Put this back after we have a trigger to open the panel */}
                                         { IS_MOBILE && (
                                             <Button
