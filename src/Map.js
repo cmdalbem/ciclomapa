@@ -363,8 +363,8 @@ class Map extends Component {
                     'interpolate',
                     ["exponential", 1.5],
                     ['zoom'],
-                    7, 0,
-                    14, 5
+                    10, 0,
+                    14, 4
                 ],
                 'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? 0.2 : 0.2),
                 'circle-stroke-width': [
