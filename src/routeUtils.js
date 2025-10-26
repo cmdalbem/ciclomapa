@@ -1,7 +1,7 @@
 // Shared utilities for route calculations and formatting
 
 import { MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY, ROUTE_COLORS } from './constants.js';
-import { hexToRgba } from './utils.js';
+import { hexToRgba, adjustColorBrightness } from './utils.js';
 import * as layersDefinitions from './layers.json';
 
 // Get layer colors from layers.json configuration
@@ -88,7 +88,7 @@ export const getRouteScore = (routeCoverageData, index) => {
     return { score: finalScore, cssClass: cssClass };
 };
 
-export const getCoverageBreakdown = (routeCoverageData, index, isDarkMode = false) => {
+export const getCoverageBreakdown = (routeCoverageData, index, isDarkMode) => {
     // Handle both old array format and new unified format
     let route;
     if (Array.isArray(routeCoverageData)) {
@@ -139,12 +139,19 @@ export const getCoverageBreakdown = (routeCoverageData, index, isDarkMode = fals
                     key={index}
                     className={`text-xs rounded-md px-1 py-0.5`}
                     style={{
+                        color: 
+                            isDarkMode ? 'white' 
+                            : item.includes('ciclovia') ? layerColors.ciclovia
+                            : item.includes('calçada') ? layerColors.calçada
+                            : item.includes('ciclofaixa') ? adjustColorBrightness(layerColors.ciclofaixa, -0.5)
+                            : item.includes('ciclorrota') ? adjustColorBrightness(layerColors.ciclorrota, -0.5)
+                            : adjustColorBrightness(ROUTE_COLORS.LIGHT.SELECTED, -0.2),
                         backgroundColor: 
-                            item.includes('ciclovia') ? hexToRgba(layerColors.ciclovia, 0.3)
-                            : item.includes('ciclofaixa') ? hexToRgba(layerColors.ciclofaixa, 0.3)
-                            : item.includes('calçada') ? hexToRgba(layerColors.calçada, 0.3)
-                            : item.includes('ciclorrota') ? hexToRgba(layerColors.ciclorrota, 0.3)
-                            : isDarkMode ? hexToRgba(ROUTE_COLORS.DARK.SELECTED, 0.3) : hexToRgba(ROUTE_COLORS.LIGHT.SELECTED, 0.2)
+                            item.includes('ciclovia') ? hexToRgba(layerColors.ciclovia, isDarkMode ? 0.3 : 0.1)
+                            : item.includes('calçada') ? hexToRgba(layerColors.calçada, isDarkMode ? 0.3 : 0.1)
+                            : item.includes('ciclofaixa') ? hexToRgba(layerColors.ciclofaixa, isDarkMode ? 0.5 : 0.3)
+                            : item.includes('ciclorrota') ? hexToRgba(layerColors.ciclorrota, isDarkMode ? 0.5 : 0.3)
+                            : isDarkMode ? hexToRgba(ROUTE_COLORS.DARK.SELECTED, 0.6) : hexToRgba(ROUTE_COLORS.LIGHT.SELECTED, 0.2)
                     }}
                 >
                     {item}

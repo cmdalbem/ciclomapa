@@ -1056,9 +1056,9 @@ class DirectionsPanel extends Component {
                                         <div
                                             key={index}
                                             className={`rounded-lg p-2 cursor-pointer transition-colors ${
-                                                this.props.selectedRouteIndex === index ? 'bg-white bg-opacity-10 border-opacity-60' : ''
+                                                this.props.selectedRouteIndex === index ? '' : 'opacity-50'
                                             } ${
-                                                this.props.hoveredRouteIndex === index ? 'bg-white bg-opacity-5' : ''
+                                                this.props.hoveredRouteIndex === index ? 'bg-white bg-opacity-5 opacity-100' : ''
                                             }`}
                                             onMouseEnter={() => this.handleRouteHover(index)}
                                             onMouseLeave={this.handleRouteLeave}
@@ -1112,8 +1112,8 @@ class DirectionsPanel extends Component {
                                                         )} */}
 
                                                         {
-                                                            // this.props.selectedRouteIndex === index ?
-                                                                // (routes[index] || {}).coverageBreakdown :
+                                                            this.props.selectedRouteIndex === index ?
+                                                                (routes[index] || {}).coverageBreakdown :
                                                                 (routes[index] || {}).coverageBreakdownSimple || null
                                                         }
                                                     </div>
@@ -1135,7 +1135,7 @@ class DirectionsPanel extends Component {
                                 </div>
                                 
                                 {/* Disclaimer */}
-                                <div className="p-2 text-gray-500 text-xs gap-2 flex flex-col">
+                                <div className="p-2 text-gray-500 hover:text-white text-xs gap-2 flex flex-col">
                                     <div>
                                         As rotas são sugestões automáticas, sempre verifique as condições das vias, sinalização e segurança antes de pedalar! :) 
                                         <Popover

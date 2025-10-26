@@ -231,7 +231,11 @@
 }
 
 .theme-light .hover\:text-white:hover {
-  color: rgba(255, 255, 255, 0.85) !important;
+  color: rgba(0, 0, 0, var(--tw-text-opacity)) !important;
+}
+
+.theme-light .hover\:text-black:hover {
+  color: rgba(255, 255, 255, var(--tw-text-opacity)) !important;
 }
 
 /* Override any other common Tailwind classes that might need light mode variants */
