@@ -1470,7 +1470,10 @@ class Map extends Component {
             this.updateOverlappingCyclepathsFromUnifiedData(routes);
             
             if (routes.bbox) { 
-                map.fitBounds(routes.bbox, { padding: 100, duration: 2000 }); 
+                const padding = IS_MOBILE ?
+                    { top: 250, bottom: 100, left: 100, right: 100 } :
+                    { top: 100, bottom: 100, left: 500, right: 100 };
+                map.fitBounds(routes.bbox, { padding: padding, duration: 2000 }); 
             }
         } else {
             // Clear both sources
