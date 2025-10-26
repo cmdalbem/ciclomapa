@@ -709,7 +709,7 @@ class Map extends Component {
                 "line-occlusion-opacity": 0.5,
                 "line-color": adjustColorBrightness(
                     this.props.layers.find(layer => layer.name === "Ciclovia").style.lineColor,
-                    this.props.isDarkMode ? -0.5 : 0.6,
+                    this.props.isDarkMode ? -0.5 : 0.4,
                     'hsl'
                 ),
                 "line-width": [
@@ -1123,6 +1123,12 @@ class Map extends Component {
     createRouteLayerSet(map, sourceId, layerType) {
         const suffix = layerType === 'top' ? '-selected' : 's-unselected';
         
+        // Will be used as "beforeId" prop in addLayer
+        const layerUnderneathName = 
+            map.getLayer('road-label-small') ? 'road-label-small'
+                : map.getLayer('road-label') ? 'road-label'
+                : '';
+        
         // 1. Padding layer
         map.addLayer({
             id: `route-padding${suffix}`,
@@ -1140,7 +1146,7 @@ class Map extends Component {
                 "line-gap-width": ROUTE_LINE_PADDING_GAP_WIDTH
             },
             filter: ['==', '$type', 'LineString']
-        });
+        }, layerUnderneathName);
 
         // 3. Main route layer
         map.addLayer({
@@ -1160,7 +1166,7 @@ class Map extends Component {
                 "line-width": ROUTE_LINE_WIDTH
             },
             filter: ['==', '$type', 'LineString']
-        });
+        }, layerUnderneathName);
 
         // 2. Border layer
         map.addLayer({
@@ -1188,11 +1194,17 @@ class Map extends Component {
                 "line-gap-width": ROUTE_LINE_GAP_WIDTH
             },
             filter: ['==', '$type', 'LineString']
-        });
+        }, layerUnderneathName);
     }
 
     createCyclepathLayerSet(map, sourceId, layerType) {
         const suffix = layerType === 'top' ? '-selected' : 's-unselected';
+        
+        // Will be used as "beforeId" prop in addLayer
+        const layerUnderneathName = 
+            map.getLayer('road-label-small') ? 'road-label-small'
+                : map.getLayer('road-label') ? 'road-label'
+                : '';
         
         // Create mapping from cyclepath types to layer definitions
         const cyclepathTypeToLayer = {};
@@ -1273,7 +1285,7 @@ class Map extends Component {
                 'line-opacity': 1.0
             },
             filter: ['==', '$type', 'LineString']
-        });
+        }, layerUnderneathName);
 
         // Border layer
         map.addLayer({
@@ -1292,7 +1304,7 @@ class Map extends Component {
                 "line-gap-width": ROUTE_LINE_GAP_WIDTH
             },
             filter: ['==', '$type', 'LineString']
-        });
+        }, layerUnderneathName);
     }
 
     setupRouteEventHandlers(map) {
