@@ -128,7 +128,7 @@ class LayersBar extends Component {
 
         const background = style.lineStyle === 'solid' 
             ? style.lineColor
-            : `repeating-linear-gradient(90deg, ${style.lineColor}, ${style.lineColor} 1px, transparent 1px, transparent 2px)`;
+            : `repeating-linear-gradient(90deg, ${style.lineColor}, ${style.lineColor} 3px, transparent 3px, transparent 5px)`;
         
         return {
             background,
