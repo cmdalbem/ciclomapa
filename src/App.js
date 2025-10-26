@@ -1014,6 +1014,7 @@ class App extends Component {
                     onToPointChange={this.setToPoint}
                     onClearRoutePoints={this.clearRoutePoints}
                     onDirectionsPanelToggle={this.onDirectionsPanelToggle}
+                    isDarkMode={this.state.isDarkMode}
                 />
 
                 <AboutModal

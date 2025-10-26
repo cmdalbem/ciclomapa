@@ -13,7 +13,7 @@ class DirectionsManager {
         this.directionsService = directionsServiceModule.default;
     }
 
-    async calculateDirections(fromCoords, toCoords, provider = 'graphhopper', geoJson, layers, isDarkMode = false) {
+    async calculateDirections(fromCoords, toCoords, provider = 'graphhopper', geoJson, layers, isDarkMode) {
         if (!this.directionsService) {
             await this.initialize();
         }
