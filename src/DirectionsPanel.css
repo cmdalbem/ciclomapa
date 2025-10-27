@@ -250,6 +250,11 @@
         z-index: 1;
     }
 
+    .directions-panel-mobile-button {
+        right: 12px;
+        left: auto;
+    }
+
     #layersPanelMobileButton.collapsed,
     .directions-panel-mobile-button.collapsed {
         color: #d1d5db;

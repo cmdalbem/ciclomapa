@@ -71,7 +71,7 @@ class LayersPanel extends Component {
 
         return (
             <>
-                {
+                {/* {
                     IS_MOBILE &&
                         <div
                             id="layersPanelMobileButton"
@@ -86,7 +86,7 @@ class LayersPanel extends Component {
                         >
                             <IconLayers/>
                         </div>
-                }
+                } */}
                 <div
                     id="layersPanel"
                     className={`

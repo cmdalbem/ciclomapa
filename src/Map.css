@@ -122,10 +122,10 @@ body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
 
 @media (min-width: 320px) and (max-width: 480px) {
   .mapboxgl-ctrl-group button {
-    width: 42px;
-    height: 42px;
+    width: 50px;
+    height: 50px;
     border-radius: 99px;
-    padding: 6px;
+    padding: 8px;
   }
 
   .mapboxgl-ctrl.mapboxgl-ctrl-group {
