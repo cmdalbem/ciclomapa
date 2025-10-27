@@ -114,7 +114,7 @@ class MapPopups {
             <div class="-mb-6 -mx-4 md:mt-10 mt-5 p-4 pt-4 rounded-bl-lg rounded-br-lg" style="background-color: rgba(0,0,0,0.04)">
                 ${coordinates && `
                     <button class="border border-opacity-25 border-${color} px-2 py-0.5 rounded-xl mr-1"
-                        onclick="window.setDestinationFromPopup && window.setDestinationFromPopup(${JSON.stringify(coordinates)})"
+                        onclick="window.setDestinationFromPopup && window.setDestinationFromPopup(${JSON.stringify(coordinates)})" style="background-color: var(--popup-text-color); color: var(--popup-bg-color);"
                     >
                         <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-0.5" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.62515 0.569498C5.38448 -0.189833 6.61582 -0.189833 7.37515 0.569498L11.4308 4.62516C12.19 5.38451 12.1901 6.61589 11.4308 7.37516L7.37515 11.4308C6.61588 12.1901 5.38449 12.19 4.62515 11.4308L0.569489 7.37516C-0.189836 6.61584 -0.189824 5.38449 0.569489 4.62516L4.62515 0.569498ZM7.00015 5.00016H4.50015C3.67173 5.00016 3.00015 5.67173 3.00015 6.50016V8.00016H4.00015V6.50016C4.00015 6.22402 4.22401 6.00016 4.50015 6.00016H7.00015V8.65153L9.10074 5.50016L7.00015 2.34879V5.00016Z"/></svg>
                         Como chegar
@@ -126,7 +126,7 @@ class MapPopups {
                     href="${osmUrl}"
                 >
                     <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-0.5" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M1 8.91695V11H3.08304L8.91638 5.16667L6.83333 3.08362L1 8.91695ZM10.8375 3.24552C11.0542 3.02888 11.0542 2.67893 10.8375 2.4623L9.5377 1.16248C9.32107 0.945841 8.97111 0.945841 8.75448 1.16248L7.73795 2.179L9.821 4.26205L10.8375 3.24552Z"/></svg>    
-                    Editar no OSM
+                    Editar
                 </a>
 
                 <a  href="#"
@@ -188,7 +188,7 @@ class MapPopups {
         // const coords = e.features[0].geometry.coordinates.slice();
         const coords = e.lngLat;
         const properties = e.features[0].properties;
-        const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
+        const osmUrl = `https://www.openstreetmap.org/${properties['@id'] || properties.id}`;
 
         console.debug(properties);
 
