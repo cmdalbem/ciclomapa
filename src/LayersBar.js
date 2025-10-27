@@ -155,17 +155,19 @@ class LayersBar extends Component {
                     paddingRight: '16px'
                 } : {}}
             >
-                <span className={`flex ${isActive ? '' : 'opacity-50'}`}>
-                    {icon ? (
-                        <img className="w-3 h-3" src={icon} alt="" />
-                    ) : lineStyle ? (
-                        <span 
-                            className="w-4 h-1 rounded"
-                            style={this.renderLineStyle(lineStyle)}
-                        />
-                    ) : null}
-                </span>
-                <span className=''>{label}</span>
+                {(icon || lineStyle) &&
+                    <span className={`flex ${isActive ? '' : 'opacity-50'}`}>
+                        {icon ? (
+                            <img className="w-3 h-3" src={icon} alt="" />
+                        ) : lineStyle ? (
+                            <span 
+                                className="w-4 h-1 rounded"
+                                style={this.renderLineStyle(lineStyle)}
+                            />
+                        ) : null}
+                    </span>
+                }
+                <span>{label}</span>
             </button>
         );
     }
@@ -183,7 +185,7 @@ class LayersBar extends Component {
         const categoryConfig = {
             pontos: {
                 icon: isDarkMode ? bikeparkingIcon : bikeparkingIconLight,
-                label: 'Pontos'
+                label: 'Pontos de interesse'
             },
             outras: {
                 // style: {

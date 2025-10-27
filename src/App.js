@@ -1008,6 +1008,7 @@ class App extends Component {
                     lengths={this.state.lengths}
                     onLayersChange={this.onLayersChange}
                     embedMode={this.state.embedMode}
+                    isDarkMode={this.state.isDarkMode}
                 />
 
                 <DirectionsPanel
@@ -1035,6 +1036,7 @@ class App extends Component {
                     visible={this.state.layersLegendModal}
                     onClose={this.closeLayersLegendModal}
                     layers={this.state.layers}
+                    isDarkMode={this.state.isDarkMode}
                 />
 
                 </div>

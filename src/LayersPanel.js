@@ -10,6 +10,7 @@ import {
 } from "react-icons/bs";
 
 import { slugify } from './utils.js'
+import InfrastructureBadge from './InfrastructureBadge.js';
 
 import './LayersPanel.css';
 
@@ -21,6 +22,15 @@ import commentIcon from './img/icons/poi-comment-flat.png';
 import bikeparkingIcon from './img/icons/poi-bikeparking@2x.png';
 import bikeshopIcon from './img/icons/poi-bikeshop@2x.png';
 import bikerentalIcon from './img/icons/poi-bikerental@2x.png';
+
+const getInfrastructureFromLayerName = (layerName) => {
+    const name = layerName.toLowerCase();
+    if (name.includes('ciclovia')) return 'ciclovia';
+    if (name.includes('calçada')) return 'calçada';
+    if (name.includes('ciclofaixa')) return 'ciclofaixa';
+    if (name.includes('ciclorrota')) return 'ciclorrota';
+    return null;
+};
 
 const iconsMap = {
     "poi-comment": commentIcon,
@@ -104,15 +114,25 @@ class LayersPanel extends Component {
                                     <div style={{width: 320}}>
                                         {
                                             l.type === 'way' &&
-                                            <img
-                                                className="mb-3 -m-4" alt=""
-                                                style={{ width: '352px', maxWidth: 'none' }}
-                                                src={'/' + slugify(l.name) + '.png'}/>
+                                                <img
+                                                    className="mb-3 -m-4" alt=""
+                                                    style={{ width: '352px', maxWidth: 'none' }}
+                                                    src={'/' + slugify(l.name) + '.png'}/>
                                         }
 
-                                        <h3 className="text-2xl mb-1 tracking-tight">
-                                            { l.displayName || l.name }
-                                        </h3>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="text-2xl mb-0 tracking-tight">
+                                                { l.displayName || l.name }
+                                            </h3>
+                                            { l.protectionLevel && l.style && (
+                                                <InfrastructureBadge 
+                                                    infrastructure={getInfrastructureFromLayerName(l.name)}
+                                                    isDarkMode={this.props.isDarkMode}
+                                                >
+                                                    {l.protectionLevel} proteção
+                                                </InfrastructureBadge>
+                                            )}
+                                        </div>
                                         
                                         { l.description }
                                     </div>

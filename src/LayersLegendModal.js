@@ -5,13 +5,22 @@ import {
 } from 'antd';
 
 import { slugify } from './utils.js';
-
+import InfrastructureBadge from './InfrastructureBadge.js';
 import commentIcon from './img/icons/poi-comment-flat.png';
 import bikeparkingIcon from './img/icons/poi-bikeparking@2x.png';
 import bikeshopIcon from './img/icons/poi-bikeshop@2x.png';
 import bikerentalIcon from './img/icons/poi-bikerental@2x.png';
 
 import { HiOutlineXMark } from 'react-icons/hi2';
+
+const getInfrastructureFromLayerName = (layerName) => {
+    const name = layerName.toLowerCase();
+    if (name.includes('ciclovia')) return 'ciclovia';
+    if (name.includes('calçada')) return 'calçada';
+    if (name.includes('ciclofaixa')) return 'ciclofaixa';
+    if (name.includes('ciclorrota')) return 'ciclorrota';
+    return null;
+}; 
 
 const iconsMap = {
     "poi-comment": commentIcon,
@@ -74,7 +83,7 @@ class LayersLegendModal extends Component {
                     <div className="flex-1 min-w-0">
                         {layer.type === 'way' && layer.style && (
                             <div 
-                                className="w-100 h-2 my-2 rounded flex-shrink-0"
+                                className="w-100 h-1 my-2 rounded flex-shrink-0"
                                 style={{
                                     background: layer.style.lineStyle === 'solid' 
                                         ? layer.style.lineColor
@@ -85,9 +94,19 @@ class LayersLegendModal extends Component {
                                 }}
                             />
                         )}
-                        <h3 className="font-semibold mb-0">
-                            {layer.displayName || layer.name}
-                        </h3>
+                        <div className="flex justify-between gap-2 mb-1">
+                            <h3 className="font-semibold mb-0">
+                                {layer.displayName || layer.name}
+                            </h3>
+                            {layer.protectionLevel && layer.style && (
+                                <InfrastructureBadge 
+                                    infrastructure={getInfrastructureFromLayerName(layer.name)}
+                                    isDarkMode={this.props.isDarkMode}
+                                >
+                                    {layer.protectionLevel} proteção
+                                </InfrastructureBadge>
+                            )}
+                        </div>
                         <p className="opacity-70 mb-0">
                             {layer.description}
                         </p>
@@ -99,7 +118,7 @@ class LayersLegendModal extends Component {
         return (
             <div 
                 className={`
-                    fixed inset-0 z-10 backdrop-filter backdrop-blur-md bg-black bg-opacity-20
+                    fixed inset-0 z-10 backdrop-filter backdrop-blur-md bg-black bg-opacity-50
                     ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-500
                 `}
             >
