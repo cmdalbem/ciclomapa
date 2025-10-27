@@ -645,6 +645,9 @@ class Map extends Component {
                 "line-color": 'yellow',
                 "line-width": 20
             },
+            "layout": {
+                "line-elevation-reference": "ground"
+            },
         }, layerUnderneathName);
 
         this.map.addLayer({
@@ -1490,7 +1493,7 @@ class Map extends Component {
             
             if (routes.bbox) { 
                 const padding = IS_MOBILE ?
-                    { top: 250, bottom: 100, left: 100, right: 100 } :
+                    { top: 250, bottom: 50, left: 50, right: 50 } :
                     { top: 100, bottom: 100, left: 500, right: 100 };
                 map.fitBounds(routes.bbox, { padding: padding, duration: 2000 }); 
             }

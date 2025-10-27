@@ -156,6 +156,7 @@ class DirectionsPanel extends Component {
 
         this.toggleCollapse = this.toggleCollapse.bind(this);
         this.clearDirections = this.clearDirections.bind(this);
+        this.clearDirectionsOnly = this.clearDirectionsOnly.bind(this);
         this.selectRoute = this.selectRoute.bind(this);
         this.handleRouteHover = this.handleRouteHover.bind(this);
         this.handleRouteLeave = this.handleRouteLeave.bind(this);
@@ -415,14 +416,6 @@ class DirectionsPanel extends Component {
                 
                 // Set the point and perform reverse geocoding
                 this.reverseGeocode(coordinates, inputType);
-                
-                // Auto-focus to destination if this was the origin
-                if (inputType === 'from' && !this.props.toPoint) {
-                    setTimeout(() => {
-                        this.setState({ focusedInput: 'to' });
-                        console.debug('Auto-focused destination input after geolocation');
-                    }, 1000);
-                }
             },
             (error) => {
                 console.error('Geolocation error:', error);
@@ -447,21 +440,16 @@ class DirectionsPanel extends Component {
                     duration: 1500
                 });
             }
+            
+            if (!this.props.toPoint) {
+                setTimeout(() => {
+                    this.setState({ focusedInput: 'to' });
+                    console.debug('Auto-focused destination input after origin was set');
+                }, 500);
+            }
         } else {
             this.props.onToPointChange(result);
         }
-        
-        if (type === 'from' && !this.props.toPoint) {
-            this.autoFocusDestinationInput();
-        }
-    }
-
-    autoFocusDestinationInput() {
-        // Auto-focus to destination input
-        setTimeout(() => {
-            this.setState({ focusedInput: 'to' });
-            console.debug('Auto-focused destination input after origin was set');
-        }, 1000);
     }
 
     addMarker(type, coordinates) {
@@ -544,35 +532,16 @@ class DirectionsPanel extends Component {
         }
 
         // On mobile, when opening the panel (collapsed -> expanded), auto-trigger geolocation
-        // if (IS_MOBILE && newCollapsedState === false) {
-        //     this.autoTriggerGeolocation();
-        // }
+        if (IS_MOBILE && newCollapsedState === false) {
+            this.autoTriggerGeolocation();
+        }
     }
 
     autoTriggerGeolocation() {
-        // Wait for the geocoder to be attached to DOM before trying to click the geolocate button
-        const tryGeolocate = () => {
-            const geolocateButton = document.querySelector('button[aria-label="Geolocate"]');
-            if (geolocateButton) {
-                console.debug('Auto-triggering geolocation on mobile');
-                geolocateButton.click();
-
-                setTimeout(() => {
-                    this.autoFocusDestinationInput();
-                }, 500);
-                return true;
-            }
-            return false;
-        };
-
-        // Try immediately first
-        if (!tryGeolocate()) {
-            // If not available, try again after a short delay
+        if (!this.props.fromPoint) {
             setTimeout(() => {
-                if (!tryGeolocate()) {
-                    console.debug('Could not find geolocate button - geocoder not ready');
-                }
-            }, 500);
+                this.handleGeolocation('from');
+            }, 100);
         }
     }
 
@@ -636,6 +605,13 @@ class DirectionsPanel extends Component {
             this.setupMapClickListener();
         }
         
+        if (this.props.onDirectionsCleared) {
+            this.props.onDirectionsCleared();
+        }
+    }
+
+    clearDirectionsOnly() {
+        // Only clear the calculated directions, keep origin/destination
         if (this.props.onDirectionsCleared) {
             this.props.onDirectionsCleared();
         }
@@ -749,6 +725,14 @@ class DirectionsPanel extends Component {
             // Update route state via hook
             if (type === 'from') {
                 this.props.onFromPointChange(newPoint);
+                
+                // Auto-focus to destination if it's not set yet
+                if (!this.props.toPoint) {
+                    setTimeout(() => {
+                        this.setState({ focusedInput: 'to' });
+                        console.debug('Auto-focused destination input after origin was set');
+                    }, 500);
+                }
             } else {
                 this.props.onToPointChange(newPoint);
             }
@@ -863,9 +847,9 @@ class DirectionsPanel extends Component {
         
         this.reverseGeocode(e.lngLat, focusedInput);
         
-        if (focusedInput === 'from' && !this.props.toPoint) {
-            this.autoFocusDestinationInput();
-        } else {
+        // Focus is handled by reverseGeocode when setting the origin
+        // Only clear focus if we set the destination
+        if (focusedInput === 'to') {
             this.setState({ focusedInput: null });
         }
     }
@@ -935,7 +919,7 @@ class DirectionsPanel extends Component {
                             {showResultsOnMobile ? (
                                 // Mobile results header with Back button
                                 <Button
-                                    onClick={this.clearDirections}
+                                    onClick={this.clearDirectionsOnly}
                                     type="text"
                                     size="small"
                                     className="text-white flex items-center"
