@@ -1,31 +1,8 @@
 // Shared utilities for route calculations and formatting
 
-import { MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY, ROUTE_COLORS } from './constants.js';
-import { hexToRgba, adjustColorBrightness } from './utils.js';
-import * as layersDefinitions from './layers.json';
-
-// Get layer colors from layers.json configuration
-const getLayerColors = () => {
-    const layers = layersDefinitions.default;
-    const colors = {};
-    
-    layers.forEach(layer => {
-        if (layer.style && layer.style.lineColor) {
-            // Map layer names to their colors
-            if (layer.name === 'Ciclovia') {
-                colors.ciclovia = layer.style.lineColor;
-            } else if (layer.name === 'Ciclofaixa') {
-                colors.ciclofaixa = layer.style.lineColor;
-            } else if (layer.name === 'Ciclorrota') {
-                colors.ciclorrota = layer.style.lineColor;
-            } else if (layer.name === 'Calçada compartilhada') {
-                colors.calçada = layer.style.lineColor;
-            }
-        }
-    });
-    
-    return colors;
-};
+import React from 'react';
+import { MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY } from './constants.js';
+import InfrastructureBadge from './InfrastructureBadge.js';
 
 export const getRouteScore = (routeCoverageData, index) => {
     // Handle both old array format and new unified format
@@ -130,32 +107,25 @@ export const getCoverageBreakdown = (routeCoverageData, index, isDarkMode) => {
         breakdown.push(`${totalPercentage.toFixed(0)}% rua`);
     }
     
-    const layerColors = getLayerColors();
-    
+    const getInfrastructureType = (item) => {
+        if (item.includes('ciclovia')) return 'ciclovia';
+        if (item.includes('calçada')) return 'calçada';
+        if (item.includes('ciclofaixa')) return 'ciclofaixa';
+        if (item.includes('ciclorrota')) return 'ciclorrota';
+        if (item.includes('rua')) return 'rua';
+        return null;
+    };
+
     return (
         <div className="flex flex-wrap gap-1 "> {
             breakdown.map((item, index) => (
-                <span
+                <InfrastructureBadge
                     key={index}
-                    className={`text-xs rounded-md px-1 py-0.5`}
-                    style={{
-                        color: 
-                            isDarkMode ? 'white' 
-                            : item.includes('ciclovia') ? layerColors.ciclovia
-                            : item.includes('calçada') ? layerColors.calçada
-                            : item.includes('ciclofaixa') ? adjustColorBrightness(layerColors.ciclofaixa, -0.5)
-                            : item.includes('ciclorrota') ? adjustColorBrightness(layerColors.ciclorrota, -0.5)
-                            : adjustColorBrightness(ROUTE_COLORS.LIGHT.SELECTED, -0.2),
-                        backgroundColor: 
-                            item.includes('ciclovia') ? hexToRgba(layerColors.ciclovia, isDarkMode ? 0.3 : 0.1)
-                            : item.includes('calçada') ? hexToRgba(layerColors.calçada, isDarkMode ? 0.3 : 0.1)
-                            : item.includes('ciclofaixa') ? hexToRgba(layerColors.ciclofaixa, isDarkMode ? 0.5 : 0.3)
-                            : item.includes('ciclorrota') ? hexToRgba(layerColors.ciclorrota, isDarkMode ? 0.5 : 0.3)
-                            : isDarkMode ? hexToRgba(ROUTE_COLORS.DARK.SELECTED, 0.6) : hexToRgba(ROUTE_COLORS.LIGHT.SELECTED, 0.2)
-                    }}
+                    infrastructure={getInfrastructureType(item)}
+                    isDarkMode={isDarkMode}
                 >
                     {item}
-                </span>
+                </InfrastructureBadge>
             ))}
         </div>
     );

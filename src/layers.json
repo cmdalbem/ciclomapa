@@ -110,14 +110,15 @@
     },
     {
         "name": "Comentários",
-        "description": "Comentários de usuários do CicloMapa sinalizando inconsistências no mapeamento das vias. Se você edita no OSM, use eles como referência e depois nos avise para marcar como resolvido!",
+        "description": "Comentários de usuários do CicloMapa sinalizando inconsistências no mapeamento das vias.",
         "type": "poi",
         "icon": "poi-comment"
     },
     {
         "name": "Ciclovia",
         "displayName": "Ciclovias",
-        "description": "Vias exclusivas para bicicletas separadas fisicamente por meio fio, muretas ou outros tipos de segregação fixa.",
+        "description": "Vias exclusivas para bicicletas separadas fisicamente por meio-fio, muretas ou outros tipos de segregação fixa.",
+        "protectionLevel": "Alta",
         "filters": [
             ["highway", "cycleway"],
             ["cycleway", "track"],
@@ -139,7 +140,8 @@
     {
         "name": "Calçada compartilhada",
         "displayName": "Calçadas",
-        "description": "Calçadas com sinalização para circulação compartilhada de bicicletas em que pedestres possuem a prioridade. Oferece boa segurança por estar segregada dos carros, mas não é tão conveniente e nem é muito legal pros pedestres, né?",
+        "description": "Calçadas com sinalização para circulação compartilhada de bicicletas em que pedestres possuem a prioridade.",
+        "protectionLevel": "Alta",
         "filters": [
             [["highway","footway"],["bicycle","designated"]],
             [["highway","pedestrian"],["bicycle","designated"]],
@@ -160,7 +162,8 @@
     {
         "name": "Ciclofaixa",
         "displayName": "Ciclofaixas",
-        "description": "Vias exclusivas para bicicletas porém sem segregação física, apenas demarcada por faixa pintada no chão ou outra sinalização",
+        "description": "Vias exclusivas para bicicletas mas sem segregação física, apenas demarcada por faixa pintada no chão ou outra sinalização",
+        "protectionLevel": "Média",
         "filters": [
             ["cycleway", "lane"],
             ["cycleway:left", "lane"],
@@ -181,7 +184,8 @@
     {
         "name": "Ciclorrota",
         "displayName": "Ciclorrotas",
-        "description": "Vias compartilhadas com veículos motorizados com sinalização especial indica a preferência das bicicletas.",
+        "description": "Ruas compartilhadas com carros com sinalização especial que indica preferência das bicicletas.",
+        "protectionLevel": "Baixa",
         "filters": [
             ["cycleway", "buffered_lane"],
             ["cycleway:left", "buffered_lane"],
@@ -206,7 +210,7 @@
     {
         "name": "Baixa velocidade",
         "displayName": "Residenciais",
-        "description": "Vias com limite de velocidade regulamentado de até 30km/h.",
+        "description": "Vias locais com limite de velocidade regulamentado de até 30km/h.",
         "isActive": false,
         "filters": [
             ["maxspeed", "30"],
@@ -242,7 +246,7 @@
     {
         "name": "Proibido",
         "displayName": "Proibidas",
-        "description": "Vias onde é proibido pedalar em cima da bicicleta, mas você pode desmontar e passar empurrando ela.",
+        "description": "Vias onde é proibido pedalar. Você pode desmontar e passar empurrando ela.",
         "isActive": false,
         "filters": [
             ["bicycle", "no"],
