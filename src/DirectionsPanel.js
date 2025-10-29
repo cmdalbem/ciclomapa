@@ -1,11 +1,7 @@
 import React, { Component } from 'react';
 import { useDirections } from './DirectionsContext.js';
-import { Button, Input, Space, Divider, Tabs, Select, AutoComplete } from 'antd';
-import { 
-    HiOutlineTrendingUp as IconTrendingUp,
-    HiOutlineTrendingDown as IconTrendingDown
-} from "react-icons/hi";
-import { HiX as IconClose, HiOutlineArrowLeft as IconBack, HiLocationMarker as IconLocation } from "react-icons/hi";
+import { Button, Input, Space, Select, AutoComplete, Dropdown } from 'antd';
+import { HiX as IconClose, HiOutlineArrowLeft as IconBack, HiLocationMarker as IconLocation, HiChevronDown as IconCaretDown } from "react-icons/hi";
 import { MdGpsFixed as IconGPS } from "react-icons/md";
 import { LuBike as IconBike } from "react-icons/lu";
 import { FaDirections as IconRoute } from "react-icons/fa";
@@ -20,12 +16,11 @@ import { Popover } from 'antd';
 import './DirectionsPanel.css';
 
 import { 
-    MAPBOX_ACCESS_TOKEN,
     GOOGLE_PLACES_API_KEY,
-    IS_PROD,
     IS_MOBILE,
     HYBRID_MAX_RESULTS,
-    ENABLE_MAP_CLICK_TO_SET_POINTS
+    ENABLE_MAP_CLICK_TO_SET_POINTS,
+    ENABLE_AUTO_AREA_CHANGE_ON_POINT
 } from './constants.js'
 import DirectionsManager from './DirectionsManager.js'
 import { formatDistance, formatDuration } from './routeUtils.js'
@@ -140,6 +135,7 @@ class DirectionsPanel extends Component {
             focusedInput: null,
             selectedProvider: 'hybrid',
             settingsVisible: false,
+            routeSortMode: 'score',
             fromSuggestions: [],
             toSuggestions: [],
             fromSearchValue: '',
@@ -174,6 +170,8 @@ class DirectionsPanel extends Component {
         this.swapOriginDestination = this.swapOriginDestination.bind(this);
         this.handleProviderChange = this.handleProviderChange.bind(this);
         this.toggleSettings = this.toggleSettings.bind(this);
+        this.handleRouteSortChange = this.handleRouteSortChange.bind(this);
+        this.getSortedRoutes = this.getSortedRoutes.bind(this);
     }
 
     getCityFromResultLike(resultLike) {
@@ -508,9 +506,9 @@ class DirectionsPanel extends Component {
             this.props.onToPointChange(result);
         }
 
-        // If this is the first point set, ensure app area matches this point's city
+        // Optionally change app area to match the first point's city
         const isFirstPoint = (type === 'from' && !this.props.toPoint) || (type === 'to' && !this.props.fromPoint);
-        if (isFirstPoint && typeof this.props.onAreaChange === 'function') {
+        if (ENABLE_AUTO_AREA_CHANGE_ON_POINT && isFirstPoint && typeof this.props.onAreaChange === 'function') {
             const areaStr = this.getAreaStringFromResultLike(result.result || result);
             if (areaStr && this.props.area !== areaStr) {
                 this.props.onAreaChange(areaStr);
@@ -721,6 +719,59 @@ class DirectionsPanel extends Component {
         this.setState({
             settingsVisible: !this.state.settingsVisible
         });
+    }
+
+    handleRouteSortChange(sortMode) {
+        this.setState({
+            routeSortMode: sortMode
+        });
+
+        const originalRoutes = (this.props.directions && this.props.directions.routes) ? this.props.directions.routes : [];
+        if (originalRoutes.length > 0) {
+            const sorted = this.getSortedRoutes(originalRoutes, sortMode);
+            const first = sorted[0];
+            const originalIndex = originalRoutes.findIndex(r => r === first);
+            if (originalIndex !== -1) {
+                this.selectRoute(originalIndex);
+            }
+        }
+    }
+
+    getSortedRoutes(routes, mode = this.state.routeSortMode) {
+        if (!routes || routes.length === 0) return [];
+        
+        const sortedRoutes = [...routes];
+        
+        switch (mode) {
+            case 'score':
+                sortedRoutes.sort((a, b) => {
+                    const scoreA = a.score !== null && a.score !== undefined ? a.score : -1;
+                    const scoreB = b.score !== null && b.score !== undefined ? b.score : -1;
+                    if (scoreB !== scoreA) {
+                        return scoreB - scoreA;
+                    }
+                    return (b.coverage || 0) - (a.coverage || 0);
+                });
+                break;
+            case 'fastest':
+                sortedRoutes.sort((a, b) => {
+                    const durationA = a.duration || Infinity;
+                    const durationB = b.duration || Infinity;
+                    return durationA - durationB;
+                });
+                break;
+            case 'shortest':
+                sortedRoutes.sort((a, b) => {
+                    const distanceA = a.distance || Infinity;
+                    const distanceB = b.distance || Infinity;
+                    return distanceA - distanceB;
+                });
+                break;
+            default:
+                break;
+        }
+        
+        return sortedRoutes;
     }
 
     setDestinationFromMapClick(coordinates) {
@@ -963,7 +1014,18 @@ class DirectionsPanel extends Component {
 
     render() {
         const { directions, directionsLoading, directionsError } = this.props;
-        const routes = directions && directions.routes ? directions.routes : [];
+        const originalRoutes = directions && directions.routes ? directions.routes : [];
+        
+        const sortedRoutes = this.getSortedRoutes(originalRoutes).map((route, sortedIndex) => {
+            const originalIndex = originalRoutes.findIndex(r => r === route);
+            return {
+                ...route,
+                _sortedIndex: sortedIndex,
+                _originalIndex: originalIndex !== -1 ? originalIndex : sortedIndex
+            };
+        });
+        
+        const routes = sortedRoutes.slice(0, HYBRID_MAX_RESULTS);
         const showResultsOnMobile = IS_MOBILE && (directions || directionsLoading);
         
         return (
@@ -1116,27 +1178,56 @@ class DirectionsPanel extends Component {
 
                         {directions && !directionsLoading && (
                             <div id="directionsPanel--results" className="mt-3">
+                                <div className="flex mb-2">
+                                    {(() => {
+                                        const items = [
+                                            { key: 'score', label: 'Proteção' },
+                                            { key: 'fastest', label: 'Tempo' },
+                                            { key: 'shortest', label: 'Distância' }
+                                        ];
+                                        const current = items.find(i => i.key === this.state.routeSortMode) || items[0];
+                                        return (
+                                            <Dropdown 
+                                                menu={{ 
+                                                    items, 
+                                                    onClick: ({ key }) => this.handleRouteSortChange(key) 
+                                                }}
+                                                placement="bottomRight"
+                                            >
+                                                <Button size="small" type="text" className="text-xs opacity-80 hover:opacity-100">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="opacity-75">Ordenar por:</span>
+                                                        <span className="font-medium">{current.label}</span>
+                                                        <IconCaretDown className="inline-block text-white opacity-60" />
+                                                    </div>
+                                                </Button>
+                                            </Dropdown>
+                                        );
+                                    })()}
+                                </div>
                                 <div className="space-y-1">
-                                    {directions.routes && directions.routes.map((route, index) => (
+                                    {routes.map((route, index) => {
+                                        const originalIndex = route._originalIndex !== undefined ? route._originalIndex : index;
+                                        return (
                                         <div
                                             key={index}
                                             className={`rounded-lg p-2 cursor-pointer transition-colors ${
-                                                this.props.selectedRouteIndex === index ? '' : 'opacity-50'
+                                                this.props.selectedRouteIndex === originalIndex ? '' : 'opacity-50'
                                             } ${
-                                                this.props.hoveredRouteIndex === index ? 'bg-white bg-opacity-5 opacity-100' : ''
+                                                this.props.hoveredRouteIndex === originalIndex ? 'bg-white bg-opacity-5 opacity-100' : ''
                                             }`}
-                                            onMouseEnter={() => this.handleRouteHover(index)}
+                                            onMouseEnter={() => this.handleRouteHover(originalIndex)}
                                             onMouseLeave={this.handleRouteLeave}
-                                            onClick={() => this.handleRouteClick(index)}
+                                            onClick={() => this.handleRouteClick(originalIndex)}
                                         >
                                             <div className="flex justify-between gap-1">
                                                 {/* Left column */}
                                                 <div className="flex items-start">
-                                                    {(routes[index] || {}).score !== null ? (
+                                                    {route.score !== null && route.score !== undefined ? (
                                                         <div 
-                                                            className={`flex items-center mr-2 ${(routes[index] || {}).scoreClass || 'bg-gray-600'} px-1.5 py-1.5 rounded-md md:text-sm text-xs leading-none font-mono text-center`} 
+                                                            className={`flex items-center mr-2 ${route.scoreClass || 'bg-gray-600'} px-1.5 py-1.5 rounded-md md:text-sm text-xs leading-none font-mono text-center`} 
                                                             style={{color: 'white'}}>
-                                                            {(routes[index] || {}).score}
+                                                            {route.score}
                                                         </div>
                                                     ) : (
                                                         <IconBike 
@@ -1177,9 +1268,9 @@ class DirectionsPanel extends Component {
                                                         )} */}
 
                                                         {
-                                                            this.props.selectedRouteIndex === index ?
-                                                                (routes[index] || {}).coverageBreakdown :
-                                                                (routes[index] || {}).coverageBreakdownSimple || null
+                                                            this.props.selectedRouteIndex === originalIndex ?
+                                                                route.coverageBreakdown :
+                                                                route.coverageBreakdownSimple || null
                                                         }
                                                     </div>
                                                 </div>
@@ -1195,8 +1286,8 @@ class DirectionsPanel extends Component {
                                                 </div>
                                             </div>
                                         </div>
-                                        )
-                                    )}
+                                        );
+                                    })}
                                 </div>
                                 
                                 {/* Disclaimer */}

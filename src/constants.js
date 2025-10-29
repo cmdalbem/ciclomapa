@@ -13,7 +13,7 @@ export const LENGTH_CALCULATE_STRATEGIES = [
     'optimistic',   // Consider always the side the longest
     'pessimistic',  // Consider always the side the shortest
     'average',  // Ignore sides, cut total raw street length by half and call it a day
-]
+];
 export const DEFAULT_LENGTH_CALCULATE_STRATEGIES = 'average';
 
 
@@ -57,6 +57,7 @@ export const TOPBAR_HEIGHT = 64;
 export const HYBRID_MAX_RESULTS = 3;
 export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
+export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = false;
 
 export const ROUTE_COLORS = {
     DARK: {
