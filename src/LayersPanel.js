@@ -5,9 +5,7 @@ import {
     HiEye as IconVisible,
     HiEyeOff as IconHidden,
 } from "react-icons/hi";
-import {
-    BsLayersFill as IconLayers,
-} from "react-icons/bs";
+import { MdSignalCellularAlt2Bar as IconSignal2, MdSignalCellularAlt as IconSignal3, MdSignalCellularAlt1Bar as IconSignal1 } from "react-icons/md";
 
 import { slugify } from './utils.js'
 import InfrastructureBadge from './InfrastructureBadge.js';
@@ -129,6 +127,9 @@ class LayersPanel extends Component {
                                                     infrastructure={getInfrastructureFromLayerName(l.name)}
                                                     isDarkMode={this.props.isDarkMode}
                                                 >
+                                                    {l.protectionLevel === 'Alta' && <IconSignal3/>}
+                                                    {l.protectionLevel === 'Média' && <IconSignal2/>}
+                                                    {l.protectionLevel === 'Baixa' && <IconSignal1/>}
                                                     {l.protectionLevel} proteção
                                                 </InfrastructureBadge>
                                             )}
