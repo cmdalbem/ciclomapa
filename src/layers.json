@@ -70,7 +70,7 @@
         }
     },
     {
-        "name": "Oficinas & lojas",
+        "name": "Lojas & oficinas",
         "description": "Oficinas e lojas especializadas em bicicletas e equipamentos.",
         "filters": [
             ["shop", "bicycle"]
@@ -107,12 +107,6 @@
         "style": {
             "textColor": "#2F904A"
         }
-    },
-    {
-        "name": "Comentários",
-        "description": "Comentários de usuários do CicloMapa sinalizando inconsistências no mapeamento das vias.",
-        "type": "poi",
-        "icon": "poi-comment"
     },
     {
         "name": "Ciclovia",
