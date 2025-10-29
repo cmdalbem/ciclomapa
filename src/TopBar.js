@@ -151,13 +151,13 @@ class TopBar extends Component {
             <IconContext.Provider value={{ className: 'react-icon' }}>
                 <div
                     id="topbar"
-                    className="w-full absolute flex items-center px-2 sm:px-6 py-3"
+                    className="w-full absolute flex px-2 sm:px-6 py-3"
                     style={{height: TOPBAR_HEIGHT, zIndex: 1}}
                 >
-                    <div className="flex items-center justify-between text-white w-full">
+                    <div className="flex items-start justify-between text-white w-full">
                         {
                             !IS_MOBILE &&
-                            <a href="/" className={embedMode ? 'opacity-25' : ''}>
+                            <a href="/" className={'mt-2 ' + (embedMode ? 'opacity-25' : '')}>
                                 <Logo />
                             </a>
                         }
@@ -165,7 +165,7 @@ class TopBar extends Component {
                         {
                             !embedMode && 
                             <div className={`city-picker sm:text-center ${IS_MOBILE && 'w-full'}`}>
-                                <div className={`flex mb-1 sm:mb-1`}>
+                                <div className={`flex flex-col items-center sm:mb-1`}>
                                     <div className={`relative ${IS_MOBILE && 'w-full'} rounded-full overflow-hidden`}>
                                         <Button
                                             className="glass-bg"
@@ -197,7 +197,7 @@ class TopBar extends Component {
 
 
                                     {
-                                        !IS_MOBILE &&
+                                        !IS_MOBILE && !loading ?
                                         <Popover
                                             trigger={IS_MOBILE ? 'click' : 'hover'}
                                             placement="bottom"
@@ -208,7 +208,7 @@ class TopBar extends Component {
                                                         {
                                                             lastUpdate &&
                                                             <div>
-                                                                O mapa que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
+                                                                O mapa de {city} que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
                                                             </div> 
                                                         }
 
@@ -225,11 +225,15 @@ class TopBar extends Component {
                                                 </div>
                                             )}
                                         >
-                                            <span className="font-regular cursor text-xl pl-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
-                                                <IconInfo/>
-                                            </span>
+                                            <div className="flex flex-center items-center gap-1 font-regular cursor text-xs mt-1 opacity-50 hover:opacity-100 transition-opacity duration-300">
+                                                Atualizado há {timeSince(lastUpdate)} <IconInfo/> 
+                                            </div> 
                                         </Popover>
 
+                                    :
+                                        <div className="flex flex-center items-center gap-1 font-regular cursor text-xs mt-1 opacity-50 hover:opacity-100 transition-opacity duration-300">
+                                            Acessando dados do OpenStreetMap...
+                                        </div>
                                     }
                                 </div>
                             </div>
