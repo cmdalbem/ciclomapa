@@ -88,6 +88,7 @@ class App extends Component {
         this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
         this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
         this.onDirectionsPanelToggle = this.onDirectionsPanelToggle.bind(this);
+        this.setArea = this.setArea.bind(this);
         this.debouncedUpdateURL = debounce(this.updateURL, 300);
 
         this.initState();
@@ -896,6 +897,12 @@ class App extends Component {
         this.setState({ fromPoint: null, toPoint: null });
     }
 
+    setArea(newArea) {
+        if (newArea && newArea !== this.state.area) {
+            this.setState({ area: newArea });
+        }
+    }
+
     forceMapReinitialization() {
         this.setState(prevState => ({
             mapKey: prevState.mapKey + 1
@@ -1017,6 +1024,7 @@ class App extends Component {
                     map={this.state.map}
                     geoJson={this.state.geoJson}
                     layers={this.state.layers}
+                    area={this.state.area}
                     fromPoint={this.state.fromPoint}
                     toPoint={this.state.toPoint}
                     onFromPointChange={this.setFromPoint}
@@ -1024,6 +1032,7 @@ class App extends Component {
                     onClearRoutePoints={this.clearRoutePoints}
                     onDirectionsPanelToggle={this.onDirectionsPanelToggle}
                     isDarkMode={this.state.isDarkMode}
+                    onAreaChange={this.setArea}
                 />
 
                 <AboutModal

@@ -188,6 +188,18 @@ class DirectionsPanel extends Component {
         return (locality && locality.long_name) || (admin2 && admin2.long_name) || (sublocality && sublocality.long_name) || null;
     }
 
+    getAreaStringFromResultLike(resultLike) {
+        const props = resultLike && (resultLike.properties || (resultLike.result && resultLike.result.properties));
+        const addressComponents = props && props.address_components;
+        if (!addressComponents || !Array.isArray(addressComponents)) return null;
+        const findComp = (type) => addressComponents.find(c => (c.types || []).includes(type));
+        const city = this.getCityFromResultLike(resultLike);
+        const state = (findComp('administrative_area_level_1') && (findComp('administrative_area_level_1').short_name || findComp('administrative_area_level_1').long_name)) || null;
+        const country = (findComp('country') && (findComp('country').long_name || findComp('country').short_name)) || null;
+        const parts = [city, state, country].filter(Boolean);
+        return parts.length ? parts.join(', ') : null;
+    }
+
     validateSameCity(type, newResultLike) {
         // Determine the other point
         const otherPoint = type === 'to' ? this.props.fromPoint : this.props.toPoint;
@@ -494,6 +506,15 @@ class DirectionsPanel extends Component {
             }
         } else {
             this.props.onToPointChange(result);
+        }
+
+        // If this is the first point set, ensure app area matches this point's city
+        const isFirstPoint = (type === 'from' && !this.props.toPoint) || (type === 'to' && !this.props.fromPoint);
+        if (isFirstPoint && typeof this.props.onAreaChange === 'function') {
+            const areaStr = this.getAreaStringFromResultLike(result.result || result);
+            if (areaStr && this.props.area !== areaStr) {
+                this.props.onAreaChange(areaStr);
+            }
         }
     }
 
