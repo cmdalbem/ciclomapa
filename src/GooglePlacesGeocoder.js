@@ -269,7 +269,7 @@ class GooglePlacesGeocoder {
         return new Promise((resolve, reject) => {
             const request = {
                 placeId: placeId,
-                fields: ['geometry', 'formatted_address', 'name', 'types']
+                fields: ['geometry', 'formatted_address', 'name', 'types', 'address_component']
             };
 
             this.placesService.getDetails(request, (place, status) => {
@@ -281,7 +281,8 @@ class GooglePlacesGeocoder {
                         ],
                         formatted_address: place.formatted_address,
                         name: place.name,
-                        types: place.types
+                        types: place.types,
+                        address_components: place.address_components
                     });
                 } else {
                     reject(new Error('Failed to get place details'));
