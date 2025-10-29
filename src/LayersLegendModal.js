@@ -12,6 +12,8 @@ import bikeshopIcon from './img/icons/poi-bikeshop@2x.png';
 import bikerentalIcon from './img/icons/poi-bikerental@2x.png';
 
 import { HiOutlineXMark } from 'react-icons/hi2';
+import { MdSignalCellularAlt2Bar as IconSignal2, MdSignalCellularAlt as IconSignal3, MdSignalCellularAlt1Bar as IconSignal1 } from "react-icons/md";
+
 
 const getInfrastructureFromLayerName = (layerName) => {
     const name = layerName.toLowerCase();
@@ -103,6 +105,9 @@ class LayersLegendModal extends Component {
                                     infrastructure={getInfrastructureFromLayerName(layer.name)}
                                     isDarkMode={this.props.isDarkMode}
                                 >
+                                    {layer.protectionLevel === 'Alta' && <IconSignal3/>}
+                                    {layer.protectionLevel === 'Média' && <IconSignal2/>}
+                                    {layer.protectionLevel === 'Baixa' && <IconSignal1/>}
                                     {layer.protectionLevel} proteção
                                 </InfrastructureBadge>
                             )}
