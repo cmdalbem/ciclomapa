@@ -145,7 +145,8 @@ class DirectionsPanel extends Component {
             fromSearchValue: '',
             toSearchValue: '',
             fromSearchLoading: false,
-            toSearchLoading: false
+            toSearchLoading: false,
+            cityValidationError: null
         };
 
         this.fromMarker = null;
@@ -173,6 +174,40 @@ class DirectionsPanel extends Component {
         this.swapOriginDestination = this.swapOriginDestination.bind(this);
         this.handleProviderChange = this.handleProviderChange.bind(this);
         this.toggleSettings = this.toggleSettings.bind(this);
+    }
+
+    getCityFromResultLike(resultLike) {
+        const props = resultLike && (resultLike.properties || (resultLike.result && resultLike.result.properties));
+        const addressComponents = props && props.address_components;
+        if (!addressComponents || !Array.isArray(addressComponents)) return null;
+        const findComp = (type) => addressComponents.find(c => (c.types || []).includes(type));
+        // Prefer locality, fallback to administrative_area_level_2 (common municipality level in BR)
+        const locality = findComp('locality');
+        const admin2 = findComp('administrative_area_level_2');
+        const sublocality = findComp('sublocality');
+        return (locality && locality.long_name) || (admin2 && admin2.long_name) || (sublocality && sublocality.long_name) || null;
+    }
+
+    validateSameCity(type, newResultLike) {
+        // Determine the other point
+        const otherPoint = type === 'to' ? this.props.fromPoint : this.props.toPoint;
+        if (!otherPoint) {
+            this.setState({ cityValidationError: null });
+            return true;
+        }
+        const fromLike = type === 'to' ? otherPoint : newResultLike;
+        const toLike = type === 'to' ? newResultLike : otherPoint;
+        const fromCity = this.getCityFromResultLike((fromLike.result) || fromLike);
+        const toCity = this.getCityFromResultLike((toLike.result) || toLike);
+        if (fromCity && toCity && fromCity !== toCity) {
+            const targetCity = type === 'to' ? fromCity : toCity;
+            this.setState({
+                cityValidationError: `Escolha ${type === 'to' ? 'um destino' : 'uma origem'} em ${targetCity} para calcular a rota.`
+            });
+            return false;
+        }
+        this.setState({ cityValidationError: null });
+        return true;
     }
 
     componentDidMount() {
@@ -344,13 +379,20 @@ class DirectionsPanel extends Component {
                         ...result.properties,
                         formatted_address: placeDetails.formatted_address,
                         name: placeDetails.name,
-                        types: placeDetails.types
+                        types: placeDetails.types,
+                        address_components: placeDetails.address_components
                     }
                 };
-                
+                // Validate city when setting origin/destination
+                if (!this.validateSameCity(inputType, completeResult)) {
+                    return;
+                }
                 this.handleGeocoderResult({ result: completeResult }, inputType, true);
             } else {
                 // If it already has coordinates, use it directly
+                if (!this.validateSameCity(inputType, result)) {
+                    return;
+                }
                 this.handleGeocoderResult({ result }, inputType, true);
             }
             
@@ -369,7 +411,9 @@ class DirectionsPanel extends Component {
         } catch (error) {
             console.error('Error getting place details:', error);
             // Fallback to the original result
-            this.handleGeocoderResult({ result }, inputType);
+            if (this.validateSameCity(inputType, result)) {
+                this.handleGeocoderResult({ result }, inputType);
+            }
             this.setState({ 
                 [`${inputType}Suggestions`]: [],
                 [`${inputType}SearchValue`]: result.place_name 
@@ -384,7 +428,8 @@ class DirectionsPanel extends Component {
         // Clear the input value
         this.setState({
             [`${inputType}SearchValue`]: '',
-            [`${inputType}Suggestions`]: []
+            [`${inputType}Suggestions`]: [],
+            cityValidationError: null
         });
         
         // Clear the corresponding point
@@ -605,6 +650,8 @@ class DirectionsPanel extends Component {
             this.setupMapClickListener();
         }
         
+        this.setState({ cityValidationError: null });
+        
         if (this.props.onDirectionsCleared) {
             this.props.onDirectionsCleared();
         }
@@ -724,6 +771,9 @@ class DirectionsPanel extends Component {
 
             // Update route state via hook
             if (type === 'from') {
+                if (!this.validateSameCity('from', newPoint.result)) {
+                    return;
+                }
                 this.props.onFromPointChange(newPoint);
                 
                 // Auto-focus to destination if it's not set yet
@@ -734,6 +784,9 @@ class DirectionsPanel extends Component {
                     }, 500);
                 }
             } else {
+                if (!this.validateSameCity('to', newPoint.result)) {
+                    return;
+                }
                 this.props.onToPointChange(newPoint);
             }
         } catch (error) {
@@ -1027,9 +1080,16 @@ class DirectionsPanel extends Component {
                             </div>
                         )}
 
-                        {directionsError && (
+                        {(directionsError || this.state.cityValidationError) && (
                             <div className="mt-3 p-2 bg-red-600 bg-opacity-20 border border-red-500 rounded text-red-200 text-sm">
-                                Erro: {directionsError}
+                                {directionsError && (
+                                    <div>Erro: {directionsError}</div>
+                                )}
+                                {this.state.cityValidationError && (
+                                    <div>
+                                        <strong>Destino fora da cidade da origem:</strong> {this.state.cityValidationError}
+                                    </div>
+                                )}
                             </div>
                         )}
 
