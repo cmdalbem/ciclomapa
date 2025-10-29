@@ -198,40 +198,38 @@ class TopBar extends Component {
 
                                     {
                                         !IS_MOBILE && !loading ?
-                                        <Popover
-                                            trigger={IS_MOBILE ? 'click' : 'hover'}
-                                            placement="bottom"
-                                            arrowPointAtCenter={true}
-                                            content={(
-                                                <div style={{ maxWidth: 250 }}>
-                                                    <Space size="small" direction="vertical" >
-                                                        {
-                                                            lastUpdate &&
-                                                            <div>
-                                                                O mapa de {city} que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
-                                                            </div> 
-                                                        }
+                                            lastUpdate && <Popover
+                                                    trigger={IS_MOBILE ? 'click' : 'hover'}
+                                                    placement="bottom"
+                                                    arrowPointAtCenter={true}
+                                                    content={(
+                                                        <div style={{ maxWidth: 250 }}>
+                                                            <Space size="small" direction="vertical" >
+                                                                {
+                                                                    lastUpdate &&
+                                                                    <div>
+                                                                        O mapa de {city} que você está vendo é uma cópia dos dados obtidos do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}).
+                                                                    </div> 
+                                                                }
 
-                                                        <Button
-                                                            size="small"
-                                                            icon={<IconUpdate />}
-                                                            type="primary"
-                                                            block
-                                                            onClick={forceUpdate}
-                                                        >
-                                                            Atualizar
-                                                        </Button>
-                                                    </Space>
-                                                </div>
-                                            )}
-                                        >
-                                            <div className="flex flex-center items-center gap-1 font-regular cursor text-xs mt-1 opacity-50 hover:opacity-100 transition-opacity duration-300">
-                                                Atualizado há {timeSince(lastUpdate)} <IconInfo/> 
-                                            </div> 
-                                        </Popover>
-
-                                    :
-                                        <div className="flex flex-center items-center gap-1 font-regular cursor text-xs mt-1 opacity-50 hover:opacity-100 transition-opacity duration-300">
+                                                                <Button
+                                                                    size="small"
+                                                                    icon={<IconUpdate />}
+                                                                    type="primary"
+                                                                    block
+                                                                    onClick={forceUpdate}
+                                                                >
+                                                                    Atualizar
+                                                                </Button>
+                                                            </Space>
+                                                        </div>
+                                                    )}
+                                                >
+                                                    <div className="flex flex-center items-center gap-1 font-regular cursor text-xs mt-1 opacity-50 hover:opacity-100 transition-opacity duration-300">
+                                                        Atualizado há {timeSince(lastUpdate)}
+                                                    </div> 
+                                                </Popover>
+                                    : <div className="flex flex-center items-center gap-1 font-regular cursor text-xs mt-1 opacity-50 hover:opacity-100 transition-opacity duration-300">
                                             Acessando dados do OpenStreetMap...
                                         </div>
                                     }
