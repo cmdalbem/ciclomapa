@@ -627,9 +627,7 @@ class DirectionsPanel extends Component {
                 this.props.isDarkMode
             );
 
-            if (this.props.setDirectionsData) {
-                this.props.setDirectionsData(result);
-            }
+            this.props.setDirectionsData(result);
             
         } catch (error) {
             if (this.props.setError) {

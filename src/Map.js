@@ -712,7 +712,7 @@ class Map extends Component {
                 "line-occlusion-opacity": 0.5,
                 "line-color": adjustColorBrightness(
                     this.props.layers.find(layer => layer.name === "Ciclovia").style.lineColor,
-                    this.props.isDarkMode ? -0.5 : 0.4,
+                    this.props.isDarkMode ? -0.6 : 0.4,
                     'hsl'
                 ),
                 "line-width": [

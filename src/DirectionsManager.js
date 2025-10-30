@@ -21,6 +21,10 @@ class DirectionsManager {
         try {
             console.debug('Calculating directions from:', fromCoords, 'to:', toCoords, 'using provider:', provider);
             
+            /*
+             * 1. Calculate directions using the provider(s)
+             */
+
             let directions;
             
             if (provider === 'hybrid') {
@@ -32,6 +36,11 @@ class DirectionsManager {
                 directions = await this.directionsService.getCyclingDirections(fromCoords, toCoords);
             }
             
+            
+            /*
+             * 2. Calculate scores for each route
+             */
+
             // Calculate coverage, scores, and prepare routes with all data in one pass
             let routesWithScores = [];
             
@@ -109,6 +118,11 @@ class DirectionsManager {
                     routes: directions?.routes?.length || 0
                 });
             }
+
+
+            /*
+             * 3. Prepare return data: sort and limit routes
+             */
             
             // Sort routes by score (highest first), then by coverage as tiebreaker
             // Routes without coverage data are sorted by distance (shortest first)
@@ -131,7 +145,7 @@ class DirectionsManager {
             }
 
             // Create unified route data structure with integrated cyclepath information
-            const unifiedRoutes = limitedSortedRoutes.map((route, sortedIndex) => ({
+            const routes = limitedSortedRoutes.map((route, sortedIndex) => ({
                 // Original route properties
                 geometry: route.geometry,
                 distance: route.distance,
@@ -153,7 +167,7 @@ class DirectionsManager {
             }));
 
             const result = {
-                routes: unifiedRoutes,
+                routes: routes,
                 waypoints: directions.waypoints || [],
                 bbox: directions.bbox
             };
