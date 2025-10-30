@@ -105,7 +105,7 @@ class MapPopups {
             }).join('');
 
         return `
-            <div class="mt-2 md:text-sm text-xs grid grid-cols-2 md:gap-2">
+            <div class="mt-2 md:text-sm text-xs grid grid-cols-2 gap-2">
                 ${propertiesHtml}
             </div>`;
     }
