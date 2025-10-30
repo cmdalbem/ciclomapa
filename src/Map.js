@@ -641,8 +641,30 @@ class Map extends Component {
             "filter": filters,
             "paint": {
                 "line-occlusion-opacity": 0.5,
-                "line-opacity": 0,
-                "line-color": 'yellow',
+                "line-opacity": [
+                    "case",
+                    ["boolean", ["feature-state", "selected"], false],
+                    1, // Selected
+                    0
+                ],
+                "line-offset": [
+                    "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, [
+                            "case",
+                                ["has", "cycleway:right"], Math.max(1, l.style.lineWidth/4),
+                                ["has", "cycleway:left"], Math.min(-1, -l.style.lineWidth/4),
+                                0
+                        ],
+                        18, [
+                            "case",
+                                ["has", "cycleway:right"], l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                ["has", "cycleway:left"], -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                0
+                        ]
+                    ],
+                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.7),
                 "line-width": 20
             },
             "layout": {
@@ -662,9 +684,14 @@ class Map extends Component {
                 "line-occlusion-opacity": 0.5,
                 "line-color": [
                     "case",
-                    ["boolean", ["feature-state", "hover"], false],
-                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3), // On hover
-                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.1 : -0.1, 'hsl') // Default
+                    ["boolean", ["feature-state", "selected"], false],
+                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.1 : -0.1, 'hsl'), // Selected
+                    [
+                        "case",
+                        ["boolean", ["feature-state", "hover"], false],
+                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3),       // Hover
+                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.1 : -0.1, 'hsl') // Default
+                    ],
                 ],
                 "line-offset": [
                     "interpolate",
@@ -741,11 +768,14 @@ class Map extends Component {
                     e.originalEvent.preventDefault();
                     return;
                 }
-                // if (self.selectedCycleway) {
-                //     self.map.setFeatureState({ source: "osmdata", id: self.selectedCycleway }, { hover: false });
-                // }
-                // self.selectedCycleway = e.features[0].id;
-                // self.map.setFeatureState({ source: "osmdata", id: self.selectedCycleway }, { hover: true });
+                
+                if (self.selectedCycleway) {
+                    try { self.map.setFeatureState({ source: 'osmdata', id: self.selectedCycleway }, { selected: false, hover: false }); } catch (err) {}
+                }
+                self.selectedCycleway = e.features[0].id;
+                try {
+                    self.map.setFeatureState({ source: 'osmdata', id: self.selectedCycleway }, { selected: true });
+                } catch (err) {}
 
                 const layer = self.props.layers.find(l =>
                     l.id === e.features[0].layer.id.split('--')[0]
@@ -780,12 +810,11 @@ class Map extends Component {
                 }
                 self.hoveredCycleway = e.features[0].id;
 
-                // @todo TEMP disable temporarily while it's buggy
-                // self.map.setFeatureState({
-                //     source: sourceId,
-                //     sourceLayer: sourceLayer,
-                //     id: self.hoveredCycleway
-                // }, { hover: true });
+                self.map.setFeatureState({
+                    source: sourceId,
+                    sourceLayer: sourceLayer,
+                    id: self.hoveredCycleway
+                }, { hover: true });
             } else {
                 if (self.hoveredCycleway && !self.selectedCycleway) {
                     self.map.setFeatureState({
@@ -798,6 +827,19 @@ class Map extends Component {
                 }
                 self.hoveredCycleway = null;
             }
+        });
+
+        this.map.on('mouseleave', interactiveLayerId, () => {
+            if (self.hoveredCycleway) {
+                self.map.setFeatureState({
+                    source: sourceId,
+                    sourceLayer: sourceLayer,
+                    id: self.hoveredCycleway
+                }, { hover: false });
+
+                self.map.getCanvas().style.cursor = '';
+            }
+            self.hoveredCycleway = null;
         });
     }
 

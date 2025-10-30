@@ -31,7 +31,8 @@ class MapPopups {
         });
         this.cyclewayPopup.on('close', e => {
             if (this.selectedCycleway) {
-                this.map.setFeatureState({ source: 'osm', id: this.selectedCycleway }, { hover: false });
+                try { this.map.setFeatureState({ source: 'osmdata', id: this.selectedCycleway }, { selected: false, hover: false }); } catch (e) {}
+                // try { this.map.setFeatureState({ source: 'pmtiles-source', id: this.selectedCycleway }, { selected: false, hover: false }); } catch (e) {}
             }
             this.selectedCycleway = null;
         });
@@ -238,6 +239,7 @@ class MapPopups {
         const properties = e.features[0].properties;
         const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
         const bgClass = layer.id;
+        this.selectedCycleway = e.features[0].id;
         
         if (this.previousCyclewayLayerClass) {
             this.cyclewayPopup.removeClassName(this.previousCyclewayLayerClass);

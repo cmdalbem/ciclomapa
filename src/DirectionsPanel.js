@@ -881,11 +881,7 @@ class DirectionsPanel extends Component {
         // Add new click listener
         this.mapClickListener = (e) => {
             console.debug("Map clicked, focusedInput:", this.state.focusedInput);
-            if (this.state.focusedInput) {
-                this.handleMapClick(e);
-            } else {
-                console.debug("Map clicked but no input focused, ignoring");
-            }
+            this.handleMapClick(e);
         };
         
         this.props.map.on('click', this.mapClickListener);
@@ -966,7 +962,6 @@ class DirectionsPanel extends Component {
         
         const coordinates = [e.lngLat.lng, e.lngLat.lat];
         const focusedInput = this.state.focusedInput;
-        
         
         this.reverseGeocode(e.lngLat, focusedInput);
         
