@@ -106,6 +106,34 @@ class LocationSearchInput extends Component {
     }
 }
 
+// Reusable dropdown component for route sorting
+const RouteSortDropdown = ({ currentKey, onChange, items }) => {
+    const defaultItems = [
+        { key: 'score', label: 'Proteção' },
+        { key: 'fastest', label: 'Tempo' },
+        { key: 'shortest', label: 'Distância' }
+    ];
+    const effectiveItems = items && items.length ? items : defaultItems;
+    const current = effectiveItems.find(i => i.key === currentKey) || effectiveItems[0];
+    return (
+        <Dropdown 
+            menu={{ 
+                items: effectiveItems, 
+                onClick: ({ key }) => onChange(key) 
+            }}
+            placement="bottomRight"
+        >
+            <Button size="small" type="text" className="text-xs opacity-80 hover:opacity-100">
+                <div className="flex items-center gap-1">
+                    <span className="opacity-75">Ordenar por:</span>
+                    <span className="font-medium">{current.label}</span>
+                    <IconCaretDown className="inline-block text-white opacity-60" />
+                </div>
+            </Button>
+        </Dropdown>
+    );
+};
+
 const googlePlacesGeocoder = new GooglePlacesGeocoder({
     apiKey: GOOGLE_PLACES_API_KEY,
     language: 'pt-BR',
@@ -1046,18 +1074,37 @@ class DirectionsPanel extends Component {
                     <div className="p-4">
                         <div id="directionsPanel--header" className="flex justify-between items-start h-6">
                             {showResultsOnMobile ? (
-                                // Mobile results header with Back button
-                                <Button
-                                    onClick={this.clearDirectionsOnly}
-                                    type="text"
-                                    size="small"
-                                    className="text-white flex items-center"
-                                    icon={<IconBack className="mr-1" style={{
-                                        display: 'inline-block',
-                                    }}/>}
-                                >
-                                    Voltar
-                                </Button>
+                                <>
+                                    {/* // Mobile results header with Back button */}
+                                    <Button
+                                        onClick={this.clearDirectionsOnly}
+                                        type="text"
+                                        size="small"
+                                        className="text-white flex items-center"
+                                        icon={<IconBack className="mr-1" style={{
+                                            display: 'inline-block',
+                                        }}/>}
+                                    >
+                                        Voltar
+                                    </Button>
+                                    {
+                                        IS_MOBILE &&
+                                        <>
+                                            <RouteSortDropdown 
+                                                currentKey={this.state.routeSortMode}
+                                                onChange={(key) => this.handleRouteSortChange(key)}
+                                            />
+                                            {/* <Button
+                                                onClick={this.toggleCollapse}
+                                                type="text" 
+                                                shape="circle"
+                                                icon={<IconClose style={{
+                                                    display: 'inline-block',
+                                                }}/>}
+                                            /> */}
+                                        </>
+                                    }
+                                </>
                             ) : (
                                 // Default header
                                 <>
@@ -1115,7 +1162,6 @@ class DirectionsPanel extends Component {
                                             </Popover>
                                         )}
 
-                                        {/* Put this back after we have a trigger to open the panel */}
                                         { IS_MOBILE && (
                                             <Button
                                                 onClick={this.toggleCollapse}
@@ -1172,31 +1218,14 @@ class DirectionsPanel extends Component {
                         {directions && !directionsLoading && (
                             <div id="directionsPanel--results" className="mt-3">
                                 <div className="flex mb-2">
-                                    {(() => {
-                                        const items = [
-                                            { key: 'score', label: 'Proteção' },
-                                            { key: 'fastest', label: 'Tempo' },
-                                            { key: 'shortest', label: 'Distância' }
-                                        ];
-                                        const current = items.find(i => i.key === this.state.routeSortMode) || items[0];
-                                        return (
-                                            <Dropdown 
-                                                menu={{ 
-                                                    items, 
-                                                    onClick: ({ key }) => this.handleRouteSortChange(key) 
-                                                }}
-                                                placement="bottomRight"
-                                            >
-                                                <Button size="small" type="text" className="text-xs opacity-80 hover:opacity-100">
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="opacity-75">Ordenar por:</span>
-                                                        <span className="font-medium">{current.label}</span>
-                                                        <IconCaretDown className="inline-block text-white opacity-60" />
-                                                    </div>
-                                                </Button>
-                                            </Dropdown>
-                                        );
-                                    })()}
+                                    {
+                                        !IS_MOBILE && (
+                                            <RouteSortDropdown 
+                                                currentKey={this.state.routeSortMode}
+                                                onChange={(key) => this.handleRouteSortChange(key)}
+                                            />
+                                        )
+                                    }
                                 </div>
                                 <div className="space-y-1">
                                     {routes.map((route, index) => {
