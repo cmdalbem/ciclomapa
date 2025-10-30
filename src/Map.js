@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { useDirections } from './DirectionsContext.js';
 
 import mapboxgl from 'mapbox-gl'
+import turfBbox from '@turf/bbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
@@ -407,7 +408,7 @@ class Map extends Component {
             'source-layer': sourceLayer,
             "filter": filters,
             "description": l.description,
-            minzoom: l.zoomThreshold+0.01,
+            minzoom: l.zoomThreshold,
             'layout': {
                 'text-field': l.name !== 'Estações' ? ['get', 'name'] : '',
                 'text-font': ['IBM Plex Sans Medium'],
@@ -496,7 +497,21 @@ class Map extends Component {
                 self.hoveredPOI = null;
             } else if (interactionType === 'click') {
                 if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
+                    if (self.hoveredPOI) {
+                        self.map.setFeatureState({
+                            source: sourceId,
+                            sourceLayer: sourceLayer,
+                            id: self.hoveredPOI },
+                            { hover: false });
+                    }
                     self.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
+                    if (IS_MOBILE && e.lngLat) {
+                        self.map.easeTo({
+                            center: [e.lngLat.lng, e.lngLat.lat],
+                            zoom: 17,
+                            padding: {bottom: 50}
+                        });
+                    }
                 }
             }
 
@@ -781,6 +796,11 @@ class Map extends Component {
                     l.id === e.features[0].layer.id.split('--')[0]
                 );
                 self.popups.showCyclewayPopup(e, layer);
+                if (IS_MOBILE && e.features && e.features[0]) {
+                    const bb = turfBbox(e.features[0]); // [minX, minY, maxX, maxY]
+                    const bounds = new mapboxgl.LngLatBounds([bb[0], bb[1]], [bb[2], bb[3]]);
+                    self.map.fitBounds(bounds, { padding: { top: 100, bottom: 200, left: 50, right: 50 } });
+                }
                 e.originalEvent.preventDefault();
             }
         });
