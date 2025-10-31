@@ -71,6 +71,7 @@
     },
     {
         "name": "Lojas & oficinas",
+        "shortName": "Lojas",
         "description": "Oficinas e lojas especializadas em bicicletas e equipamentos.",
         "filters": [
             ["shop", "bicycle"]
@@ -83,7 +84,8 @@
         }
     },
     {
-    "name": "Estações",
+        "name": "Estações",
+        "shortName": "Estações",
         "description": "Estações de compartilhamento de bicicletas (bike sharing) de diferentes operadoras.",
         "filters": [
             ["amenity", "bicycle_rental"]
@@ -96,7 +98,8 @@
         }
     },
     {
-        "name": "Bicicletários",
+        "name": "Bicicletários & paraciclos",
+        "shortName": "Bicicletários",
         "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos. Sempre verifique a qualidade e segurança oferecida!",
         "filters": [
             ["amenity", "bicycle_parking"]
