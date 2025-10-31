@@ -158,7 +158,7 @@ export const osmi18n = {
     only: 'Somente isso',
     tyres: 'Pneus',
     public: 'Público?',
-    private: 'Privado?',
+    private: 'Privado',
     limited: 'Limitado',
     designated: '',
     permissive: 'Permissivo?',
