@@ -52,6 +52,21 @@ class MapPopups {
         this.routeTooltips = [];
     }
 
+    attachMobileActiveHandler(popupInstance) {
+        if (!IS_MOBILE || !popupInstance) return;
+        
+        const el = popupInstance.getElement();
+        el.addEventListener('touchstart', e => {
+            console.debug('touchstart', e.target);
+            if (e.target.closest('button, a, [role="button"], .no-toggle')) return;
+            // Prevent map drag/reposition from interfering with first toggle
+            try { e.preventDefault(); } catch (_) {}
+            e.stopPropagation();
+            const toggleResult = el.classList.toggle('active');
+            console.debug('toggleResult', toggleResult);
+        }, { passive: false });
+    }
+
     renderProperties(properties) {
         const propertiesHtml = Object.keys(properties)
             .filter(key => this.debugMode ? true : !key.startsWith('ciclomapa:'))
@@ -183,6 +198,8 @@ class MapPopups {
         this.commentPopup.setLngLat(coords)
             .setHTML(html)
             .addTo(this.map);
+        // Disabeld while we probably don't really need it
+        // this.attachMobileActiveHandler(this.commentPopup);
     }
 
     showPOIPopup(e, iconSrc, poiType) {
@@ -224,14 +241,16 @@ class MapPopups {
         this.poiPopup.setLngLat(coords)
             .setHTML(html)
             .addTo(this.map);
+        // Disabeld while we probably don't really need it
+        // this.attachMobileActiveHandler(this.poiPopup);
 
-            Analytics.event('view_item', {
-                items: [{
-                    item_name : `${poiType} - ${properties.name}`,
-                    item_variant: poiType,
-                    item_category: 'map data'
-                }],
-            });
+        Analytics.event('view_item', {
+            items: [{
+                item_name : `${poiType} - ${properties.name}`,
+                item_variant: poiType,
+                item_category: 'map data'
+            }],
+        });
     }
 
     showCyclewayPopup(e, layer) {
@@ -249,6 +268,7 @@ class MapPopups {
 
         let html = `
             <div>
+                
                 <div class="relative inline-block mt-3 group">
                     <div
                         class="inline-flex items-center py-0 px-2 rounded-full font-semibold tracking-wide cursor-pointer"
@@ -281,7 +301,9 @@ class MapPopups {
             .setHTML(html)
             .addTo(this.map);
         this.cyclewayPopup.addClassName(bgClass);
-        
+        // Disabeld while we probably don't really need it
+        // this.attachMobileActiveHandler(this.cyclewayPopup);
+
         document.querySelector('.popup-big.mapboxgl-popup').style.setProperty("--popup-bg-color", layer.style.lineColor);
         document.querySelector('.popup-big.mapboxgl-popup').style.setProperty("--popup-text-color", layer.style.textColor);
 
