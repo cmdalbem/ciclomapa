@@ -20,7 +20,10 @@ class LayersBar extends Component {
             ciclowaysExpanded: false,
             outrasAnimating: false,
             pontosAnimating: false,
-            ciclowaysAnimating: false
+            ciclowaysAnimating: false,
+            outrasExpanding: false,
+            pontosExpanding: false,
+            ciclowaysExpanding: false
         };
     }
 
@@ -77,17 +80,32 @@ class LayersBar extends Component {
         const categories = this.getLayerCategories();
         const stateKey = `${categoryName}Expanded`;
         const animatingKey = `${categoryName}Animating`;
+        const expandingKey = `${categoryName}Expanding`;
         
         this.setState(prevState => {
             const newExpanded = !prevState[stateKey];
             
-            // If expanding, activate all layers in the category
+            // If expanding, mark as expanding and delay layer activation
             if (newExpanded) {
-                const layerChanges = categories[categoryName].map(layer => ({
-                    id: layer.id,
-                    isActive: true
-                }));
-                onLayersChange(layerChanges);
+                // Delay activation to allow pill exit animation
+                setTimeout(() => {
+                    const layerChanges = categories[categoryName].map(layer => ({
+                        id: layer.id,
+                        isActive: true
+                    }));
+                    onLayersChange(layerChanges);
+                    
+                    // After layers are active, stop showing the expanding pill
+                    setTimeout(() => {
+                        this.setState({ [expandingKey]: false });
+                    }, 50);
+                }, 300);
+                
+                return {
+                    [stateKey]: newExpanded,
+                    [animatingKey]: true,
+                    [expandingKey]: true
+                };
             }
             
             return {
@@ -108,6 +126,7 @@ class LayersBar extends Component {
         const currentLayer = this.props.layers.find(l => l.id === layerId);
         const newActiveState = !currentLayer?.isActive;
         const stateKey = `${categoryName}Expanded`;
+        const animatingKey = `${categoryName}Animating`;
         
         onLayersChange(layerId, newActiveState);
         
@@ -119,7 +138,13 @@ class LayersBar extends Component {
                 
                 if (allDeactivated && this.state[stateKey]) {
                     this.setState({ 
-                        [stateKey]: false
+                        [stateKey]: false,
+                        [animatingKey]: true
+                    }, () => {
+                        // Reset animation state after animation completes
+                        setTimeout(() => {
+                            this.setState({ [animatingKey]: false });
+                        }, 3000);
                     });
                 }
             }, 0);
@@ -153,22 +178,23 @@ class LayersBar extends Component {
         };
     }
 
-    renderLayerButton({ id, onClick, isActive, icon, lineStyle, label, className = '', shouldMergeWithNext = false, isAnimated = false, animationDelay = 0 }) {
+    renderLayerButton({ id, onClick, isActive, icon, lineStyle, label, className = '', shouldMergeWithNext = false, isAnimated = false, isCategoryPill = false, isExpanding = false }) {
         const baseClasses = 'flex items-center space-x-2 px-3 py-2 rounded-full text-xs transition-all duration-200 glass-bg flex-shrink-0';
         const activeClasses = isActive 
             ? 'text-white bg-black bg-opacity-50'
             : 'text-gray-500';
-        const animationClasses = isAnimated ? 'animate-slide-in' : '';
+        const animationClasses = isAnimated 
+            ? (isCategoryPill 
+                ? (isExpanding ? 'animate-category-expand' : 'animate-category-collapse')
+                : 'animate-slide-in')
+            : '';
         
         const style = shouldMergeWithNext ? {
             marginRight: '-16px',
             borderTopRightRadius: '0',
             borderBottomRightRadius: '0',
-            paddingRight: '16px',
-            animationDelay: isAnimated ? `${animationDelay}ms` : undefined
-        } : {
-            animationDelay: isAnimated ? `${animationDelay}ms` : undefined
-        };
+            paddingRight: '16px'
+        } : {};
         
         return (
             <button
@@ -233,13 +259,13 @@ class LayersBar extends Component {
                 }}
             >
                 <div className="flex justify-start space-x-1 transition-all duration-300">
-                    {/* Pontos category button (only when all POI are deactivated) */}
+                    {/* Pontos category button (only when all POI are deactivated or when expanding) */}
                     {(() => {
                         const config = categoryConfig.pontos;
                         const hasLayers = categories.pontos.length > 0;
                         const allLayersDeactivated = hasLayers && categories.pontos.every(layer => !layer.isActive);
 
-                        if (!hasLayers || !allLayersDeactivated) return null;
+                        if (!hasLayers || (!allLayersDeactivated && !this.state.pontosExpanding)) return null;
 
                         return this.renderLayerButton({
                             id: 'pontos',
@@ -248,7 +274,9 @@ class LayersBar extends Component {
                             icon: config.icon,
                             lineStyle: config.style,
                             label: config.label,
-                            isAnimated: this.state.pontosAnimating
+                            isAnimated: this.state.pontosAnimating,
+                            isCategoryPill: true,
+                            isExpanding: this.state.pontosExpanding
                         });
                     })()}
 
@@ -271,8 +299,7 @@ class LayersBar extends Component {
                                 lineStyle: layer.style,
                                 label: layer.shortName || displayName,
                                 shouldMergeWithNext,
-                                isAnimated: this.state.pontosAnimating,
-                                animationDelay: index * 60
+                                isAnimated: this.state.pontosAnimating
                             });
                         });
                     })()}
@@ -292,7 +319,8 @@ class LayersBar extends Component {
                             icon: config.icon,
                             lineStyle: config.style,
                             label: config.label,
-                            isAnimated: this.state.ciclowaysAnimating
+                            isAnimated: this.state.ciclowaysAnimating,
+                            isCategoryPill: true
                         });
                     })()}
 
@@ -314,8 +342,7 @@ class LayersBar extends Component {
                                  lineStyle: layer.style,
                                  label: displayName,
                                  shouldMergeWithNext,
-                                 isAnimated: this.state.ciclowaysAnimating,
-                                 animationDelay: index * 60
+                                 isAnimated: this.state.ciclowaysAnimating
                              });
                          });
                     })()}
@@ -336,7 +363,8 @@ class LayersBar extends Component {
                             icon: config.icon,
                             lineStyle: config.style,
                             label: config.label,
-                            isAnimated: this.state.outrasAnimating
+                            isAnimated: this.state.outrasAnimating,
+                            isCategoryPill: true
                         });
                     })()}
                     
@@ -359,8 +387,7 @@ class LayersBar extends Component {
                                 label: displayName,
                                 className: 'ml-2',
                                 shouldMergeWithNext,
-                                isAnimated: this.state.outrasAnimating,
-                                animationDelay: index * 60
+                                isAnimated: this.state.outrasAnimating
                             });
                         });
                     })()}
