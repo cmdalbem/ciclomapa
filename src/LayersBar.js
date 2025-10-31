@@ -3,13 +3,18 @@ import { IS_MOBILE, TOPBAR_HEIGHT } from './constants.js'
 
 import bikeparkingIcon from './img/icons/poi-bikeparking-mini.png';
 import bikeparkingIconLight from './img/icons/poi-bikeparking-mini--light.png';
+import bikeshopIcon from './img/icons/poi-bikeshop-mini.png';
+import bikeshopIconLight from './img/icons/poi-bikeshop-mini--light.png';
+import bikerentalIcon from './img/icons/poi-bikerental-mini.png';
+import bikerentalIconLight from './img/icons/poi-bikerental-mini--light.png';
 import { HiOutlineInformationCircle } from 'react-icons/hi';
 
 class LayersBar extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            outrasExpanded: false
+            outrasExpanded: false,
+            pontosExpanded: false
         };
     }
 
@@ -75,17 +80,18 @@ class LayersBar extends Component {
         }
     }
 
-    // Toggle expansion of Outras category
-    toggleOutrasExpansion() {
+    // Generic method to toggle expansion of any category
+    toggleCategoryExpansion(categoryName) {
         const { onLayersChange } = this.props;
         const categories = this.getLayerCategories();
+        const stateKey = `${categoryName}Expanded`;
         
         this.setState(prevState => {
-            const newExpanded = !prevState.outrasExpanded;
+            const newExpanded = !prevState[stateKey];
             
             // If expanding, activate all layers in the category
             if (newExpanded) {
-                const layerChanges = categories.outras.map(layer => ({
+                const layerChanges = categories[categoryName].map(layer => ({
                     id: layer.id,
                     isActive: true
                 }));
@@ -93,16 +99,17 @@ class LayersBar extends Component {
             }
             
             return {
-                outrasExpanded: newExpanded
+                [stateKey]: newExpanded
             };
         });
     }
 
-    // Toggle individual layer in Outras category
-    toggleOutrasLayer(layerId) {
+    // Generic method to toggle individual layer in any category
+    toggleCategoryLayer(categoryName, layerId) {
         const { onLayersChange } = this.props;
         const currentLayer = this.props.layers.find(l => l.id === layerId);
         const newActiveState = !currentLayer?.isActive;
+        const stateKey = `${categoryName}Expanded`;
         
         onLayersChange(layerId, newActiveState);
         
@@ -110,10 +117,10 @@ class LayersBar extends Component {
         if (!newActiveState) {
             setTimeout(() => {
                 const updatedCategories = this.getLayerCategories();
-                const allDeactivated = updatedCategories.outras.every(layer => !layer.isActive);
+                const allDeactivated = updatedCategories[categoryName].every(layer => !layer.isActive);
                 
-                if (allDeactivated && this.state.outrasExpanded) {
-                    this.setState({ outrasExpanded: false });
+                if (allDeactivated && this.state[stateKey]) {
+                    this.setState({ [stateKey]: false });
                 }
             }, 0);
         }
@@ -122,6 +129,15 @@ class LayersBar extends Component {
     isCategoryActive(category) {
         const categories = this.getLayerCategories();
         return categories[category].some(layer => layer.isActive);
+    }
+
+    getPOIIcon(iconName, isDarkMode) {
+        const iconsMap = {
+            "poi-bikeparking": isDarkMode ? bikeparkingIcon : bikeparkingIconLight,
+            "poi-bikeshop": isDarkMode ? bikeshopIcon : bikeshopIconLight,
+            "poi-rental": isDarkMode ? bikerentalIcon : bikerentalIconLight
+        };
+        return iconsMap[iconName] || null;
     }
 
     renderLineStyle(style) {
@@ -206,25 +222,47 @@ class LayersBar extends Component {
                 }}
             >
                 <div className="flex justify-start space-x-1">
-                    {/* Pontos category button */}
+                    {/* Pontos category button (only when all POI are deactivated) */}
                     {(() => {
                         const config = categoryConfig.pontos;
-                        const isActive = this.isCategoryActive('pontos');
                         const hasLayers = categories.pontos.length > 0;
-                        
-                        if (!hasLayers) return null;
-                        
-                        // Check if the next button (first individual layer) is active
-                        const isNextActive = individualLayers.length > 0 && individualLayers[0].isActive;
-                        
+                        const allLayersDeactivated = hasLayers && categories.pontos.every(layer => !layer.isActive);
+
+                        if (!hasLayers || !allLayersDeactivated) return null;
+
                         return this.renderLayerButton({
                             id: 'pontos',
-                            onClick: () => this.toggleCategory('pontos'),
-                            isActive,
+                            onClick: () => this.toggleCategoryExpansion('pontos'),
+                            isActive: false,
                             icon: config.icon,
                             lineStyle: config.style,
-                            label: config.label,
-                            isNextActive
+                            label: config.label
+                        });
+                    })()}
+
+                    {/* Individual Pontos layers - show when any are active or when expanded */}
+                    {(() => {
+                        const hasActivePontosLayers = categories.pontos.some(layer => layer.isActive);
+                        const shouldShowIndividual = hasActivePontosLayers || this.state.pontosExpanded;
+
+                        if (!shouldShowIndividual) return null;
+
+                        return categories.pontos.map((layer, index) => {
+                            const displayName = layer.displayName || layer.name;
+
+                            const isNextActive = index < categories.pontos.length - 1
+                                ? categories.pontos[index + 1].isActive
+                                : false;
+
+                            return this.renderLayerButton({
+                                id: layer.id,
+                                onClick: () => this.toggleCategoryLayer('pontos', layer.id),
+                                isActive: layer.isActive,
+                                icon: this.getPOIIcon(layer.icon, isDarkMode),
+                                lineStyle: layer.style,
+                                label: layer.shortName || displayName,
+                                isNextActive
+                            });
                         });
                     })()}
                     
@@ -267,7 +305,7 @@ class LayersBar extends Component {
                         
                         return this.renderLayerButton({
                             id: 'outras',
-                            onClick: () => this.toggleOutrasExpansion(),
+                            onClick: () => this.toggleCategoryExpansion('outras'),
                             isActive: false, // Always false since we only show when all are deactivated
                             icon: config.icon,
                             lineStyle: config.style,
@@ -292,7 +330,7 @@ class LayersBar extends Component {
                             
                             return this.renderLayerButton({
                                 id: layer.id,
-                                onClick: () => this.toggleOutrasLayer(layer.id),
+                                onClick: () => this.toggleCategoryLayer('outras', layer.id),
                                 isActive: layer.isActive,
                                 lineStyle: layer.style,
                                 label: displayName,
