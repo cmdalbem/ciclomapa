@@ -505,9 +505,10 @@ class Map extends Component {
                             { hover: false });
                     }
                     self.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
-                    if (IS_MOBILE && e.lngLat) {
+                    if (IS_MOBILE && e.features[0]?.geometry?.coordinates) {
+                        const coords = e.features[0].geometry.coordinates;
                         self.map.easeTo({
-                            center: [e.lngLat.lng, e.lngLat.lat],
+                            center: [coords[0], coords[1]],
                             zoom: 17,
                             padding: {bottom: 50}
                         });
@@ -799,7 +800,7 @@ class Map extends Component {
                 if (IS_MOBILE && e.features && e.features[0]) {
                     const bb = turfBbox(e.features[0]); // [minX, minY, maxX, maxY]
                     const bounds = new mapboxgl.LngLatBounds([bb[0], bb[1]], [bb[2], bb[3]]);
-                    self.map.fitBounds(bounds, { padding: { top: 100, bottom: 200, left: 50, right: 50 } });
+                    self.map.fitBounds(bounds, { padding: { top: 150, bottom: 300, left: 100, right: 100 } });
                 }
                 e.originalEvent.preventDefault();
             }
