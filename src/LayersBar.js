@@ -9,12 +9,16 @@ import bikerentalIcon from './img/icons/poi-bikerental-mini.png';
 import bikerentalIconLight from './img/icons/poi-bikerental-mini--light.png';
 import { HiOutlineInformationCircle } from 'react-icons/hi';
 
+import './LayersBar.css';
+
 class LayersBar extends Component {
     constructor(props) {
         super(props);
         this.state = {
             outrasExpanded: false,
-            pontosExpanded: false
+            pontosExpanded: false,
+            outrasAnimating: false,
+            pontosAnimating: false
         };
     }
 
@@ -85,6 +89,7 @@ class LayersBar extends Component {
         const { onLayersChange } = this.props;
         const categories = this.getLayerCategories();
         const stateKey = `${categoryName}Expanded`;
+        const animatingKey = `${categoryName}Animating`;
         
         this.setState(prevState => {
             const newExpanded = !prevState[stateKey];
@@ -99,8 +104,14 @@ class LayersBar extends Component {
             }
             
             return {
-                [stateKey]: newExpanded
+                [stateKey]: newExpanded,
+                [animatingKey]: true
             };
+        }, () => {
+            // Reset animation state after animation completes
+            setTimeout(() => {
+                this.setState({ [animatingKey]: false });
+            }, 300);
         });
     }
 
@@ -110,6 +121,7 @@ class LayersBar extends Component {
         const currentLayer = this.props.layers.find(l => l.id === layerId);
         const newActiveState = !currentLayer?.isActive;
         const stateKey = `${categoryName}Expanded`;
+        const animatingKey = `${categoryName}Animating`;
         
         onLayersChange(layerId, newActiveState);
         
@@ -120,7 +132,14 @@ class LayersBar extends Component {
                 const allDeactivated = updatedCategories[categoryName].every(layer => !layer.isActive);
                 
                 if (allDeactivated && this.state[stateKey]) {
-                    this.setState({ [stateKey]: false });
+                    this.setState({ 
+                        [stateKey]: false,
+                        [animatingKey]: true
+                    }, () => {
+                        setTimeout(() => {
+                            this.setState({ [animatingKey]: false });
+                        }, 300);
+                    });
                 }
             }, 0);
         }
@@ -153,23 +172,29 @@ class LayersBar extends Component {
         };
     }
 
-    renderLayerButton({ id, onClick, isActive, icon, lineStyle, label, className = '', isNextActive = false }) {
+    renderLayerButton({ id, onClick, isActive, icon, lineStyle, label, className = '', shouldMergeWithNext = false, isAnimated = false, animationDelay = 0 }) {
         const baseClasses = 'flex items-center space-x-2 px-3 py-2 rounded-full text-xs transition-all duration-200 glass-bg flex-shrink-0';
         const activeClasses = isActive 
             ? 'text-white bg-black bg-opacity-50'
             : 'text-gray-500';
+        const animationClasses = isAnimated ? 'animate-slide-in' : '';
+        
+        const style = shouldMergeWithNext ? {
+            marginRight: '-16px',
+            borderTopRightRadius: '0',
+            borderBottomRightRadius: '0',
+            paddingRight: '16px',
+            animationDelay: isAnimated ? `${animationDelay}ms` : undefined
+        } : {
+            animationDelay: isAnimated ? `${animationDelay}ms` : undefined
+        };
         
         return (
             <button
                 key={id}
                 onClick={onClick}
-                className={`${baseClasses} ${activeClasses} ${className}`}
-                style={isActive && isNextActive ? {
-                    marginRight: '-16px',
-                    borderTopRightRadius: '0',
-                    borderBottomRightRadius: '0',
-                    paddingRight: '16px'
-                } : {}}
+                className={`${baseClasses} ${activeClasses} ${animationClasses} ${className}`}
+                style={style}
             >
                 {(icon || lineStyle) &&
                     <span className={`flex ${isActive ? '' : 'opacity-50'}`}>
@@ -221,7 +246,7 @@ class LayersBar extends Component {
                     scrollbarWidth: 'none'
                 }}
             >
-                <div className="flex justify-start space-x-1">
+                <div className="flex justify-start space-x-1 transition-all duration-300">
                     {/* Pontos category button (only when all POI are deactivated) */}
                     {(() => {
                         const config = categoryConfig.pontos;
@@ -236,7 +261,8 @@ class LayersBar extends Component {
                             isActive: false,
                             icon: config.icon,
                             lineStyle: config.style,
-                            label: config.label
+                            label: config.label,
+                            isAnimated: this.state.pontosAnimating
                         });
                     })()}
 
@@ -249,10 +275,7 @@ class LayersBar extends Component {
 
                         return categories.pontos.map((layer, index) => {
                             const displayName = layer.displayName || layer.name;
-
-                            const isNextActive = index < categories.pontos.length - 1
-                                ? categories.pontos[index + 1].isActive
-                                : false;
+                            const shouldMergeWithNext = index < categories.pontos.length - 1;
 
                             return this.renderLayerButton({
                                 id: layer.id,
@@ -261,7 +284,9 @@ class LayersBar extends Component {
                                 icon: this.getPOIIcon(layer.icon, isDarkMode),
                                 lineStyle: layer.style,
                                 label: layer.shortName || displayName,
-                                isNextActive
+                                shouldMergeWithNext,
+                                isAnimated: this.state.pontosAnimating,
+                                animationDelay: index * 50
                             });
                         });
                     })()}
@@ -269,20 +294,7 @@ class LayersBar extends Component {
                     {/* Individual layer buttons */}
                     {individualLayers.map((layer, index) => {
                         const displayName = layer.displayName || layer.name;
-                        
-                        // Check if the next button is active
-                        // Next could be the next individual layer, or the Outras button, or the first Outras layer
-                        let isNextActive = false;
-                        if (index < individualLayers.length - 1) {
-                            // Next is another individual layer
-                            isNextActive = individualLayers[index + 1].isActive;
-                        } else {
-                            // This is the last individual layer, check if Outras layers are shown and first one is active
-                            const hasActiveOutrasLayers = categories.outras.some(layer => layer.isActive);
-                            if (hasActiveOutrasLayers && categories.outras.length > 0) {
-                                isNextActive = categories.outras[0].isActive;
-                            }
-                        }
+                        const shouldMergeWithNext = index < individualLayers.length - 1;
                         
                         return this.renderLayerButton({
                             id: layer.id,
@@ -290,7 +302,7 @@ class LayersBar extends Component {
                             isActive: layer.isActive,
                             lineStyle: layer.style,
                             label: displayName,
-                            isNextActive
+                            shouldMergeWithNext
                         });
                     })}
                     
@@ -309,7 +321,8 @@ class LayersBar extends Component {
                             isActive: false, // Always false since we only show when all are deactivated
                             icon: config.icon,
                             lineStyle: config.style,
-                            label: config.label
+                            label: config.label,
+                            isAnimated: this.state.outrasAnimating
                         });
                     })()}
                     
@@ -322,11 +335,7 @@ class LayersBar extends Component {
                         
                         return categories.outras.map((layer, index) => {
                             const displayName = layer.displayName || layer.name;
-                            
-                            // Check if the next Outras layer is active
-                            const isNextActive = index < categories.outras.length - 1 
-                                ? categories.outras[index + 1].isActive 
-                                : false;
+                            const shouldMergeWithNext = index < categories.outras.length - 1;
                             
                             return this.renderLayerButton({
                                 id: layer.id,
@@ -335,7 +344,9 @@ class LayersBar extends Component {
                                 lineStyle: layer.style,
                                 label: displayName,
                                 className: 'ml-2',
-                                isNextActive
+                                shouldMergeWithNext,
+                                isAnimated: this.state.outrasAnimating,
+                                animationDelay: index * 50
                             });
                         });
                     })()}
