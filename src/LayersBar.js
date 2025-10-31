@@ -17,8 +17,10 @@ class LayersBar extends Component {
         this.state = {
             outrasExpanded: false,
             pontosExpanded: false,
+            ciclowaysExpanded: false,
             outrasAnimating: false,
-            pontosAnimating: false
+            pontosAnimating: false,
+            ciclowaysAnimating: false
         };
     }
 
@@ -32,6 +34,12 @@ class LayersBar extends Component {
         
         const categories = {
             pontos: activeLayers.filter(l => l.type === 'poi'),
+            cicloways: activeLayers.filter(l => 
+                l.name === 'Ciclovia' || 
+                l.name === 'Calçada compartilhada' || 
+                l.name === 'Ciclofaixa' || 
+                l.name === 'Ciclorrota'
+            ),
             outras: activeLayers.filter(l => 
                 l.name === 'Baixa velocidade' || 
                 l.name === 'Trilha' || 
@@ -40,17 +48,6 @@ class LayersBar extends Component {
         };
         
         return categories;
-    }
-
-    getIndividualLayers() {
-        const activeLayers = this.getActiveLayers();
-        
-        return activeLayers.filter(l => 
-            l.name === 'Ciclovia' || 
-            l.name === 'Calçada compartilhada' || 
-            l.name === 'Ciclofaixa' || 
-            l.name === 'Ciclorrota'
-        );
     }
 
 
@@ -73,16 +70,6 @@ class LayersBar extends Component {
         onLayersChange(layerChanges);
     }
 
-    // Individual layer toggle method
-    toggleLayer(layerId) {
-        const { onLayersChange } = this.props;
-        const layers = this.getIndividualLayers();
-        const layer = layers.find(l => l.id === layerId);
-        
-        if (layer) {
-            onLayersChange(layerId, !layer.isActive);
-        }
-    }
 
     // Generic method to toggle expansion of any category
     toggleCategoryExpansion(categoryName) {
@@ -111,7 +98,7 @@ class LayersBar extends Component {
             // Reset animation state after animation completes
             setTimeout(() => {
                 this.setState({ [animatingKey]: false });
-            }, 300);
+            }, 400);
         });
     }
 
@@ -121,7 +108,6 @@ class LayersBar extends Component {
         const currentLayer = this.props.layers.find(l => l.id === layerId);
         const newActiveState = !currentLayer?.isActive;
         const stateKey = `${categoryName}Expanded`;
-        const animatingKey = `${categoryName}Animating`;
         
         onLayersChange(layerId, newActiveState);
         
@@ -133,12 +119,7 @@ class LayersBar extends Component {
                 
                 if (allDeactivated && this.state[stateKey]) {
                     this.setState({ 
-                        [stateKey]: false,
-                        [animatingKey]: true
-                    }, () => {
-                        setTimeout(() => {
-                            this.setState({ [animatingKey]: false });
-                        }, 300);
+                        [stateKey]: false
                     });
                 }
             }, 0);
@@ -197,7 +178,15 @@ class LayersBar extends Component {
                 style={style}
             >
                 {(icon || lineStyle) &&
-                    <span className={`flex ${isActive ? '' : 'opacity-50'}`}>
+                    <span 
+                        className="flex"
+                        style={{
+                            opacity: isActive ? 1 : 0,
+                            maxWidth: isActive ? '1rem' : 0,
+                            marginRight: isActive ? 0 : '-0.5rem',
+                            transition: 'all 200ms ease-out'
+                        }}
+                    >
                         {icon ? (
                             <img className="w-3 h-3" src={icon} alt="" />
                         ) : lineStyle ? (
@@ -221,20 +210,17 @@ class LayersBar extends Component {
         }
 
         const categories = this.getLayerCategories();
-        const individualLayers = this.getIndividualLayers();
         
         const categoryConfig = {
             pontos: {
                 icon: isDarkMode ? bikeparkingIcon : bikeparkingIconLight,
                 label: 'Pontos de interesse'
             },
+            cicloways: {
+                label: 'Vias cicláveis'
+            },
             outras: {
-                // style: {
-                //     lineColor: '#DC7C3B',
-                //     lineWidth: 8,
-                //     lineStyle: 'dashed'
-                // },
-                label: 'Outras'
+                label: 'Outras vias'
             }
         };
 
@@ -286,25 +272,53 @@ class LayersBar extends Component {
                                 label: layer.shortName || displayName,
                                 shouldMergeWithNext,
                                 isAnimated: this.state.pontosAnimating,
-                                animationDelay: index * 50
+                                animationDelay: index * 60
                             });
                         });
                     })()}
                     
-                    {/* Individual layer buttons */}
-                    {individualLayers.map((layer, index) => {
-                        const displayName = layer.displayName || layer.name;
-                        const shouldMergeWithNext = index < individualLayers.length - 1;
-                        
+                    {/* Cicloways category button (only when all cycleways are deactivated) */}
+                    {(() => {
+                        const config = categoryConfig.cicloways;
+                        const hasLayers = categories.cicloways.length > 0;
+                        const allLayersDeactivated = hasLayers && categories.cicloways.every(layer => !layer.isActive);
+
+                        if (!hasLayers || !allLayersDeactivated) return null;
+
                         return this.renderLayerButton({
-                            id: layer.id,
-                            onClick: () => this.toggleLayer(layer.id),
-                            isActive: layer.isActive,
-                            lineStyle: layer.style,
-                            label: displayName,
-                            shouldMergeWithNext
+                            id: 'cicloways',
+                            onClick: () => this.toggleCategoryExpansion('cicloways'),
+                            isActive: false,
+                            icon: config.icon,
+                            lineStyle: config.style,
+                            label: config.label,
+                            isAnimated: this.state.ciclowaysAnimating
                         });
-                    })}
+                    })()}
+
+                    {/* Individual Cicloways layers - show when any are active or when expanded */}
+                    {(() => {
+                        const hasActiveCiclowaysLayers = categories.cicloways.some(layer => layer.isActive);
+                        const shouldShowIndividual = hasActiveCiclowaysLayers || this.state.ciclowaysExpanded;
+
+                        if (!shouldShowIndividual) return null;
+
+                         return categories.cicloways.map((layer, index) => {
+                             const displayName = layer.displayName || layer.name;
+                             const shouldMergeWithNext = index < categories.cicloways.length - 1;
+
+                             return this.renderLayerButton({
+                                 id: layer.id,
+                                 onClick: () => this.toggleCategoryLayer('cicloways', layer.id),
+                                 isActive: layer.isActive,
+                                 lineStyle: layer.style,
+                                 label: displayName,
+                                 shouldMergeWithNext,
+                                 isAnimated: this.state.ciclowaysAnimating,
+                                 animationDelay: index * 60
+                             });
+                         });
+                    })()}
                     
                     {/* Outras category button (last) */}
                     {(() => {
@@ -346,7 +360,7 @@ class LayersBar extends Component {
                                 className: 'ml-2',
                                 shouldMergeWithNext,
                                 isAnimated: this.state.outrasAnimating,
-                                animationDelay: index * 50
+                                animationDelay: index * 60
                             });
                         });
                     })()}
