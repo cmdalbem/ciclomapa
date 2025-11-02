@@ -295,6 +295,47 @@
   background-color: rgba(249, 250, 251, var(--tw-bg-opacity, 1)) !important;
 }
 
+/* Dark mode gray background overrides - neutral grays without blue tint */
+.theme-dark .bg-gray-50 {
+  background-color: rgba(204, 204, 204, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-dark .bg-gray-100 {
+  background-color: rgba(179, 179, 179, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-dark .bg-gray-200 {
+  background-color: rgba(153, 153, 153, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-dark .bg-gray-300 {
+  background-color: rgba(128, 128, 128, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-dark .bg-gray-400 {
+  background-color: rgba(102, 102, 102, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-dark .bg-gray-500 {
+  background-color: rgba(77, 77, 77, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-dark .bg-gray-600 {
+  background-color: rgba(64, 64, 64, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-dark .bg-gray-700 {
+  background-color: rgba(51, 51, 51, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-dark .bg-gray-800 {
+  background-color: rgba(38, 38, 38, var(--tw-bg-opacity, 1)) !important;
+}
+
+.theme-dark .bg-gray-900 {
+  background-color: rgba(26, 26, 26, var(--tw-bg-opacity, 1)) !important;
+}
+
 .theme-light .ant-popover-inner-content {
   color: black !important;
 }
