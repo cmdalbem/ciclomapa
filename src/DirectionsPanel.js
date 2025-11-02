@@ -8,6 +8,7 @@ import { FaDirections as IconRoute } from "react-icons/fa";
 import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash, HiOutlineExclamationTriangle as IconNoData } from "react-icons/hi2";
 import { HiCog as IconCog } from "react-icons/hi";
 import { HiSearch as IconSearch } from "react-icons/hi";
+import { HiInformationCircle as IconInfoCircle } from "react-icons/hi";
 import GooglePlacesGeocoder from './GooglePlacesGeocoder.js';
 import mapboxgl from 'mapbox-gl';
 import { Popover } from 'antd';
@@ -1313,34 +1314,15 @@ class DirectionsPanel extends Component {
                                 </div>
                                 
                                 {/* Disclaimer */}
-                                <div className="p-2 text-gray-500 hover:text-white text-xs gap-2 flex flex-col">
-                                    <div>
-                                        As rotas são sugestões automáticas, sempre verifique as condições das vias, sinalização e segurança antes de pedalar! :) 
-                                        <Popover
-                                            content={(
-                                                <div className="text-sm text-white" style={{width: 320}}>
-                                                    <h3 className="font-semibold">
-                                                        Como calculamos as notas?
-                                                    </h3>
-                                                    <p>
-                                                        As notas indicam o quanto cada opção de rota está coberta por diferentes tipos de infraestrutura cicloviária.
-                                                    </p>
-                                                    <p>
-                                                        Por exemplo: uma opção 100% coberta por ciclovias ganha a nota máxima 100. Porém se fosse por ciclorrotas a nota seria bem menor, já que a pessoa ciclista precisa compartilhar a via com carros.
-                                                    </p>
-                                                    <p>
-                                                        <code>
-                                                            nota = pCiclovia*1.0 + pCalcadaCompartilhada*0.8 + pCiclofaixa*0.6 + pCiclorrota*0.4
-                                                        </code>
-                                                    </p>
-                                                </div>
-                                            )}
-                                        >
-                                            {" "}
-                                            <span className="underline">
-                                                Leia mais sobre como calculamos as notas
-                                            </span>
-                                        </Popover>
+                                <div className="p-2 text-gray-500 hover:text-white text-xs flex flex-col">
+                                    <div 
+                                        className="cursor-pointer flex items-center mt-2 mb-0"
+                                        onClick={() => this.props.openLayersLegendModal && this.props.openLayersLegendModal('routes-section')}
+                                    >
+                                        <IconInfoCircle className="mr-1" /> 
+                                        <span>
+                                            Leia mais sobre os níveis de proteção das rotas
+                                        </span>
                                     </div>
                                 </div>
                             </div>

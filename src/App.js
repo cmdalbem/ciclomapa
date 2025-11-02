@@ -151,6 +151,7 @@ class App extends Component {
             hideUI: !urlParams.embed,
             aboutModal: false,
             layersLegendModal: false,
+            layersLegendScrollToSection: null,
             lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
             map: null,
             isDarkMode: isDarkMode,
@@ -215,12 +216,18 @@ class App extends Component {
         })
     }
 
-    openLayersLegendModal() {
-        this.setState({ layersLegendModal: true })
+    openLayersLegendModal(scrollToSection = null) {
+        this.setState({ 
+            layersLegendModal: true,
+            layersLegendScrollToSection: scrollToSection
+        })
     }
 
     closeLayersLegendModal() {
-        this.setState({ layersLegendModal: false })
+        this.setState({ 
+            layersLegendModal: false,
+            layersLegendScrollToSection: null
+        })
     }
 
     initLayers(prevLayersStates, isDarkMode, isDebugMode) {
@@ -1033,6 +1040,7 @@ class App extends Component {
                     onDirectionsPanelToggle={this.onDirectionsPanelToggle}
                     isDarkMode={this.state.isDarkMode}
                     onAreaChange={this.setArea}
+                    openLayersLegendModal={this.openLayersLegendModal}
                 />
 
                 <AboutModal
@@ -1046,6 +1054,7 @@ class App extends Component {
                     onClose={this.closeLayersLegendModal}
                     layers={this.state.layers}
                     isDarkMode={this.state.isDarkMode}
+                    scrollToSection={this.state.layersLegendScrollToSection}
                 />
 
                 </div>

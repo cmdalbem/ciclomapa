@@ -36,17 +36,17 @@ const InfrastructureBadge = ({
     
     if (infrastructure === 'rua') {
         const routeColor = isDarkMode ? ROUTE_COLORS.DARK.SELECTED : ROUTE_COLORS.LIGHT.SELECTED;
-        textColor = isDarkMode ? 'white' : adjustColorBrightness(routeColor, -0.2);
-        backgroundColor = isDarkMode ? hexToRgba(routeColor, 0.6) : hexToRgba(routeColor, 0.2);
+        textColor = isDarkMode ? 'white' : adjustColorBrightness(routeColor, -0.3);
+        backgroundColor = hexToRgba(routeColor, isDarkMode ? 0.6 : 0.2);
     } else if (infrastructure) {
         const badgeColor = layerColors[infrastructure];
         if (badgeColor) {
             if (infrastructure === 'ciclovia' || infrastructure === 'calçada') {
-                textColor = isDarkMode ? 'white' : badgeColor;
-                backgroundColor = hexToRgba(badgeColor, isDarkMode ? 0.3 : 0.1);
+                textColor = isDarkMode ? 'white' : adjustColorBrightness(badgeColor, -0.2   );
+                backgroundColor = hexToRgba(badgeColor, isDarkMode ? 0.3 : 0.22);
             } else if (infrastructure === 'ciclofaixa' || infrastructure === 'ciclorrota') {
                 textColor = isDarkMode ? 'white' : adjustColorBrightness(badgeColor, -0.5);
-                backgroundColor = hexToRgba(badgeColor, isDarkMode ? 0.5 : 0.3);
+                backgroundColor = hexToRgba(badgeColor, isDarkMode ? 0.5 : 0.2);
             }
         }
     }
