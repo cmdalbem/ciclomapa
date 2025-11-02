@@ -157,7 +157,7 @@ export const osmi18n = {
     fee: 'Pago?',
     only: 'Somente isso',
     tyres: 'Pneus',
-    public: 'Público?',
+    public: 'Público',
     private: 'Privado',
     limited: 'Limitado',
     designated: '',
