@@ -809,14 +809,9 @@ class Map extends Component {
         // Since these structures are contiguous we need to use mousemove instead of mouseenter/mouseleave
         this.map.on('mousemove', interactiveLayerId, e => {
             if (e.features.length > 0) {
-                if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
-                    return;
-                }
-                if (self.props.isInRouteMode) {
-                    return;
-                }
-                if (!e.features[0].id) {
-                    console.error('No id found for hovered cycleway, make sure youre generating these ids either in mapbox or in the tile generation script', e.features[0]);
+                if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD ||
+                    self.hoveredCycleway === e.features[0].id ||
+                    self.props.isInRouteMode) {
                     return;
                 }
 
@@ -829,24 +824,13 @@ class Map extends Component {
                         id: self.hoveredCycleway
                     }, { hover: false });
                 }
-                self.hoveredCycleway = e.features[0].id;
 
+                self.hoveredCycleway = e.features[0].id;
                 self.map.setFeatureState({
                     source: sourceId,
                     sourceLayer: sourceLayer,
                     id: self.hoveredCycleway
                 }, { hover: true });
-            } else {
-                if (self.hoveredCycleway && !self.selectedCycleway) {
-                    self.map.setFeatureState({
-                        source: sourceId,
-                        sourceLayer: sourceLayer,
-                        id: self.hoveredCycleway
-                    }, { hover: false });
-    
-                    self.map.getCanvas().style.cursor = '';
-                }
-                self.hoveredCycleway = null;
             }
         });
 
