@@ -330,7 +330,7 @@ class LayersLegendModal extends Component {
                         <div id="routes-section" className="space-y-6 mb-8">
                             <div>
                                 <h3 className="text-lg md:text-xl">Rotas</h3>
-                                <p className="opacity-80 mb-6 text-xs md:text-base">
+                                <p className="opacity-80 mb-6">
                                     Quando você calcula uma rota, analisamos quantos quilômetros dela estão cobertos por cada tipo de infraestrutura cicloviária. 
                                     Cada tipo tem um peso diferente na nota final, refletindo o nível de proteção e segurança oferecido.
                                 </p>
@@ -403,7 +403,7 @@ class LayersLegendModal extends Component {
                             </div>
 
                             {/* Visual Examples */}
-                            <p className="opacity-80 mb-6 text-xs md:text-base">Alguns exemplos:</p>
+                            <p className="opacity-80 mb-6">Alguns exemplos:</p>
 
                             <div className="rounded-lg p-4 bg-gray-900">
                                 <div className="space-y-3">
