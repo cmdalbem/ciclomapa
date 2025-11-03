@@ -982,7 +982,7 @@ class App extends Component {
                         }
 
                         {
-                            !this.state.embedMode &&
+                            !this.state.embedMode && !IS_MOBILE &&
                             <div id="gradient-backdrop"/>
                         }
                     </div>
