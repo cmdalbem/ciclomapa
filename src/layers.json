@@ -128,7 +128,7 @@
         "zoomThreshold": 15,
         "style": {
             "lineColor": "#386641",
-            "lineColorDark": "#9ac13e",
+            "lineColorDark": "#6BB543",
             "textColor": "#FFFFFF",
             "textColorDark": "#000000",
             "lineWidth": 8
@@ -149,7 +149,7 @@
         ],
         "style": {
             "lineColor": "#386641",
-            "lineColorDark": "#9ac13e",
+            "lineColorDark": "#6BB543",
             "textColor": "#FFFFFF",
             "textColorDark": "#000000",
             "lineWidth": 8,
