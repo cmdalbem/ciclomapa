@@ -172,6 +172,12 @@ function hslToRgb(h, s, l) {
 // Positive values brighten, negative values darken
 // method: 'linear' (default) or 'hsl' for different adjustment techniques
 export function adjustColorBrightness(hexColor, percentage = 0.3, method = 'linear') {
+    // If percentage is 0, return the original color unchanged
+    if (percentage === 0) {
+        // Ensure it has # prefix for consistency
+        return hexColor.startsWith('#') ? hexColor : `#${hexColor}`;
+    }
+    
     // Remove # if present
     hexColor = hexColor.replace('#', '');
     
