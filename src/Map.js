@@ -706,7 +706,7 @@ class Map extends Component {
                         "case",
                         ["boolean", ["feature-state", "hover"], false],
                         adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3),       // Hover
-                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.1 : -0.1, 'hsl') // Default
+                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.0 : -0.1, 'hsl') // Default
                     ],
                 ],
                 "line-offset": [
@@ -756,7 +756,7 @@ class Map extends Component {
                 "line-color": adjustColorBrightness(
                     this.props.layers.find(layer => layer.name === "Ciclovia").style.lineColor,
                     this.props.isDarkMode ? -0.6 : 0.4,
-                    'hsl'
+                    // 'hsl'
                 ),
                 "line-width": [
                     "interpolate",
@@ -835,6 +835,7 @@ class Map extends Component {
         });
 
         this.map.on('mouseleave', interactiveLayerId, () => {
+            console.debug('mouseleave', interactiveLayerId);
             if (self.hoveredCycleway) {
                 self.map.setFeatureState({
                     source: sourceId,
