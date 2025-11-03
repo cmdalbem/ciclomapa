@@ -128,7 +128,7 @@
         "zoomThreshold": 15,
         "style": {
             "lineColor": "#386641",
-            "lineColorDark": "#6BB543",
+            "lineColorDark": "#9AB543",
             "textColor": "#FFFFFF",
             "textColorDark": "#000000",
             "lineWidth": 8
@@ -149,7 +149,7 @@
         ],
         "style": {
             "lineColor": "#386641",
-            "lineColorDark": "#6BB543",
+            "lineColorDark": "#9AB543",
             "textColor": "#FFFFFF",
             "textColorDark": "#000000",
             "lineWidth": 8,
@@ -172,7 +172,7 @@
         ],
         "style": {
             "lineColor": "#A7C957",
-            "lineColorDark": "#6B9A4A",
+            "lineColorDark": "#6B9A67",
             "textColor": "#000000",
             "textColorDark": "#FFFFFF",
             "lineWidth": 8
@@ -197,7 +197,7 @@
         ],
         "style": {
             "lineColor": "#A7C957",
-            "lineColorDark": "#6B9A4A",
+            "lineColorDark": "#6B9A67",
             "textColor": "#000000",
             "textColorDark": "#FFFFFF",
             "lineWidth": 8,
