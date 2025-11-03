@@ -395,9 +395,9 @@ class LayersBar extends Component {
                     {/* Legend info icon */}
                     <button
                         onClick={this.props.openLayersLegendModal}
-                        className="flex items-center justify-center ml-2 px-2 py-2 rounded-full text-xs transition-all duration-200 glass-bg flex-shrink-0"
+                        className="flex items-center justify-center ml-2 px-2 py-2 rounded-full text-xs transition-all duration-200 glass-bg flex-shrink-0 gap-1"
                     >
-                        <HiOutlineInformationCircle className="text-base" />
+                        <HiOutlineInformationCircle className="text-base" /> Legenda
                     </button>
                 </div>
             </div>
