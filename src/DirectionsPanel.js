@@ -481,13 +481,13 @@ class DirectionsPanel extends Component {
         }
     }
 
-    handleGeolocation(inputType) {
+    handleGeolocation(inputType, isAutoTriggered = false) {
         if (!navigator.geolocation) {
             console.error('Geolocation is not supported by this browser');
             return;
         }
 
-        console.debug(`Getting current location for ${inputType}`);
+        console.debug(`Getting current location for ${inputType}${isAutoTriggered ? ' (auto-triggered)' : ''}`);
         
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -499,7 +499,7 @@ class DirectionsPanel extends Component {
                 console.debug('Current location:', coordinates);
                 
                 // Set the point and perform reverse geocoding
-                this.reverseGeocode(coordinates, inputType);
+                this.reverseGeocode(coordinates, inputType, isAutoTriggered);
             },
             (error) => {
                 console.error('Geolocation error:', error);
@@ -633,7 +633,7 @@ class DirectionsPanel extends Component {
     autoTriggerGeolocation() {
         if (!this.props.fromPoint) {
             setTimeout(() => {
-                this.handleGeolocation('from');
+                this.handleGeolocation('from', true);
             }, 100);
         }
     }
@@ -839,7 +839,7 @@ class DirectionsPanel extends Component {
         this.reverseGeocode(coordinates, type);
     }
 
-    async reverseGeocode(coordinates, type) {
+    async reverseGeocode(coordinates, type, isAutoTriggered = false) {
         if (!coordinates) return;
 
         const lngLat = [coordinates.lng, coordinates.lat];
@@ -852,6 +852,22 @@ class DirectionsPanel extends Component {
             });
 
             console.debug('Reverse geocode result:', result);
+
+            // On mobile, when auto-triggered geolocation happens on first panel open,
+            // check if the user's current city matches the app's current city
+            if (IS_MOBILE && isAutoTriggered && type === 'from' && this.props.area) {
+                const appCity = this.props.area.split(',')[0].trim();
+                const geolocationCity = this.getCityFromResultLike(result);
+                
+                if (geolocationCity && appCity && geolocationCity !== appCity) {
+                    console.debug(`Ignoring geolocation result: user is in ${geolocationCity} but app is showing ${appCity}`);
+                    // Clear the search input value since we're ignoring the result
+                    this.setState({
+                        [`${type}SearchValue`]: ''
+                    });
+                    return;
+                }
+            }
 
             const address = result.place_name || 'Nova posição';
             
