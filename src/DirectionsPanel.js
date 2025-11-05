@@ -1128,8 +1128,8 @@ class DirectionsPanel extends Component {
                                     <h3 className=" font-semibold flex items-center mb-0">
                                         <IconRoute className="mr-2" />
                                         Rotas de bici
-                                        <span className="bg-white opacity-50 ml-1 px-1 py-0 rounded-full text-black text-xs leading-normal tracking-wider" style={{fontSize: 10}}>
-                                            BETA
+                                        <span className="bg-white opacity-50 ml-2 px-1 py-0 rounded-full text-black text-xs leading-normal tracking-wider" style={{fontSize: 10}}>
+                                            Novo
                                         </span>
                                     </h3>
 
@@ -1158,7 +1158,7 @@ class DirectionsPanel extends Component {
                                             />
                                         )}
                                         
-                                        { !IS_MOBILE && (
+                                        { !IS_MOBILE && this.props.debugMode && (
                                             <Popover
                                                 content={this.renderSettingsContent()}
                                                 title={null}

@@ -1039,6 +1039,7 @@ class App extends Component {
                     onClearRoutePoints={this.clearRoutePoints}
                     onDirectionsPanelToggle={this.onDirectionsPanelToggle}
                     isDarkMode={this.state.isDarkMode}
+                    debugMode={this.state.debugMode}
                     onAreaChange={this.setArea}
                     openLayersLegendModal={this.openLayersLegendModal}
                 />
