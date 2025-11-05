@@ -42,11 +42,11 @@ const InfrastructureBadge = ({
         const badgeColor = layerColors[infrastructure];
         if (badgeColor) {
             if (infrastructure === 'ciclovia' || infrastructure === 'calçada') {
-                textColor = isDarkMode ? 'white' : adjustColorBrightness(badgeColor, -0.2   );
-                backgroundColor = hexToRgba(badgeColor, isDarkMode ? 0.3 : 0.22);
+                textColor = isDarkMode ? 'black' : adjustColorBrightness(badgeColor, -0.2);
+                backgroundColor = hexToRgba(badgeColor, isDarkMode ? 0.9 : 0.22);
             } else if (infrastructure === 'ciclofaixa' || infrastructure === 'ciclorrota') {
                 textColor = isDarkMode ? 'white' : adjustColorBrightness(badgeColor, -0.5);
-                backgroundColor = hexToRgba(badgeColor, isDarkMode ? 0.5 : 0.2);
+                backgroundColor = hexToRgba(badgeColor, isDarkMode ? 0.4 : 0.2);
             }
         }
     }
