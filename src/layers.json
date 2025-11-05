@@ -71,8 +71,9 @@
     },
     {
         "name": "Lojas & oficinas",
+        "displayName": "Lojas e oficinas",
         "shortName": "Lojas",
-        "description": "Oficinas e lojas especializadas em bicicletas e equipamentos.",
+        "description": "Estabelecimentos especializadas em venda e reparo de bicicletas e acessórios.",
         "filters": [
             ["shop", "bicycle"]
         ],
@@ -85,6 +86,7 @@
     },
     {
         "name": "Estações",
+        "displayName": "Estações de bike compartilhadas",
         "shortName": "Estações",
         "description": "Estações de compartilhamento de bicicletas (bike sharing) de diferentes operadoras.",
         "filters": [
@@ -114,7 +116,7 @@
     {
         "name": "Ciclovia",
         "displayName": "Ciclovias",
-        "description": "Vias exclusivas para bicicletas separadas fisicamente por meio-fio, muretas ou outros tipos de segregação fixa.",
+        "description": "Vias protegidas e exclusivas para bicicletas. Ciclovias são separadas fisicamente por meio-fio, muretas ou outros tipos de segregação fixa que impedem a circulação de veículos.",
         "protectionLevel": "Alta",
         "filters": [
             ["highway", "cycleway"],
@@ -136,8 +138,9 @@
     },
     {
         "name": "Calçada compartilhada",
-        "displayName": "Calçadas",
-        "description": "Calçadas com sinalização para circulação compartilhada de bicicletas em que pedestres possuem a prioridade.",
+        "displayName": "Calçadas compartilhadas",
+        "shortName": "Calçadas",
+        "description": "Calçadas com sinalização para circulação compartilhada de bicicletas. Lembre-se que pedestres possuem a prioridade.",
         "protectionLevel": "Alta",
         "filters": [
             [["highway","footway"],["bicycle","designated"]],
@@ -207,6 +210,7 @@
     {
         "name": "Baixa velocidade",
         "displayName": "Residenciais",
+        "shortName": "Residenciais",
         "description": "Vias locais com limite de velocidade regulamentado de até 30km/h.",
         "isActive": false,
         "filters": [
@@ -224,7 +228,7 @@
     {
         "name": "Trilha",
         "displayName": "Trilhas",
-        "description": "Caminhos geralmente não pavimentados com acesso permitido ou destinado a bicicleta.",
+        "description": "Caminhos não pavimentados com acesso permitido ou destinado a bicicleta.",
         "isActive": false,
         "filters": [
             [["highway","track"],["bicycle","designated"]],
@@ -243,7 +247,7 @@
     {
         "name": "Proibido",
         "displayName": "Proibidas",
-        "description": "Vias onde é proibido pedalar. Você pode desmontar e passar empurrando ela.",
+        "description": "Vias onde é proibido pedalar. Você pode descer a bicicleta e passar empurrando ela.",
         "isActive": false,
         "filters": [
             ["bicycle", "no"],
