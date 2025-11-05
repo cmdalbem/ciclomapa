@@ -358,13 +358,14 @@ class Map extends Component {
             "filter": filters,
             "description": l.description,
             type: 'circle',
+            minzoom: MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
             maxzoom: l.zoomThreshold,
             'paint': {
                 'circle-radius': [
                     'interpolate',
                     ["exponential", 1.5],
                     ['zoom'],
-                    10, 0,
+                    10, 2,
                     14, 4
                 ],
                 'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? 0.2 : 0.2),
@@ -372,7 +373,7 @@ class Map extends Component {
                     'interpolate',
                     ["exponential", 1.5],
                     ['zoom'],
-                    12, 0,
+                    12, 1,
                     14, 2
                 ],
                 'circle-opacity': ['case',
@@ -649,44 +650,46 @@ class Map extends Component {
         // };
 
         // Interactive layer is wider than the actual layer to improve usability
-        this.map.addLayer({
-            "id": interactiveLayerId,
-            "type": "line",
-            "source": sourceId,
-            'source-layer': sourceLayer,
-            "filter": filters,
-            "paint": {
-                "line-occlusion-opacity": 0.5,
-                "line-opacity": [
-                    "case",
-                    ["boolean", ["feature-state", "selected"], false],
-                    1, // Selected
-                    0
-                ],
-                "line-offset": [
-                    "interpolate",
-                        ["exponential", 1.5],
-                        ["zoom"],
-                        10, [
-                            "case",
-                                ["has", "cycleway:right"], Math.max(1, l.style.lineWidth/4),
-                                ["has", "cycleway:left"], Math.min(-1, -l.style.lineWidth/4),
-                                0
-                        ],
-                        18, [
-                            "case",
-                                ["has", "cycleway:right"], l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-                                ["has", "cycleway:left"], -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-                                0
-                        ]
+        if (sourceId === 'osmdata') {
+            this.map.addLayer({
+                "id": interactiveLayerId,
+                "type": "line",
+                "source": sourceId,
+                'source-layer': sourceLayer,
+                "filter": filters,
+                "paint": {
+                    "line-occlusion-opacity": 0.5,
+                    "line-opacity": [
+                        "case",
+                        ["boolean", ["feature-state", "selected"], false],
+                        1, // Selected
+                        0
                     ],
-                "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.7),
-                "line-width": 20
-            },
-            "layout": {
-                "line-elevation-reference": "ground"
-            },
-        }, layerUnderneathName);
+                    "line-offset": [
+                        "interpolate",
+                            ["exponential", 1.5],
+                            ["zoom"],
+                            10, [
+                                "case",
+                                    ["has", "cycleway:right"], Math.max(1, l.style.lineWidth/4),
+                                    ["has", "cycleway:left"], Math.min(-1, -l.style.lineWidth/4),
+                                    0
+                            ],
+                            18, [
+                                "case",
+                                    ["has", "cycleway:right"], l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                    ["has", "cycleway:left"], -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                    0
+                            ]
+                        ],
+                    "line-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.7 : 0.7),
+                    "line-width": 20
+                },
+                "layout": {
+                    "line-elevation-reference": "ground"
+                },
+            }, layerUnderneathName);
+        }
 
         this.map.addLayer({
             "id": normalLayerId,
@@ -774,79 +777,82 @@ class Map extends Component {
                 },
             }, layerUnderneathName);
 
-        this.map.on('click', interactiveLayerId, e => {
-            if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
-                return;
-            }
-            if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-                // Disable cyclepath clicks when in route mode
-                if (self.props.isInRouteMode) {
+        // Only osmdata is interactive
+        if (sourceId === 'osmdata') {
+            this.map.on('click', interactiveLayerId, e => {
+                if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
+                    return;
+                }
+                if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
+                    // Disable cyclepath clicks when in route mode
+                    if (self.props.isInRouteMode) {
+                        e.originalEvent.preventDefault();
+                        return;
+                    }
+                    
+                    if (self.selectedCycleway) {
+                        try { self.map.setFeatureState({ source: 'osmdata', id: self.selectedCycleway }, { selected: false, hover: false }); } catch (err) {}
+                    }
+                    self.selectedCycleway = e.features[0].id;
+                    try {
+                        self.map.setFeatureState({ source: 'osmdata', id: self.selectedCycleway }, { selected: true });
+                    } catch (err) {}
+
+                    const layer = self.props.layers.find(l =>
+                        l.id === e.features[0].layer.id.split('--')[0]
+                    );
+                    self.popups.showCyclewayPopup(e, layer);
+                    if (IS_MOBILE && e.features && e.features[0]) {
+                        const bb = turfBbox(e.features[0]); // [minX, minY, maxX, maxY]
+                        const bounds = new mapboxgl.LngLatBounds([bb[0], bb[1]], [bb[2], bb[3]]);
+                        self.map.fitBounds(bounds, { padding: { top: 150, bottom: 300, left: 100, right: 100 } });
+                    }
                     e.originalEvent.preventDefault();
-                    return;
                 }
-                
-                if (self.selectedCycleway) {
-                    try { self.map.setFeatureState({ source: 'osmdata', id: self.selectedCycleway }, { selected: false, hover: false }); } catch (err) {}
-                }
-                self.selectedCycleway = e.features[0].id;
-                try {
-                    self.map.setFeatureState({ source: 'osmdata', id: self.selectedCycleway }, { selected: true });
-                } catch (err) {}
+            });
 
-                const layer = self.props.layers.find(l =>
-                    l.id === e.features[0].layer.id.split('--')[0]
-                );
-                self.popups.showCyclewayPopup(e, layer);
-                if (IS_MOBILE && e.features && e.features[0]) {
-                    const bb = turfBbox(e.features[0]); // [minX, minY, maxX, maxY]
-                    const bounds = new mapboxgl.LngLatBounds([bb[0], bb[1]], [bb[2], bb[3]]);
-                    self.map.fitBounds(bounds, { padding: { top: 150, bottom: 300, left: 100, right: 100 } });
-                }
-                e.originalEvent.preventDefault();
-            }
-        });
+            // Since these structures are contiguous we need to use mousemove instead of mouseenter/mouseleave
+            this.map.on('mousemove', interactiveLayerId, e => {
+                if (e.features.length > 0) {
+                    if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD ||
+                        self.hoveredCycleway === e.features[0].id ||
+                        self.props.isInRouteMode) {
+                        return;
+                    }
 
-        // Since these structures are contiguous we need to use mousemove instead of mouseenter/mouseleave
-        this.map.on('mousemove', interactiveLayerId, e => {
-            if (e.features.length > 0) {
-                if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD ||
-                    self.hoveredCycleway === e.features[0].id ||
-                    self.props.isInRouteMode) {
-                    return;
-                }
+                    self.map.getCanvas().style.cursor = 'pointer';
+        
+                    if (self.hoveredCycleway) {
+                        self.map.setFeatureState({
+                            source: sourceId,
+                            sourceLayer: sourceLayer,
+                            id: self.hoveredCycleway
+                        }, { hover: false });
+                    }
 
-                self.map.getCanvas().style.cursor = 'pointer';
-    
+                    self.hoveredCycleway = e.features[0].id;
+                    self.map.setFeatureState({
+                        source: sourceId,
+                        sourceLayer: sourceLayer,
+                        id: self.hoveredCycleway
+                    }, { hover: true });
+                }
+            });
+
+            this.map.on('mouseleave', interactiveLayerId, () => {
+                console.debug('mouseleave', interactiveLayerId);
                 if (self.hoveredCycleway) {
                     self.map.setFeatureState({
                         source: sourceId,
                         sourceLayer: sourceLayer,
                         id: self.hoveredCycleway
                     }, { hover: false });
+
+                    self.map.getCanvas().style.cursor = '';
                 }
-
-                self.hoveredCycleway = e.features[0].id;
-                self.map.setFeatureState({
-                    source: sourceId,
-                    sourceLayer: sourceLayer,
-                    id: self.hoveredCycleway
-                }, { hover: true });
-            }
-        });
-
-        this.map.on('mouseleave', interactiveLayerId, () => {
-            console.debug('mouseleave', interactiveLayerId);
-            if (self.hoveredCycleway) {
-                self.map.setFeatureState({
-                    source: sourceId,
-                    sourceLayer: sourceLayer,
-                    id: self.hoveredCycleway
-                }, { hover: false });
-
-                self.map.getCanvas().style.cursor = '';
-            }
-            self.hoveredCycleway = null;
-        });
+                self.hoveredCycleway = null;
+            });
+        }
     }
 
     async initCommentsLayer() {
@@ -1100,6 +1106,9 @@ class Map extends Component {
                 this.reverseGeocode(coords)
                     .then(result => {
                         this.syncMapState(result.place_name);
+                    })
+                    .catch(err => {
+                        console.debug('Reverse geocoding failed:', err.message);
                     });
             }
         });
@@ -1151,12 +1160,12 @@ class Map extends Component {
             // if (!this.props.embedMode) {
             //     this.addInteractiveCapitalsLayer();
             // }
-            if (map.getLayer('capitais-br')) {
-                map.setLayoutProperty(
-                    'capitais-br',
-                    'visibility',
-                    'visible');
-            }
+            // if (map.getLayer('capitais-br')) {
+            //     map.setLayoutProperty(
+            //         'capitais-br',
+            //         'visibility',
+            //         'visible');
+            // }
 
         } else {
             console.warn('Map layers already initialized.');
@@ -2034,6 +2043,10 @@ class Map extends Component {
         this.reverseGeocode([this.props.lng, this.props.lat])
             .then(result => {
                 this.syncMapState(result.place_name);
+            })
+            .catch(err => {
+                // Reverse geocoding failure is not critical - map can function without it
+                console.debug('Reverse geocoding failed during initialization:', err.message);
             });
     }
 
@@ -2081,6 +2094,9 @@ class Map extends Component {
                 this.reverseGeocode(result.result.center)
                     .then(geocodeResult => {
                         this.syncMapState(geocodeResult.place_name);
+                    })
+                    .catch(err => {
+                        console.debug('Reverse geocoding failed:', err.message);
                     });
     
                 // Hide UI
@@ -2112,6 +2128,9 @@ class Map extends Component {
                         this.syncMapState(geocodeResult.place_name);
                         // Update lighting based on user's actual location
                         this.setRealisticLighting();
+                    })
+                    .catch(err => {
+                        console.debug('Reverse geocoding failed:', err.message);
                     });
             });
             this.map.addControl(geolocate, 'bottom-right');
