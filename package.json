@@ -43,7 +43,8 @@
     "eject": "react-scripts eject",
     "predeploy": "yarn run build",
     "deploy": "gh-pages -d build",
-    "dev:vercel": "vercel dev"
+    "dev:vercel": "vercel dev",
+    "overpass": "node scripts/overpass-to-geojson.js"
   },
   "eslintConfig": {
     "extends": "react-app"
