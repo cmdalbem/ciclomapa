@@ -241,12 +241,27 @@ class TopBar extends Component {
 
                         <div className="nav-links font-white">
                             {
-                                !embedMode ? <div className="hidden sm:block">
-                                    <Button type="link" className="glass-bg" shape="circle" onClick={() => toggleTheme()}>
-                                        {isDarkMode ? <IconSun /> : <IconMoon />}
-                                    </Button>
+                                !embedMode ? <div className="hidden sm:flex gap-2 items-center">
+                                    <Button.Group className="glass-bg rounded-full overflow-hidden">
+                                        <Button 
+                                            type={!isDarkMode ? "default" : "link"} 
+                                            className={!isDarkMode ? "" : "opacity-50"}
+                                            shape="circle"
+                                            onClick={() => toggleTheme()}
+                                        >
+                                            <IconSun />
+                                        </Button>
+                                        <Button 
+                                            type={isDarkMode ? "default" : "link"} 
+                                            className={isDarkMode ? "" : "opacity-50"}
+                                            shape="circle"
+                                            onClick={() => toggleTheme()}
+                                        >
+                                            <IconMoon />
+                                        </Button>
+                                    </Button.Group>
 
-                                    <Button className="glass-bg ml-2"
+                                    <Button className="glass-bg"
                                         type="link"
                                         onClick={this.props.openAboutModal}
                                     >
@@ -254,19 +269,19 @@ class TopBar extends Component {
                                     </Button>
 
                                     <Dropdown menu={collaborateMenu}>
-                                        <Button className="glass-bg ml-2">
+                                        <Button className="glass-bg">
                                             <span className="mr-2"> Colaborar </span>
-                                            <IconCaret className="text-green-300" />
+                                            <IconCaret className="text-green-300" style={{ marginRight: '-3px' }} />
                                         </Button>
                                     </Dropdown>
                                     
-                                    <Button className="glass-bg ml-2" onClick={downloadData}>
+                                    <Button className="glass-bg" onClick={downloadData}>
                                         <IconDownload /> Dados
                                     </Button>
 
                                     {
                                         !this.props.isSidebarOpen &&
-                                        <Button className="glass-bg ml-2" onClick={() => this.props.toggleSidebar(true)}>
+                                        <Button className="glass-bg" onClick={() => this.props.toggleSidebar(true)}>
                                             <IconAnalytics/> Métricas
                                         </Button>
                                     }
