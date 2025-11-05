@@ -194,8 +194,11 @@
         }
 
         .ant-select-clear {
-            background: white;
-            color: black;
+            /* background: white; */
+            /* color: black; */
+            width: 32px;
+            /* color: white; */
+            right: 8px;
         }
     }
 }
