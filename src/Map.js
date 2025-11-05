@@ -658,7 +658,7 @@ class Map extends Component {
                 'source-layer': sourceLayer,
                 "filter": filters,
                 "paint": {
-                    "line-occlusion-opacity": 0.5,
+                    // "line-occlusion-opacity": 0.5,
                     "line-opacity": [
                         "case",
                         ["boolean", ["feature-state", "selected"], false],
@@ -700,7 +700,7 @@ class Map extends Component {
             "description": l.description,
             "filter": filters,
             "paint": {
-                "line-occlusion-opacity": 0.5,
+                // "line-occlusion-opacity": 0.5,
                 "line-color": [
                     "case",
                     ["boolean", ["feature-state", "selected"], false],
@@ -755,7 +755,7 @@ class Map extends Component {
             "description": l.description,
             "filter": filters,
             "paint": {
-                "line-occlusion-opacity": 0.5,
+                // "line-occlusion-opacity": 0.5,
                 "line-color": adjustColorBrightness(
                     this.props.layers.find(layer => layer.name === "Ciclovia").style.lineColor,
                     this.props.isDarkMode ? -0.6 : 0.4,
@@ -1200,7 +1200,7 @@ class Map extends Component {
                 'line-elevation-reference': 'ground'
             },
             paint: {
-                'line-occlusion-opacity': 0.5,
+                // 'line-occlusion-opacity': 0.5,
                 'line-color': this.props.isDarkMode ? '#2d2e30' : '#FFFFFF',
                 "line-width": ROUTE_LINE_PADDING_WIDTH,
                 "line-gap-width": ROUTE_LINE_PADDING_GAP_WIDTH
@@ -1219,7 +1219,7 @@ class Map extends Component {
                 'line-elevation-reference': 'ground',
             },
             paint: {
-                'line-occlusion-opacity': 0.5,
+                // 'line-occlusion-opacity': 0.5,
                 'line-color': layerType === 'top'
                     ? (this.props.isDarkMode ? ROUTE_COLORS.DARK.SELECTED : ROUTE_COLORS.LIGHT.SELECTED)
                     : this.props.isDarkMode ? ROUTE_COLORS.DARK.UNSELECTED : ROUTE_COLORS.LIGHT.UNSELECTED,
@@ -1239,7 +1239,7 @@ class Map extends Component {
                 'line-elevation-reference': 'ground',
             },
             paint: {
-                'line-occlusion-opacity': 0.5,
+                // 'line-occlusion-opacity': 0.5,
                 'line-color': layerType === 'top' 
                     ? (this.props.isDarkMode ? '#ffffff' : '#000000') // Selected route border
                     : (this.props.isDarkMode ? '#ffffff' : '#000000'),
@@ -1286,7 +1286,7 @@ class Map extends Component {
                 'line-elevation-reference': 'ground',
             },
             paint: {
-                'line-occlusion-opacity': 0.5,
+                // 'line-occlusion-opacity': 0.5,
                 'line-color': layerType === 'top'
                     ? [
                         // Selected route - use original colors
@@ -1357,7 +1357,7 @@ class Map extends Component {
                 'line-elevation-reference': 'ground',
             },
             paint: {
-                'line-occlusion-opacity': 0.5,
+                // 'line-occlusion-opacity': 0.5,
                 "line-color": this.props.isDarkMode ? '#ffffff' : '#000000',
                 "line-width": ROUTE_LINE_BORDER_WIDTH,
                 "line-opacity": ROUTE_LINE_BORDER_OPACITY,
