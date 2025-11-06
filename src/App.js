@@ -100,9 +100,12 @@ class App extends Component {
         const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
         console.log('Previous saved state:', prev);
         
-        // Use system theme preference only
-        const isDarkMode = this.getSystemThemePreference();
-        console.log('Theme preference:', isDarkMode ? 'dark' : 'light', '(system preference)');
+        // Use saved preference if available, otherwise fallback to system theme preference
+        const isDarkMode = prev.isDarkMode !== undefined 
+            ? prev.isDarkMode 
+            : this.getSystemThemePreference();
+        console.log('Theme preference:', isDarkMode ? 'dark' : 'light', 
+            prev.isDarkMode !== undefined ? '(saved preference)' : '(system preference)');
 
         // Parse route data from URL
         let fromPoint = null;
@@ -198,6 +201,8 @@ class App extends Component {
             // TEMP while we don't update everything dynamically
             // window.location.reload();
             this.forceMapReinitialization();
+            // Save preference to localStorage
+            this.saveStateToLocalStorage();
         });
     }
 
@@ -266,6 +271,7 @@ class App extends Component {
                 lat: this.state.lat,
                 isSidebarOpen: this.state.isSidebarOpen,
                 layersStates: layersStates,
+                isDarkMode: this.state.isDarkMode,
             }
 
             let str = JSON.stringify(state);
@@ -743,10 +749,18 @@ class App extends Component {
             // }
         }
 
+        if (this.state.isDarkMode !== prevState.isDarkMode) {
+            if (!this.state.showSatellite) {
+                const newMapStyle = this.state.isDarkMode 
+                    ? MAP_STYLES.DARK
+                    : MAP_STYLES.LIGHT;
+                this.setState({ mapStyle: newMapStyle });
+            }
+        }
+
         if (this.state.geoJson !== prevState.geoJson) {
             if (!this.state.geoJson || (this.state.geoJson.features && this.state.geoJson.features.length === 0)) {
                 // @todo link to our tutorials and invite the user to start mapping it
-                // @todo this was being triggered wrong
                 // notification['warning']({
                 //     message: 'Ops',
                 //     description:
@@ -972,7 +986,7 @@ class App extends Component {
                             toPoint={this.state.toPoint}
                         />
                         
-                        {
+                        {/* {
                             !this.state.embedMode &&
                             <MapStyleSwitcher 
                                 showSatellite={this.state.showSatellite}
@@ -980,7 +994,7 @@ class App extends Component {
                                 onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
                                 isDarkMode={this.state.isDarkMode}
                             />
-                        }
+                        } */}
 
                         {
                             !this.state.embedMode && !IS_MOBILE &&
