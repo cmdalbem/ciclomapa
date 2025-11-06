@@ -289,7 +289,10 @@ class Map extends Component {
             const idsToHide = Array.from(this.geojsonFeatureIds);
             const hideFilter = [
                 '!',
-                ['in', ['get', '@id'], ['literal', idsToHide]]
+                ['any',
+                    ['in', ['get', '@id'], ['literal', idsToHide]],
+                    ['in', ['get', 'id'], ['literal', idsToHide]]
+                ]
             ];
             return ['all', baseFilter, hideFilter];
         }
