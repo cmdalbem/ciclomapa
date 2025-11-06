@@ -140,11 +140,11 @@ class LayersPanel extends Component {
                                 )}
                             >
                                 <div
-                                    className="flex rounded-md items-center justify-between px-2 py-1 hover:bg-black hover:bg-opacity-50"
+                                    className="flex rounded-md items-center justify-between px-2 py-1 hover:bg-black hover:bg-opacity-70"
                                     onClick={this.onChange.bind(this, l.id, !l.isActive)}
                                     style={{ opacity: l.isActive ? 1 : .5 }}
                                 >
-                                    <div className="flex items-center">
+                                    <div className="layer-panel-name flex items-center">
                                         <span className="w-6 mr-2 inline-block flex justify-center">
                                         {
                                             l.type === 'way' ?

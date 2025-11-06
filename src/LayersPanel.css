@@ -3,6 +3,16 @@
     overflow: hidden;
 }
 
+.theme-dark .layer-panel-name {
+    backdrop-filter: blur(2px);
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
+}
+
+.theme-light .layer-panel-name {
+    /* backdrop-filter: blur(2px); */
+    text-shadow: -1px -1px 0 #ececec, 1px -1px 0 #ececec, -1px 1px 0 #ececec, 1px 1px 0 #ececec;
+}
+
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {
