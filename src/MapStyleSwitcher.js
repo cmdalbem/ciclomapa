@@ -32,14 +32,6 @@ class MapStyleSwitcher extends Component {
     componentDidUpdate(prevProps, prevState) {
         const options = this.getOptions();
         
-        // Handle theme changes - update map style if default is selected
-        if (prevProps.isDarkMode !== this.props.isDarkMode && this.state.selected === 0) {
-            const defaultOption = options[0];
-            if (defaultOption.url) {
-                this.props.onMapStyleChange(defaultOption.url);
-            }
-        }
-        
         // Handle style selection changes
         if (this.state !== prevState) {
             const selected = options[this.state.selected];
