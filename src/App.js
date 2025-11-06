@@ -969,6 +969,7 @@ class App extends Component {
                             isDarkMode={this.state.isDarkMode}
                             setMapRef={this.setMapRef}
                             directionsPanelRef={this.directionsPanel}
+                            toPoint={this.state.toPoint}
                         />
                         
                         {
