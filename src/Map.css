@@ -120,7 +120,6 @@ body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
 
 /* Mobile */
 
-@media (min-width: 320px) and (max-width: 480px) {
   .mapboxgl-ctrl-group button {
     width: 50px;
     height: 50px;
@@ -135,4 +134,3 @@ body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
   .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl {
     margin-right: 12px;
   }
-}
