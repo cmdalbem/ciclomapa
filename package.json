@@ -11,6 +11,8 @@
     "@craco/craco": "^7.1.0",
     "@mapbox/mapbox-gl-geocoder": "^5.0.3",
     "@mapbox/mapbox-sdk": "^0.16.1",
+    "@turf/circle": "^7.2.0",
+    "@turf/distance": "^7.2.0",
     "@turf/length": "^7.2.0",
     "@turf/line-overlap": "^7.2.0",
     "antd": "^4.14.0",
@@ -33,7 +35,6 @@
     "react-scripts": "^5.0.1",
     "recharts": "^2.0.8",
     "skmeans": "^0.11.3",
-    "turf-distance": "^3.0.12",
     "zipson": "^0.2.12"
   },
   "scripts": {

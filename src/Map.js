@@ -3,6 +3,8 @@ import { useDirections } from './DirectionsContext.js';
 
 import mapboxgl from 'mapbox-gl'
 import turfBbox from '@turf/bbox';
+import turfDistance from '@turf/distance';
+import turfCircle from '@turf/circle';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
@@ -28,6 +30,7 @@ import {
     ROUTE_LINE_BORDER_WIDTH,
     ROUTE_LINE_BORDER_OPACITY,
     ROUTE_LINE_PADDING_WIDTH,
+    NEAR_DESTINATION_POI_RADIUS_KM,
 } from './constants.js'
 
 import Analytics from './Analytics.js'
@@ -97,6 +100,7 @@ class Map extends Component {
     comments;
     debouncedMapStateSync;
     lastGeocodedPlaceName;
+    originalPOIFilters; // Store original POI filters to restore when routes are cleared
 
     constructor(props) {
         super(props);
@@ -658,7 +662,7 @@ class Map extends Component {
                 'source-layer': sourceLayer,
                 "filter": filters,
                 "paint": {
-                    // "line-occlusion-opacity": 0.5,
+                    "line-occlusion-opacity": 1,
                     "line-opacity": [
                         "case",
                         ["boolean", ["feature-state", "selected"], false],
@@ -700,7 +704,7 @@ class Map extends Component {
             "description": l.description,
             "filter": filters,
             "paint": {
-                // "line-occlusion-opacity": 0.5,
+                "line-occlusion-opacity": 1,
                 "line-color": [
                     "case",
                     ["boolean", ["feature-state", "selected"], false],
@@ -755,7 +759,7 @@ class Map extends Component {
             "description": l.description,
             "filter": filters,
             "paint": {
-                // "line-occlusion-opacity": 0.5,
+                "line-occlusion-opacity": 1,
                 "line-color": adjustColorBrightness(
                     this.props.layers.find(layer => layer.name === "Ciclovia").style.lineColor,
                     this.props.isDarkMode ? -0.6 : 0.4,
@@ -1200,7 +1204,7 @@ class Map extends Component {
                 'line-elevation-reference': 'ground'
             },
             paint: {
-                // 'line-occlusion-opacity': 0.5,
+                'line-occlusion-opacity': 1,
                 'line-color': this.props.isDarkMode ? '#2d2e30' : '#FFFFFF',
                 "line-width": ROUTE_LINE_PADDING_WIDTH,
                 "line-gap-width": ROUTE_LINE_PADDING_GAP_WIDTH
@@ -1219,7 +1223,7 @@ class Map extends Component {
                 'line-elevation-reference': 'ground',
             },
             paint: {
-                // 'line-occlusion-opacity': 0.5,
+                'line-occlusion-opacity': 1,
                 'line-color': layerType === 'top'
                     ? (this.props.isDarkMode ? ROUTE_COLORS.DARK.SELECTED : ROUTE_COLORS.LIGHT.SELECTED)
                     : this.props.isDarkMode ? ROUTE_COLORS.DARK.UNSELECTED : ROUTE_COLORS.LIGHT.UNSELECTED,
@@ -1239,7 +1243,7 @@ class Map extends Component {
                 'line-elevation-reference': 'ground',
             },
             paint: {
-                // 'line-occlusion-opacity': 0.5,
+                'line-occlusion-opacity': 1,
                 'line-color': layerType === 'top' 
                     ? (this.props.isDarkMode ? '#ffffff' : '#000000') // Selected route border
                     : (this.props.isDarkMode ? '#ffffff' : '#000000'),
@@ -1286,7 +1290,7 @@ class Map extends Component {
                 'line-elevation-reference': 'ground',
             },
             paint: {
-                // 'line-occlusion-opacity': 0.5,
+                'line-occlusion-opacity': 1,
                 'line-color': layerType === 'top'
                     ? [
                         // Selected route - use original colors
@@ -1357,7 +1361,7 @@ class Map extends Component {
                 'line-elevation-reference': 'ground',
             },
             paint: {
-                // 'line-occlusion-opacity': 0.5,
+                'line-occlusion-opacity': 1,
                 "line-color": this.props.isDarkMode ? '#ffffff' : '#000000',
                 "line-width": ROUTE_LINE_BORDER_WIDTH,
                 "line-opacity": ROUTE_LINE_BORDER_OPACITY,
@@ -1466,6 +1470,9 @@ class Map extends Component {
                 map.getSource("osmdata").setData(this.props.data);
             }
             
+            // Reset stored filters when data changes
+            this.originalPOIFilters = null;
+            
             this.hideGeoJsonFromPmtiles(this.props.data);
         }
 
@@ -1488,6 +1495,11 @@ class Map extends Component {
         
         if (layersChanged) {
             console.debug('Layer visibility changed, updating...');
+            this.updateLayerVisibility();
+        }
+
+        // Update layer visibility when routes or destination changes
+        if (this.props.routes !== prevProps.routes || this.props.toPoint !== prevProps.toPoint) {
             this.updateLayerVisibility();
         }
 
@@ -1875,14 +1887,121 @@ class Map extends Component {
         }
     }
 
+    /**
+     * Filter POIs visible during route planning (only show bike parking and rental stations near destination)
+     * Uses Mapbox's native 'within' filter with a circle geometry
+     */
+    updateNearDestinationPOIs(hasRoutes, destinationCoords, source) {
+        const map = this.map;
+        if (!map) return;
+
+        const nearDestinationPOIs = ['poi-rental', 'poi-bikeparking'];
+        const CIRCLE_SOURCE_ID = 'destination-filter-circle';
+
+        if (hasRoutes && destinationCoords) {
+            // Create circle geometry around destination
+            const circle = turfCircle(destinationCoords, NEAR_DESTINATION_POI_RADIUS_KM, { 
+                units: 'kilometers' 
+            });
+
+            // Create or update temporary circle source
+            if (!map.getSource(CIRCLE_SOURCE_ID)) {
+                map.addSource(CIRCLE_SOURCE_ID, {
+                    type: 'geojson',
+                    data: circle
+                });
+            } else {
+                map.getSource(CIRCLE_SOURCE_ID).setData(circle);
+            }
+
+            // Get POI layers that should remain visible during routes
+            const nearDestinationPOILayers = this.props.layers.filter(l => 
+                l.type === 'poi' && nearDestinationPOIs.includes(l.icon)
+            );
+
+            // Apply within filter to near-destination POI layers
+            nearDestinationPOILayers.forEach(layer => {
+                const originalFilter = this.convertFilterToMapboxFilter(layer, 'osmdata');
+                // Combine original filter with within filter
+                const withinFilter = ['all', originalFilter, ['within', circle.geometry]];
+                
+                // Only apply to GeoJSON source layers (not PMTiles)
+                const layerId = layer.id;
+                const circlesLayerId = layerId + 'circles';
+                const polygonLayerId = layerId + 'polygon';
+                
+                // Store original filter if not already stored
+                if (!this.originalPOIFilters) {
+                    this.originalPOIFilters = {};
+                }
+                if (!this.originalPOIFilters[circlesLayerId]) {
+                    this.originalPOIFilters[circlesLayerId] = originalFilter;
+                }
+                if (!this.originalPOIFilters[layerId]) {
+                    this.originalPOIFilters[layerId] = originalFilter;
+                }
+                if (!this.originalPOIFilters[polygonLayerId]) {
+                    this.originalPOIFilters[polygonLayerId] = originalFilter;
+                }
+
+                // Apply within filter to all three layer types (circles, symbols, polygons)
+                // Only for GeoJSON source layers, skip PMTiles layers
+                [circlesLayerId, layerId, polygonLayerId].forEach(id => {
+                    if (map.getLayer(id)) {
+                        try {
+                            map.setFilter(id, withinFilter);
+                        } catch (e) {
+                            console.warn('Error setting within filter for', id, e);
+                        }
+                    }
+                });
+            });
+        } else {
+            // Remove within filter and restore original filters when routes are cleared
+            if (this.originalPOIFilters) {
+                const nearDestinationPOILayers = this.props.layers.filter(l => 
+                    l.type === 'poi' && nearDestinationPOIs.includes(l.icon)
+                );
+
+                nearDestinationPOILayers.forEach(layer => {
+                    // Only restore GeoJSON source layers (not PMTiles)
+                    const layerId = layer.id;
+                    const circlesLayerId = layerId + 'circles';
+                    const polygonLayerId = layerId + 'polygon';
+
+                    [circlesLayerId, layerId, polygonLayerId].forEach(id => {
+                        if (map.getLayer(id) && this.originalPOIFilters[id]) {
+                            try {
+                                map.setFilter(id, this.originalPOIFilters[id]);
+                            } catch (e) {
+                                console.warn('Error restoring filter for', id, e);
+                            }
+                        }
+                    });
+                });
+
+                this.originalPOIFilters = null;
+            }
+
+            // Remove circle source when routes are cleared
+            if (map.getSource(CIRCLE_SOURCE_ID)) {
+                map.removeSource(CIRCLE_SOURCE_ID);
+            }
+        }
+    }
+
     updateLayerVisibility() {
         const map = this.map;
         if (!map) return;
 
-        const hasRoutes = this.props.routes && 
-                         this.props.routes.routes && 
-                         this.props.routes.routes.length > 0;
+        const hasRoutes = this.props.routes?.routes?.length > 0;
+        const nearDestinationPOIs = ['poi-rental', 'poi-bikeparking']; // POI types visible during routes
+        const destinationCoords = this.props.toPoint?.result?.center;
 
+        // Apply within filter for near-destination POIs when routes are active
+        this.updateNearDestinationPOIs(hasRoutes, destinationCoords, null);
+
+        // Update layer visibility
         this.props.layers.forEach(layer => {
             if (layer.type === 'way') {
                 ['', '--pmtiles'].forEach(sourceSuffix => {
@@ -1890,45 +2009,29 @@ class Map extends Component {
                     const interactiveLayerId = layer.id + '--interactive' + sourceSuffix;
                     const routesActiveLayerId = layer.id + '--routes-active' + sourceSuffix;
                     
-                    if (map.getLayer(baseLayerId)) {
-                        const normalStatus = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
-                        map.setLayoutProperty(baseLayerId, 'visibility', normalStatus);
-                    }
-                    
-                    if (map.getLayer(routesActiveLayerId)) {
-                        const routesActiveStatus = (layer.isActive && hasRoutes) ? 'visible' : 'none';
-                        map.setLayoutProperty(routesActiveLayerId, 'visibility', routesActiveStatus);
-                    }
-                    
-                    if (map.getLayer(interactiveLayerId)) {
-                        const interactiveStatus = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
-                        map.setLayoutProperty(interactiveLayerId, 'visibility', interactiveStatus);
-                    }
+                    [baseLayerId, routesActiveLayerId, interactiveLayerId].forEach((id, idx) => {
+                        if (!map.getLayer(id)) return;
+                        const status = idx === 1 
+                            ? (layer.isActive && hasRoutes ? 'visible' : 'none')
+                            : (layer.isActive && !hasRoutes ? 'visible' : 'none');
+                        map.setLayoutProperty(id, 'visibility', status);
+                    });
                 });
             } else if (layer.type === 'poi') {
-                const status = (layer.isActive && !hasRoutes) ? 'visible' : 'none';
+                const isNearDestinationPOI = nearDestinationPOIs.includes(layer.icon);
+                const status = !hasRoutes 
+                    ? (layer.isActive ? 'visible' : 'none')
+                    : (isNearDestinationPOI && destinationCoords && layer.isActive ? 'visible' : 'none');
                 
                 ['', '--pmtiles'].forEach(sourceSuffix => {
-                    const layerId = layer.id + sourceSuffix;
-                    const circlesLayerId = layerId + 'circles';
-                    const polygonLayerId = layerId + 'polygon';
-                    
-                    if (map.getLayer(circlesLayerId)) {
-                        map.setLayoutProperty(circlesLayerId, 'visibility', status);
-                    }
-                    
-                    if (map.getLayer(layerId)) {
-                        map.setLayoutProperty(layerId, 'visibility', status);
-                    }
-
-                    if (map.getLayer(polygonLayerId)) {
-                        map.setLayoutProperty(polygonLayerId, 'visibility', status);
-                    }
+                    [layer.id + sourceSuffix + 'circles', layer.id + sourceSuffix, layer.id + sourceSuffix + 'polygon'].forEach(id => {
+                        if (map.getLayer(id)) {
+                            map.setLayoutProperty(id, 'visibility', status);
+                        }
+                    });
                 });
             }
         });
-        
-        // console.debug(`Updated layer visibility - routes active: ${hasRoutes}`);
     }
 
     updateCyclablePathsOpacity() {
