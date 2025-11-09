@@ -21,7 +21,7 @@ export const osmi18n = {
 
     // Properties
     maxspeed: 'Velocidade máxima',
-    oneway: 'Sentido único?',
+    oneway: 'Via de sentido único?',
     "oneway:bicycle": 'Sentido único para bicicletas?',
     
     // Road types
@@ -31,13 +31,13 @@ export const osmi18n = {
     // cycleway: 'Caminho para bicicletas',
     // footway: 'Caminho para pedestres',
     // sidewalk: 'Caminho para pedestres',
-    "cycleway:left": 'Tipo de caminho para bicicletas na esquerda',
-    "cycleway:right": 'Tipo de caminho para bicicletas na direita',
-    "cycleway:both": 'Tipo de caminho para bicicletas em ambos lados',
-    "cycleway:opposite": 'Tipo de caminho para bicicletas (lado oposto)',
-    "cycleway:opposite:left": 'Tipo de caminho para bicicletas (lado oposto esquerdo)',
-    "cycleway:opposite:right": 'Tipo de caminho para bicicletas (lado oposto direito)',
-    "cycleway:opposite:both": 'Tipo de caminho para bicicletas (lado oposto, ambos lados)',
+    // "cycleway:left": 'Tipo de caminho para bicicletas na esquerda',
+    // "cycleway:right": 'Tipo de caminho para bicicletas na direita',
+    // "cycleway:both": 'Tipo de caminho para bicicletas em ambos lados',
+    // "cycleway:opposite": 'Tipo de caminho para bicicletas (lado oposto)',
+    // "cycleway:opposite:left": 'Tipo de caminho para bicicletas (lado oposto esquerdo)',
+    // "cycleway:opposite:right": 'Tipo de caminho para bicicletas (lado oposto direito)',
+    // "cycleway:opposite:both": 'Tipo de caminho para bicicletas (lado oposto, ambos lados)',
     tertiary: 'Terciária',
     secondary: 'Secundária',
     primary: 'Primária',
