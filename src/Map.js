@@ -678,14 +678,14 @@ class Map extends Component {
                             ["zoom"],
                             10, [
                                 "case",
-                                    ["has", "cycleway:right"], Math.max(1, l.style.lineWidth/4),
-                                    ["has", "cycleway:left"], Math.min(-1, -l.style.lineWidth/4),
+                                    ["==", ['get', "cycleway:right"], 'lane'], Math.max(1, l.style.lineWidth/4),
+                                    ["==", ['get', "cycleway:left"], 'lane'], Math.min(-1, -l.style.lineWidth/4),
                                     0
                             ],
                             18, [
                                 "case",
-                                    ["has", "cycleway:right"], l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-                                    ["has", "cycleway:left"], -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                    ["==", ['get', "cycleway:right"], 'lane'], l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                    ["==", ['get', "cycleway:left"], 'lane'], -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
                                     0
                             ]
                         ],
@@ -725,14 +725,14 @@ class Map extends Component {
                         ["zoom"],
                         10, [
                             "case",
-                                ["has", "cycleway:right"], Math.max(1, l.style.lineWidth/4),
-                                ["has", "cycleway:left"], Math.min(-1, -l.style.lineWidth/4),
+                                ["==", ['get', "cycleway:right"], 'lane'], Math.max(1, l.style.lineWidth/4),
+                                ["==", ['get', "cycleway:left"], 'lane'], Math.min(-1, -l.style.lineWidth/4),
                                 0
                         ],
                         18, [
                             "case",
-                                ["has", "cycleway:right"], l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-                                ["has", "cycleway:left"], -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                ["==", ['get', "cycleway:right"], 'lane'], l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+                                ["==", ['get', "cycleway:left"], 'lane'], -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
                                 0
                         ]
                     ],
