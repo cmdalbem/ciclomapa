@@ -64,6 +64,7 @@ import bikerentalIconLight from './img/icons/poi-bikerental--light.png';
 import bikerentalIcon2x from './img/icons/poi-bikerental@2x.png';
 import bikerentalIconMini from './img/icons/poi-bikerental-mini.png';
 import bikerentalIconMiniLight from './img/icons/poi-bikerental-mini--light.png';
+import arrowSdf from './img/icons/arrow-sdf.png';
 
 const iconsMap = {
     "poi-comment": commentIcon,
@@ -749,7 +750,68 @@ class Map extends Component {
                     "line-elevation-reference": "ground",
                     ...(l.style.lineStyle === 'dashed' ? {} : { "line-join": "round", "line-cap": "round" }),
                 },
+        }, layerUnderneathName);
+
+        if (sourceId === 'osmdata') {
+            const arrowLayerId = normalLayerId + '--arrows';
+            
+            this.map.addLayer({
+                "id": arrowLayerId,
+                "type": "symbol",
+                "source": sourceId,
+                'source-layer': sourceLayer,
+                "filter": filters,
+                "minzoom": 12,
+                "layout": {
+                    "symbol-placement": "line",
+                    "symbol-spacing": [
+                        "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        12, 20,
+                        16, 80,
+                    ],
+                    // "symbol-spacing": 60,
+                    "icon-image": "arrowSdf",
+                    "icon-size": [
+                        "interpolate",
+                            ["exponential", 1.5],
+                            ["zoom"],
+                            10, Math.max(1, l.style.lineWidth/5)/32,
+                            18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER/24
+                    ],
+                    "icon-rotation-alignment": "map",
+                    "icon-allow-overlap": true,
+                    "icon-ignore-placement": true,
+                    "icon-padding": 4,
+                    "icon-offset": [
+                        "case",
+                            ["==", ['get', "cycleway:right"], 'lane'], [0, 22],
+                            ["==", ['get', "cycleway:left"], 'lane'], [0, -22],
+                            [0, 0]
+                    ],
+                },
+                "paint": {
+                    "icon-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.0 : -0.1, 'hsl'),
+                    // "icon-color": [
+                    //     "case",
+                    //         ['==', ['get', 'oneway:bicycle'], 'no'], 'red',
+                    //         ['==', ['get', 'oneway'], 'no'], 'orange',
+                    //         'green'
+                    // ],
+                    "icon-opacity": [
+                        "case",
+                            ['==', ['get', 'oneway:bicycle'], 'no'], 0,
+                            ['==', ['get', 'oneway:bicycle'], 'yes'], 1,
+                            ['==', ['get', 'oneway'], 'no'], 0,
+                            ['==', ['get', 'oneway'], 'yes'], 1,
+                            0
+                    ],
+                    'icon-halo-width': 1,
+                    'icon-halo-color': this.props.isDarkMode ? '#1c1a17' : '#ffffff',
+                }
             }, layerUnderneathName);
+        }
 
         // Layer for routes active
         // It is hidden by default and is shown when a route is selected
@@ -2011,6 +2073,7 @@ class Map extends Component {
                     const baseLayerId = layer.id + sourceSuffix;
                     const interactiveLayerId = layer.id + '--interactive' + sourceSuffix;
                     const routesActiveLayerId = layer.id + '--routes-active' + sourceSuffix;
+                    const arrowLayerId = baseLayerId + '--arrows';
                     
                     [baseLayerId, routesActiveLayerId, interactiveLayerId].forEach((id, idx) => {
                         if (!map.getLayer(id)) return;
@@ -2019,6 +2082,12 @@ class Map extends Component {
                             : (layer.isActive && !hasRoutes ? 'visible' : 'none');
                         map.setLayoutProperty(id, 'visibility', status);
                     });
+                    
+                    // Handle arrow layer visibility (same as base layer)
+                    if (map.getLayer(arrowLayerId)) {
+                        const status = layer.isActive && !hasRoutes ? 'visible' : 'none';
+                        map.setLayoutProperty(arrowLayerId, 'visibility', status);
+                    }
                 });
             } else if (layer.type === 'poi') {
                 const isNearDestinationPOI = nearDestinationPOIs.includes(layer.icon);
@@ -2309,6 +2378,11 @@ class Map extends Component {
                     this.map.addImage(key, image);
                 });
             }
+        });
+
+        this.map.loadImage( arrowSdf, (error, image) => {
+            if (error) throw error;
+            this.map.addImage('arrowSdf', image, { sdf: true });
         });
     }
 
