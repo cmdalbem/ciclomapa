@@ -778,7 +778,7 @@ class Map extends Component {
                             ["exponential", 1.5],
                             ["zoom"],
                             10, Math.max(1, l.style.lineWidth/5)/32,
-                            18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER/24
+                            18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER/24,
                     ],
                     "icon-rotation-alignment": "map",
                     "icon-allow-overlap": true,
@@ -786,19 +786,13 @@ class Map extends Component {
                     "icon-padding": 4,
                     "icon-offset": [
                         "case",
-                            ["==", ['get', "cycleway:right"], 'lane'], [0, 22],
-                            ["==", ['get', "cycleway:left"], 'lane'], [0, -22],
+                            ["==", ['get', "cycleway:right"], 'lane'], [0, 24],
+                            ["==", ['get', "cycleway:left"], 'lane'], [0, -24],
                             [0, 0]
                     ],
                 },
                 "paint": {
                     "icon-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.0 : -0.1, 'hsl'),
-                    // "icon-color": [
-                    //     "case",
-                    //         ['==', ['get', 'oneway:bicycle'], 'no'], 'red',
-                    //         ['==', ['get', 'oneway'], 'no'], 'orange',
-                    //         'green'
-                    // ],
                     "icon-opacity": [
                         "case",
                             ['==', ['get', 'oneway:bicycle'], 'no'], 0,
@@ -808,7 +802,8 @@ class Map extends Component {
                             0
                     ],
                     'icon-halo-width': 1,
-                    'icon-halo-color': this.props.isDarkMode ? '#1c1a17' : '#ffffff',
+                    'icon-halo-blur': 0,
+                    'icon-halo-color': this.props.isDarkMode ? '#1c1a17' : '#dcdad8',
                 }
             }, layerUnderneathName);
         }
