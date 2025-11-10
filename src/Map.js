@@ -350,12 +350,20 @@ class Map extends Component {
         });
     }
 
+    getLayerUnderneathName(map) {
+        return map.getLayer('road-label-small') ? 'road-label-small'
+            : map.getLayer('road-label') ? 'road-label'
+            : '';
+    }
+
     initPOILayerForSource(l, sourceId) {
         const filters = this.convertFilterToMapboxFilter(l, sourceId);
 
         const sourceLayer = sourceId === 'osmdata' ? '' : 'default';
         const sourceSuffix = sourceId === 'osmdata' ? '' : '--pmtiles';
         const layerId = l.id + sourceSuffix;
+
+        const layerUnderneathName = this.getLayerUnderneathName(this.map);
 
         // Circles (lower zoom levels)
         this.map.addLayer({
@@ -391,7 +399,7 @@ class Map extends Component {
                 ],
                 'circle-stroke-color': this.props.isDarkMode ? '#000000' : '#ffffff',
             }
-        });
+        }, layerUnderneathName);
 
         // Polygons for area POIs (e.g. bike parkings)
         this.map.addLayer({
@@ -406,7 +414,7 @@ class Map extends Component {
                 'fill-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.1 : 0.2),
                 'fill-opacity': 0.2
             }
-        });
+        }, layerUnderneathName);
 
         // Icons (higher zoom levels)
         this.map.addLayer({
@@ -461,7 +469,7 @@ class Map extends Component {
                 ],
                 'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#ffffff',
             }
-        });
+        }, layerUnderneathName);
 
         // Interactions
         const self = this;
@@ -628,11 +636,7 @@ class Map extends Component {
     initCyclepathLayerForSource(l, sourceId) {
         const filters = this.convertFilterToMapboxFilter(l, sourceId);
         
-        // Will be used as "beforeId" prop in AddLayer
-        const layerUnderneathName = 
-            this.map.getLayer('road-label-small') ? 'road-label-small'
-                : this.map.getLayer('road-label') ? 'road-label'
-                : '';
+        const layerUnderneathName = this.getLayerUnderneathName(this.map);
         const self = this;
 
         const sourceLayer = sourceId === 'osmdata' ? '' : 'default';
@@ -1247,11 +1251,7 @@ class Map extends Component {
     createRouteLayerSet(map, sourceId, layerType) {
         const suffix = layerType === 'top' ? '-selected' : 's-unselected';
         
-        // Will be used as "beforeId" prop in addLayer
-        const layerUnderneathName = 
-            map.getLayer('road-label-small') ? 'road-label-small'
-                : map.getLayer('road-label') ? 'road-label'
-                : '';
+        const layerUnderneathName = this.getLayerUnderneathName(map);
         
         // 1. Padding layer
         map.addLayer({
@@ -1324,11 +1324,7 @@ class Map extends Component {
     createCyclepathLayerSet(map, sourceId, layerType) {
         const suffix = layerType === 'top' ? '-selected' : 's-unselected';
         
-        // Will be used as "beforeId" prop in addLayer
-        const layerUnderneathName = 
-            map.getLayer('road-label-small') ? 'road-label-small'
-                : map.getLayer('road-label') ? 'road-label'
-                : '';
+        const layerUnderneathName = this.getLayerUnderneathName(map);
         
         // Create mapping from cyclepath types to layer definitions
         const cyclepathTypeToLayer = {};
