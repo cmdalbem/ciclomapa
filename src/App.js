@@ -44,7 +44,6 @@ import {
     FORCE_RECALCULATE_LENGTHS_ALWAYS,
     DEFAULT_LENGTH_CALCULATE_STRATEGIES,
     MAP_STYLES,
-    WHITELISTED_CITIES,
     MAPBOX_ACCESS_TOKEN
 } from './constants.js'
 
@@ -611,17 +610,6 @@ class App extends Component {
             if (forceUpdate) {
                 this.getDataFromOSM({forceUpdate: true});
             } else {
-                // Check if city is whitelisted before running OSM query
-                if (WHITELISTED_CITIES.includes(this.state.area)) {
-                    console.debug(`City ${this.state.area} is whitelisted, skipping OSM query!`);
-                    this.setState({ 
-                        loading: false,
-                        geoJson: null,
-                        lengths: {}
-                    });
-                    return;
-                }
-                
                 
                 // Try to retrieve this area's geojson data from the database
                 this.storage.load(this.state.area)

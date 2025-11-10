@@ -9,6 +9,7 @@ import {
     DEFAULT_BORDER_WIDTH,
     OVERPASS_SERVERS,
     AREA_ID_OVERRIDES,
+    BLACKLISTED_CITIES_FOR_EXTRA_LAYERS,
 } from './constants.js'
 import { slugify } from './utils.js'
 
@@ -59,8 +60,17 @@ class OSMController {
     static getQuery(constraints) {
         const bbox = constraints.bbox;
         const areaId = constraints.areaId;
-        // const areaName = constraints.areaName;
-        const filteredLayers = layersDefinitions.default.filter(l => l.filters);
+        
+        const isBlacklisted = areaId && BLACKLISTED_CITIES_FOR_EXTRA_LAYERS.includes(areaId);
+        const extraLayersToExclude = ['Baixa velocidade', 'Trilha', 'Proibido'];
+        
+        const filteredLayers = layersDefinitions.default.filter(l => {
+            if (!l.filters) return false;
+            if (isBlacklisted && extraLayersToExclude.includes(l.name)) {
+                return false;
+            }
+            return true;
+        });
 
         const body = filteredLayers.map(l =>
             (l.type === 'poi' ? ['node', 'way'] : ['way']).map( element =>
