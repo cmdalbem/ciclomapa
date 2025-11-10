@@ -4,8 +4,8 @@
 
 export const OSM_DATA_MAX_AGE_DAYS = 30;
 
-export const WHITELISTED_CITIES = [
-    // 'Barcelona, Barcelona, Espanha'
+export const BLACKLISTED_CITIES_FOR_EXTRA_LAYERS = [
+    3600062422 // Berlin, Berlin, Germany
 ];
 
 export const LENGTH_CALCULATE_STRATEGIES = [
