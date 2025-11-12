@@ -28,6 +28,7 @@ import {
     HiChatAlt as IconComment,
     HiSun as IconSun,
     HiMoon as IconMoon,
+    HiOutlineAdjustments as IconAuto,
 } from "react-icons/hi"
 
 import { IconContext } from "react-icons";
@@ -107,7 +108,7 @@ class TopBar extends Component {
             forceUpdate,
             downloadData,
             embedMode,
-            isDarkMode,
+            themeMode,
             toggleTheme,
             loading
         } = this.props;
@@ -244,18 +245,29 @@ class TopBar extends Component {
                                 !embedMode ? <div className="hidden sm:flex gap-2 items-center">
                                     <Button.Group className="glass-bg rounded-full overflow-hidden">
                                         <Button 
-                                            type={!isDarkMode ? "default" : "link"} 
-                                            className={!isDarkMode ? "" : "opacity-50"}
+                                            type={themeMode === 'auto' ? "default" : "link"} 
+                                            className={themeMode === 'auto' ? "" : "opacity-50"}
                                             shape="circle"
-                                            onClick={() => toggleTheme()}
+                                            onClick={() => toggleTheme('auto')}
+                                            title="Seguir tema do dispositivo"
+                                        >
+                                            <IconAuto />
+                                        </Button>
+                                        <Button 
+                                            type={themeMode === 'light' ? "default" : "link"} 
+                                            className={themeMode === 'light' ? "" : "opacity-50"}
+                                            shape="circle"
+                                            onClick={() => toggleTheme('light')}
+                                            title="Modo claro"
                                         >
                                             <IconSun />
                                         </Button>
                                         <Button 
-                                            type={isDarkMode ? "default" : "link"} 
-                                            className={isDarkMode ? "" : "opacity-50"}
+                                            type={themeMode === 'dark' ? "default" : "link"} 
+                                            className={themeMode === 'dark' ? "" : "opacity-50"}
                                             shape="circle"
-                                            onClick={() => toggleTheme()}
+                                            onClick={() => toggleTheme('dark')}
+                                            title="Modo escuro"
                                         >
                                             <IconMoon />
                                         </Button>

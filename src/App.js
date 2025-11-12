@@ -67,6 +67,14 @@ class App extends Component {
         return false; // Light mode as fallback
     }
 
+    // Get effective dark mode state based on theme mode
+    getEffectiveIsDarkMode(themeMode) {
+        if (themeMode === 'auto') {
+            return this.getSystemThemePreference();
+        }
+        return themeMode === 'dark';
+    }
+
     constructor(props) {
         super(props);
         this.updateData = this.updateData.bind(this);
@@ -99,30 +107,18 @@ class App extends Component {
         const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
         console.log('Previous saved state:', prev);
         
-        const systemThemePreference = this.getSystemThemePreference();
+        // Default to 'auto' mode (match device theme)
+        // On mobile, always use 'auto' mode (don't sync from desktop)
+        // On desktop, use saved themeMode if available, otherwise default to 'auto'
+        const themeMode = IS_MOBILE 
+            ? 'auto'
+            : (prev.themeMode || 'auto');
         
-        // On mobile, always use system preference (don't sync from desktop)
-        // On desktop, check if saved preference differs from system preference
-        // Only use saved preference if it's different (meaning user manually overrode it)
-        let isDarkMode;
-        let isThemeManuallyOverridden = false;
+        const effectiveIsDarkMode = this.getEffectiveIsDarkMode(themeMode);
         
-        if (IS_MOBILE) {
-            isDarkMode = systemThemePreference;
-        } else {
-            if (prev.isDarkMode !== undefined && prev.isDarkMode !== systemThemePreference) {
-                // Saved preference differs from system - user manually overrode it
-                isDarkMode = prev.isDarkMode;
-                isThemeManuallyOverridden = true;
-            } else {
-                // No saved preference or it matches system preference - use system
-                isDarkMode = systemThemePreference;
-            }
-        }
-        
-        console.log('Theme preference:', isDarkMode ? 'dark' : 'light', 
-            IS_MOBILE ? '(mobile - system preference)' :
-            (isThemeManuallyOverridden ? '(saved manual override)' : '(system preference)'));
+        console.log('Theme mode:', themeMode, 
+            IS_MOBILE ? '(mobile - always auto)' :
+            (prev.themeMode ? '(saved preference)' : '(default: auto)'));
 
         // Parse route data from URL
         let fromPoint = null;
@@ -161,10 +157,10 @@ class App extends Component {
             geoJson: null,
             debugMode: urlParams.debug || false,
             loading: false,
-            mapStyle: isDarkMode ? 
+            mapStyle: effectiveIsDarkMode ? 
                 MAP_STYLES.DARK : 
                 MAP_STYLES.LIGHT,
-            layers: this.initLayers(prev.layersStates, isDarkMode, urlParams.debug || false),
+            layers: this.initLayers(prev.layersStates, effectiveIsDarkMode, urlParams.debug || false),
             lengths: {},
             embedMode: urlParams.embed,
             isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : !IS_PROD,
@@ -174,8 +170,7 @@ class App extends Component {
             layersLegendScrollToSection: null,
             lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
             map: null,
-            isDarkMode: isDarkMode,
-            isThemeManuallyOverridden: isThemeManuallyOverridden,
+            themeMode: themeMode,
             mapKey: 0,
             fromPoint: fromPoint,
             toPoint: toPoint,
@@ -190,45 +185,41 @@ class App extends Component {
         this.setState({ lengthCalculationStrategy: event.target.value });
     }
 
-    toggleTheme(newIsDark, isManualChange = false) {
-        const currentIsDark = this.state.isDarkMode;
+    toggleTheme(mode) {
+        // If no mode specified, cycle through: auto -> dark -> light -> auto
+        let newThemeMode;
+        if (mode === undefined) {
+            const modes = ['auto', 'dark', 'light'];
+            const currentIndex = modes.indexOf(this.state.themeMode);
+            newThemeMode = modes[(currentIndex + 1) % modes.length];
+        } else {
+            newThemeMode = mode;
+        }
 
-        if (newIsDark !== undefined && newIsDark === currentIsDark) {
+        if (newThemeMode === this.state.themeMode) {
             return;
         }
 
-        if (newIsDark === undefined) {
-            newIsDark = !currentIsDark;
-            isManualChange = true; // User clicked the toggle button
-        }
+        const effectiveIsDarkMode = this.getEffectiveIsDarkMode(newThemeMode);
 
         // Apply theme class to body
-        document.body.className = newIsDark ? 'theme-dark' : 'theme-light';
-         
-        // // Update map style if default style is selected (not satellite)
-        // if (!this.state.showSatellite) {
-        //     const newMapStyle = newIsDark 
-        //         ? MAP_STYLES.DARK
-        //         : MAP_STYLES.LIGHT;
-        //     this.setState({ mapStyle: newMapStyle });
-        // }
+        document.body.className = effectiveIsDarkMode ? 'theme-dark' : 'theme-light';
 
-        const systemPreference = this.getSystemThemePreference();
-        // If user manually changed theme, track if it differs from system preference
-        // If it matches system preference, clear the override (user wants to follow system again)
-        const isThemeManuallyOverridden = isManualChange 
-            ? (newIsDark !== systemPreference)
-            : this.state.isThemeManuallyOverridden;
+        const stateUpdate = {
+            layers: this.initLayers(this.state.layers, effectiveIsDarkMode, this.state.debugMode),
+            themeMode: newThemeMode
+        };
 
-        this.setState({ 
-            layers: this.initLayers(this.state.layers, newIsDark, this.state.debugMode),
-            isDarkMode: newIsDark,
-            isThemeManuallyOverridden: isThemeManuallyOverridden
-        }, () => {
-            // TEMP while we don't update everything dynamically
-            // window.location.reload();
+        // Update map style if not showing satellite
+        if (!this.state.showSatellite) {
+            stateUpdate.mapStyle = effectiveIsDarkMode 
+                ? MAP_STYLES.DARK
+                : MAP_STYLES.LIGHT;
+        }
+
+        this.setState(stateUpdate, () => {
             this.forceMapReinitialization();
-            // Save preference to localStorage (only if manually changed and differs from system)
+            // Save preference to localStorage (only if not 'auto' mode)
             this.saveStateToLocalStorage();
         });
     }
@@ -282,8 +273,14 @@ class App extends Component {
         console.debug('Retrived saved state from local storage:', savedState);
         const state = savedState || {};
         
-        // On mobile, exclude isDarkMode from saved state to prevent desktop preference sync
-        if (IS_MOBILE && state.isDarkMode !== undefined) {
+        // On mobile, exclude themeMode from saved state to prevent desktop preference sync
+        if (IS_MOBILE && state.themeMode !== undefined) {
+            delete state.themeMode;
+        }
+        
+        // Legacy support: convert old isDarkMode to themeMode
+        if (!state.themeMode && state.isDarkMode !== undefined) {
+            state.themeMode = state.isDarkMode ? 'dark' : 'light';
             delete state.isDarkMode;
         }
         
@@ -307,14 +304,10 @@ class App extends Component {
                 layersStates: layersStates,
             }
 
-            // Only save isDarkMode on desktop (not on mobile)
-            // And only save if it differs from system preference (user manually overrode it)
-            if (!IS_MOBILE && this.state.isThemeManuallyOverridden) {
-                const systemPreference = this.getSystemThemePreference();
-                if (this.state.isDarkMode !== systemPreference) {
-                    state.isDarkMode = this.state.isDarkMode;
-                }
-                // If it matches system preference, don't save it (let it be removed from localStorage)
+            // Only save themeMode on desktop (not on mobile)
+            // Only save if it's not 'auto' (manual preference)
+            if (!IS_MOBILE && this.state.themeMode !== 'auto') {
+                state.themeMode = this.state.themeMode;
             }
 
             let str = JSON.stringify(state);
@@ -783,9 +776,10 @@ class App extends Component {
             // }
         }
 
-        if (this.state.isDarkMode !== prevState.isDarkMode) {
+        if (this.state.themeMode !== prevState.themeMode) {
+            const effectiveIsDarkMode = this.getEffectiveIsDarkMode(this.state.themeMode);
             if (!this.state.showSatellite) {
-                const newMapStyle = this.state.isDarkMode 
+                const newMapStyle = effectiveIsDarkMode 
                     ? MAP_STYLES.DARK
                     : MAP_STYLES.LIGHT;
                 this.setState({ mapStyle: newMapStyle });
@@ -842,16 +836,31 @@ class App extends Component {
 
     componentDidMount() {
         // Initialize theme
-        document.body.className = this.state.isDarkMode ? 'theme-dark' : 'theme-light';
+        const effectiveIsDarkMode = this.getEffectiveIsDarkMode(this.state.themeMode);
+        document.body.className = effectiveIsDarkMode ? 'theme-dark' : 'theme-light';
 
-        // Listen for system theme changes
+        // Listen for system theme changes (only relevant when themeMode is 'auto')
         if (window.matchMedia) {
             const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
             const handleThemeChange = (e) => {
-                const newTheme = e.matches;
-                // Only auto-update if user hasn't manually overridden the theme
-                if (!this.state.isThemeManuallyOverridden) {
-                    this.toggleTheme(newTheme, false);
+                // Only auto-update if theme mode is 'auto'
+                if (this.state.themeMode === 'auto') {
+                    const effectiveIsDarkMode = this.getEffectiveIsDarkMode('auto');
+                    document.body.className = effectiveIsDarkMode ? 'theme-dark' : 'theme-light';
+                    if (!this.state.showSatellite) {
+                        const newMapStyle = effectiveIsDarkMode 
+                            ? MAP_STYLES.DARK
+                            : MAP_STYLES.LIGHT;
+                        this.setState({
+                            mapStyle: newMapStyle,
+                            layers: this.initLayers(this.state.layers, effectiveIsDarkMode, this.state.debugMode)
+                        });
+                    } else {
+                        this.setState({
+                            layers: this.initLayers(this.state.layers, effectiveIsDarkMode, this.state.debugMode)
+                        });
+                    }
+                    this.forceMapReinitialization();
                 }
             };
             mediaQuery.addEventListener('change', handleThemeChange);
@@ -968,6 +977,8 @@ class App extends Component {
     }
 
     render() {
+        const effectiveIsDarkMode = this.getEffectiveIsDarkMode(this.state.themeMode);
+        
         return (
             <DirectionsProvider>
                 <div id="ciclomapa" className={this.state.hideUI ? "hideUI" : ""}>
@@ -996,7 +1007,7 @@ class App extends Component {
                                 toggleSidebar={this.toggleSidebar}
                                 embedMode={this.state.embedMode}
                                 openAboutModal={this.openAboutModal}
-                                isDarkMode={this.state.isDarkMode}
+                                themeMode={this.state.themeMode}
                                 toggleTheme={this.toggleTheme}
                                 loading={this.state.loading}
                             />
@@ -1017,7 +1028,7 @@ class App extends Component {
                             isSidebarOpen={this.state.isSidebarOpen}
                             embedMode={this.state.embedMode}
                             debugMode={this.state.debugMode}
-                            isDarkMode={this.state.isDarkMode}
+                            isDarkMode={effectiveIsDarkMode}
                             setMapRef={this.setMapRef}
                             directionsPanelRef={this.directionsPanel}
                             toPoint={this.state.toPoint}
@@ -1029,7 +1040,7 @@ class App extends Component {
                                 showSatellite={this.state.showSatellite}
                                 onMapStyleChange={this.onMapStyleChange}
                                 onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
-                                isDarkMode={this.state.isDarkMode}
+                                isDarkMode={effectiveIsDarkMode}
                             />
                         } */}
 
@@ -1064,7 +1075,7 @@ class App extends Component {
                         layers={this.state.layers}
                         onLayersChange={this.onLayersChange}
                         embedMode={this.state.embedMode}
-                        isDarkMode={this.state.isDarkMode}
+                        isDarkMode={effectiveIsDarkMode}
                         openLayersLegendModal={this.openLayersLegendModal}
                     />
                 }
@@ -1074,7 +1085,7 @@ class App extends Component {
                     lengths={this.state.lengths}
                     onLayersChange={this.onLayersChange}
                     embedMode={this.state.embedMode}
-                    isDarkMode={this.state.isDarkMode}
+                    isDarkMode={effectiveIsDarkMode}
                 />
 
                 <DirectionsPanel
@@ -1090,7 +1101,7 @@ class App extends Component {
                     onToPointChange={this.setToPoint}
                     onClearRoutePoints={this.clearRoutePoints}
                     onDirectionsPanelToggle={this.onDirectionsPanelToggle}
-                    isDarkMode={this.state.isDarkMode}
+                    isDarkMode={effectiveIsDarkMode}
                     debugMode={this.state.debugMode}
                     onAreaChange={this.setArea}
                     openLayersLegendModal={this.openLayersLegendModal}
@@ -1106,7 +1117,7 @@ class App extends Component {
                     visible={this.state.layersLegendModal}
                     onClose={this.closeLayersLegendModal}
                     layers={this.state.layers}
-                    isDarkMode={this.state.isDarkMode}
+                    isDarkMode={effectiveIsDarkMode}
                     scrollToSection={this.state.layersLegendScrollToSection}
                 />
 
