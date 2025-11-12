@@ -99,16 +99,30 @@ class App extends Component {
         const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
         console.log('Previous saved state:', prev);
         
+        const systemThemePreference = this.getSystemThemePreference();
+        
         // On mobile, always use system preference (don't sync from desktop)
-        // On desktop, use saved preference if available, otherwise fallback to system theme preference
-        const isDarkMode = IS_MOBILE
-            ? this.getSystemThemePreference()
-            : (prev.isDarkMode !== undefined 
-                ? prev.isDarkMode 
-                : this.getSystemThemePreference());
+        // On desktop, check if saved preference differs from system preference
+        // Only use saved preference if it's different (meaning user manually overrode it)
+        let isDarkMode;
+        let isThemeManuallyOverridden = false;
+        
+        if (IS_MOBILE) {
+            isDarkMode = systemThemePreference;
+        } else {
+            if (prev.isDarkMode !== undefined && prev.isDarkMode !== systemThemePreference) {
+                // Saved preference differs from system - user manually overrode it
+                isDarkMode = prev.isDarkMode;
+                isThemeManuallyOverridden = true;
+            } else {
+                // No saved preference or it matches system preference - use system
+                isDarkMode = systemThemePreference;
+            }
+        }
+        
         console.log('Theme preference:', isDarkMode ? 'dark' : 'light', 
             IS_MOBILE ? '(mobile - system preference)' :
-            (prev.isDarkMode !== undefined ? '(saved preference)' : '(system preference)'));
+            (isThemeManuallyOverridden ? '(saved manual override)' : '(system preference)'));
 
         // Parse route data from URL
         let fromPoint = null;
@@ -161,6 +175,7 @@ class App extends Component {
             lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
             map: null,
             isDarkMode: isDarkMode,
+            isThemeManuallyOverridden: isThemeManuallyOverridden,
             mapKey: 0,
             fromPoint: fromPoint,
             toPoint: toPoint,
@@ -175,7 +190,7 @@ class App extends Component {
         this.setState({ lengthCalculationStrategy: event.target.value });
     }
 
-    toggleTheme(newIsDark) {
+    toggleTheme(newIsDark, isManualChange = false) {
         const currentIsDark = this.state.isDarkMode;
 
         if (newIsDark !== undefined && newIsDark === currentIsDark) {
@@ -184,6 +199,7 @@ class App extends Component {
 
         if (newIsDark === undefined) {
             newIsDark = !currentIsDark;
+            isManualChange = true; // User clicked the toggle button
         }
 
         // Apply theme class to body
@@ -197,14 +213,22 @@ class App extends Component {
         //     this.setState({ mapStyle: newMapStyle });
         // }
 
+        const systemPreference = this.getSystemThemePreference();
+        // If user manually changed theme, track if it differs from system preference
+        // If it matches system preference, clear the override (user wants to follow system again)
+        const isThemeManuallyOverridden = isManualChange 
+            ? (newIsDark !== systemPreference)
+            : this.state.isThemeManuallyOverridden;
+
         this.setState({ 
             layers: this.initLayers(this.state.layers, newIsDark, this.state.debugMode),
-            isDarkMode: newIsDark
+            isDarkMode: newIsDark,
+            isThemeManuallyOverridden: isThemeManuallyOverridden
         }, () => {
             // TEMP while we don't update everything dynamically
             // window.location.reload();
             this.forceMapReinitialization();
-            // Save preference to localStorage
+            // Save preference to localStorage (only if manually changed and differs from system)
             this.saveStateToLocalStorage();
         });
     }
@@ -284,8 +308,13 @@ class App extends Component {
             }
 
             // Only save isDarkMode on desktop (not on mobile)
-            if (!IS_MOBILE) {
-                state.isDarkMode = this.state.isDarkMode;
+            // And only save if it differs from system preference (user manually overrode it)
+            if (!IS_MOBILE && this.state.isThemeManuallyOverridden) {
+                const systemPreference = this.getSystemThemePreference();
+                if (this.state.isDarkMode !== systemPreference) {
+                    state.isDarkMode = this.state.isDarkMode;
+                }
+                // If it matches system preference, don't save it (let it be removed from localStorage)
             }
 
             let str = JSON.stringify(state);
@@ -820,7 +849,10 @@ class App extends Component {
             const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
             const handleThemeChange = (e) => {
                 const newTheme = e.matches;
-                this.toggleTheme(newTheme);
+                // Only auto-update if user hasn't manually overridden the theme
+                if (!this.state.isThemeManuallyOverridden) {
+                    this.toggleTheme(newTheme, false);
+                }
             };
             mediaQuery.addEventListener('change', handleThemeChange);
             
