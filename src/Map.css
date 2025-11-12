@@ -6,8 +6,8 @@
 .mapboxgl-canvas,
 .mapboxgl-map {
   width: 100% !important;
-  /* height: calc(100vh - 64px); */
-  height: 100vh;
+  /* Use CSS custom property for viewport height that accounts for mobile browser UI */
+  height: var(--viewport-height, 100vh);
 }
 
 
