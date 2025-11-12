@@ -99,12 +99,16 @@ class App extends Component {
         const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
         console.log('Previous saved state:', prev);
         
-        // Use saved preference if available, otherwise fallback to system theme preference
-        const isDarkMode = prev.isDarkMode !== undefined 
-            ? prev.isDarkMode 
-            : this.getSystemThemePreference();
+        // On mobile, always use system preference (don't sync from desktop)
+        // On desktop, use saved preference if available, otherwise fallback to system theme preference
+        const isDarkMode = IS_MOBILE
+            ? this.getSystemThemePreference()
+            : (prev.isDarkMode !== undefined 
+                ? prev.isDarkMode 
+                : this.getSystemThemePreference());
         console.log('Theme preference:', isDarkMode ? 'dark' : 'light', 
-            prev.isDarkMode !== undefined ? '(saved preference)' : '(system preference)');
+            IS_MOBILE ? '(mobile - system preference)' :
+            (prev.isDarkMode !== undefined ? '(saved preference)' : '(system preference)'));
 
         // Parse route data from URL
         let fromPoint = null;
@@ -252,7 +256,14 @@ class App extends Component {
     getStateFromLocalStorage() {
         const savedState = JSON.parse(window.localStorage.getItem('appstate'));
         console.debug('Retrived saved state from local storage:', savedState);
-        return savedState || {};
+        const state = savedState || {};
+        
+        // On mobile, exclude isDarkMode from saved state to prevent desktop preference sync
+        if (IS_MOBILE && state.isDarkMode !== undefined) {
+            delete state.isDarkMode;
+        }
+        
+        return state;
     }
 
     saveStateToLocalStorage() {
@@ -270,7 +281,11 @@ class App extends Component {
                 lat: this.state.lat,
                 isSidebarOpen: this.state.isSidebarOpen,
                 layersStates: layersStates,
-                isDarkMode: this.state.isDarkMode,
+            }
+
+            // Only save isDarkMode on desktop (not on mobile)
+            if (!IS_MOBILE) {
+                state.isDarkMode = this.state.isDarkMode;
             }
 
             let str = JSON.stringify(state);
