@@ -498,7 +498,7 @@ class App extends Component {
     }
 
     getDataFromOSM(options = {}) {
-        const {areaName = this.state.area, forceUpdate} = options;
+        const {areaName = this.state.area, forceUpdate, backgroundUpdate} = options;
 
         // Cancel any existing OSM request
         if (this.currentOSMRequest) {
@@ -512,7 +512,9 @@ class App extends Component {
             this.currentOSMRequest = null;
         }
 
-        this.setState({ loading: true });
+        if (!backgroundUpdate) {
+            this.setState({ loading: true });
+        }
         
         const parts = areaName.split(',');
         const city = parts[0];
@@ -562,7 +564,7 @@ class App extends Component {
                     this.setState({
                         geoJson: newData.geoJson,
                         dataUpdatedAt: new Date(),
-                        loading: false,
+                        ...(backgroundUpdate ? {} : { loading: false }),
                         lengths: lengths
                     });
                     
@@ -617,7 +619,7 @@ class App extends Component {
                         if (data) {
                             if (!this.isDataFresh(data.updatedAt)) {
                                 // If data is not fresh, fetch fresh data from OSM assync
-                                this.getDataFromOSM();
+                                this.getDataFromOSM({backgroundUpdate: true});
                             }
 
                             if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
