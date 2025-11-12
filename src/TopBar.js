@@ -173,8 +173,8 @@ class TopBar extends Component {
                                             size={IS_MOBILE ? "large" : "middle"}
                                             onClick={this.showCityPicker}
                                         >
-                                            <h3 className="flex items-center justify-between">
-                                                <span className="mr-3">
+                                            <h3 className="flex items-center justify-between gap-1">
+                                                <span>
                                                     <span className="font-bold">
                                                         {city},
                                                     </span>
@@ -182,7 +182,7 @@ class TopBar extends Component {
                                                     {state}
                                                 </span>
 
-                                                <IconCaret className="text-green-300"/>
+                                                <IconCaret className="text-green-300" style={{ marginRight: '-2px' }} />
                                             </h3>
                                         </Button>
                                         {
