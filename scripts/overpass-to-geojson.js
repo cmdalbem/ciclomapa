@@ -3,14 +3,25 @@
 /**
  * Overpass Query to GeoJSON Converter
  * 
+ * Generates Overpass queries from layers.json and converts results to GeoJSON.
+ * 
  * Usage:
  *   node scripts/overpass-to-geojson.js [options]
  * 
- * Options:
- *   --query <file>      Path to Overpass query file (default: reads from stdin)
- *   --output <file>     Output GeoJSON file path (default: output.geojson)
- *   --area <name>       Area name for geocodeArea (default: Brazil)
- *   --endpoint <url>    Overpass API endpoint (default: https://overpass-api.de/api/interpreter)
+ * Required Options:
+ *   --output <file>     Output GeoJSON file path
+ *   --area <name>       Area name for the query
+ * 
+ * Optional Options:
+ *   --endpoint <url>    Overpass API endpoint (default: first server from fallback list)
+ *   --include-layers    Comma-separated list of layer names to include
+ *   --exclude-layers    Comma-separated list of layer names to exclude
+ *   --include-poi        Include POI (Point of Interest) layers in the query
+ * 
+ * Note: If no --endpoint is specified, the script will automatically try multiple
+ * Overpass API servers in sequence if one fails, providing better reliability.
+ * 
+ * By default, POI layers are excluded. Use --include-poi to include them.
  */
 
 const fs = require('fs');
@@ -20,12 +31,15 @@ const path = require('path');
 const { URL } = require('url');
 const osmtogeojson = require('osmtogeojson');
 
-// Default configuration
-const DEFAULTS = {
-    endpoint: 'https://overpass-api.de/api/interpreter',
-    output: 'output.geojson',
-    area: 'Brazil'
-};
+const OVERPASS_SERVERS = [
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://z.overpass-api.de/api/interpreter',
+    'https://overpass.openstreetmap.fr/api/interpreter',
+    'https://overpass.osm.ch/api/interpreter',
+    'https://overpass.nchc.org.tw/api/interpreter'
+];
+
+const DEFAULT_OVERPASS_ENDPOINT = OVERPASS_SERVERS[0];
 
 // Area ID overrides (from constants.js)
 const AREA_ID_OVERRIDES = {
@@ -37,157 +51,106 @@ const AREA_ID_OVERRIDES = {
     'Madri, Madrid, Espanha': 3605326784,
 };
 
-// Generate smart default filename based on parameters
-function generateDefaultFilename(config) {
-    const parts = [];
-    
-    // If query file provided, use its name (without extension) as prefix
-    if (config.queryFile) {
-        const queryName = path.basename(config.queryFile, path.extname(config.queryFile));
-        parts.push(queryName);
-    }
-    
-    // Add area name (slugified)
-    if (config.area && config.area !== DEFAULTS.area) {
-        const areaSlug = slugify(config.area);
-        parts.push(areaSlug);
-    }
-    
-    // Add suffix if using --from-layers
-    if (config.fromLayers) {
-        parts.push('layers');
-    }
-    
-    // If no parts, use default
-    if (parts.length === 0) {
-        return 'output.geojson';
-    }
-    
-    return `${parts.join('-')}.geojson`;
-}
-
 // Parse command line arguments
 function parseArgs() {
     const args = process.argv.slice(2);
-    const config = { ...DEFAULTS };
-    let outputExplicitlySet = false;
+    const config = {
+        endpoint: DEFAULT_OVERPASS_ENDPOINT
+    };
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         
-        if (arg === '--query' && i + 1 < args.length) {
-            config.queryFile = args[++i];
-        } else if (arg === '--output' && i + 1 < args.length) {
+        if (arg === '--output' && i + 1 < args.length) {
             config.output = args[++i];
-            outputExplicitlySet = true;
         } else if (arg === '--area' && i + 1 < args.length) {
             config.area = args[++i];
         } else if (arg === '--endpoint' && i + 1 < args.length) {
             config.endpoint = args[++i];
-        } else if (arg === '--from-layers') {
-            config.fromLayers = true;
         } else if (arg === '--include-layers' && i + 1 < args.length) {
             config.includeLayers = args[++i].split(',').map(s => s.trim()).filter(s => s);
         } else if (arg === '--exclude-layers' && i + 1 < args.length) {
             config.excludeLayers = args[++i].split(',').map(s => s.trim()).filter(s => s);
+        } else if (arg === '--include-poi') {
+            config.includePoi = true;
         } else if (arg === '--help' || arg === '-h') {
             console.log(`
 Overpass Query to GeoJSON Converter
 
+Generates Overpass queries from layers.json and converts results to GeoJSON.
+
 Usage:
   node scripts/overpass-to-geojson.js [options]
 
-Options:
-  --query <file>      Path to Overpass query file (if not provided, reads from stdin)
-  --output <file>     Output GeoJSON file path (default: auto-generated from parameters)
-  --area <name>       Area name to override {{geocodeArea:...}} in query (default: Brazil)
-  --endpoint <url>    Overpass API endpoint (default: https://overpass-api.de/api/interpreter)
-  --from-layers       Generate query from layers.json using the same logic as OSMController
-  --include-layers    Comma-separated list of layer names to include (only with --from-layers)
-  --exclude-layers    Comma-separated list of layer names to exclude (only with --from-layers)
+Required Options:
+  --output <file>     Output GeoJSON file path
+  --area <name>       Area name for the query
+
+Optional Options:
+  --endpoint <url>    Overpass API endpoint (default: first server from fallback list)
+  --include-layers    Comma-separated list of layer names to include
+  --exclude-layers    Comma-separated list of layer names to exclude
+  --include-poi        Include POI (Point of Interest) layers in the query
   --help, -h          Show this help message
 
+Note: If no --endpoint is specified, the script will automatically try multiple
+Overpass API servers in sequence if one fails, providing better reliability.
+
+By default, POI layers are excluded. Use --include-poi to include them.
+
 Examples:
-  node scripts/overpass-to-geojson.js --query query.txt --output brazil.geojson
-  node scripts/overpass-to-geojson.js --query query.txt --area "Spain" --output spain.geojson
   node scripts/overpass-to-geojson.js --area "Spain" --output spain.geojson
-  node scripts/overpass-to-geojson.js --from-layers --area "Spain" --output spain.geojson
-  node scripts/overpass-to-geojson.js --from-layers --area "Spain" --include-layers "Ciclovia,Ciclofaixa"
-  node scripts/overpass-to-geojson.js --from-layers --area "Spain" --exclude-layers "Proibido,Baixa velocidade"
-  echo '[out:json]; node["amenity"="bicycle_rental"]; out;' | node scripts/overpass-to-geojson.js
+  node scripts/overpass-to-geojson.js --area "Brazil" --output brazil.geojson --include-layers "Ciclovia,Ciclofaixa"
+  node scripts/overpass-to-geojson.js --area "France" --output france.geojson --exclude-layers "Proibido,Baixa velocidade"
+  node scripts/overpass-to-geojson.js --area "Germany" --output germany.geojson --include-poi
             `);
             process.exit(0);
         }
     }
     
-    // Validate that include/exclude layers are only used with --from-layers
-    if ((config.includeLayers || config.excludeLayers) && !config.fromLayers) {
-        console.warn('⚠️  Warning: --include-layers and --exclude-layers are only effective with --from-layers');
+    // Validate required parameters
+    if (!config.output) {
+        console.error('❌ Error: Missing required parameter --output');
+        console.error('   Usage: --output <file>');
+        process.exit(1);
     }
     
-    // Generate smart default filename if output not explicitly provided
-    if (!outputExplicitlySet) {
-        config.output = generateDefaultFilename(config);
+    if (!config.area) {
+        console.error('❌ Error: Missing required parameter --area');
+        console.error('   Usage: --area <name>');
+        console.error('   Example: --area "Spain"');
+        process.exit(1);
     }
 
     return config;
 }
 
-// Read query from file or stdin, or generate from layers
-async function readQuery(config) {
-    // If --from-layers is specified, generate query from layers.json
-    if (config.fromLayers) {
-        console.log('📋 Generating query from layers.json...');
-        const spinner = new Spinner('Resolving area...');
-        spinner.start();
-        
-        try {
-            const areaId = await getAreaId(config.area, spinner);
-            spinner.stop(`✓ Resolved "${config.area}" to area ID ${areaId}`);
-            
-            const query = generateQueryFromLayers(
-                areaId,
-                null, // bbox
-                config.includeLayers,
-                config.excludeLayers
-            );
-            return query;
-        } catch (error) {
-            spinner.stop();
-            // Preserve validation errors (they already have helpful messages)
-            if (error.message.includes('Unknown layer(s)')) {
-                throw error;
-            }
-            throw new Error(`Failed to generate query from layers: ${error.message}`);
-        }
-    }
+// Generate query from layers.json
+async function generateQuery(config) {
+    console.log('📋 Generating query from layers.json...');
+    const spinner = new Spinner('Resolving area...');
+    spinner.start();
     
-    if (config.queryFile) {
-        return fs.promises.readFile(config.queryFile, 'utf8');
+    try {
+        const areaId = await getAreaId(config.area, spinner);
+        spinner.stop(`✓ Resolved "${config.area}" to area ID ${areaId}`);
+        
+        const result = generateQueryFromLayers(
+            areaId,
+            null, // bbox
+            config.includeLayers,
+            config.excludeLayers,
+            config.includePoi
+        );
+        return result;
+    } catch (error) {
+        spinner.stop();
+        // Preserve validation errors (they already have helpful messages)
+        if (error.message.includes('Unknown layer(s)')) {
+            throw error;
+        }
+        throw new Error(`Failed to generate query from layers: ${error.message}`);
     }
-
-    // Read from stdin
-    return new Promise((resolve, reject) => {
-        let input = '';
-        process.stdin.setEncoding('utf8');
-        
-        process.stdin.on('data', (chunk) => {
-            input += chunk;
-        });
-        
-        process.stdin.on('end', () => {
-            resolve(input);
-        });
-        
-        process.stdin.on('error', reject);
-        
-        // If no input within 100ms, use default query
-        setTimeout(() => {
-            if (!input) {
-                resolve(getDefaultQuery(config.area));
-            }
-        }, 100);
-    });
 }
 
 // Simple spinner utility for console animations
@@ -295,7 +258,7 @@ async function getAreaId(areaName, spinner = null) {
 }
 
 // Generate query from layers.json (same logic as OSMController.getQuery)
-function generateQueryFromLayers(areaId, bbox = null, includeLayers = null, excludeLayers = null) {
+function generateQueryFromLayers(areaId, bbox = null, includeLayers = null, excludeLayers = null, includePoi = false) {
     const layersPath = path.join(__dirname, '..', 'src', 'layers.json');
     const layers = JSON.parse(fs.readFileSync(layersPath, 'utf8'));
     
@@ -304,7 +267,20 @@ function generateQueryFromLayers(areaId, bbox = null, includeLayers = null, excl
         l.id = slugify(l.name);
     });
     
-    let filteredLayers = layers.filter(l => l.filters);
+    // Filter out layers without filters, debug layers, and POI layers (unless includePoi is true)
+    let filteredLayers = layers.filter(l => {
+        if (!l.filters) return false;
+        if (l.onlyDebug) return false;
+        if (!includePoi && l.type === 'poi') return false;
+        return true;
+    });
+    
+    if (!includePoi) {
+        const poiCount = layers.filter(l => l.filters && !l.onlyDebug && l.type === 'poi').length;
+        if (poiCount > 0) {
+            console.log(`   ℹ️  Excluding ${poiCount} POI layer(s) (use --include-poi to include them)`);
+        }
+    }
     
     // Build a map of all available layer names and IDs for validation
     const availableLayersMap = new Map();
@@ -395,7 +371,7 @@ function generateQueryFromLayers(areaId, bbox = null, includeLayers = null, excl
         ).join("")
     ).join("");
 
-    return `
+    const query = `
         [out:json][timeout:500];
         ${!bbox && `area(${areaId})->.a;`}
         (
@@ -403,6 +379,13 @@ function generateQueryFromLayers(areaId, bbox = null, includeLayers = null, excl
         );
         out body geom;
     `;
+
+    const includedLayerNames = filteredLayers.map(l => l.name).sort();
+
+    return {
+        query: query.trim(),
+        layers: includedLayerNames
+    };
 }
 
 // Resolve area name to relation ID using Nominatim
@@ -454,139 +437,7 @@ async function resolveAreaToRelationId(areaName, spinner = null) {
     });
 }
 
-// Convert Overpass Turbo {{geocodeArea:...}} syntax to Overpass API syntax
-async function convertGeocodeArea(query, overrideArea = null) {
-    // Replace {{geocodeArea:AreaName}}->.a; or {{geocodeArea:AreaName}} with proper Overpass area query
-    // Match the full pattern including optional arrow assignment
-    const geocodeAreaRegex = /\{\{geocodeArea:([^}]+)\}\}(->\.[a-zA-Z_]+;)?/g;
-    const matches = [...query.matchAll(geocodeAreaRegex)];
-    
-    if (matches.length === 0) {
-        // If no geocodeArea found but overrideArea is provided, inject it
-        if (overrideArea) {
-            console.log(`   ℹ️  No {{geocodeArea:...}} found in query, but --area provided.`);
-            console.log(`   Adding area "${overrideArea}" to query...`);
-            // Try to find a good place to inject it - look for area.a references
-            if (query.includes('(area.a)')) {
-                // Inject at the beginning after [out:json]
-                query = query.replace(/\[out:json\]/, `[out:json]\n{{geocodeArea:${overrideArea}}}->.a;`);
-                // Now we have a geocodeArea, so re-run the conversion
-                return convertGeocodeArea(query, overrideArea);
-            } else {
-                // No area.a found, can't inject meaningfully
-                console.log(`   ⚠️  Could not find area references in query, skipping area injection.`);
-            }
-        }
-        return query;
-    }
-    
-    // If overrideArea is provided, replace all geocodeArea references with it
-    let areaNames;
-    if (overrideArea) {
-        console.log(`   ℹ️  Overriding area(s) with "${overrideArea}" from --area parameter`);
-        areaNames = [overrideArea];
-    } else {
-        // Resolve all unique area names from the query
-        areaNames = [...new Set(matches.map(m => m[1].trim()))];
-    }
-    
-    const areaMap = new Map();
-    
-    const spinner = new Spinner('Resolving area names...');
-    spinner.start();
-    
-    const resolvedAreas = [];
-    
-    try {
-        for (const area of areaNames) {
-            try {
-                const resolved = await resolveAreaToRelationId(area, spinner);
-                areaMap.set(area, resolved);
-                resolvedAreas.push(`   ✓ Resolved "${area}" to area ID ${resolved.areaId}`);
-            } catch (error) {
-                spinner.stop();
-                throw new Error(`Failed to resolve area "${area}": ${error.message}`);
-            }
-        }
-        spinner.stop();
-        // Print all resolved areas
-        resolvedAreas.forEach(msg => console.log(msg));
-    } catch (error) {
-        spinner.stop();
-        throw error;
-    }
-    
-    // Replace all occurrences - use the resolved area for all matches
-    const resolvedArea = areaMap.values().next().value; // Get the first (and possibly only) resolved area
-    
-    return query.replace(geocodeAreaRegex, (match, area, assignment) => {
-        // Use the original assignment if provided, otherwise default to ->.a;
-        const target = assignment || '->.a;';
-        // Use area() function with the area ID
-        return `area(${resolvedArea.areaId})${target}`;
-    });
-}
-
-// Generate default query based on the provided query template
-function getDefaultQuery(area) {
-    return `[out:json][timeout:500];     
-{{geocodeArea:${area}}}->.a;
-(
-    node["shop"="bicycle"](area.a);
-    way["shop"="bicycle"](area.a);
-    node["amenity"="bicycle_rental"](area.a);
-    way["amenity"="bicycle_rental"](area.a);
-    node["amenity"="bicycle_parking"](area.a);
-    way["amenity"="bicycle_parking"](area.a);
-    way["highway"="cycleway"](area.a);
-    
-    way["cycleway"="track"](area.a);
-    way["cycleway:left"="track"](area.a);
-    way["cycleway:right"="track"](area.a);
-    way["cycleway"="opposite_track"](area.a);
-    way["cycleway:left"="opposite_track"](area.a);
-    way["cycleway:right"="opposite_track"](area.a);
-    way["cycleway"="lane"](area.a);
-    way["cycleway:left"="lane"](area.a);
-    way["cycleway:right"="lane"](area.a);
-    way["cycleway:both"="lane"](area.a);
-    way["cycleway"="opposite_lane"](area.a);
-    way["cycleway:right"="opposite_lane"](area.a);
-    way["cycleway:left"="opposite_lane"](area.a);
-    way["highway"="footway"]["bicycle"="designated"](area.a);
-    way["highway"="pedestrian"]["bicycle"="designated"](area.a);
-    way["highway"="pedestrian"]["bicycle"="yes"](area.a);
-    way["cycleway"="sidepath"](area.a);
-    way["cycleway:left"="sidepath"](area.a);
-    way["cycleway:right"="sidepath"](area.a);
-    way["cycleway"="buffered_lane"](area.a);
-    way["cycleway:left"="buffered_lane"](area.a);
-    way["cycleway:right"="buffered_lane"](area.a);
-    way["cycleway"="shared_lane"](area.a);
-    way["cycleway:left"="shared_lane"](area.a);
-    way["cycleway:right"="shared_lane"](area.a);
-    way["cycleway"="share_busway"](area.a);
-    way["cycleway:left"="share_busway"](area.a);
-    way["cycleway:right"="share_busway"](area.a);
-    way["cycleway"="opposite_share_busway"](area.a);
-
-    way["maxspeed"="30"](area.a);
-    way["maxspeed"="20"](area.a);
-
-    way["highway"="living_street"]["bicycle"="yes"](area.a);
-    way["highway"="track"]["bicycle"="designated"](area.a);
-    way["highway"="track"]["bicycle"="yes"](area.a);
-    way["highway"="path"]["bicycle"="designated"](area.a);
-    way["highway"="path"]["bicycle"="yes"](area.a);
-
-    way["bicycle"="no"](area.a);
-    way["bicycle"="dismount"](area.a);
-
-);
-out body geom;`;
-}
-
-// Execute Overpass query
+// Execute Overpass query against a single endpoint
 function executeOverpassQuery(query, endpoint, spinner = null) {
     return new Promise((resolve, reject) => {
         const url = new URL(endpoint);
@@ -666,6 +517,70 @@ function executeOverpassQuery(query, endpoint, spinner = null) {
     });
 }
 
+// Execute Overpass query with automatic fallback to multiple servers
+async function executeOverpassQueryWithFallback(query, endpoint, spinner = null) {
+    // If a custom endpoint is provided, use only that one
+    if (endpoint !== DEFAULT_OVERPASS_ENDPOINT) {
+        return executeOverpassQuery(query, endpoint, spinner);
+    }
+    
+    // Otherwise, try servers in sequence until one succeeds
+    const errors = [];
+    
+    for (let i = 0; i < OVERPASS_SERVERS.length; i++) {
+        const server = OVERPASS_SERVERS[i];
+        const serverNumber = i + 1;
+        
+        try {
+            if (i === 0) {
+                if (spinner) {
+                    spinner.update(`Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}...`);
+                } else {
+                    console.log(`   🔄 Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`);
+                }
+            } else {
+                // Stop spinner before printing failure message
+                if (spinner) spinner.stop();
+                console.log(`   ⚠️  Server ${i}/${OVERPASS_SERVERS.length} failed, trying next...`);
+                if (spinner) {
+                    spinner.start();
+                    spinner.update(`Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}...`);
+                } else {
+                    console.log(`   🔄 Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`);
+                }
+            }
+            
+            const result = await executeOverpassQuery(query, server, spinner);
+            
+            // Stop spinner before printing success message
+            if (spinner) spinner.stop();
+            if (i > 0) {
+                console.log(`   ✓ Successfully used fallback server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`);
+            } else {
+                console.log(`   ✓ Successfully used server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`);
+            }
+            
+            return result;
+        } catch (error) {
+            errors.push({ server, error: error.message });
+            
+            // Stop spinner before printing error message
+            if (spinner) spinner.stop();
+            console.log(`   ❌ Server ${serverNumber}/${OVERPASS_SERVERS.length} failed: ${server}`);
+            console.log(`      Error: ${error.message}`);
+            
+            if (i < OVERPASS_SERVERS.length - 1) {
+                console.log(`   ↻ Routing to next server...`);
+            }
+        }
+    }
+    
+    // All servers failed
+    console.log('');
+    const errorMessages = errors.map((e, idx) => `   ${idx + 1}. ${e.server}: ${e.error}`).join('\n');
+    throw new Error(`All Overpass API servers failed:\n${errorMessages}`);
+}
+
 // Convert OSM JSON to GeoJSON
 function convertToGeoJSON(osmData) {
     try {
@@ -690,42 +605,43 @@ async function main() {
         const config = parseArgs();
         
         console.log('');
-        console.log('📥 Reading Overpass query...');
-        let query = await readQuery(config);
+        console.log('📥 Generating Overpass query from layers.json...');
+        const queryResult = await generateQuery(config);
+        const query = queryResult.query;
+        const layers = queryResult.layers;
         
         // Trim whitespace
-        query = query.trim();
+        const trimmedQuery = query.trim();
         
-        if (!query) {
-            console.error('❌ Error: No query provided');
+        if (!trimmedQuery) {
+            console.error('❌ Error: Failed to generate query');
             process.exit(1);
         }
 
-        // Convert Overpass Turbo syntax to Overpass API syntax
-        // Skip conversion if query was generated from layers (it's already in correct format)
-        // Always convert if geocodeArea is found, or if --area is provided explicitly
-        const hasGeocodeArea = query.includes('{{geocodeArea:');
-        const hasAreaOverride = config.area !== DEFAULTS.area;
+        console.log('');
+        console.log(`📊 Query includes ${layers.length} layer(s):`);
+        console.log('─'.repeat(60));
+        layers.forEach((layerName, index) => {
+            console.log(`   ${index + 1}. ${layerName}`);
+        });
+        console.log('─'.repeat(60));
+        console.log('');
+        console.log('📋 Generated query:');
+        console.log('─'.repeat(60));
+        console.log(trimmedQuery);
+        console.log('─'.repeat(60));
+        console.log('');
         
-        if (!config.fromLayers && (hasGeocodeArea || hasAreaOverride)) {
-            console.log('🔄 Converting Overpass Turbo syntax to Overpass API syntax...');
-            const overrideArea = hasAreaOverride ? config.area : null;
-            query = await convertGeocodeArea(query, overrideArea);
-            console.log('');
+        if (config.endpoint === DEFAULT_OVERPASS_ENDPOINT) {
+            console.log(`🌐 Executing query (will try ${OVERPASS_SERVERS.length} servers if needed)...`);
+        } else {
+            console.log(`🌐 Executing query against ${config.endpoint}...`);
         }
-
-        console.log('');
-        console.log('📋 Converted query:');
-        console.log('─'.repeat(60));
-        console.log(query);
-        console.log('─'.repeat(60));
-        console.log('');
-        console.log(`🌐 Executing query against ${config.endpoint}...`);
         
         const querySpinner = new Spinner('Executing query...');
         querySpinner.start();
         
-        const osmData = await executeOverpassQuery(query, config.endpoint, querySpinner);
+        const osmData = await executeOverpassQueryWithFallback(trimmedQuery, config.endpoint, querySpinner);
         
         console.log('');
         if (!osmData.elements || osmData.elements.length === 0) {
@@ -751,13 +667,6 @@ async function main() {
         console.error('❌ Error:', error.message);
         console.error('');
         
-        // If it's a query-related error, provide helpful hints
-        if (error.message.includes('parse error') || error.message.includes('Unknown type')) {
-            console.error('💡 Tip: Make sure your query uses valid Overpass QL syntax.');
-            console.error('   If you\'re using {{geocodeArea:...}}, the script will convert it automatically.');
-            console.error('');
-        }
-        
         process.exit(1);
     }
 }
@@ -767,5 +676,5 @@ if (require.main === module) {
     main();
 }
 
-module.exports = { main, executeOverpassQuery, convertToGeoJSON };
+module.exports = { main, executeOverpassQuery, executeOverpassQueryWithFallback, convertToGeoJSON };
 
