@@ -1,10 +1,40 @@
 // Import dark theme by default (existing behavior)
 @import './antd.customize.less';
 
+html {
+    height: 100%;
+    overflow: hidden;
+}
+
 body {
     margin: 0;
     padding: 0;
+    height: 100%;
+    overflow: hidden;
     transition: background-color 0.3s ease;
+}
+
+#root {
+    height: 100%;
+    overflow: hidden;
+}
+
+#ciclomapa {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    
+    > .flex {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        
+        > .relative {
+            height: 100%;
+            position: relative;
+        }
+    }
 }
 
 button.ant-btn {
