@@ -4,6 +4,37 @@ import App from './App';
 import * as serviceWorker from './serviceWorker';
 import { BrowserRouter as Router } from "react-router-dom";
 
+// Function to set viewport height CSS custom property
+// This accounts for mobile browser UI (address bar, navigation bar) which 100vh doesn't
+function setViewportHeight() {
+  document.documentElement.style.setProperty('--viewport-height', `${window.innerHeight}px`);
+}
+
+// Set initial viewport height
+setViewportHeight();
+
+// Update viewport height on resize and orientation change
+// Use a debounced approach to avoid excessive updates
+let resizeTimeout;
+function handleResize() {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    setViewportHeight();
+  }, 100);
+}
+
+window.addEventListener('resize', handleResize);
+window.addEventListener('orientationchange', () => {
+  // Small delay to ensure the viewport has updated after orientation change
+  setTimeout(setViewportHeight, 100);
+});
+
+// Also update on visual viewport changes (for mobile browsers with dynamic UI)
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', handleResize);
+  window.visualViewport.addEventListener('scroll', handleResize);
+}
+
 // Create a root using ReactDOM.createRoot
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
