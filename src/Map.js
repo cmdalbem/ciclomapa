@@ -102,6 +102,7 @@ class Map extends Component {
     debouncedMapStateSync;
     lastGeocodedPlaceName;
     originalPOIFilters; // Store original POI filters to restore when routes are cleared
+    geolocateControl; // Reference to Mapbox GeolocateControl
 
     constructor(props) {
         super(props);
@@ -1585,6 +1586,23 @@ class Map extends Component {
         if (hoveredRouteChanged) {
             this.updateHoveredRoute(this.props.hoveredRouteIndex);
         }
+
+        // Handle geolocation tracking state changes
+        if (IS_MOBILE && 
+            this.geolocateControl && 
+            this.props.isTrackingUserLocation !== prevProps.isTrackingUserLocation) {
+            if (this.props.isTrackingUserLocation && !prevProps.isTrackingUserLocation) {
+                // User wants to start tracking
+                try {
+                    this.geolocateControl.trigger();
+                    console.debug('Starting geolocation tracking from prop change');
+                } catch (error) {
+                    console.debug('Could not start geolocation tracking:', error);
+                }
+            }
+            // Note: We don't stop tracking here because trackuserlocationend event
+            // will be fired automatically when user moves the map
+        }
     }
 
     updateRoutesLayer(routes) {
@@ -2287,6 +2305,10 @@ class Map extends Component {
                 trackUserLocation: IS_MOBILE ? true : false,
                 showUserHeading: IS_MOBILE ? true : false
             });
+            
+            // Store reference to geolocate control
+            this.geolocateControl = geolocate;
+            
             geolocate.on('geolocate', result => {
                 console.debug('geolocate', result);
                 this.reverseGeocode([result.coords.longitude, result.coords.latitude])
@@ -2299,8 +2321,34 @@ class Map extends Component {
                         console.debug('Reverse geocoding failed:', err.message);
                     });
             });
+            
+            // Listen to tracking events to persist state
+            if (IS_MOBILE && this.props.onTrackingUserLocationChange) {
+                geolocate.on('trackuserlocationstart', () => {
+                    console.debug('Geolocation tracking started');
+                    this.props.onTrackingUserLocationChange(true);
+                });
+                
+                geolocate.on('trackuserlocationend', () => {
+                    console.debug('Geolocation tracking ended (user moved map)');
+                    this.props.onTrackingUserLocationChange(false);
+                });
+            }
+            
             this.map.addControl(geolocate, 'bottom-right');
             
+            // Restore tracking state if it was active before
+            if (IS_MOBILE && this.props.isTrackingUserLocation && this.props.onTrackingUserLocationChange) {
+                // Wait a bit for the control to be fully initialized, then trigger tracking
+                setTimeout(() => {
+                    try {
+                        geolocate.trigger();
+                        console.debug('Restored geolocation tracking from localStorage');
+                    } catch (error) {
+                        console.debug('Could not restore geolocation tracking:', error);
+                    }
+                }, 500);
+            }
             
             // this.map.addControl(new mapboxgl.FullscreenControl({
             //     container: document.querySelector('body')
