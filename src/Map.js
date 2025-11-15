@@ -2323,6 +2323,7 @@ class Map extends Component {
             });
             
             // Listen to tracking events to persist state
+            // Note: These listeners are additive and don't interfere with the control's internal behavior
             if (IS_MOBILE && this.props.onTrackingUserLocationChange) {
                 geolocate.on('trackuserlocationstart', () => {
                     console.debug('Geolocation tracking started');
@@ -2330,24 +2331,42 @@ class Map extends Component {
                 });
                 
                 geolocate.on('trackuserlocationend', () => {
-                    console.debug('Geolocation tracking ended (user moved map)');
+                    console.debug('Geolocation tracking ended (user moved map or stopped tracking)');
                     this.props.onTrackingUserLocationChange(false);
+                });
+                
+                // Handle errors (e.g., permission denied) - stop tracking state
+                geolocate.on('error', (error) => {
+                    console.debug('Geolocation error:', error);
+                    // Only update state if we were tracking, to avoid unnecessary updates
+                    if (this.props.isTrackingUserLocation) {
+                        this.props.onTrackingUserLocationChange(false);
+                    }
                 });
             }
             
             this.map.addControl(geolocate, 'bottom-right');
             
             // Restore tracking state if it was active before
+            // Note: trigger() will start tracking if trackUserLocation is true
+            // It may prompt for permission if not already granted
             if (IS_MOBILE && this.props.isTrackingUserLocation && this.props.onTrackingUserLocationChange) {
-                // Wait a bit for the control to be fully initialized, then trigger tracking
+                // Wait for the control to be fully initialized and added to the map
+                // Use a longer timeout to ensure the control is ready
                 setTimeout(() => {
                     try {
-                        geolocate.trigger();
-                        console.debug('Restored geolocation tracking from localStorage');
+                        if (geolocate && typeof geolocate.trigger === 'function') {
+                            geolocate.trigger();
+                            console.debug('Restored geolocation tracking from localStorage');
+                        } else {
+                            console.debug('Geolocate control not ready for restoration');
+                        }
                     } catch (error) {
                         console.debug('Could not restore geolocation tracking:', error);
+                        // If restoration fails, update state to false to avoid stuck state
+                        this.props.onTrackingUserLocationChange(false);
                     }
-                }, 500);
+                }, 1000);
             }
             
             // this.map.addControl(new mapboxgl.FullscreenControl({
