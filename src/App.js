@@ -148,6 +148,7 @@ class App extends Component {
                 MAP_STYLES.LIGHT,
             layers: this.initLayers(prev.layersStates, isDarkMode, urlParams.debug || false),
             lengths: {},
+            isTrackingUserLocation: IS_MOBILE && prev.isTrackingUserLocation === true ? true : false,
             embedMode: urlParams.embed,
             isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : !IS_PROD,
             hideUI: !urlParams.embed,
@@ -271,6 +272,7 @@ class App extends Component {
                 isSidebarOpen: this.state.isSidebarOpen,
                 layersStates: layersStates,
                 isDarkMode: this.state.isDarkMode,
+                isTrackingUserLocation: this.state.isTrackingUserLocation,
             }
 
             let str = JSON.stringify(state);
@@ -974,6 +976,11 @@ class App extends Component {
                             setMapRef={this.setMapRef}
                             directionsPanelRef={this.directionsPanel}
                             toPoint={this.state.toPoint}
+                            isTrackingUserLocation={this.state.isTrackingUserLocation}
+                            onTrackingUserLocationChange={(isTracking) => {
+                                this.setState({ isTrackingUserLocation: isTracking });
+                                this.saveStateToLocalStorage();
+                            }}
                         />
                         
                         {/* {

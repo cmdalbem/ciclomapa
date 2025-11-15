@@ -102,6 +102,7 @@ class Map extends Component {
     debouncedMapStateSync;
     lastGeocodedPlaceName;
     originalPOIFilters; // Store original POI filters to restore when routes are cleared
+    geolocateControl; // Reference to Mapbox GeolocateControl
 
     constructor(props) {
         super(props);
@@ -224,7 +225,7 @@ class Map extends Component {
             this.reverseGeocode([center.lng, center.lat])
                 .then(result => {
                     const currentPlaceName = result.place_name;
-                    console.debug('Geocoding result:', currentPlaceName);
+                    // console.debug('Geocoding result:', currentPlaceName);
 
                     if (!this.lastGeocodedPlaceName) {
                         // Initial case
@@ -233,7 +234,7 @@ class Map extends Component {
                     } else {
                         // Check if this is the same place as the last geocoding result
                         if (this.lastGeocodedPlaceName === currentPlaceName) {
-                            console.debug('Same place detected, not triggering debounced sync...');
+                            // console.debug('Same place detected, not triggering debounced sync...');
                         } else {
                             console.debug('Different place detected, cancelling previous sync and starting new timer');
 
@@ -1585,6 +1586,7 @@ class Map extends Component {
         if (hoveredRouteChanged) {
             this.updateHoveredRoute(this.props.hoveredRouteIndex);
         }
+
     }
 
     updateRoutesLayer(routes) {
@@ -2287,6 +2289,10 @@ class Map extends Component {
                 trackUserLocation: IS_MOBILE ? true : false,
                 showUserHeading: IS_MOBILE ? true : false
             });
+            
+            // Store reference to geolocate control
+            this.geolocateControl = geolocate;
+            
             geolocate.on('geolocate', result => {
                 console.debug('geolocate', result);
                 this.reverseGeocode([result.coords.longitude, result.coords.latitude])
@@ -2299,8 +2305,53 @@ class Map extends Component {
                         console.debug('Reverse geocoding failed:', err.message);
                     });
             });
+            
+            // Listen to tracking events to sync state for persistence
+            // The control handles all button clicks and tracking logic internally
+            // We just sync the state to React for localStorage persistence
+            if (IS_MOBILE && this.props.onTrackingUserLocationChange) {
+                geolocate.on('trackuserlocationstart', () => {
+                    console.debug('Geolocation tracking started');
+                    this.props.onTrackingUserLocationChange(true);
+                });
+                
+                geolocate.on('trackuserlocationend', () => {
+                    console.debug('Geolocation tracking ended (user moved map or stopped tracking)');
+                    this.props.onTrackingUserLocationChange(false);
+                });
+                
+                // Handle errors (e.g., permission denied) - stop tracking state
+                geolocate.on('error', (error) => {
+                    console.debug('Geolocation error:', error);
+                    if (this.props.isTrackingUserLocation) {
+                        this.props.onTrackingUserLocationChange(false);
+                    }
+                });
+            }
+            
             this.map.addControl(geolocate, 'bottom-right');
             
+            // Restore tracking state if it was active before
+            // Note: trigger() will start tracking if trackUserLocation is true
+            // It may prompt for permission if not already granted
+            if (IS_MOBILE && this.props.isTrackingUserLocation && this.props.onTrackingUserLocationChange) {
+                // Wait for the control to be fully initialized and added to the map
+                // Use a longer timeout to ensure the control is ready
+                setTimeout(() => {
+                    try {
+                        if (geolocate && typeof geolocate.trigger === 'function') {
+                            geolocate.trigger();
+                            console.debug('Restored geolocation tracking from localStorage');
+                        } else {
+                            console.debug('Geolocate control not ready for restoration');
+                        }
+                    } catch (error) {
+                        console.debug('Could not restore geolocation tracking:', error);
+                        // If restoration fails, update state to false to avoid stuck state
+                        this.props.onTrackingUserLocationChange(false);
+                    }
+                }, 1000);
+            }
             
             // this.map.addControl(new mapboxgl.FullscreenControl({
             //     container: document.querySelector('body')
