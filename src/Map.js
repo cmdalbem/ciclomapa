@@ -225,7 +225,7 @@ class Map extends Component {
             this.reverseGeocode([center.lng, center.lat])
                 .then(result => {
                     const currentPlaceName = result.place_name;
-                    console.debug('Geocoding result:', currentPlaceName);
+                    // console.debug('Geocoding result:', currentPlaceName);
 
                     if (!this.lastGeocodedPlaceName) {
                         // Initial case
@@ -234,7 +234,7 @@ class Map extends Component {
                     } else {
                         // Check if this is the same place as the last geocoding result
                         if (this.lastGeocodedPlaceName === currentPlaceName) {
-                            console.debug('Same place detected, not triggering debounced sync...');
+                            // console.debug('Same place detected, not triggering debounced sync...');
                         } else {
                             console.debug('Different place detected, cancelling previous sync and starting new timer');
 
@@ -1587,22 +1587,6 @@ class Map extends Component {
             this.updateHoveredRoute(this.props.hoveredRouteIndex);
         }
 
-        // Handle geolocation tracking state changes
-        if (IS_MOBILE && 
-            this.geolocateControl && 
-            this.props.isTrackingUserLocation !== prevProps.isTrackingUserLocation) {
-            if (this.props.isTrackingUserLocation && !prevProps.isTrackingUserLocation) {
-                // User wants to start tracking
-                try {
-                    this.geolocateControl.trigger();
-                    console.debug('Starting geolocation tracking from prop change');
-                } catch (error) {
-                    console.debug('Could not start geolocation tracking:', error);
-                }
-            }
-            // Note: We don't stop tracking here because trackuserlocationend event
-            // will be fired automatically when user moves the map
-        }
     }
 
     updateRoutesLayer(routes) {
@@ -2322,8 +2306,9 @@ class Map extends Component {
                     });
             });
             
-            // Listen to tracking events to persist state
-            // Note: These listeners are additive and don't interfere with the control's internal behavior
+            // Listen to tracking events to sync state for persistence
+            // The control handles all button clicks and tracking logic internally
+            // We just sync the state to React for localStorage persistence
             if (IS_MOBILE && this.props.onTrackingUserLocationChange) {
                 geolocate.on('trackuserlocationstart', () => {
                     console.debug('Geolocation tracking started');
@@ -2338,7 +2323,6 @@ class Map extends Component {
                 // Handle errors (e.g., permission denied) - stop tracking state
                 geolocate.on('error', (error) => {
                     console.debug('Geolocation error:', error);
-                    // Only update state if we were tracking, to avoid unnecessary updates
                     if (this.props.isTrackingUserLocation) {
                         this.props.onTrackingUserLocationChange(false);
                     }
