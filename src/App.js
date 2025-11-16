@@ -99,12 +99,16 @@ class App extends Component {
         const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
         console.log('Previous saved state:', prev);
         
-        // Use saved preference if available, otherwise fallback to system theme preference
-        const isDarkMode = prev.isDarkMode !== undefined 
-            ? prev.isDarkMode 
-            : this.getSystemThemePreference();
+        // On mobile, always use system theme preference since toggle isn't available
+        // On desktop, use saved preference if available, otherwise fallback to system theme preference
+        const isDarkMode = IS_MOBILE
+            ? this.getSystemThemePreference()
+            : (prev.isDarkMode !== undefined 
+                ? prev.isDarkMode 
+                : this.getSystemThemePreference());
         console.log('Theme preference:', isDarkMode ? 'dark' : 'light', 
-            prev.isDarkMode !== undefined ? '(saved preference)' : '(system preference)');
+            IS_MOBILE ? '(mobile - system preference)' :
+            (prev.isDarkMode !== undefined ? '(saved preference)' : '(system preference)'));
 
         // Parse route data from URL
         let fromPoint = null;
