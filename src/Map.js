@@ -415,7 +415,8 @@ class Map extends Component {
                 'fill-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.1 : 0.2),
                 'fill-opacity': 0.2
             }
-        }, layerUnderneathName);
+        // }, layerUnderneathName); // This one should be on TOP of the rest!
+        });
 
         // Icons (higher zoom levels)
         this.map.addLayer({
@@ -470,7 +471,8 @@ class Map extends Component {
                 ],
                 'text-halo-color': this.props.isDarkMode ? '#1c1a17' : '#ffffff',
             }
-        }, layerUnderneathName);
+        // }, layerUnderneathName); // This one should be on TOP of the rest!
+        });
 
         // Interactions
         const self = this;
