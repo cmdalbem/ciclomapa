@@ -147,6 +147,7 @@ export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 11;
  */
 
 export const IS_PROD = window.location.hostname === 'ciclomapa.org.br';
+export const DEFAULT_SIDEBAR_OPEN = false;
 export const ENABLE_COMMENTS = true;
 export const SAVE_TO_FIREBASE = true;
 export const DISABLE_DATA_HEALTY_TEST = false;

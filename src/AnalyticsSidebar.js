@@ -121,7 +121,7 @@ class AnalyticsSidebar extends Component {
     }
 
     render() {
-        const { lengths, layers } = this.props;
+        const { lengths, layers, isDarkMode } = this.props;
         
         if (!layers) {
             return;
@@ -177,7 +177,7 @@ class AnalyticsSidebar extends Component {
                     {
                         this.props.location &&
                         <>
-                            <div className="mt-3 text-3xl tracking-tighter">
+                            <div className="mt-3 text-3xl tracking-tighter leading-none">
                                 {this.props.location.split(',')[0]}
                             </div>
                             <div className="mb-2 mt-0 text-xl tracking-tight opacity-50">
@@ -264,27 +264,33 @@ class AnalyticsSidebar extends Component {
                                     {this.generatePatterns(layers)}
                                 </defs>
                                 <Pie
-                                    data={this.state.chartsData} dataKey="value"
+                                    data={this.state.chartsData && this.state.totalLength && this.state.totalLength > 0
+                                        ? this.state.chartsData 
+                                        : [{ value: 1, fill: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }]} 
+                                    dataKey="value"
                                     cx={'50%'} cy={'50%'}
                                     innerRadius={90} outerRadius={100}
-                                    paddingAngle={4} strokeWidth={0}
+                                    paddingAngle={this.state.chartsData && this.state.totalLength && this.state.totalLength > 0 ? 4 : 0} strokeWidth={0}
                                     startAngle={90} endAngle={-2700}
                                 />
                             </PieChart>
 
-                            {
-                                this.state.totalLength && this.state.totalLength >= 0 &&
-                                <div
-                                    className="absolute top-0 w-full flex flex-col items-center justify-center text-xs"
-                                    style={{height: PIE_CHART_WIDTH_PX+'px'}}
-                                >
-                                    TOTAL
-                                    <div className="text-4xl font-regular tracking-tighter">
-                                        { this.state.totalLength.toFixed(1)}
-                                    </div> 
-                                    km
-                                </div>
-                            }
+                            <div
+                                className="absolute top-0 w-full flex flex-col items-center justify-center text-xs"
+                                style={{height: PIE_CHART_WIDTH_PX+'px'}}
+                            >
+                                {this.state.totalLength && this.state.totalLength >= 0 ? (
+                                    <>
+                                        TOTAL
+                                        <div className="text-4xl font-regular tracking-tighter">
+                                            { this.state.totalLength.toFixed(1) }
+                                        </div>
+                                        km
+                                    </>
+                                ) : (
+                                    <span className="opacity-50">Sem dados</span>
+                                )}
+                            </div>
                         </div>
                         
                         <div className="mt-2">
