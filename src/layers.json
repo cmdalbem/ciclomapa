@@ -79,7 +79,7 @@
         ],
         "type": "poi",
         "icon": "poi-bikeshop",
-        "zoomThreshold": 14,
+        "zoomThreshold": 15,
         "style": {
             "textColor": "#2A7BF4"
         }
