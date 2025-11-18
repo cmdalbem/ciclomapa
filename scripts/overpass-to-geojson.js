@@ -9,10 +9,10 @@
  *   node scripts/overpass-to-geojson.js [options]
  * 
  * Required Options:
- *   --output <file>     Output GeoJSON file path
  *   --area <name>       Area name for the query
  * 
  * Optional Options:
+ *   --output <file>     Output GeoJSON file path (default: uses area name as filename)
  *   --endpoint <url>    Overpass API endpoint (default: first server from fallback list)
  *   --include-layers    Comma-separated list of layer names to include
  *   --exclude-layers    Comma-separated list of layer names to exclude
@@ -83,10 +83,10 @@ Usage:
   node scripts/overpass-to-geojson.js [options]
 
 Required Options:
-  --output <file>     Output GeoJSON file path
   --area <name>       Area name for the query
 
 Optional Options:
+  --output <file>     Output GeoJSON file path (default: uses area name as filename)
   --endpoint <url>    Overpass API endpoint (default: first server from fallback list)
   --include-layers    Comma-separated list of layer names to include
   --exclude-layers    Comma-separated list of layer names to exclude
@@ -99,27 +99,26 @@ Overpass API servers in sequence if one fails, providing better reliability.
 By default, POI layers are excluded. Use --include-poi to include them.
 
 Examples:
-  node scripts/overpass-to-geojson.js --area "Spain" --output spain.geojson
+  node scripts/overpass-to-geojson.js --area "Spain"
   node scripts/overpass-to-geojson.js --area "Brazil" --output brazil.geojson --include-layers "Ciclovia,Ciclofaixa"
-  node scripts/overpass-to-geojson.js --area "France" --output france.geojson --exclude-layers "Proibido,Baixa velocidade"
-  node scripts/overpass-to-geojson.js --area "Germany" --output germany.geojson --include-poi
+  node scripts/overpass-to-geojson.js --area "France" --exclude-layers "Proibido,Baixa velocidade"
+  node scripts/overpass-to-geojson.js --area "Germany" --include-poi
             `);
             process.exit(0);
         }
     }
     
     // Validate required parameters
-    if (!config.output) {
-        console.error('❌ Error: Missing required parameter --output');
-        console.error('   Usage: --output <file>');
-        process.exit(1);
-    }
-    
     if (!config.area) {
         console.error('❌ Error: Missing required parameter --area');
         console.error('   Usage: --area <name>');
         console.error('   Example: --area "Spain"');
         process.exit(1);
+    }
+
+    // Generate output filename from area name if not provided
+    if (!config.output) {
+        config.output = `${slugify(config.area)}.geojson`;
     }
 
     return config;
