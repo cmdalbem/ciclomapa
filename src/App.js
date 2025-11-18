@@ -44,7 +44,8 @@ import {
     FORCE_RECALCULATE_LENGTHS_ALWAYS,
     DEFAULT_LENGTH_CALCULATE_STRATEGIES,
     MAP_STYLES,
-    MAPBOX_ACCESS_TOKEN
+    MAPBOX_ACCESS_TOKEN,
+    DEFAULT_SIDEBAR_OPEN
 } from './constants.js'
 
 import './App.less';
@@ -154,7 +155,7 @@ class App extends Component {
             lengths: {},
             isTrackingUserLocation: IS_MOBILE && prev.isTrackingUserLocation === true ? true : false,
             embedMode: urlParams.embed,
-            isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : !IS_PROD,
+            isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : DEFAULT_SIDEBAR_OPEN,
             hideUI: !urlParams.embed,
             aboutModal: false,
             layersLegendModal: false,
@@ -1014,8 +1015,10 @@ class App extends Component {
                                 location={this.state.area}
                                 lengthCalculationStrategy={this.state.lengthCalculationStrategy}
                                 debugMode={this.state.debugMode}
+                                isDarkMode={this.state.isDarkMode}
                                 toggle={this.toggleSidebar}
                                 onChangeStrategy={this.onChangeStrategy}
+                                downloadData={this.downloadData}
                             />
                     }
                 </div>

@@ -18,7 +18,6 @@ import {
 } from "react-icons/md";
 import {
     HiOutlineMap as IconMap,
-    HiDownload as IconDownload,
     HiOutlineRefresh as IconUpdate,
     HiOutlineChevronDown as IconCaret,
     HiPencil as IconEdit,
@@ -105,7 +104,6 @@ class TopBar extends Component {
             title,
             lastUpdate,
             forceUpdate,
-            downloadData,
             embedMode,
             isDarkMode,
             toggleTheme,
@@ -274,10 +272,6 @@ class TopBar extends Component {
                                             <IconCaret className="text-green-300" style={{ marginRight: '-3px' }} />
                                         </Button>
                                     </Dropdown>
-                                    
-                                    <Button className="glass-bg" onClick={downloadData}>
-                                        <IconDownload /> Dados
-                                    </Button>
 
                                     {
                                         !this.props.isSidebarOpen &&
