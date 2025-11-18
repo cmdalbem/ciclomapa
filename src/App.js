@@ -1016,6 +1016,7 @@ class App extends Component {
                                 debugMode={this.state.debugMode}
                                 toggle={this.toggleSidebar}
                                 onChangeStrategy={this.onChangeStrategy}
+                                downloadData={this.downloadData}
                             />
                     }
                 </div>

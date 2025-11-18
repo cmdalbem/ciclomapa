@@ -7,7 +7,8 @@ import { PieChart, Pie } from 'recharts';
 
 import { 
     HiX as IconClose,
-    HiInformationCircle as IconInfo
+    HiInformationCircle as IconInfo,
+    HiDownload as IconDownload
 } from "react-icons/hi";
 
 import {
@@ -158,9 +159,9 @@ class AnalyticsSidebar extends Component {
                 <div className="px-4">
                     <div className="flex w-full justify-between items-center pt-2 mt-1">
                         <div className="flex items-center">
-                            <IconAnalytics/>
+                            <IconAnalytics className="mr-1" />
 
-                            <h2 className="my-0 pl-1">
+                            <h2 className="my-0">
                                 Métricas
                             </h2>
                         </div>
@@ -172,6 +173,18 @@ class AnalyticsSidebar extends Component {
                             <IconClose/>
                         </div>
                     </div>
+
+                    {
+                        this.props.location &&
+                        <>
+                            <div className="mt-3 text-3xl tracking-tighter">
+                                {this.props.location.split(',')[0]}
+                            </div>
+                            <div className="mb-2 mt-0 text-xl tracking-tight opacity-50">
+                                {this.props.location.split(',')[1] && `${this.props.location.split(',')[1]}`}
+                            </div>
+                        </>
+                    }
 
                     {
                         this.state.cityMetadata && this.state.cityMetadata.pnb_total!==undefined &&
@@ -228,7 +241,6 @@ class AnalyticsSidebar extends Component {
 
                     <Section
                         title="Vias"
-                        beta={true}
                         description={<>
                             <p>
                                 As extensões totais das vias são calculadas automaticamente com base nos dados do OpenStreetMap. 
@@ -283,9 +295,14 @@ class AnalyticsSidebar extends Component {
                                         l.id === 'ciclofaixa' ||
                                         l.id === 'ciclorrota' ||
                                         l.id === 'calcada-compartilhada')
+                                    .sort((a, b) => {
+                                        const lenA = lengths && lengths[a.id] ? lengths[a.id] : 0;
+                                        const lenB = lengths && lengths[b.id] ? lengths[b.id] : 0;
+                                        return lenB - lenA; // Sort descending by length
+                                    })
                                     .map(l => 
                                         <DataLineWithBarChart
-                                            name={l.name}
+                                            name={l.shortName || l.displayName}
                                             key={l.name}
                                             length={lengths && lengths[l.id]}
                                             percent={lengths && Math.floor(lengths[l.id] * 100 / this.state.totalLength) || 0}
@@ -318,6 +335,26 @@ class AnalyticsSidebar extends Component {
                                 )
                         }
                     </Section>
+
+                    {
+                        this.props.downloadData &&
+                        <Section
+                            title="Dados"
+                            description={<>
+                                <p>
+                                    Baixe os dados da infraestrutura cicloviária desta cidade em formato GeoJSON para uso em seus próprios projetos e análises.
+                                </p>
+                            </>}
+                        >
+                            <Button 
+                                className="glass-bg" 
+                                onClick={this.props.downloadData}
+                                block
+                            >
+                                <IconDownload className="inline-block mr-1" /> Baixar dados
+                            </Button>
+                        </Section>
+                    }
                 </div>
 
             </div>
@@ -356,10 +393,15 @@ const DataLine = (props) =>
             { props.name } 
         </span>
 
-        <span>
-            { props.length !== undefined && Math.round(props.length) }
-            { props.length !== undefined && props.unit && ' ' + props.unit }
-        </span>
+        <div className="flex items-center gap-2">
+            <span className="opacity-50">
+                { props.percent !== undefined && props.percent + '%' }
+            </span>
+            <span>
+                { props.length !== undefined && Math.round(props.length) }
+                { props.length !== undefined && props.unit && ' ' + props.unit }
+            </span>
+        </div>
     </div>
 
 const Section = (props) =>
