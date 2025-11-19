@@ -31,6 +31,7 @@ import {
     ROUTE_LINE_BORDER_OPACITY,
     ROUTE_LINE_PADDING_WIDTH,
     NEAR_DESTINATION_POI_RADIUS_KM,
+    PMTILES_FILENAME,
 } from './constants.js'
 
 import Analytics from './Analytics.js'
@@ -552,89 +553,129 @@ class Map extends Component {
     }
 
     initBoundaryLayer() {
-        const filters = this.convertFilterToMapboxFilter({
-            filters: [
-                ["boundary", "administrative"],
-                ["admin_level", "6"],
-                ["admin_level", "7"],
-                ["admin_level", "8"],
-                ["admin_level", "9"],
-                ["admin_level", "10"]
-            ]}
-        );
-
-        this.map.addLayer({
-            'id': 'boundary-layer',
-            'type': 'line',
-            'source': 'osmdata',
-            'name': 'Limites',
-            'filter': filters,
-            'paint': {
-                'line-color': this.props.isDarkMode ? '#FFFFFF' : '#000000',
-                'line-dasharray': [1, 1],
-                'line-width': 2,
-                'line-opacity': 0.3
-            }
-        });
-
-        // this.updateWorldMask();
+        this.updateBoundaryMask();
     }
 
-    // updateWorldMask() {
-    //     const boundaryData = this.props.boundaryData;
-        
-    //     // Remove existing mask if no boundary data
-    //     if (!boundaryData || !boundaryData.features || boundaryData.features.length === 0) {
-    //         if (this.map.getLayer('city-boundary-mask')) {
-    //             this.map.removeLayer('city-boundary-mask');
-    //         }
-    //         if (this.map.getSource('worldMaskSrc')) {
-    //             this.map.removeSource('worldMaskSrc');
-    //         }
-    //         return;
-    //     }
+    updateBoundaryMask() {
+        const removeBoundaryLayers = () => {
+            if (this.map.getLayer('boundary-mask')) this.map.removeLayer('boundary-mask');
+            if (this.map.getSource('boundaryMaskSrc')) this.map.removeSource('boundaryMaskSrc');
+            if (this.map.getLayer('boundary-layer')) this.map.removeLayer('boundary-layer');
+            if (this.map.getSource('boundaryLineSrc')) this.map.removeSource('boundaryLineSrc');
+        };
 
-    //     // Create world polygon with hole for city boundary
-    //     const worldPolygonWithHole = {
-    //         'type': 'Feature',
-    //         'geometry': {
-    //             'type': 'Polygon',
-    //             'coordinates': [
-    //                 // Outer ring - covers the entire world
-    //                 [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]],
-    //                 // Inner ring - hole for the city boundary
-    //                 boundaryData.features[0].geometry.coordinates[0]
-    //             ]
-    //         }
-    //     };
+        if (!this.map || !this.props.data?.features?.length) {
+            removeBoundaryLayers();
+            return;
+        }
 
-    //     const maskData = {
-    //         'type': 'FeatureCollection',
-    //         'features': [worldPolygonWithHole]
-    //     };
+        const isStyleLoaded = this.map.isStyleLoaded();
+        if (!isStyleLoaded) {
+            const retryWhenReady = () => {
+                if (this.map && this.map.isStyleLoaded() && this.props.data?.features?.length) {
+                    this.updateBoundaryMask();
+                } else {
+                    removeBoundaryLayers();
+                }
+            };
+            this.map.once('load', retryWhenReady);
+            this.map.once('idle', retryWhenReady);
+            return;
+        }
 
-    //     // Add or update source
-    //     if (!this.map.getSource('worldMaskSrc')) {
-    //         this.map.addSource('worldMaskSrc', {
-    //             'type': 'geojson',
-    //             'data': maskData
-    //         });
+        const boundaryFeatures = this.props.data.features.filter(f => 
+            f.properties?.boundary === 'administrative'
+        );
 
-    //         // Add mask layer
-    //         this.map.addLayer({
-    //             'id': 'city-boundary-mask',
-    //             'type': 'fill',
-    //             'source': 'worldMaskSrc',
-    //             'paint': {
-    //                 'fill-color': this.props.isDarkMode ? '#000000' : '#ffffff',
-    //                 'fill-opacity': 0.5
-    //             }
-    //         });
-    //     } else {
-    //         // Update existing source
-    //         this.map.getSource('worldMaskSrc').setData(maskData);
-    //     }
-    // }
+        const boundary = boundaryFeatures.find(f => {
+            const adminLevel = String(f.properties?.admin_level || '');
+            return ['6', '7', '8', '9', '10'].includes(adminLevel);
+        }) || boundaryFeatures[0];
+
+        if (!boundary) {
+            removeBoundaryLayers();
+            return;
+        }
+
+        this.initBoundaryLineLayer(boundary);
+
+        let innerRings = [];
+        if (boundary.geometry.type === 'Polygon') {
+            const outerRing = boundary.geometry.coordinates[0];
+            if (outerRing && outerRing.length > 0) {
+                innerRings.push(outerRing);
+            }
+        } else if (boundary.geometry.type === 'MultiPolygon') {
+            for (const polygon of boundary.geometry.coordinates) {
+                const outerRing = polygon?.[0];
+                if (outerRing && outerRing.length > 0) {
+                    innerRings.push(outerRing);
+                }
+            }
+        } else {
+            removeBoundaryLayers();
+            return;
+        }
+
+        if (innerRings.length === 0) {
+            removeBoundaryLayers();
+            return;
+        }
+
+        const maskData = {
+            type: 'FeatureCollection',
+            features: [{
+                type: 'Feature',
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [
+                        [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]],
+                        ...innerRings
+                    ]
+                }
+            }]
+        };
+
+        if (!this.map.getSource('boundaryMaskSrc')) {
+            this.map.addSource('boundaryMaskSrc', { type: 'geojson', data: maskData });
+            this.map.addLayer({
+                id: 'boundary-mask',
+                type: 'fill',
+                source: 'boundaryMaskSrc',
+                paint: { 'fill-color': '#000000', 'fill-opacity': this.props.isDarkMode ? 0.2 : 0.1 }
+            });
+        } else {
+            this.map.getSource('boundaryMaskSrc').setData(maskData);
+        }
+    }
+
+    initBoundaryLineLayer(boundary) {
+        const boundaryLineData = {
+            type: 'FeatureCollection',
+            features: [boundary]
+        };
+
+        if (!this.map.getSource('boundaryLineSrc')) {
+            this.map.addSource('boundaryLineSrc', {
+                type: 'geojson',
+                data: boundaryLineData
+            });
+
+            this.map.addLayer({
+                id: 'boundary-layer',
+                type: 'line',
+                source: 'boundaryLineSrc',
+                paint: {
+                    'line-color': '#000000',
+                    // 'line-dasharray': [1, 1],
+                    'line-width': 1,
+                    'line-opacity': this.props.isDarkMode ? 0.5 : 0.1,
+                }
+            });
+        } else {
+            this.map.getSource('boundaryLineSrc').setData(boundaryLineData);
+        }
+    }
 
     initCyclepathLayerForSource(l, sourceId) {
         const filters = this.convertFilterToMapboxFilter(l, sourceId);
@@ -1066,7 +1107,7 @@ class Map extends Component {
 
         if (USE_PMTILES_SOURCE) {
             try {
-                const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + 'all.pmtiles';
+                const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + PMTILES_FILENAME;
                 console.log('Loading PMTiles from S3:', PMTILES_URL);
                 
                 const header = await PmTilesSource.getHeader(PMTILES_URL);
@@ -1226,7 +1267,7 @@ class Map extends Component {
                 }
             });
             
-            // this.initBoundaryLayer();
+            this.initBoundaryLayer();
 
             // if (!this.props.embedMode) {
             //     this.addInteractiveCapitalsLayer();
@@ -1533,6 +1574,8 @@ class Map extends Component {
             this.originalPOIFilters = null;
             
             this.hideGeoJsonFromPmtiles(this.props.data);
+            
+            this.updateBoundaryMask();
         }
 
         if (this.props.style !== prevProps.style) {
@@ -1546,6 +1589,18 @@ class Map extends Component {
                 'visibility',
                 this.props.showSatellite ? 'visible' : 'none');
         }
+
+        // Temporarily disabled to test if it's needed
+        // if (this.props.isDarkMode !== prevProps.isDarkMode) {
+        //     if (map.getLayer('boundary-layer')) {
+        //         map.setPaintProperty('boundary-layer', 'line-color', 
+        //             this.props.isDarkMode ? '#FFFFFF' : '#000000');
+        //     }
+        //     if (map.getLayer('boundary-mask')) {
+        //         map.setPaintProperty('boundary-mask', 'fill-opacity', 
+        //             this.props.isDarkMode ? 0.5 : 0.1);
+        //     }
+        // }
 
         const layersChanged = this.props.layers.some((layer, index) => {
             const prevLayer = prevProps.layers[index];
@@ -2403,6 +2458,7 @@ class Map extends Component {
         await this.initLayers();
         this.initMapControls();
         this.setRealisticLighting();
+        this.updateBoundaryMask();
     }
 
     loadImages() {
