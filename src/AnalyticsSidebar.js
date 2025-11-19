@@ -99,6 +99,11 @@ class AnalyticsSidebar extends Component {
                         l.id === 'ciclorrota' ||
                         l.id === 'calcada-compartilhada')
                     .filter(l => lengths && Math.floor(lengths[l.id]) > 0)
+                    .sort((a, b) => {
+                        const lenA = lengths && lengths[a.id] ? lengths[a.id] : 0;
+                        const lenB = lengths && lengths[b.id] ? lengths[b.id] : 0;
+                        return lenB - lenA; // Sort descending by length
+                    })
                     .map(l => lengths && 
                         {
                             value: lengths[l.id],
