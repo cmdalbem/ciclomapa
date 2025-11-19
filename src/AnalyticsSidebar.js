@@ -374,7 +374,7 @@ class AnalyticsSidebar extends Component {
 }
 
 const BigNum = ({children}) =>
-    <div className="text-5xl font-regular tracking-tighter -mt-2 mb-1">
+    <div className="text-2xl font-regular tracking-tighter -mt-2 mb-1">
         { children }
     </div>
 
@@ -410,7 +410,7 @@ const DataLine = (props) =>
             </span>
             <span>
                 { props.length !== undefined && Math.round(props.length) }
-                { props.length !== undefined && props.unit && ' ' + props.unit }
+                { props.length !== undefined && props.unit }
             </span>
         </div>
     </div>
@@ -453,7 +453,7 @@ const Section = (props) =>
 
                             {
                                 props.link &&
-                                <Button ghost target="_BLANK" href={props.link}>
+                                <Button className='glass-bg' target="_BLANK" href={props.link}>
                                     Saiba mais
                                 </Button> 
                             }
