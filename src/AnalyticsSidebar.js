@@ -15,7 +15,7 @@ import {
     MdDataUsage as IconAnalytics,
 } from "react-icons/md";
 
-import { removeAccents, adjustColorBrightness } from './utils.js';
+
 import AirtableDatabase from './AirtableDatabase.js'
 
 import {
@@ -41,16 +41,17 @@ class AnalyticsSidebar extends Component {
     }
 
     async loadMetadata() {
+        const allMetadata = await this.airtableDatabase.getMetadata();
         this.setState({
-            allMetadata: await this.airtableDatabase.getMetadata()
+            allMetadata: allMetadata
+        }, () => {
+            this.updateLocation();
         });
-
-        this.updateLocation();
     }
 
     updateLocation() {
         let search;
-        if (this.state.allMetadata && this.state.allMetadata.length > 0) {
+        if (this.state.allMetadata && this.state.allMetadata.length > 0 && this.props.location) {
             search = this.state.allMetadata.find(
                 v => this.props.location
                     .toLowerCase()
