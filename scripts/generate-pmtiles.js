@@ -110,7 +110,7 @@ async function generateGeoJSONForArea(area, outputPath, endpoint = null) {
 function getExpectedGeoJSONFilename(area) {
     // This matches the logic in overpass-to-geojson.js generateDefaultFilename
     const areaSlug = slugify(area);
-    return `${areaSlug}-layers.geojson`;
+    return `${areaSlug}.geojson`;
 }
 
 // Slugify function (from overpass-to-geojson.js)
@@ -213,10 +213,12 @@ async function main() {
         console.log('─'.repeat(60));
         console.log(`   Areas: ${config.areas.join(', ')}`);
         console.log(`   Output: ${config.output}`);
+        console.log(`   Skip GeoJSON: ${config.skipGeoJSON ? 'YES' : 'NO'}`);
         console.log('─'.repeat(60));
 
         const geojsonFiles = [];
         const cwd = process.cwd();
+        console.log(`\n📂 Working directory: ${cwd}`);
 
         // Generate GeoJSON for each area
         for (const area of config.areas) {
@@ -224,10 +226,24 @@ async function main() {
             const expectedPath = path.join(cwd, expectedFilename);
             geojsonFiles.push(expectedPath);
 
+            console.log(`\n🔍 Checking area: "${area}"`);
+            console.log(`   Expected filename: ${expectedFilename}`);
+            console.log(`   Expected path: ${expectedPath}`);
+
+            const fileExistsResult = await fileExists(expectedPath);
+            console.log(`   File exists: ${fileExistsResult ? 'YES' : 'NO'}`);
+            console.log(`   Skip flag enabled: ${config.skipGeoJSON ? 'YES' : 'NO'}`);
+
             // Check if file already exists and skip-geojson is set
-            if (config.skipGeoJSON && await fileExists(expectedPath)) {
-                console.log(`\n⏭️  Skipping GeoJSON generation for "${area}" (file already exists)`);
+            if (config.skipGeoJSON && fileExistsResult) {
+                console.log(`\n⏭️  SKIPPING GeoJSON generation for "${area}"`);
+                console.log(`   Reason: --skip-geojson flag is set AND file already exists`);
+                console.log(`   Using existing file: ${expectedPath}`);
                 continue;
+            }
+
+            if (config.skipGeoJSON && !fileExistsResult) {
+                console.log(`\n⚠️  Skip flag is set but file doesn't exist - will generate`);
             }
 
             try {
@@ -239,16 +255,27 @@ async function main() {
         }
 
         // Verify all GeoJSON files exist
+        console.log(`\n✅ Verifying GeoJSON files before PMtiles generation...`);
         const missingFiles = [];
+        const existingFiles = [];
         for (const file of geojsonFiles) {
-            if (!(await fileExists(file))) {
+            const exists = await fileExists(file);
+            if (!exists) {
                 missingFiles.push(path.basename(file));
+                console.log(`   ❌ Missing: ${path.basename(file)} (${file})`);
+            } else {
+                existingFiles.push(file);
+                console.log(`   ✓ Found: ${path.basename(file)} (${file})`);
             }
         }
 
         if (missingFiles.length > 0) {
+            console.error(`\n❌ Error: ${missingFiles.length} GeoJSON file(s) not found:`);
+            missingFiles.forEach(f => console.error(`   - ${f}`));
             throw new Error(`GeoJSON files not found: ${missingFiles.join(', ')}`);
         }
+
+        console.log(`\n📊 Summary: ${existingFiles.length} GeoJSON file(s) ready for PMtiles generation`);
 
         // Generate PMtiles
         await generatePMtiles(geojsonFiles, config.output);
