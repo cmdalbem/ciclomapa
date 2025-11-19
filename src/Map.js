@@ -597,7 +597,7 @@ class Map extends Component {
             return;
         }
 
-        this.initBoundaryLineLayer(boundary);
+        // this.initBoundaryLineLayer(boundary);
 
         let innerRings = [];
         if (boundary.geometry.type === 'Polygon') {
@@ -642,7 +642,19 @@ class Map extends Component {
                 id: 'boundary-mask',
                 type: 'fill',
                 source: 'boundaryMaskSrc',
-                paint: { 'fill-color': '#000000', 'fill-opacity': this.props.isDarkMode ? 0.2 : 0.1 }
+                paint: { 
+                    'fill-color': '#000000', 
+                    'fill-opacity': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        10,
+                        0,
+                        14,
+                        this.props.isDarkMode ? 0.3 : 0.15
+                    ],
+                    // 'fill-z-offset': 100 // Apparently can only be used based on sea level, not on ground level, so doesn't work for us
+                }
             });
         } else {
             this.map.getSource('boundaryMaskSrc').setData(maskData);
