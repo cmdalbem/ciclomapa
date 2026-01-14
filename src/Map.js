@@ -557,6 +557,16 @@ class Map extends Component {
     }
 
     updateBoundaryMask() {
+        // Temporarily disabled - boundary mask rendering is causing problems
+        // Clean up any existing boundary mask layers
+        if (this.map) {
+            if (this.map.getLayer('boundary-mask')) this.map.removeLayer('boundary-mask');
+            if (this.map.getSource('boundaryMaskSrc')) this.map.removeSource('boundaryMaskSrc');
+            if (this.map.getLayer('boundary-layer')) this.map.removeLayer('boundary-layer');
+            if (this.map.getSource('boundaryLineSrc')) this.map.removeSource('boundaryLineSrc');
+        }
+        return;
+        
         const removeBoundaryLayers = () => {
             if (this.map.getLayer('boundary-mask')) this.map.removeLayer('boundary-mask');
             if (this.map.getSource('boundaryMaskSrc')) this.map.removeSource('boundaryMaskSrc');
@@ -597,7 +607,7 @@ class Map extends Component {
             return;
         }
 
-        // this.initBoundaryLineLayer(boundary);
+        this.initBoundaryLineLayer(boundary);
 
         let innerRings = [];
         if (boundary.geometry.type === 'Polygon') {
@@ -1279,7 +1289,8 @@ class Map extends Component {
                 }
             });
             
-            this.initBoundaryLayer();
+            // Temporarily disabled - boundary mask rendering is causing problems
+            // this.initBoundaryLayer();
 
             // if (!this.props.embedMode) {
             //     this.addInteractiveCapitalsLayer();
