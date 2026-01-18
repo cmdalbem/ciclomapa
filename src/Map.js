@@ -2377,7 +2377,8 @@ class Map extends Component {
                 console.debug('geolocate', result);
                 this.reverseGeocode([result.coords.longitude, result.coords.latitude])
                     .then(geocodeResult => {
-                        this.syncMapState(geocodeResult.place_name);
+                        // this.syncMapState(geocodeResult.place_name);
+                        this.syncMapState();
                         // Update lighting based on user's actual location
                         this.setRealisticLighting();
                     })
