@@ -243,7 +243,7 @@ class TopBar extends Component {
                                     <Button.Group className="glass-bg rounded-full overflow-hidden">
                                         <Button 
                                             type={!isDarkMode ? "default" : "link"} 
-                                            className={!isDarkMode ? "" : "opacity-50"}
+                                            className={!isDarkMode ? "border border-opacity-10 border-white" : "opacity-50"}
                                             shape="circle"
                                             onClick={() => toggleTheme()}
                                         >
@@ -251,7 +251,7 @@ class TopBar extends Component {
                                         </Button>
                                         <Button 
                                             type={isDarkMode ? "default" : "link"} 
-                                            className={isDarkMode ? "" : "opacity-50"}
+                                            className={isDarkMode ? "border border-opacity-10 border-white" : "opacity-50"}
                                             shape="circle"
                                             onClick={() => toggleTheme()}
                                         >
