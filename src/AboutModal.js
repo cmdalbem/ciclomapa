@@ -33,7 +33,7 @@ class AboutModal extends Component {
                             </p>
 
                             <p>
-                                Usando os dados do <a className="underline" href="https://www.openstreetmap.org/" title="OpenStreetMap" target="_blank" rel="noopener noreferrer">OpenStreetMap (OSM)</a>  — que qualquer pessoa pode editar — ela permite que cidadãos, pesquisadores e gestores públicos visualizem, baixem e usem essas informações para melhorar a mobilidade por bicicleta no Brasil.
+                                Usando os dados do <a className="underline" href="https://www.openstreetmap.org/" title="OpenStreetMap" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>  (a Wikipedia dos mapas) ela permite que cidadãos, pesquisadores e gestores públicos visualizem, baixem e usem essas informações para melhorar a mobilidade por bicicleta no Brasil.
                             </p>
                         </div>
 
@@ -87,7 +87,7 @@ class AboutModal extends Component {
                             </p>
 
                             <p className="text-xs mt-6 mb-6 opacity-50 text-center">
-                                design & desenvolvimento por  <a className="underline" href="https://www.cristianodalbem.com/" target="_BLANK" rel="noopener noreferrer" > Cristiano Dalbem </a>
+                                Design & desenvolvimento por  <a className="underline" href="https://www.cristianodalbem.com/" target="_BLANK" rel="noopener noreferrer" > Cristiano Dalbem </a> e  <a className="underline" href="https://github.com/cmdalbem/ciclomapa/graphs/contributors/" target="_BLANK" rel="noopener noreferrer" > colaboradores</a>.
                             </p>
                         </div>
                     </div>
