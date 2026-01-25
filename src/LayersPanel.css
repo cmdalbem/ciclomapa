@@ -3,15 +3,24 @@
     overflow: hidden;
 }
 
-.theme-dark .layer-panel-name {
-    backdrop-filter: blur(2px);
-    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
+.theme-dark #layersPanel,
+.theme-light #layersPanel {
+    transition: backdrop-filter 0.3s ease-out;
+    backdrop-filter: blur(8px) opacity(0);
+
+    .layer-panel-name {
+        transition: text-shadow 0.3s ease-out;
+    }
 }
 
-.theme-light .layer-panel-name {
-    /* backdrop-filter: blur(2px); */
-    text-shadow: -1px -1px 0 #ececec, 1px -1px 0 #ececec, -1px 1px 0 #ececec, 1px 1px 0 #ececec;
+#layersPanel:hover {
+    backdrop-filter: blur(8px) opacity(1);
+    
+    /* .layer-panel-name {
+        text-shadow: -1px -1px 0 #ececec, 1px -1px 0 #ececec, -1px 1px 0 #ececec, 1px 1px 0 #ececec;
+    } */
 }
+
 
 /* Mobile */
 
