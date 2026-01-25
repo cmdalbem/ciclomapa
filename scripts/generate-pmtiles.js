@@ -224,6 +224,14 @@ function slugify(str) {
         .replace(/-+$/, ''); // Trim - from end of text
 }
 
+function shellQuote(value) {
+    const str = String(value);
+    if (/^[A-Za-z0-9_\/\.\-=:]+$/.test(str)) {
+        return str;
+    }
+    return `"${str.replace(/["\\]/g, '\\$&')}"`;
+}
+
 // Check if tippecanoe is available
 async function checkTippecanoe() {
     return new Promise((resolve) => {
@@ -262,6 +270,9 @@ async function generatePMtiles(geojsonFiles, outputPath) {
                 '-l', 'default',
                 ...geojsonFiles
             ];
+
+            const commandPreview = ['tippecanoe', ...args].map(shellQuote).join(' ');
+            console.log(`   Command: ${commandPreview}`);
 
             const child = spawn('tippecanoe', args, {
                 stdio: 'inherit',
