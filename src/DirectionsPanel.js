@@ -158,7 +158,7 @@ class DirectionsPanel extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            collapsed: IS_MOBILE,
+            collapsed: true,
             fromGeocoderAttached: false,
             toGeocoderAttached: false,
             focusedInput: null,
@@ -1069,10 +1069,10 @@ class DirectionsPanel extends Component {
         return (
             <>
                 {
-                    IS_MOBILE &&
+                    // IS_MOBILE &&
                         <div
                             id="directionsPanelMobileButton"
-                            className={`directions-panel-mobile-button ${this.state.collapsed ? 'collapsed' : 'expanded'}`}
+                            className={`directions-panel-button ${this.state.collapsed ? 'collapsed' : 'expanded'}`}
                             onClick={this.toggleCollapse}
                         >
                             <IconRoute/>
@@ -1179,7 +1179,7 @@ class DirectionsPanel extends Component {
                                             </Popover>
                                         )}
 
-                                        { IS_MOBILE && (
+                                        {/* { IS_MOBILE && ( */}
                                             <Button
                                                 onClick={this.toggleCollapse}
                                                 type="text" 
@@ -1188,7 +1188,7 @@ class DirectionsPanel extends Component {
                                                     display: 'inline-block',
                                                 }}/>}
                                             />
-                                        )}
+                                        {/* // )} */}
                                     </div>
                                 </>
                             )}
