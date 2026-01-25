@@ -32,11 +32,10 @@ const { URL } = require('url');
 const osmtogeojson = require('osmtogeojson');
 
 const OVERPASS_SERVERS = [
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://z.overpass-api.de/api/interpreter',
-    'https://overpass.openstreetmap.fr/api/interpreter',
-    'https://overpass.osm.ch/api/interpreter',
-    'https://overpass.nchc.org.tw/api/interpreter'
+    'https://overpass.private.coffee/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.osm.jp/api/interpreter'
 ];
 
 const DEFAULT_OVERPASS_ENDPOINT = OVERPASS_SERVERS[0];

@@ -18,11 +18,10 @@ export const DEFAULT_LENGTH_CALCULATE_STRATEGIES = 'average';
 
 
 export const OVERPASS_SERVERS = [
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://z.overpass-api.de/api/interpreter',
-    'https://overpass.openstreetmap.fr/api/interpreter',
-    'https://overpass.osm.ch/api/interpreter',
-    'https://overpass.nchc.org.tw/api/interpreter'
+    'https://overpass.private.coffee/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.osm.jp/api/interpreter'
 ];
 
 export const AREA_ID_OVERRIDES = {
@@ -140,7 +139,7 @@ export const INTERACTIVE_LAYERS_ZOOM_THRESHOLD = 15;
 export const COMMENTS_ZOOM_THRESHOLD = 13;
 export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 12;
 
-const DEFAULT_PMTILES_FILENAME = 'la_es_pt.pmtiles';
+const DEFAULT_PMTILES_FILENAME = 'europe.pmtiles';
 export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAULT_PMTILES_FILENAME;
 
 /* 
