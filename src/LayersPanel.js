@@ -88,13 +88,13 @@ class LayersPanel extends Component {
                 <div
                     id="layersPanel"
                     className={`
-                        fixed text-white
+                        fixed text-white p-2 rounded-xl
                         ${IS_MOBILE && 'bg-black rounded-xl border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
                         ${IS_MOBILE && this.state.collapsed ? 'hidden ' : ''}
                         ${embedMode ? 'pointer-events-none ' : 'cursor-pointer '}
                     `}
                     style={{
-                        bottom: IS_MOBILE ? 100 : 30,
+                        bottom: IS_MOBILE ? 100 : 16,
                         left: 8,
                         zIndex: IS_MOBILE ? 1000 : 1
                     }}
