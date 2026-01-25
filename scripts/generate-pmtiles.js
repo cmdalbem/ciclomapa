@@ -10,7 +10,11 @@
  *   --output <file>     Output PMtiles file path (default: all.pmtiles)
  *   --areas <list>      Comma-separated list of areas (alternative to positional args)
  *   --endpoint <url>    Overpass API endpoint (passed to overpass-to-geojson.js)
+ *   --include-layers    Comma-separated list of layer names to include
+ *   --exclude-layers    Comma-separated list of layer names to exclude
+ *   --include-poi       Include POI (Point of Interest) layers
  *   --skip-geojson      Skip GeoJSON generation if files already exist
+ *   --skip-existing-geojsons   Alias for --skip-geojson
  *   --cleanup           Remove GeoJSON files after PMtiles generation
  *   --help, -h          Show this help message
  */
@@ -19,8 +23,69 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs').promises;
 
+const AREA_ALIASES = {
+    'south america': [
+        'Argentina',
+        'Bolivia',
+        'Brazil',
+        'Chile',
+        'Colombia',
+        'Ecuador',
+        'Guyana',
+        'Paraguay',
+        'Peru',
+        'Suriname',
+        'Uruguay',
+        'Venezuela'
+    ],
+    'iberian peninsula': [
+        'Spain',
+        'Portugal',
+        'Andorra',
+        'Gibraltar'
+    ],
+    'europe': [
+        'Austria',
+        'Belgium',
+        'Denmark',
+        'Finland',
+        'France',
+        'Germany',
+        'Ireland',
+        'Italy',
+        'Luxembourg',
+        'Netherlands',
+        'Norway',
+        'Portugal',
+        'Spain',
+        'Sweden',
+        'Switzerland'
+    ],
+    'uk': [
+        'United Kingdom'
+    ]
+};
+
 // Path to the overpass-to-geojson script
 const OVERPASS_SCRIPT = path.join(__dirname, 'overpass-to-geojson.js');
+
+function normalizeAreaKey(value) {
+    return value.trim().toLowerCase();
+}
+
+function expandAreaAliases(areas) {
+    const expanded = [];
+    areas.forEach(area => {
+        const aliasKey = normalizeAreaKey(area);
+        const aliasAreas = AREA_ALIASES[aliasKey];
+        if (aliasAreas) {
+            expanded.push(...aliasAreas);
+        } else {
+            expanded.push(area);
+        }
+    });
+    return expanded;
+}
 
 // Parse command line arguments
 function parseArgs() {
@@ -29,6 +94,9 @@ function parseArgs() {
         output: 'all.pmtiles',
         areas: [],
         endpoint: null,
+        includeLayers: null,
+        excludeLayers: null,
+        includePoi: false,
         skipGeoJSON: false,
         cleanup: false
     };
@@ -43,7 +111,15 @@ function parseArgs() {
             config.areas = args[++i].split(',').map(a => a.trim()).filter(Boolean);
         } else if (arg === '--endpoint' && i + 1 < args.length) {
             config.endpoint = args[++i];
+        } else if (arg === '--include-layers' && i + 1 < args.length) {
+            config.includeLayers = args[++i].split(',').map(s => s.trim()).filter(Boolean);
+        } else if (arg === '--exclude-layers' && i + 1 < args.length) {
+            config.excludeLayers = args[++i].split(',').map(s => s.trim()).filter(Boolean);
+        } else if (arg === '--include-poi') {
+            config.includePoi = true;
         } else if (arg === '--skip-geojson') {
+            config.skipGeoJSON = true;
+        } else if (arg === '--skip-existing-geojsons') {
             config.skipGeoJSON = true;
         } else if (arg === '--cleanup') {
             config.cleanup = true;
@@ -58,7 +134,11 @@ Options:
   --output <file>     Output PMtiles file path (default: all.pmtiles)
   --areas <list>      Comma-separated list of areas (alternative to positional args)
   --endpoint <url>    Overpass API endpoint (passed to overpass-to-geojson.js)
+  --include-layers    Comma-separated list of layer names to include
+  --exclude-layers    Comma-separated list of layer names to exclude
+  --include-poi       Include POI (Point of Interest) layers
   --skip-geojson      Skip GeoJSON generation if files already exist
+  --skip-existing-geojsons   Alias for --skip-geojson
   --cleanup           Remove GeoJSON files after PMtiles generation
   --help, -h          Show this help message
 
@@ -66,6 +146,12 @@ Examples:
   node scripts/generate-pmtiles.js "Brazil" "Spain"
   node scripts/generate-pmtiles.js --areas "Brazil,Spain" --output world.pmtiles
   node scripts/generate-pmtiles.js "Brazil" "Spain" --cleanup
+
+Aliases:
+  "South America" -> Argentina, Bolivia, Brazil, Chile, Colombia, Ecuador, Guyana, Paraguay, Peru, Suriname, Uruguay, Venezuela
+  "Iberian Peninsula" -> Spain, Portugal, Andorra, Gibraltar
+  "europe" -> Austria, Belgium, Denmark, Finland, France, Germany, Ireland, Italy, Luxembourg, Netherlands, Norway, Portugal, Spain, Sweden, Switzerland
+  "uk" -> United Kingdom
             `);
             process.exit(0);
         } else if (!arg.startsWith('--')) {
@@ -74,15 +160,25 @@ Examples:
         }
     }
 
+    config.areas = expandAreaAliases(config.areas);
     return config;
 }
 
 // Run overpass-to-geojson.js for a single area
-async function generateGeoJSONForArea(area, outputPath, endpoint = null) {
+async function generateGeoJSONForArea(area, outputPath, options = {}) {
     return new Promise((resolve, reject) => {
         const args = ['--from-layers', '--area', area, '--output', outputPath];
-        if (endpoint) {
-            args.push('--endpoint', endpoint);
+        if (options.endpoint) {
+            args.push('--endpoint', options.endpoint);
+        }
+        if (options.includeLayers && options.includeLayers.length > 0) {
+            args.push('--include-layers', options.includeLayers.join(','));
+        }
+        if (options.excludeLayers && options.excludeLayers.length > 0) {
+            args.push('--exclude-layers', options.excludeLayers.join(','));
+        }
+        if (options.includePoi) {
+            args.push('--include-poi');
         }
 
         console.log(`\n📥 Generating GeoJSON for: ${area}`);
@@ -160,6 +256,7 @@ async function generatePMtiles(geojsonFiles, outputPath) {
 
             const args = [
                 '-o', outputPath,
+                '--force',
                 '--maximum-zoom=g',
                 '--generate-ids',
                 '-l', 'default',
@@ -214,6 +311,9 @@ async function main() {
         console.log(`   Areas: ${config.areas.join(', ')}`);
         console.log(`   Output: ${config.output}`);
         console.log(`   Skip GeoJSON: ${config.skipGeoJSON ? 'YES' : 'NO'}`);
+        console.log(`   Include layers: ${config.includeLayers ? config.includeLayers.join(', ') : 'ALL'}`);
+        console.log(`   Exclude layers: ${config.excludeLayers ? config.excludeLayers.join(', ') : 'NONE'}`);
+        console.log(`   Include POI: ${config.includePoi ? 'YES' : 'NO'}`);
         console.log('─'.repeat(60));
 
         const geojsonFiles = [];
@@ -247,7 +347,12 @@ async function main() {
             }
 
             try {
-                await generateGeoJSONForArea(area, expectedPath, config.endpoint);
+                await generateGeoJSONForArea(area, expectedPath, {
+                    endpoint: config.endpoint,
+                    includeLayers: config.includeLayers,
+                    excludeLayers: config.excludeLayers,
+                    includePoi: config.includePoi
+                });
             } catch (error) {
                 console.error(`\n❌ Failed to generate GeoJSON for "${area}": ${error.message}`);
                 throw error;
