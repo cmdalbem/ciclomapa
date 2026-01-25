@@ -123,18 +123,18 @@
 /* DirectionsPanel light mode overrides */
 
 .theme-light #layersPanelMobileButton,
-.theme-light .directions-panel-mobile-button {
+.theme-light .directions-panel-button {
     border: 0;
 }
 
 .theme-light #layersPanelMobileButton.collapsed,
-.theme-light .directions-panel-mobile-button.collapsed {
+.theme-light .directions-panel-button.collapsed {
     color: black !important;
     background: #ffffff !important;
 }
 
 .theme-light #layersPanelMobileButton.expanded,
-.theme-light .directions-panel-mobile-button.expanded {
+.theme-light .directions-panel-button.expanded {
     color: #111827 !important;
     background: #f3f4f6 !important;
 }
@@ -235,41 +235,39 @@
         max-height: 130px;
     }
 
-
     #directionsPanelMobileButton {
         z-index: 2;
     }
+}
 
+#layersPanelMobileButton,
+.directions-panel-button {
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 99px;
+    font-size: 1.125rem;
+    position: fixed;
+    bottom: 94px;
+    left: 8px;
+    cursor: pointer;
+    z-index: 1;
+}
 
-    #layersPanelMobileButton,
-    .directions-panel-mobile-button {
-        padding: 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 99px;
-        font-size: 1.125rem;
-        position: fixed;
-        bottom: 94px;
-        left: 8px;
-        cursor: pointer;
-        z-index: 1;
-    }
+.directions-panel-button {
+    right: 12px;
+    left: auto;
+}
 
-    .directions-panel-mobile-button {
-        right: 12px;
-        left: auto;
-    }
+#layersPanelMobileButton.collapsed,
+.directions-panel-button.collapsed {
+    color: #d1d5db;
+    background: #1c1717;
+}
 
-    #layersPanelMobileButton.collapsed,
-    .directions-panel-mobile-button.collapsed {
-        color: #d1d5db;
-        background: #1c1717;
-    }
-
-    #layersPanelMobileButton.expanded,
-    .directions-panel-mobile-button.expanded {
-        color: #111827;
-        background: #f3f4f6;
-    }
+#layersPanelMobileButton.expanded,
+.directions-panel-button.expanded {
+    color: #111827;
+    background: #f3f4f6;
 }
 
 .animate-pulse-2x {
