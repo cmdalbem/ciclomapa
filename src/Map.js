@@ -2246,6 +2246,7 @@ class Map extends Component {
             this.map = new mapboxgl.Map({
             container: this.mapContainer,
             style: this.props.style,
+            preserveDrawingBuffer: true,
             // style: MAP_STYLES.LIGHT,
             // config: {
             //     basemap: {
