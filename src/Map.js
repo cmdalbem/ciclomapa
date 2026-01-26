@@ -2288,14 +2288,20 @@ class Map extends Component {
         this.initializeMapAfterStyleLoad();
         
         // Initialize map center
-        this.reverseGeocode([this.props.lng, this.props.lat])
-            .then(result => {
-                this.syncMapState(result.place_name);
-            })
-            .catch(err => {
-                // Reverse geocoding failure is not critical - map can function without it
-                console.debug('Reverse geocoding failed during initialization:', err.message);
-            });
+        const shouldInitializeArea = this.props.zoom > MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD;
+        if (shouldInitializeArea) {
+            this.reverseGeocode([this.props.lng, this.props.lat])
+                .then(result => {
+                    this.syncMapState(result.place_name);
+                })
+                .catch(err => {
+                    // Reverse geocoding failure is not critical - map can function without it
+                    console.debug('Reverse geocoding failed during initialization:', err.message);
+                });
+        } else {
+            // Preserve map state without forcing an area when zoomed out.
+            this.syncMapState();
+        }
     }
 
     initMapControls() {
