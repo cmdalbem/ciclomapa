@@ -1,0 +1,29 @@
+.screenshot-panel .ant-form-item {
+    margin-bottom: 12px;
+}
+
+.screenshot-panel__size .ant-form-item {
+    margin-bottom: 0;
+}
+
+body.theme-light .screenshot-panel .ant-form-item-label > label,
+body.theme-light .screenshot-panel__toggle {
+    color: #111827;
+}
+
+body.theme-dark .screenshot-panel .ant-form-item-label > label,
+body.theme-dark .screenshot-panel__toggle {
+    color: #f9fafb;
+}
+
+body.theme-light .screenshot-panel__group-title {
+    color: rgba(71, 85, 105, 0.9);
+}
+
+body.theme-dark .screenshot-panel__group-title {
+    color: rgba(148, 163, 184, 0.9);
+}
+
+.screenshot-panel__poster {
+    max-height: 70vh;
+}

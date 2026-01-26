@@ -55,6 +55,19 @@ export function slugify(str) {
     .replace(/-+$/, '') // Trim - from end of text
 }
 
+export function parseAreaLabel(areaLabel) {
+    if (!areaLabel) {
+        return { city: '', state: '', country: '' };
+    }
+
+    const parts = areaLabel.split(',').map((part) => part.trim()).filter(Boolean);
+    const city = parts[0] || '';
+    const country = parts.length >= 3 ? parts[2] : (parts[1] || '');
+    const state = parts.length >= 3 ? parts[1] : '';
+
+    return { city, state, country };
+}
+
 const typeSizes = {
     "undefined": () => 0,
     "boolean": () => 4,

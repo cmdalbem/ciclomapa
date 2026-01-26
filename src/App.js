@@ -26,9 +26,13 @@ import LayersPanel from './LayersPanel.js'
 import LayersBar from './LayersBar.js'
 import DirectionsPanel from './DirectionsPanel.js'
 import AnalyticsSidebar from './AnalyticsSidebar.js'
+import ScreenshotPanel from './screenshot/ScreenshotPanel.js'
+import { HiOutlineCamera as IconCamera } from 'react-icons/hi';
 import OSMController from './OSMController.js'
 import Storage from './Storage.js'
-import { downloadObjectAsJson } from './utils.js'
+import { downloadObjectAsJson, parseAreaLabel } from './utils.js'
+import { getDefaultPosterSettings } from './screenshot/posterDefaults.js'
+import { exportMapScreenshot } from './screenshot/exportMapScreenshot.js'
 import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './geojsonUtils.js'
 import { DirectionsProvider } from './DirectionsContext.js'
 import {
@@ -89,9 +93,17 @@ class App extends Component {
         this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
         this.onDirectionsPanelToggle = this.onDirectionsPanelToggle.bind(this);
         this.setArea = this.setArea.bind(this);
+        this.openScreenshotPanel = this.openScreenshotPanel.bind(this);
+        this.closeScreenshotPanel = this.closeScreenshotPanel.bind(this);
+        this.updateScreenshotSettings = this.updateScreenshotSettings.bind(this);
+        this.exportScreenshot = this.exportScreenshot.bind(this);
         this.debouncedUpdateURL = debounce(this.updateURL, 300);
 
         this.initState();
+    }
+
+    getDefaultScreenshotSettings(areaLabel) {
+        return getDefaultPosterSettings(areaLabel);
     }
 
 
@@ -167,6 +179,8 @@ class App extends Component {
             fromPoint: fromPoint,
             toPoint: toPoint,
             isDirectionsPanelOpen: false,
+            showScreenshotPanel: false,
+            screenshotSettings: this.getDefaultScreenshotSettings(prev.area || '')
         };
 
         this.updateData();
@@ -238,6 +252,59 @@ class App extends Component {
             layersLegendModal: false,
             layersLegendScrollToSection: null
         })
+    }
+
+    openScreenshotPanel() {
+        this.setState((prevState) => {
+            const nextSettings = { ...prevState.screenshotSettings };
+            const { city, country } = parseAreaLabel(this.state.area);
+            if (!nextSettings.title && city) {
+                nextSettings.title = city;
+            }
+            if (!nextSettings.subtitle && country) {
+                nextSettings.subtitle = country;
+            }
+            return {
+                showScreenshotPanel: true,
+                screenshotSettings: nextSettings
+            };
+        });
+    }
+
+    closeScreenshotPanel() {
+        this.setState({ showScreenshotPanel: false });
+    }
+
+    updateScreenshotSettings(nextSettings) {
+        this.setState({ screenshotSettings: nextSettings });
+    }
+
+    async exportScreenshot() {
+        const { map, screenshotSettings, lat, lng, area } = this.state;
+
+        if (!map) {
+            notification.error({
+                message: 'Mapa indisponível',
+                description: 'Aguarde o mapa carregar antes de exportar a imagem.'
+            });
+            return;
+        }
+
+        try {
+            await exportMapScreenshot({
+                map,
+                settings: screenshotSettings,
+                titleFallback: area,
+                coords: { lat, lng },
+                isDarkMode: this.state.isDarkMode
+            });
+        } catch (error) {
+            console.error('Erro ao exportar imagem:', error);
+            notification.error({
+                message: 'Falha ao exportar imagem',
+                description: error.message || 'Não foi possível gerar a imagem.'
+            });
+        }
     }
 
     initLayers(prevLayersStates, isDarkMode, isDebugMode) {
@@ -942,24 +1009,40 @@ class App extends Component {
                     <div className="relative w-full">
                         { 
                             IS_MOBILE && this.state.isDirectionsPanelOpen ? '' :
-                            <TopBar
-                                title={this.state.area}
-                                lastUpdate={this.state.dataUpdatedAt}
-                                lat={this.state.lat}
-                                lng={this.state.lng}
-                                z={this.state.zoom}
-                                downloadData={this.downloadData}
-                                // isDownloadUnavailable={this.state.isDownloadUnavailable}
-                                onMapMoved={this.onMapMoved}
-                                forceUpdate={this.forceUpdate}
-                                isSidebarOpen={this.state.isSidebarOpen}
-                                toggleSidebar={this.toggleSidebar}
-                                embedMode={this.state.embedMode}
+                            <>
+                                <TopBar
+                                    title={this.state.area}
+                                    lastUpdate={this.state.dataUpdatedAt}
+                                    lat={this.state.lat}
+                                    lng={this.state.lng}
+                                    z={this.state.zoom}
+                                    downloadData={this.downloadData}
+                                    // isDownloadUnavailable={this.state.isDownloadUnavailable}
+                                    onMapMoved={this.onMapMoved}
+                                    forceUpdate={this.forceUpdate}
+                                    isSidebarOpen={this.state.isSidebarOpen}
+                                    toggleSidebar={this.toggleSidebar}
+                                    embedMode={this.state.embedMode}
                                 openAboutModal={this.openAboutModal}
-                                isDarkMode={this.state.isDarkMode}
-                                toggleTheme={this.toggleTheme}
-                                loading={this.state.loading}
-                            />
+                                    isDarkMode={this.state.isDarkMode}
+                                    toggleTheme={this.toggleTheme}
+                                    loading={this.state.loading}
+                                />
+                                {this.state.showScreenshotPanel && (
+                                    <ScreenshotPanel
+                                        open={this.state.showScreenshotPanel}
+                                        onCancel={this.closeScreenshotPanel}
+                                        onExport={this.exportScreenshot}
+                                        settings={this.state.screenshotSettings}
+                                        onSettingsChange={this.updateScreenshotSettings}
+                                        map={this.state.map}
+                                        coords={{ lat: this.state.lat, lng: this.state.lng }}
+                                        titleFallback={this.state.area}
+                                        subtitleFallback={parseAreaLabel(this.state.area).country}
+                                    isDarkMode={this.state.isDarkMode}
+                                    />
+                                )}
+                            </>
                         }
                         <Map
                             key={this.state.mapKey}
@@ -1034,6 +1117,24 @@ class App extends Component {
                         isDarkMode={this.state.isDarkMode}
                         openLayersLegendModal={this.openLayersLegendModal}
                     />
+                }
+
+                {
+                    IS_MOBILE && this.state.isDirectionsPanelOpen ? '' :
+                    <div
+                        className="directions-panel-button collapsed screenshot-panel-button"
+                        onClick={this.openScreenshotPanel}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                this.openScreenshotPanel();
+                            }
+                        }}
+                        aria-label="Exportar imagem"
+                    >
+                        <IconCamera />
+                    </div>
                 }
                 
                 <LayersPanel
