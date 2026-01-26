@@ -102,30 +102,6 @@ export const ROUTE_LINE_GAP_WIDTH = ROUTE_FIXED_WIDTH - ROUTE_LINE_BORDER_WIDTH 
 
 export const NEAR_DESTINATION_POI_RADIUS_KM = 0.6; // Radius in kilometers for showing POIs near destination during route planning
 
-// const ROUTE_MIN_WIDTH = 6;
-// const ROUTE_MAX_WIDTH = 12;
-// const ROUTE_LINE_WIDTH = [
-//     "interpolate",
-//         ["exponential", 1.5],
-//         ["zoom"],
-//         12, ROUTE_MIN_WIDTH,
-//         18, ROUTE_MAX_WIDTH
-// ];
-
-// const ROUTE_LINE_PADDING_GAP_WIDTH = [
-//     "interpolate",
-//         ["exponential", 1.5],
-//         ["zoom"],
-//         12, ROUTE_MIN_WIDTH+ROUTE_LINE_PADDING_WIDTH,
-//         18, ROUTE_MAX_WIDTH+ROUTE_LINE_PADDING_WIDTH
-// ];
-// const ROUTE_LINE_GAP_WIDTH = [
-//     "interpolate",
-//         ["exponential", 1.5],
-//         ["zoom"],
-//         12, ROUTE_MIN_WIDTH-ROUTE_LINE_BORDER_WIDTH,
-//         18, ROUTE_MAX_WIDTH-ROUTE_LINE_BORDER_WIDTH
-// ];
 
 /* 
  * Map
