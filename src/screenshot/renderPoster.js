@@ -226,7 +226,8 @@ const renderPosterCanvas = async ({ mapCanvas, width, height, overlay }) => {
     }
 
     if (overlay?.showInnerBorder) {
-        drawInnerBorder(ctx, width, height, overlay.frameColor, frameSize);
+        const innerBorderColor = overlay?.innerBorderColor || overlay.frameColor;
+        drawInnerBorder(ctx, width, height, innerBorderColor, frameSize);
     }
 
     drawTextBlock(ctx, width, height, overlay, frameSize);

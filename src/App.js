@@ -257,13 +257,9 @@ class App extends Component {
     openScreenshotPanel() {
         this.setState((prevState) => {
             const nextSettings = { ...prevState.screenshotSettings };
-            const { city, country } = parseAreaLabel(this.state.area);
-            if (!nextSettings.title && city) {
-                nextSettings.title = city;
-            }
-            if (!nextSettings.subtitle && country) {
-                nextSettings.subtitle = country;
-            }
+            const { city, state, country } = parseAreaLabel(this.state.area);
+            nextSettings.title = city;
+            nextSettings.subtitle = state !== city ? state : country;
             return {
                 showScreenshotPanel: true,
                 screenshotSettings: nextSettings

@@ -13,6 +13,7 @@ export const getPosterThemeColors = (isDarkMode) => {
     if (isDarkMode === false) {
         return {
             frameColor: '#FFFFFF',
+            innerBorderColor: '#386641',
             backgroundColor: '#EDEEED',
             textColor: adjustColorBrightness('#386641', -0.2),
             backdropColor: '#EDEEED'
@@ -20,7 +21,8 @@ export const getPosterThemeColors = (isDarkMode) => {
     }
 
     return {
-        frameColor: '#111827',
+        frameColor: '#1a1a1a',
+        innerBorderColor: '#B9FAB7',
         backgroundColor: '#1a1a1a',
         textColor: adjustColorBrightness('#B9FAB7', 0.2),
         backdropColor: '#1a1a1a'
@@ -33,17 +35,17 @@ export const POSTER_LAYOUT = {
     gradientFadeRatio: 0.4,
     gradientFadeAlpha: 1,
     gradientSolidStop: 0.1,
-    titleSizeRatio: 0.05,
+    titleSizeRatio: 0.04,
     subtitleSizeRatio: 0.02,
     coordsSizeRatio: 0.01,
     coordsSpacingRatio: 4,
     subtitleSpacingRatio: 1.6,
-    titleTrackingRatio: 0.5,
+    titleTrackingRatio: 0.2,
     logoWidthRatio: 0.08,
     logoPaddingRatio: 0.025,
     logoPaddingMin: 16,
     textMarginRatio: 0.05,
-    innerBorderRatio: 0.01,
+    innerBorderRatio: 0.005,
     innerBorderMin: 4
 };
 
@@ -60,9 +62,9 @@ export const getDefaultPosterSettings = (areaLabel) => {
         showCoords: true,
         showBackdrop: true,
         showLogo: false,
-        showInnerBorder: false,
+        showInnerBorder: true,
         hideBasemap: false,
-        title: city || areaLabel || '',
+        title: city || '',
         subtitle: country || ''
     };
 };

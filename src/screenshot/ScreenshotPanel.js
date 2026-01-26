@@ -93,7 +93,8 @@ const ScreenshotPanel = ({
                             : '',
                         frameColor: settings.frameColor || themeColors.frameColor,
                         textColor: settings.textColor || themeColors.textColor,
-                        backdropColor: settings.backdropColor || themeColors.backdropColor
+                        backdropColor: settings.backdropColor || themeColors.backdropColor,
+                        innerBorderColor: settings.innerBorderColor || themeColors.innerBorderColor || settings.frameColor || themeColors.frameColor
                     };
 
                     const preview = await renderPosterDataUrl({

@@ -53,6 +53,7 @@ const normalizeOverlay = (settings, titleFallback, coords, isDarkMode) => {
     const showCoords = settings?.showCoords !== false;
     const frameColor = settings?.frameColor || themeColors.frameColor;
     const backgroundColor = settings?.backgroundColor || themeColors.backgroundColor;
+    const innerBorderColor = settings?.innerBorderColor || themeColors.innerBorderColor || frameColor;
 
     return {
         showFrame: settings?.showFrame !== false,
@@ -66,7 +67,8 @@ const normalizeOverlay = (settings, titleFallback, coords, isDarkMode) => {
         frameColor,
         textColor: settings?.textColor || themeColors.textColor,
         backdropColor: settings?.backdropColor || themeColors.backdropColor,
-        backgroundColor: backgroundColor
+        backgroundColor: backgroundColor,
+        innerBorderColor: innerBorderColor
     };
 };
 
