@@ -2289,7 +2289,7 @@ class Map extends Component {
         this.initializeMapAfterStyleLoad();
         
         // Initialize map center
-        const shouldInitializeArea = this.props.zoom > MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD;
+        const shouldInitializeArea = this.props.zoom >= MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD;
         if (shouldInitializeArea) {
             this.reverseGeocode([this.props.lng, this.props.lat])
                 .then(result => {
