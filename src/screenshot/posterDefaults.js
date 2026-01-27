@@ -7,16 +7,9 @@ import { MAP_STYLES } from '../constants.js';
  */
 export const POSTER_MAP_THEMES = [
     {
-        id: 'default',
-        label: 'Padrão',
-        styles: {
-            dark: MAP_STYLES.DARK,
-            light: MAP_STYLES.LIGHT
-        }
-    },
-    {
         id: 'minimalistic',
         label: 'Minimalista',
+        description: 'Traços limpos, pouca interferência visual e sem cores.',
         styles: {
             // New styles
             // dark: 'mapbox://styles/cmdalbem/cmkvrqoe2007x01se22vk16ol',
@@ -28,8 +21,18 @@ export const POSTER_MAP_THEMES = [
         }
     },
     {
+        id: 'default',
+        label: 'Padrão CicloMapa',
+        description: 'Ruas e detalhes do mapa visíveis com cores sutis.',
+        styles: {
+            dark: MAP_STYLES.DARK,
+            light: MAP_STYLES.LIGHT
+        }
+    },
+    {
         id: 'accented',
         label: 'Destacado',
+        description: 'Contraste forte com corpos d\'agua para um efeito mais dramático.',
         styles: {
             dark: 'mapbox://styles/cmdalbem/cmkvub5js007b01sb0wcu31kv',
             light: 'mapbox://styles/cmdalbem/cmkvu318h001i01sbhhgj2l0b'
@@ -38,6 +41,7 @@ export const POSTER_MAP_THEMES = [
     {
         id: 'none',
         label: 'Nenhum',
+        description: 'Só ciclovias e camadas, sem ruas.',
         hideBasemap: true,
         styles: {
             // Uses the default styles but hides the basemap layers
@@ -92,7 +96,7 @@ export const getPosterThemeColors = (isDarkMode) => {
 export const POSTER_LAYOUT = {
     frameSizeRatio: 0.05,
     frameSizeMin: 8,
-    gradientFadeRatio: 0.4,
+    gradientFadeRatio: 0.3,
     gradientFadeAlpha: 1,
     gradientSolidStop: 0.1,
     titleSizeRatio: 0.04,
@@ -123,7 +127,7 @@ export const getDefaultPosterSettings = (areaLabel) => {
         showBackdrop: true,
         showLogo: false,
         showInnerBorder: true,
-        mapTheme: 'default',
+        mapTheme: 'minimalistic',
         title: city || '',
         subtitle: country || ''
     };
