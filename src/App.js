@@ -261,10 +261,20 @@ class App extends Component {
             const { city, state, country } = parseAreaLabel(this.state.area);
             nextSettings.title = city;
             nextSettings.subtitle = state !== city ? state : country;
-            return {
+            const nextState = {
                 showScreenshotPanel: true,
                 screenshotSettings: nextSettings
             };
+            const nextTheme = nextSettings?.mapTheme;
+            if (nextTheme && nextTheme !== 'default') {
+                nextState.mapStyle = getPosterMapStyle(nextTheme, this.state.isDarkMode);
+            }
+            return nextState;
+        }, () => {
+            const nextTheme = this.state.screenshotSettings?.mapTheme;
+            if (nextTheme && nextTheme !== 'default') {
+                this.forceMapReinitialization();
+            }
         });
     }
 
