@@ -5,12 +5,13 @@ import {
     InputNumber,
     Switch,
     Input,
-    Space
+    Space,
+    Slider
 } from 'antd';
 
 import { renderPosterDataUrl } from './renderPoster.js';
 import { getThemeColors, formatCoords } from './exportMapScreenshot.js';
-import { POSTER_PRESETS, POSTER_MAP_THEMES, shouldHideBasemapForTheme } from './posterDefaults.js';
+import { POSTER_PRESETS, POSTER_MAP_THEMES, POSTER_COLOR_OVERLAYS, POSTER_OVERLAY_BLEND_MODES, shouldHideBasemapForTheme } from './posterDefaults.js';
 import { withMapBasemapHidden, withMapLabelsHidden } from './mapStyleUtils.js';
 import './ScreenshotPanel.css';
 
@@ -35,6 +36,13 @@ const ScreenshotPanel = ({
     const presetId = settings?.presetId || 'portrait';
     const isCustom = settings?.useCustomSize || presetId === 'custom';
     const presetShapeSize = 42;
+    const overlaySelection = settings?.overlayColor ?? null;
+    const overlayBlendMode = settings?.overlayBlendMode || 'source-over';
+    const overlayAlpha = Number.isFinite(settings?.overlayAlpha) ? settings.overlayAlpha : 0.18;
+    const presetAreas = POSTER_PRESETS
+        .filter((preset) => Number.isFinite(preset.width) && Number.isFinite(preset.height))
+        .map((preset) => preset.width * preset.height);
+    const maxPresetArea = presetAreas.length ? Math.max(...presetAreas) : 0;
 
     const handlePresetChange = (value) => {
         const preset = getPresetById(value);
@@ -64,17 +72,20 @@ const ScreenshotPanel = ({
             };
         }
 
+        const presetArea = preset.width * preset.height;
+        const sizeScale = maxPresetArea > 0 ? Math.sqrt(presetArea / maxPresetArea) : 1;
+        const scaledShapeSize = Math.max(12, Math.round(presetShapeSize * sizeScale));
         const ratio = preset.width / preset.height;
         if (ratio >= 1) {
             return {
-                width: presetShapeSize,
-                height: Math.max(12, Math.round(presetShapeSize / ratio))
+                width: scaledShapeSize,
+                height: Math.max(12, Math.round(scaledShapeSize / ratio))
             };
         }
 
         return {
-            width: Math.max(12, Math.round(presetShapeSize * ratio)),
-            height: presetShapeSize
+            width: Math.max(12, Math.round(scaledShapeSize * ratio)),
+            height: scaledShapeSize
         };
     };
 
@@ -214,7 +225,7 @@ const ScreenshotPanel = ({
                         return;
                     }
 
-                    const themeColors = getThemeColors(isDarkMode);
+                    const themeColors = getThemeColors(settings?.mapTheme, isDarkMode);
 
                     const overlay = {
                         showFrame: settings.showFrame !== false,
@@ -222,6 +233,9 @@ const ScreenshotPanel = ({
                         showBackdrop: settings.showBackdrop !== false,
                         showLogo: settings.showLogo !== false,
                         showInnerBorder: settings.showInnerBorder === true,
+                        overlayColor: settings.overlayColor || null,
+                        overlayBlendMode: settings.overlayBlendMode || 'source-over',
+                        overlayAlpha: Number.isFinite(settings.overlayAlpha) ? settings.overlayAlpha : undefined,
                         backgroundColor: settings.backgroundColor || themeColors.backgroundColor,
                         title: settings.title || titleFallback || '',
                         subtitle: settings.subtitle || subtitleFallback || '',
@@ -263,10 +277,10 @@ const ScreenshotPanel = ({
             open={open}
             onCancel={onCancel}
             onOk={onExport}
-            okText="Exportar PNG"
+            okText="Baixar imagem (PNG)"
             cancelText="Cancelar"
-            width="100vw"
-            height="100vh"
+            width="100%"
+            height="100%"
         >
             <div className="screenshot-panel__layout flex flex-col md:flex-row gap-4">
                 <div className="w-full md:w-1/4 screenshot-panel__controls">
@@ -356,6 +370,72 @@ const ScreenshotPanel = ({
                                 </div>
                             </Form.Item>
 
+                            <div className="screenshot-panel__group border border-gray-300 border-opacity-40 rounded-lg p-3 mb-3">
+                            <div className="screenshot-panel__group-title text-xs uppercase tracking-wide mb-2">Sobreposição</div>
+                            <Form.Item label="Cor">
+                                <div
+                                    className="screenshot-panel__color-grid"
+                                    role="radiogroup"
+                                    aria-label="Cor da sobreposição"
+                                >
+                                    {POSTER_COLOR_OVERLAYS.map((option) => {
+                                        const isSelected = overlaySelection === option.color;
+                                        return (
+                                            <button
+                                                key={option.id}
+                                                type="button"
+                                                className={`screenshot-panel__option-card screenshot-panel__color-card${isSelected ? ' is-active' : ''}`}
+                                                onClick={() => updateSetting('overlayColor', option.color)}
+                                                role="radio"
+                                                aria-checked={isSelected}
+                                            >
+                                                <span
+                                                    className={`screenshot-panel__color-swatch${option.color ? '' : ' is-empty'}`}
+                                                    style={option.color ? { backgroundColor: option.color } : undefined}
+                                                />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </Form.Item>
+                            <Form.Item label="Modo">
+                                <div
+                                    className="screenshot-panel__blend-grid"
+                                    role="radiogroup"
+                                    aria-label="Modo de mistura"
+                                >
+                                    {POSTER_OVERLAY_BLEND_MODES.map((option) => {
+                                        const isSelected = overlayBlendMode === option.mode;
+                                        return (
+                                            <button
+                                                key={option.id}
+                                                type="button"
+                                                className={`screenshot-panel__option-card screenshot-panel__blend-card${isSelected ? ' is-active' : ''}`}
+                                                onClick={() => updateSetting('overlayBlendMode', option.mode)}
+                                                role="radio"
+                                                aria-checked={isSelected}
+                                            >
+                                                <span className="screenshot-panel__blend-label">{option.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </Form.Item>
+                            <Form.Item label="Opacidade">
+                                <div className="screenshot-panel__alpha-row">
+                                    <Slider
+                                        min={0}
+                                        max={1}
+                                        step={0.02}
+                                        value={overlayAlpha}
+                                        onChange={(value) => updateSetting('overlayAlpha', value)}
+                                        tooltip={{ formatter: (value) => `${Math.round((value || 0) * 100)}%` }}
+                                    />
+                                </div>
+                            </Form.Item>
+                        </div>
+
+
                         <div className="screenshot-panel__group border border-gray-300 border-opacity-40 rounded-lg p-3 mb-3">
                             <div className="screenshot-panel__group-title text-xs uppercase tracking-wide mb-2">Elementos</div>
                             <div className="screenshot-panel__toggle flex items-center justify-between gap-3 py-1 pb-3">
@@ -390,7 +470,7 @@ const ScreenshotPanel = ({
                                 />
                             </div>
                         </div>
-
+                        
                         <div className="screenshot-panel__group border border-gray-300 border-opacity-40 rounded-lg p-3 mb-3">
                             <div className="screenshot-panel__group-title text-xs uppercase tracking-wide mb-2">Texto</div>
                             <div className="screenshot-panel__toggle flex items-center justify-between gap-3 py-1 pb-3">

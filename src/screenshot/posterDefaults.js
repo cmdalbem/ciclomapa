@@ -51,6 +51,28 @@ export const POSTER_MAP_THEMES = [
     }
 ];
 
+export const POSTER_COLOR_OVERLAYS = [
+    { id: 'none', label: null, color: null },
+    { id: '#386641', label: null, color: '#386641' },
+    { id: '#A7C957', label: null, color: '#A7C957' },
+    { id: '#4FA0AD', label: null, color: '#4FA0AD' },
+    { id: '#583707', label: null, color: '#583707' },
+    { id: '#B61815', label: null, color: '#B61815' },
+    { id: '#2A7BF4', label: null, color: '#2A7BF4' },
+    { id: '#E56119', label: null, color: '#E56119' }
+];
+
+export const POSTER_OVERLAY_BLEND_MODES = [
+    { id: 'soft-light', label: 'Soft light', mode: 'soft-light' },
+    { id: 'multiply', label: 'Multiply', mode: 'multiply' },
+    { id: 'screen', label: 'Screen', mode: 'screen' },
+    { id: 'overlay', label: 'Overlay', mode: 'overlay' },
+    { id: 'hard-light', label: 'Hard light', mode: 'hard-light' },
+    { id: 'color-burn', label: 'Color burn', mode: 'color-burn' },
+    { id: 'color', label: 'Color', mode: 'color' },
+    { id: 'normal', label: 'Normal', mode: 'source-over' },
+];
+
 export const getPosterMapThemeById = (id) => 
     POSTER_MAP_THEMES.find((theme) => theme.id === id) || POSTER_MAP_THEMES[0];
 
@@ -65,6 +87,8 @@ export const shouldHideBasemapForTheme = (themeId) => {
 };
 
 export const POSTER_PRESETS = [
+    { id: 'a5_portrait', label: 'A5 Retrato (1748x2480)', width: 1748, height: 2480 },
+    { id: 'a5_landscape', label: 'A5 Paisagem (2480x1748)', width: 2480, height: 1748 },
     { id: 'a4_portrait', label: 'A4 Retrato (2480x3508)', width: 2480, height: 3508 },
     { id: 'a4_landscape', label: 'A4 Paisagem (3508x2480)', width: 3508, height: 2480 },
     { id: 'a3_portrait', label: 'A3 Retrato (3508x4961)', width: 3508, height: 4961 },
@@ -73,29 +97,79 @@ export const POSTER_PRESETS = [
     { id: 'custom', label: 'Personalizado' }
 ];
 
-export const getPosterThemeColors = (isDarkMode) => {
-    if (isDarkMode === false) {
-        return {
+const POSTER_THEME_COLOR_OVERRIDES = {
+    minimalistic: {
+        light: {
+            frameColor: '#f7f7f7',
+            backdropColor: '#f7f7f7'
+        },
+        dark: {
+            frameColor: '#0f0f0f',
+            backdropColor: '#0f0f0f'
+        }
+    },
+    default: {
+        light: {
+            frameColor: '#dcdad8',
+            backdropColor: '#dcdad8'
+        },
+        dark: {
+            frameColor: '#131313',
+            backdropColor: '#131313'
+        }
+    },
+    accented: {
+        light: {
+            frameColor: '#446f4e',
+            backdropColor: '#f7f7f7'
+        },
+        dark: {
+            frameColor: '#b9fab7',
+            backdropColor: '#b9fab7'
+        }
+    },
+    none: { 
+        light: {
+            frameColor: '#FFFFFF',
+            backdropColor: '#FFFFFF'
+        },
+        dark: {
+            frameColor: '#1a1a1a',
+            backdropColor: '#1a1a1a'
+        }
+    }
+};
+
+export const getPosterThemeColors = (themeId, isDarkMode) => {
+    const baseColors = isDarkMode === false
+        ? {
             frameColor: '#FFFFFF',
             innerBorderColor: '#386641',
             backgroundColor: '#EDEEED',
             textColor: adjustColorBrightness('#386641', -0.2),
             backdropColor: '#EDEEED'
+        }
+        : {
+            frameColor: '#1a1a1a',
+            innerBorderColor: '#B9FAB7',
+            backgroundColor: '#1a1a1a',
+            textColor: adjustColorBrightness('#B9FAB7', 0.2),
+            backdropColor: '#1a1a1a'
         };
-    }
+
+    const variant = isDarkMode ? 'dark' : 'light';
+    const themeOverrides = POSTER_THEME_COLOR_OVERRIDES[themeId]?.[variant] || {};
 
     return {
-        frameColor: '#1a1a1a',
-        innerBorderColor: '#B9FAB7',
-        backgroundColor: '#1a1a1a',
-        textColor: adjustColorBrightness('#B9FAB7', 0.2),
-        backdropColor: '#1a1a1a'
+        ...baseColors,
+        ...themeOverrides
     };
 };
 
 export const POSTER_LAYOUT = {
     frameSizeRatio: 0.05,
     frameSizeMin: 8,
+    overlayAlpha: 1,
     gradientFadeRatio: 0.3,
     gradientFadeAlpha: 1,
     gradientSolidStop: 0.1,
@@ -117,9 +191,9 @@ export const getDefaultPosterSettings = (areaLabel) => {
     const { city, country } = parseAreaLabel(areaLabel);
 
     return {
-        presetId: 'a4_portrait',
-        width: 2480,
-        height: 3508,
+        presetId: 'a5_portrait',
+        width: 1748,
+        height: 2480,
         useCustomSize: false,
         showFrame: true,
         showText: true,
@@ -127,6 +201,9 @@ export const getDefaultPosterSettings = (areaLabel) => {
         showBackdrop: true,
         showLogo: false,
         showInnerBorder: true,
+        overlayColor: null,
+        overlayBlendMode: 'soft-light',
+        overlayAlpha: POSTER_LAYOUT.overlayAlpha,
         mapTheme: 'minimalistic',
         title: city || '',
         subtitle: country || ''

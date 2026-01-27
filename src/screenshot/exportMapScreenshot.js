@@ -60,10 +60,10 @@ const getOutputSize = (settings, mapCanvas) => {
     return { width, height };
 };
 
-export const getThemeColors = (isDarkMode) => getPosterThemeColors(isDarkMode);
+export const getThemeColors = (themeId, isDarkMode) => getPosterThemeColors(themeId, isDarkMode);
 
 const normalizeOverlay = (settings, titleFallback, coords, isDarkMode) => {
-    const themeColors = getThemeColors(isDarkMode);
+    const themeColors = getThemeColors(settings?.mapTheme, isDarkMode);
     const showText = settings?.showText !== false;
     const showCoords = settings?.showCoords !== false;
     const frameColor = settings?.frameColor || themeColors.frameColor;
@@ -76,6 +76,9 @@ const normalizeOverlay = (settings, titleFallback, coords, isDarkMode) => {
         showBackdrop: settings?.showBackdrop !== false,
         showLogo: settings?.showLogo !== false,
         showInnerBorder: settings?.showInnerBorder === true,
+        overlayColor: settings?.overlayColor || null,
+        overlayBlendMode: settings?.overlayBlendMode || 'source-over',
+        overlayAlpha: Number.isFinite(settings?.overlayAlpha) ? settings.overlayAlpha : undefined,
         title: settings?.title || titleFallback || '',
         subtitle: settings?.subtitle || '',
         coords: showText && showCoords ? formatCoords(coords) : '',

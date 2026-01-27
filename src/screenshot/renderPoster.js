@@ -100,6 +100,18 @@ const drawGradientBackdrop = (ctx, width, height, color) => {
     ctx.fillRect(0, height - fadeSize, width, fadeSize);
 };
 
+const drawColorOverlay = (ctx, width, height, color, blendMode, alpha) => {
+    if (!color) {
+        return;
+    }
+    const previousBlend = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = blendMode || 'source-over';
+    const overlayAlpha = Number.isFinite(alpha) ? alpha : POSTER_LAYOUT.overlayAlpha;
+    ctx.fillStyle = hexToRgba(color, overlayAlpha);
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalCompositeOperation = previousBlend;
+};
+
 const drawTextBlock = (ctx, width, height, overlay, frameSize) => {
     if (!overlay.showText) {
         return;
@@ -233,6 +245,17 @@ const renderPosterCanvas = async ({ mapCanvas, width, height, overlay }) => {
     drawTextBlock(ctx, width, height, overlay, frameSize);
     if (overlay?.showLogo !== false) {
         await drawLogo(ctx, width, height, overlay, frameSize);
+    }
+
+    if (overlay?.overlayColor) {
+        drawColorOverlay(
+            ctx,
+            width,
+            height,
+            overlay.overlayColor,
+            overlay?.overlayBlendMode,
+            overlay?.overlayAlpha
+        );
     }
 
     return outputCanvas;
