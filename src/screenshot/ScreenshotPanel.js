@@ -10,8 +10,8 @@ import {
 } from 'antd';
 
 import { renderPosterDataUrl } from './renderPoster.js';
-import { getThemeColors } from './exportMapScreenshot.js';
-import { POSTER_PRESETS, POSTER_MAP_THEMES } from './posterDefaults.js';
+import { getThemeColors, formatCoords } from './exportMapScreenshot.js';
+import { POSTER_PRESETS, POSTER_MAP_THEMES, shouldHideBasemapForTheme } from './posterDefaults.js';
 import { withMapBasemapHidden, withMapLabelsHidden } from './mapStyleUtils.js';
 import './ScreenshotPanel.css';
 
@@ -93,7 +93,8 @@ const ScreenshotPanel = ({
             }
 
             setIsRendering(true);
-            await withMapBasemapHidden(map, settings?.hideBasemap === true, async () => (
+            const hideBasemap = shouldHideBasemapForTheme(settings?.mapTheme);
+            await withMapBasemapHidden(map, hideBasemap, async () => (
                 withMapLabelsHidden(map, async () => {
                     if (cancelled) {
                         return;
@@ -110,8 +111,8 @@ const ScreenshotPanel = ({
                         backgroundColor: settings.backgroundColor || themeColors.backgroundColor,
                         title: settings.title || titleFallback || '',
                         subtitle: settings.subtitle || subtitleFallback || '',
-                        coords: settings.showCoords !== false && settings.showText !== false && coords
-                            ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
+                        coords: settings.showCoords !== false && settings.showText !== false
+                            ? formatCoords(coords)
                             : '',
                         frameColor: settings.frameColor || themeColors.frameColor,
                         textColor: settings.textColor || themeColors.textColor,
@@ -217,14 +218,6 @@ const ScreenshotPanel = ({
                         </div>
 
                         <div className="screenshot-panel__toggle flex items-center justify-between gap-3 py-1 pb-3">
-                            <span>Ocultar base do mapa</span>
-                            <Switch
-                                checked={settings?.hideBasemap}
-                                onChange={(checked) => updateSetting('hideBasemap', checked)}
-                            />
-                        </div>
-
-                        <div className="screenshot-panel__toggle flex items-center justify-between gap-3 py-1 pb-3">
                             <span>Gradiente</span>
                             <Switch
                                 checked={settings?.showBackdrop}
@@ -249,9 +242,6 @@ const ScreenshotPanel = ({
                         </div>
 
                         <div className="screenshot-panel__group border border-gray-300 border-opacity-40 rounded-lg p-3 mb-3">
-                            <div className="screenshot-panel__group-title text-xs tracking-wider uppercase mb-2">
-                                Texto do pôster
-                            </div>
                             <Form.Item label="Título">
                                 <Input
                                     value={settings?.title}

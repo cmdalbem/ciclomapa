@@ -34,6 +34,16 @@ export const POSTER_MAP_THEMES = [
             dark: 'mapbox://styles/cmdalbem/cmkvub5js007b01sb0wcu31kv',
             light: 'mapbox://styles/cmdalbem/cmkvu318h001i01sbhhgj2l0b'
         }
+    },
+    {
+        id: 'none',
+        label: 'Nenhum',
+        hideBasemap: true,
+        styles: {
+            // Uses the default styles but hides the basemap layers
+            dark: MAP_STYLES.DARK,
+            light: MAP_STYLES.LIGHT
+        }
     }
 ];
 
@@ -43,6 +53,11 @@ export const getPosterMapThemeById = (id) =>
 export const getPosterMapStyle = (themeId, isDarkMode) => {
     const theme = getPosterMapThemeById(themeId);
     return isDarkMode ? theme.styles.dark : theme.styles.light;
+};
+
+export const shouldHideBasemapForTheme = (themeId) => {
+    const theme = getPosterMapThemeById(themeId);
+    return theme.hideBasemap === true;
 };
 
 export const POSTER_PRESETS = [
@@ -81,7 +96,7 @@ export const POSTER_LAYOUT = {
     gradientFadeAlpha: 1,
     gradientSolidStop: 0.1,
     titleSizeRatio: 0.04,
-    subtitleSizeRatio: 0.02,
+    subtitleSizeRatio: 0.015,
     coordsSizeRatio: 0.01,
     coordsSpacingRatio: 4,
     subtitleSpacingRatio: 1.6,
@@ -108,7 +123,6 @@ export const getDefaultPosterSettings = (areaLabel) => {
         showBackdrop: true,
         showLogo: false,
         showInnerBorder: true,
-        hideBasemap: false,
         mapTheme: 'default',
         title: city || '',
         subtitle: country || ''

@@ -1,7 +1,7 @@
 import { saveAs } from 'file-saver';
 import { renderPoster } from './renderPoster.js';
 import { withMapBasemapHidden, withMapLabelsHidden } from './mapStyleUtils.js';
-import { getPosterThemeColors } from './posterDefaults.js';
+import { getPosterThemeColors, shouldHideBasemapForTheme } from './posterDefaults.js';
 
 const DEFAULT_FILENAME_PREFIX = 'ciclomapa';
 
@@ -17,11 +17,26 @@ const buildFilename = (prefix) => {
     return `${prefix}-${stamp}.png`;
 };
 
-const formatCoords = (coords) => {
+/**
+ * Format coordinates with typographically correct symbols.
+ * Uses degree symbol (°), proper minus sign (−), and cardinal directions.
+ * Example output: "23.5505° S, 46.6333° W"
+ */
+export const formatCoords = (coords) => {
     if (!coords || coords.lat == null || coords.lng == null) {
         return '';
     }
-    return `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
+
+    const lat = coords.lat;
+    const lng = coords.lng;
+
+    const latDir = lat >= 0 ? 'N' : 'S';
+    const lngDir = lng >= 0 ? 'E' : 'W';
+
+    const latAbs = Math.abs(lat).toFixed(4);
+    const lngAbs = Math.abs(lng).toFixed(4);
+
+    return `${latAbs}° ${latDir}, ${lngAbs}° ${lngDir}`;
 };
 
 const getOutputSize = (settings, mapCanvas) => {
@@ -84,7 +99,8 @@ export const exportMapScreenshot = async ({
         throw new Error('Mapa indisponível para exportação.');
     }
 
-    const blob = await withMapBasemapHidden(map, settings?.hideBasemap === true, async () => (
+    const hideBasemap = shouldHideBasemapForTheme(settings?.mapTheme);
+    const blob = await withMapBasemapHidden(map, hideBasemap, async () => (
         withMapLabelsHidden(map, async () => {
             const mapCanvas = map.getCanvas();
             const { width, height } = getOutputSize(settings, mapCanvas);
