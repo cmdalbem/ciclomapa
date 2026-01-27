@@ -31,7 +31,7 @@ import { HiOutlineCamera as IconCamera } from 'react-icons/hi';
 import OSMController from './OSMController.js'
 import Storage from './Storage.js'
 import { downloadObjectAsJson, parseAreaLabel } from './utils.js'
-import { getDefaultPosterSettings } from './screenshot/posterDefaults.js'
+import { getDefaultPosterSettings, getPosterMapStyle } from './screenshot/posterDefaults.js'
 import { exportMapScreenshot } from './screenshot/exportMapScreenshot.js'
 import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './geojsonUtils.js'
 import { DirectionsProvider } from './DirectionsContext.js'
@@ -97,6 +97,7 @@ class App extends Component {
         this.closeScreenshotPanel = this.closeScreenshotPanel.bind(this);
         this.updateScreenshotSettings = this.updateScreenshotSettings.bind(this);
         this.exportScreenshot = this.exportScreenshot.bind(this);
+        this.onPosterMapThemeChange = this.onPosterMapThemeChange.bind(this);
         this.debouncedUpdateURL = debounce(this.updateURL, 300);
 
         this.initState();
@@ -268,11 +269,32 @@ class App extends Component {
     }
 
     closeScreenshotPanel() {
-        this.setState({ showScreenshotPanel: false });
+        const { screenshotSettings, isDarkMode } = this.state;
+        const currentTheme = screenshotSettings?.mapTheme;
+        
+        // If a custom poster map theme was active, restore the normal app map style
+        if (currentTheme && currentTheme !== 'default') {
+            const normalMapStyle = isDarkMode ? MAP_STYLES.DARK : MAP_STYLES.LIGHT;
+            this.setState({ 
+                showScreenshotPanel: false,
+                mapStyle: normalMapStyle
+            }, () => {
+                this.forceMapReinitialization();
+            });
+        } else {
+            this.setState({ showScreenshotPanel: false });
+        }
     }
 
     updateScreenshotSettings(nextSettings) {
         this.setState({ screenshotSettings: nextSettings });
+    }
+
+    onPosterMapThemeChange(themeId) {
+        const newMapStyle = getPosterMapStyle(themeId, this.state.isDarkMode);
+        this.setState({ mapStyle: newMapStyle }, () => {
+            this.forceMapReinitialization();
+        });
     }
 
     async exportScreenshot() {
@@ -811,9 +833,11 @@ class App extends Component {
 
         if (this.state.isDarkMode !== prevState.isDarkMode) {
             if (!this.state.showSatellite) {
-                const newMapStyle = this.state.isDarkMode 
-                    ? MAP_STYLES.DARK
-                    : MAP_STYLES.LIGHT;
+                // Check if a custom poster map theme is active
+                const posterTheme = this.state.screenshotSettings?.mapTheme;
+                const newMapStyle = (posterTheme && posterTheme !== 'default' && this.state.showScreenshotPanel)
+                    ? getPosterMapStyle(posterTheme, this.state.isDarkMode)
+                    : (this.state.isDarkMode ? MAP_STYLES.DARK : MAP_STYLES.LIGHT);
                 this.setState({ mapStyle: newMapStyle });
             }
         }
@@ -1031,11 +1055,12 @@ class App extends Component {
                                         onExport={this.exportScreenshot}
                                         settings={this.state.screenshotSettings}
                                         onSettingsChange={this.updateScreenshotSettings}
+                                        onMapThemeChange={this.onPosterMapThemeChange}
                                         map={this.state.map}
                                         coords={{ lat: this.state.lat, lng: this.state.lng }}
                                         titleFallback={this.state.area}
                                         subtitleFallback={parseAreaLabel(this.state.area).country}
-                                    isDarkMode={this.state.isDarkMode}
+                                        isDarkMode={this.state.isDarkMode}
                                     />
                                 )}
                             </>

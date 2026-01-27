@@ -11,7 +11,7 @@ import {
 
 import { renderPosterDataUrl } from './renderPoster.js';
 import { getThemeColors } from './exportMapScreenshot.js';
-import { POSTER_PRESETS } from './posterDefaults.js';
+import { POSTER_PRESETS, POSTER_MAP_THEMES } from './posterDefaults.js';
 import { withMapBasemapHidden, withMapLabelsHidden } from './mapStyleUtils.js';
 import './ScreenshotPanel.css';
 
@@ -23,6 +23,7 @@ const ScreenshotPanel = ({
     onExport,
     settings,
     onSettingsChange,
+    onMapThemeChange,
     map,
     coords,
     titleFallback,
@@ -61,11 +62,32 @@ const ScreenshotPanel = ({
         });
     };
 
+    const handleMapThemeChange = (themeId) => {
+        updateSetting('mapTheme', themeId);
+        if (onMapThemeChange) {
+            onMapThemeChange(themeId);
+        }
+    };
+
     useEffect(() => {
         let cancelled = false;
 
+        const isMapReady = (mapInstance) => {
+            if (!mapInstance) {
+                return false;
+            }
+            try {
+                // Check if map has a valid style and canvas
+                const style = mapInstance.getStyle && mapInstance.getStyle();
+                const canvas = mapInstance.getCanvas && mapInstance.getCanvas();
+                return style != null && canvas != null;
+            } catch (error) {
+                return false;
+            }
+        };
+
         const buildPreview = async () => {
-            if (!open || !map || !settings) {
+            if (!open || !map || !settings || !isMapReady(map)) {
                 setPreviewUrl('');
                 return;
             }
@@ -146,6 +168,17 @@ const ScreenshotPanel = ({
                             />
                         </Form.Item>
 
+                        <Form.Item label="Estilo do mapa">
+                            <Select
+                                value={settings?.mapTheme || 'default'}
+                                onChange={handleMapThemeChange}
+                                options={POSTER_MAP_THEMES.map((theme) => ({
+                                    value: theme.id,
+                                    label: theme.label
+                                }))}
+                            />
+                        </Form.Item>
+
                         {isCustom && (
                             <Space className="screenshot-panel__size" size="middle">
                                 <Form.Item label="Largura (px)">
@@ -190,7 +223,7 @@ const ScreenshotPanel = ({
                                 onChange={(checked) => updateSetting('hideBasemap', checked)}
                             />
                         </div>
-{/* 
+
                         <div className="screenshot-panel__toggle flex items-center justify-between gap-3 py-1 pb-3">
                             <span>Gradiente</span>
                             <Switch
@@ -205,7 +238,7 @@ const ScreenshotPanel = ({
                                 checked={settings?.showLogo}
                                 onChange={(checked) => updateSetting('showLogo', checked)}
                             />
-                        </div> */}
+                        </div>
 
                         <div className="screenshot-panel__toggle flex items-center justify-between gap-3 py-1 pb-3">
                             <span>Texto</span>

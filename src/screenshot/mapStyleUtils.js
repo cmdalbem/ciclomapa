@@ -22,8 +22,26 @@ export const POI_LAYER_IDS = [
     'public transport stations'
 ];
 
-const waitForMapIdle = (map) => new Promise((resolve) => {
+/**
+ * Checks if the map is in a valid state for style operations.
+ * The map can become invalid when it's being reinitialized.
+ */
+const isMapValid = (map) => {
     if (!map) {
+        return false;
+    }
+
+    try {
+        // Check if the map has a valid style
+        const style = map.getStyle && map.getStyle();
+        return style != null;
+    } catch (error) {
+        return false;
+    }
+};
+
+const waitForMapIdle = (map) => new Promise((resolve) => {
+    if (!map || !isMapValid(map)) {
         resolve();
         return;
     }
@@ -82,22 +100,22 @@ const shouldHideBasemapLayer = (layer, basemapSourceIds) => {
 };
 
 export const withMapLabelsHidden = async (map, fn) => {
-    if (!map) {
+    if (!map || !isMapValid(map)) {
         return fn();
     }
 
     const previousVisibility = {};
     [...LABEL_LAYER_IDS, ...POI_LAYER_IDS].forEach((layerId) => {
-        if (!map.getLayer || !map.getLayer(layerId)) {
-            return;
-        }
-
         try {
+            if (!map.getLayer(layerId)) {
+                return;
+            }
+
             const visibility = map.getLayoutProperty(layerId, 'visibility');
             previousVisibility[layerId] = visibility || 'visible';
             map.setLayoutProperty(layerId, 'visibility', 'none');
         } catch (error) {
-            // Ignore style mutation failures
+            // Ignore style mutation failures (map may have been invalidated)
         }
     });
 
@@ -107,15 +125,15 @@ export const withMapLabelsHidden = async (map, fn) => {
         return await fn();
     } finally {
         [...LABEL_LAYER_IDS, ...POI_LAYER_IDS].forEach((layerId) => {
-            if (!map.getLayer || !map.getLayer(layerId)) {
-                return;
-            }
-
-            const visibility = previousVisibility[layerId] || 'visible';
             try {
+                if (!isMapValid(map) || !map.getLayer(layerId)) {
+                    return;
+                }
+
+                const visibility = previousVisibility[layerId] || 'visible';
                 map.setLayoutProperty(layerId, 'visibility', visibility);
             } catch (error) {
-                // Ignore style mutation failures
+                // Ignore style mutation failures (map may have been invalidated)
             }
         });
     }
@@ -126,11 +144,11 @@ export const withMapBasemapHidden = async (map, enabled, fn) => {
         return fn();
     }
 
-    if (!map) {
+    if (!map || !isMapValid(map)) {
         return fn();
     }
 
-    const style = map.getStyle && map.getStyle();
+    const style = map.getStyle();
     const layers = style?.layers || [];
     const basemapSourceIds = getBasemapSourceIds(style);
     const previousVisibility = {};
@@ -145,7 +163,7 @@ export const withMapBasemapHidden = async (map, enabled, fn) => {
             previousVisibility[layer.id] = visibility || 'visible';
             map.setLayoutProperty(layer.id, 'visibility', 'none');
         } catch (error) {
-            // Ignore style mutation failures
+            // Ignore style mutation failures (map may have been invalidated)
         }
     });
 
@@ -155,15 +173,15 @@ export const withMapBasemapHidden = async (map, enabled, fn) => {
         return await fn();
     } finally {
         Object.keys(previousVisibility).forEach((layerId) => {
-            if (!map.getLayer || !map.getLayer(layerId)) {
-                return;
-            }
-
-            const visibility = previousVisibility[layerId] || 'visible';
             try {
+                if (!isMapValid(map) || !map.getLayer(layerId)) {
+                    return;
+                }
+
+                const visibility = previousVisibility[layerId] || 'visible';
                 map.setLayoutProperty(layerId, 'visibility', visibility);
             } catch (error) {
-                // Ignore style mutation failures
+                // Ignore style mutation failures (map may have been invalidated)
             }
         });
     }

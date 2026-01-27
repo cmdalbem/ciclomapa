@@ -1,4 +1,49 @@
 import { adjustColorBrightness, parseAreaLabel } from '../utils.js';
+import { MAP_STYLES } from '../constants.js';
+
+/**
+ * Map themes available for poster export.
+ * Each theme has a light and dark variant.
+ */
+export const POSTER_MAP_THEMES = [
+    {
+        id: 'default',
+        label: 'Padrão',
+        styles: {
+            dark: MAP_STYLES.DARK,
+            light: MAP_STYLES.LIGHT
+        }
+    },
+    {
+        id: 'minimalistic',
+        label: 'Minimalista',
+        styles: {
+            // New styles
+            // dark: 'mapbox://styles/cmdalbem/cmkvrqoe2007x01se22vk16ol',
+            // light: 'mapbox://styles/cmdalbem/cmkv57ppb003801shbjefcb6y'
+            
+            // Classic styles
+            dark: 'mapbox://styles/cmdalbem/cmkvtc3uy001g01sbdwh3227b',
+            light: 'mapbox://styles/cmdalbem/cmkvtc3z8004401sh7skp0css'
+        }
+    },
+    {
+        id: 'accented',
+        label: 'Destacado',
+        styles: {
+            dark: 'mapbox://styles/cmdalbem/cmkvub5js007b01sb0wcu31kv',
+            light: 'mapbox://styles/cmdalbem/cmkvu318h001i01sbhhgj2l0b'
+        }
+    }
+];
+
+export const getPosterMapThemeById = (id) => 
+    POSTER_MAP_THEMES.find((theme) => theme.id === id) || POSTER_MAP_THEMES[0];
+
+export const getPosterMapStyle = (themeId, isDarkMode) => {
+    const theme = getPosterMapThemeById(themeId);
+    return isDarkMode ? theme.styles.dark : theme.styles.light;
+};
 
 export const POSTER_PRESETS = [
     { id: 'a4_portrait', label: 'A4 Retrato (2480x3508)', width: 2480, height: 3508 },
@@ -64,6 +109,7 @@ export const getDefaultPosterSettings = (areaLabel) => {
         showLogo: false,
         showInnerBorder: true,
         hideBasemap: false,
+        mapTheme: 'default',
         title: city || '',
         subtitle: country || ''
     };
