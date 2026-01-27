@@ -128,7 +128,10 @@ class OSMController {
     }
 
     static getLayers(isDarkMode, isDebugMode) {
-        let layers = layersDefinitions.default;
+        let layers = layersDefinitions.default.map(layer => ({
+            ...layer,
+            style: layer.style ? { ...layer.style } : undefined,
+        }));
         
         layers.forEach(l => {
             // Generate an ID based on name
@@ -138,8 +141,10 @@ class OSMController {
             l.isActive = l.isActive !== undefined ? l.isActive : true;
             l.type = l.type || 'way';
             if (l.style) {
-                l.style.lineColor = isDarkMode && l.style.lineColorDark ? l.style.lineColorDark : l.style.lineColor;
-                l.style.textColor = isDarkMode && l.style.textColorDark ? l.style.textColorDark : l.style.textColor;
+                if (isDarkMode) {
+                    l.style.lineColor = l.style.lineColorDark ? l.style.lineColorDark : l.style.lineColor;
+                    l.style.textColor = l.style.textColorDark ? l.style.textColorDark : l.style.textColor;
+                }
  
                 l.style.lineStyle = l.style.lineStyle || 'solid';
 
