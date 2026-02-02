@@ -80,7 +80,7 @@ class CommentModal extends Component {
     render() {
         return (
             <Modal
-                open={this.props.visible}
+                open={this.props.open}
                 onOk={this.handleOk}
                 onCancel={this.props.onCancel}
                 destroyOnClose={true}
