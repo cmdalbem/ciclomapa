@@ -57,6 +57,8 @@ export const HYBRID_MAX_RESULTS = 3;
 export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
 export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = false;
+export const ENABLE_COMMENTS = true;
+export const ENABLE_SATELLITE_TOGGLE = false;
 
 export const ROUTE_COLORS = {
     DARK: {
@@ -125,7 +127,6 @@ export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAUL
 
 export const IS_PROD = window.location.hostname === 'ciclomapa.org.br';
 export const DEFAULT_SIDEBAR_OPEN = false;
-export const ENABLE_COMMENTS = true;
 export const SAVE_TO_FIREBASE = true;
 export const DISABLE_DATA_HEALTY_TEST = false;
 export const THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE = 0.1;

@@ -45,7 +45,8 @@ import {
     DEFAULT_LENGTH_CALCULATE_STRATEGIES,
     MAP_STYLES,
     MAPBOX_ACCESS_TOKEN,
-    DEFAULT_SIDEBAR_OPEN
+    DEFAULT_SIDEBAR_OPEN,
+    ENABLE_SATELLITE_TOGGLE
 } from './constants.js'
 
 import './App.less';
@@ -141,7 +142,9 @@ class App extends Component {
 
         this.state = {
             area: prev.area || '',
-            showSatellite: prev.showSatellite !== undefined ? prev.showSatellite : false,
+            showSatellite: ENABLE_SATELLITE_TOGGLE
+                ? (prev.showSatellite !== undefined ? prev.showSatellite : false)
+                : false,
             zoom: prev.zoom || urlParams.z || DEFAULT_ZOOM,
             lat: parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
             lng: parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
@@ -668,6 +671,14 @@ class App extends Component {
     }
 
     onMapShowSatelliteChanged(showSatellite) {
+        if (!ENABLE_SATELLITE_TOGGLE) {
+            // Ensure satellite mode is never enabled when the flag is off.
+            if (this.state.showSatellite !== false) {
+                this.setState({ showSatellite: false });
+            }
+            return;
+        }
+
         this.setState({ showSatellite: showSatellite });
     }
 
@@ -970,7 +981,7 @@ class App extends Component {
                             zoom={this.state.zoom}
                             lat={this.state.lat}
                             lng={this.state.lng}
-                            showSatellite={this.state.showSatellite}
+                            showSatellite={ENABLE_SATELLITE_TOGGLE ? this.state.showSatellite : false}
                             location={this.state.area}
                             onMapMoved={this.onMapMoved}
                             updateLengths={this.updateLengths}
@@ -988,15 +999,16 @@ class App extends Component {
                             }}
                         />
                         
-                        {/* {
+                        {
                             !this.state.embedMode &&
+                            ENABLE_SATELLITE_TOGGLE &&
                             <MapStyleSwitcher 
                                 showSatellite={this.state.showSatellite}
                                 onMapStyleChange={this.onMapStyleChange}
                                 onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
                                 isDarkMode={this.state.isDarkMode}
                             />
-                        } */}
+                        }
 
                         {
                             !this.state.embedMode && !IS_MOBILE &&
