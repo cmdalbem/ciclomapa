@@ -258,6 +258,11 @@
     left: auto;
 }
 
+#ciclomapa.analyticsSidebarOpen .directions-panel-button {
+    /* Analytics sidebar uses Tailwind `w-60` (= 15rem). Shift button left to avoid overlap. */
+    right: calc(12px + 15rem);
+}
+
 #layersPanelMobileButton.collapsed,
 .directions-panel-button.collapsed {
     color: #d1d5db;

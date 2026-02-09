@@ -941,7 +941,13 @@ class App extends Component {
     render() {
         return (
             <DirectionsProvider>
-                <div id="ciclomapa" className={this.state.hideUI ? "hideUI" : ""}>
+                <div
+                    id="ciclomapa"
+                    className={[
+                        this.state.hideUI ? 'hideUI' : '',
+                        this.state.isSidebarOpen ? 'analyticsSidebarOpen' : '',
+                    ].filter(Boolean).join(' ')}
+                >
                 {
                     !IS_PROD &&
                     <div className="fixed bottom-0 left-0 right-0 z-10 flex bg-yellow-300 text-black items-center justify-center text-center text-xs py-1">
