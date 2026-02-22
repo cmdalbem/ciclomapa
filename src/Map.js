@@ -2177,6 +2177,10 @@ class Map extends Component {
                 });
             }
         });
+
+        if (map.getLayer('comentarios')) {
+            map.setLayoutProperty('comentarios', 'visibility', hasRoutes ? 'none' : 'visible');
+        }
     }
 
     updateCyclablePathsOpacity() {
