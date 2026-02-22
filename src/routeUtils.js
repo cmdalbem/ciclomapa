@@ -42,9 +42,8 @@ export const getRouteScore = (routeCoverageData, index) => {
         totalCoverage += percentage;
     });
     
-    // If no cycling infrastructure coverage, score is 0
     if (totalCoverage === 0) {
-        return { score: 0, cssClass: 'bg-gray-600' };
+        return { score: 0, cssClass: 'bg-red-600' };
     }
     
     // Calculate final score considering BOTH quality and coverage
