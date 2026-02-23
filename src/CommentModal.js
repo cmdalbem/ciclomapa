@@ -9,6 +9,8 @@ import {
     Space,
     Checkbox, Row, Col
 } from 'antd';
+import { HiOutlineExternalLink } from 'react-icons/hi';
+import { getOsmUrl } from './utils.js';
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -78,8 +80,12 @@ class CommentModal extends Component {
     }
 
     render() {
+        const { coords, z } = this.props;
+        const osmEditUrl = coords ? getOsmUrl(coords.lat, coords.lng, z) : 'https://www.openstreetmap.org/';
+
         return (
             <Modal
+                title="Adicionar comentário no mapa"
                 open={this.props.open}
                 onOk={this.handleOk}
                 onCancel={this.props.onCancel}
@@ -89,10 +95,25 @@ class CommentModal extends Component {
                 okButtonProps={{
                     disabled: this.state.text.length === 0 || this.state.tags.length === 0
                 }}
+                okText="Adicionar comentário"
+                cancelText="Cancelar"
             >
                 <Space direction="vertical" size="large" style={{width: '100%'}}>
+                    <Text type="secondary" className="text-white" style={{ opacity: 0.7 }}>
+                        Deixe um comentário para ajudar a melhorar o mapeamento da infraestrutura cicloviária da sua cidade. Se preferir, você também pode fazer a edição diretamente no{' '}
+                        <a
+                            className="underline inline-flex items-center gap-1"
+                            style={{ opacity: 0.9 }}
+                            href={osmEditUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            OpenStreetMap <HiOutlineExternalLink />
+                        </a>.
+                    </Text>
+
                     <div>
-                        <Text strong>
+                        <Text className="text-white">
                             Assunto
                         </Text>
 
@@ -129,22 +150,24 @@ class CommentModal extends Component {
                     </div>
 
                     <div>
-                        <Text strong>
+                        <Text className="text-white">
                             Comentário
                         </Text>
                         <TextArea
                             autoSize={{ minRows: 3 }}
                             style={{ width: '100%' }}
                             onChange={this.onTextChange}
+                            placeholder="Explique em mais detalhes o problema que você identificou."
                         />
                     </div>
 
                     <div>
-                        <Text strong type="secondary">
-                            Seu contato (opcional, somente visível para a equipe)
+                        <Text className="text-white">
+                            Email
                         </Text>
                         <Input
                             onChange={this.onEmailChange}
+                            placeholder="Opcional, somente visível para a equipe CicloMapa"
                         />
                     </div>
                 </Space>
