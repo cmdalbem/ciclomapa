@@ -125,7 +125,7 @@ class TopBar extends Component {
                 {
                     key: 'comment',
                     icon: <IconComment/>,
-                    label: 'Comentar',
+                    label: 'Adicionar comentário',
                 },
                 {
                     key: 'edit',
@@ -136,10 +136,10 @@ class TopBar extends Component {
                             target="_BLANK" rel="noopener noreferrer"
                             href={getOsmUrl(this.props.lat, this.props.lng, this.props.z)}
                         >
-                            Editar no OSM
+                            Editar mapa
                         </a>
                         :
-                        "Editar no OSM"
+                        "Editar mapa"
                 }
             ],
             onClick: this.handleMenuClick
