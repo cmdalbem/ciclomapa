@@ -482,3 +482,8 @@
 .theme-light .ant-checkbox-disabled + span {
   color: rgba(0, 0, 0, 0.25) !important;
 }
+
+/* Light mode placeholder color for modal inputs */
+.theme-light .ant-modal .ant-input::placeholder {
+  color: rgba(0, 0, 0, 0.45) !important;
+}
