@@ -194,11 +194,14 @@
         }
 
         .ant-select-clear {
-            /* background: white; */
-            /* color: black; */
             width: 32px;
-            /* color: white; */
             right: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: rgba(0, 0, 0, 0.45);
+        }
+
+        .ant-select-clear:hover {
+            color: rgba(0, 0, 0, 0.7);
         }
     }
 }
