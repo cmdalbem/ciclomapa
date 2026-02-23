@@ -58,7 +58,7 @@ export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
 export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = false;
 export const ENABLE_COMMENTS = true;
-export const ENABLE_SATELLITE_TOGGLE = true;
+export const ENABLE_SATELLITE_TOGGLE = false;
 
 export const ROUTE_COLORS = {
     DARK: {
