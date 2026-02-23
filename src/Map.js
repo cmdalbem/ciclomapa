@@ -2363,15 +2363,10 @@ class Map extends Component {
                 document.querySelector('body').classList.remove('show-city-picker');
                 cityPicker.clear();
             });
+            
             // Doesn't matter where we add this, it's customized via CSS
             this.map.addControl(cityPicker, 'top-left');
     
-            // this.map.addControl(
-            //     new mapboxgl.NavigationControl({
-            //         showCompass: true
-            //     }),
-            //     'bottom-right'
-            // );
 
             const geolocate = new mapboxgl.GeolocateControl({
                 positionOptions: {
@@ -2444,11 +2439,50 @@ class Map extends Component {
                     }
                 }, 1000);
             }
+
+            this.initCompassControl();
             
             // this.map.addControl(new mapboxgl.FullscreenControl({
             //     container: document.querySelector('body')
             // }), 'bottom-right');
         }
+    }
+
+    initCompassControl() {
+        const navigationControl = new mapboxgl.NavigationControl({
+            showCompass: true,
+            showZoom: false,
+            visualizePitch: true
+        });
+        this.map.addControl(navigationControl, 'right');
+
+        const compassControlContainer = navigationControl._container;
+        const compassButton = navigationControl._container?.querySelector('.mapboxgl-ctrl-compass');
+        if (!compassControlContainer) return;
+        compassControlContainer.classList.add('ciclomapa-compass-control');
+
+        const rotationOrPitchThreshold = 0.1;
+        const normalizeBearing = (bearing) => {
+            const normalized = ((bearing % 360) + 360) % 360;
+            return normalized > 180 ? normalized - 360 : normalized;
+        };
+
+        const updateCompassVisibility = () => {
+            const hasRotation = Math.abs(normalizeBearing(this.map.getBearing())) > rotationOrPitchThreshold;
+            const hasPitch = this.map.getPitch() > rotationOrPitchThreshold;
+            const shouldShowCompass = hasRotation || hasPitch;
+            compassControlContainer.classList.toggle('is-visible', shouldShowCompass);
+
+            if (compassButton) {
+                compassButton.setAttribute('aria-hidden', shouldShowCompass ? 'false' : 'true');
+            }
+        };
+
+        updateCompassVisibility();
+        this.map.on('rotate', updateCompassVisibility);
+        this.map.on('pitch', updateCompassVisibility);
+        this.map.on('rotateend', updateCompassVisibility);
+        this.map.on('pitchend', updateCompassVisibility);
     }
 
     /**
