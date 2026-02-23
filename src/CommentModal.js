@@ -102,7 +102,7 @@ class CommentModal extends Component {
                     <Text type="secondary" className="text-white" style={{ opacity: 0.7 }}>
                         Deixe um comentário para ajudar a melhorar o mapeamento da infraestrutura cicloviária da sua cidade. Se preferir, você também pode fazer a edição diretamente no{' '}
                         <a
-                            className="underline inline-flex items-center gap-1"
+                            className="text-whiteunderline inline-flex items-center gap-1"
                             style={{ opacity: 0.9 }}
                             href={osmEditUrl}
                             target="_blank"
