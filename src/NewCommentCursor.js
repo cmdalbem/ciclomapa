@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 
 import commentIcon from './img/icons/poi-comment.png';
+import commentIconLight from './img/icons/poi-comment--light.png';
 
 
 class NewCommentCursor extends Component {
@@ -35,7 +36,7 @@ class NewCommentCursor extends Component {
                 }}>
                 <img
                     className="absolute" alt=""
-                    src={commentIcon}
+                    src={this.props.isDarkMode ? commentIcon : commentIconLight}
                     style={{
                         left: -16,
                         top: -20,

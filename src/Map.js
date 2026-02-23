@@ -47,8 +47,8 @@ import './Map.css'
 
 import capitalsGeojson from './brazil_capitals.geojson';
 
-// @todo: improve this please
 import commentIcon from './img/icons/poi-comment.png';
+import commentIconLight from './img/icons/poi-comment--light.png';
 
 import bikeparkingIcon from './img/icons/poi-bikeparking.png';
 import bikeparkingIconLight from './img/icons/poi-bikeparking--light.png';
@@ -69,6 +69,7 @@ import arrowSdf from './img/icons/arrow-sdf.png';
 
 const iconsMap = {
     "poi-comment": commentIcon,
+    "poi-comment--light": commentIconLight,
     "poi-bikeparking": bikeparkingIcon,
     "poi-bikeparking--light": bikeparkingIconLight,
     "poi-bikeparking-2x": bikeparkingIcon2x,
@@ -1023,8 +1024,9 @@ class Map extends Component {
                         'id': 'comentarios',
                         'type': 'symbol',
                         'source': 'commentsSrc',
+                        'minzoom': MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
                         'layout': {
-                            'icon-image': 'commentIcon',
+                            'icon-image': this.props.isDarkMode ? 'commentIcon' : 'commentIcon--light',
                             'icon-size': [
                                 "interpolate",
                                 ["exponential", 1.5],
@@ -1053,6 +1055,9 @@ class Map extends Component {
                     // Interactions
         
                     this.map.on('mouseenter', 'comentarios', e => {
+                        if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
+                            return;
+                        }
                         if (e.features.length > 0) {
                             // Disable comment hover effects when in route mode
                             if (self.props.isInRouteMode) {
@@ -2531,11 +2536,17 @@ class Map extends Component {
     }
 
     loadImages() {
-        // Load comment icon if not already loaded
+        // Load comment icons if not already loaded
         if (!this.map.hasImage('commentIcon')) {
             this.map.loadImage( commentIcon, (error, image) => {
                 if (error) throw error;
                 this.map.addImage('commentIcon', image);
+            });
+        }
+        if (!this.map.hasImage('commentIcon--light')) {
+            this.map.loadImage( commentIconLight, (error, image) => {
+                if (error) throw error;
+                this.map.addImage('commentIcon--light', image);
             });
         }
 
@@ -2653,7 +2664,7 @@ class Map extends Component {
                 {
                     ENABLE_COMMENTS &&
                     this.state.showCommentCursor &&
-                    <NewCommentCursor/>
+                    <NewCommentCursor isDarkMode={this.props.isDarkMode}/>
                 }
 
                 {
@@ -2663,6 +2674,7 @@ class Map extends Component {
                         open={this.state.showCommentModal}
                         tagsList={this.state.tagsList}
                         coords={this.newCommentCoords}
+                        z={this.props.z}
                         airtableDatabase={this.airtableDatabase}
                         afterCreate={this.afterCommentCreate}
                         onCancel={this.hideCommentModal}
