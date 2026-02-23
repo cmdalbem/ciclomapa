@@ -33,6 +33,17 @@ body.theme-dark .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group {
   filter: invert(1);
 }
 
+.mapboxgl-ctrl.ciclomapa-compass-control {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.mapboxgl-ctrl.ciclomapa-compass-control.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* .mapboxgl-ctrl-group button+button {
   border: none;
 } */
