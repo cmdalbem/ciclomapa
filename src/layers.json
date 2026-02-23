@@ -247,7 +247,7 @@
     {
         "name": "Proibido",
         "displayName": "Proibidas",
-        "description": "Vias onde é proibido pedalar. Você pode descer a bicicleta e passar empurrando ela.",
+        "description": "Vias onde é proibido pedalar. Você pode descer da bicicleta e passar empurrando ela.",
         "isActive": false,
         "filters": [
             ["bicycle", "no"],
