@@ -4,6 +4,7 @@ import './MapPopups.css'
 import { osmi18n as i18n } from './osmi18n.js'
 import Analytics from './Analytics.js'
 import { getRouteScore, formatDistance, formatDuration } from './routeUtils.js'
+import { formatTimeAgo } from './utils.js'
 
 import { IS_MOBILE } from "./constants.js";
 
@@ -162,11 +163,11 @@ class MapPopups {
 
         let html = `
             <div style="color: gray;">
-                ${new Date(properties.createdAt).toLocaleString('pt-br')}
+                ${formatTimeAgo(properties.createdAt, { capitalizeFirstLetter: true })}
             </div>
 
             <div style="
-                margin-top: 1em;
+                margin-top: .5em;
                 font-size: 18px;">
                 ${properties.text}
             </div>
@@ -186,7 +187,7 @@ class MapPopups {
             
             properties.tags.forEach( t => {
                 html += `
-                    <div class="inline-block py-1 px-3 rounded-full border-gray-700 border mt-2 text-xs">
+                    <div class="inline-block py-1 px-3 rounded-full bg-gray-800 text-gray-300 mt-2 text-xs">
                         ${t}
                     </div>
                 `;
@@ -198,7 +199,7 @@ class MapPopups {
         this.commentPopup.setLngLat(coords)
             .setHTML(html)
             .addTo(this.map);
-        // Disabeld while we probably don't really need it
+        // Disabled while we probably don't really need it
         // this.attachMobileActiveHandler(this.commentPopup);
     }
 
