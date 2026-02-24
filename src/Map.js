@@ -527,14 +527,7 @@ class Map extends Component {
                             { hover: false });
                     }
                     self.popups.showPOIPopup(e, iconsMap[l.icon+'-2x'], l.icon);
-                    if (IS_MOBILE && e.features[0]?.geometry?.coordinates) {
-                        const coords = e.features[0].geometry.coordinates;
-                        self.map.easeTo({
-                            center: [coords[0], coords[1]],
-                            zoom: 17,
-                            padding: {bottom: 50}
-                        });
-                    }
+                    self.focusFeatureOnMobile(e.features[0]);
                 }
             }
 
@@ -555,6 +548,23 @@ class Map extends Component {
 
     initBoundaryLayer() {
         this.updateBoundaryMask();
+    }
+
+    focusFeatureOnMobile(feature) {
+        if (!IS_MOBILE || !this.map) {
+            return;
+        }
+
+        const coords = feature?.geometry?.coordinates;
+        if (!coords) {
+            return;
+        }
+
+        this.map.easeTo({
+            center: [coords[0], coords[1]],
+            zoom: 17,
+            padding: {bottom: 50}
+        });
     }
 
     updateBoundaryMask() {
@@ -1102,6 +1112,7 @@ class Map extends Component {
                                 return;
                             }
                             self.popups.showCommentPopup(e);
+                            self.focusFeatureOnMobile(e.features[0]);
                             e.originalEvent.preventDefault();
                         }
                     });
