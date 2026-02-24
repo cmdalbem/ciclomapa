@@ -3,18 +3,13 @@ import { Popover, Button } from 'antd';
 
 import './AnalyticsSidebar.css';
 
-import { PieChart, Pie } from 'recharts';
+import { PieChart, Pie, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
 
 import { 
     HiX as IconClose,
     HiInformationCircle as IconInfo,
     HiDownload as IconDownload
 } from "react-icons/hi";
-
-import {
-    MdDataUsage as IconAnalytics,
-} from "react-icons/md";
-
 
 import AirtableDatabase from './AirtableDatabase.js'
 
@@ -128,6 +123,14 @@ class AnalyticsSidebar extends Component {
 
     render() {
         const { lengths, layers, isDarkMode } = this.props;
+        const pnbEvolutionData = [2018, 2019, 2020, 2021, 2022, 2023, 2024]
+            .map((year) => {
+                const value = this.state.cityMetadata && this.state.cityMetadata[`pnb_${year}`];
+                return value !== undefined && value !== null
+                    ? { year: String(year), value: Number(value) }
+                    : null;
+            })
+            .filter((item) => item !== null && !Number.isNaN(item.value));
         
         if (!layers) {
             return;
@@ -162,11 +165,9 @@ class AnalyticsSidebar extends Component {
                     border-l border-opacity-10 border-white h-screen ${this.state.open ? 'w-60 overflow-y-auto flex-none' : ''}
                     transform transition-transform duration-500 ${this.state.open ? '' : 'translate-x-full'}`}
             >
-                <div className="px-4">
+                <div className="px-4 pb-10">
                     <div className="flex w-full justify-between items-center pt-2 mt-1">
                         <div className="flex items-center">
-                            <IconAnalytics className="mr-1" />
-
                             <h2 className="my-0">
                                 Métricas
                             </h2>
@@ -208,16 +209,131 @@ class AnalyticsSidebar extends Component {
                                 {this.state.cityMetadata.pnb_total + '%'}
                             </BigNum>
 
-                            <DataLine
-                                name="Mulheres negras"
-                                length={this.state.cityMetadata.pnb_black_women}
-                                unit="%"
-                            />
-                            <DataLine
-                                name="Mulheres renda até 1 SM"
-                                length={this.state.cityMetadata.pnb_women_less_one_salary}
-                                unit="%"
-                            />
+                            {
+                                this.state.cityMetadata.pnb_black_women!==undefined &&
+                                <DataLine
+                                    name="Mulheres negras"
+                                    length={this.state.cityMetadata.pnb_black_women}
+                                    unit="%"
+                                />
+                            }
+                            {
+                                this.state.cityMetadata.pnb_women_less_one_salary!==undefined &&
+                                <DataLine
+                                    name="Mulheres renda até 1 SM"
+                                    length={this.state.cityMetadata.pnb_women_less_one_salary}
+                                    unit="%"
+                                />
+                            }
+                            {/* {
+                                this.state.cityMetadata.pnb_2024!==undefined &&
+                                <DataLine
+                                    name="2024"
+                                    length={this.state.cityMetadata.pnb_2024}
+                                    unit="%"
+                                />
+                            }
+                            {
+                                this.state.cityMetadata.pnb_2023!==undefined &&
+                                <DataLine
+                                    name="2023"
+                                    length={this.state.cityMetadata.pnb_2023}
+                                    unit="%"
+                                />
+                            }
+                            {
+                                this.state.cityMetadata.pnb_2022!==undefined &&
+                                <DataLine
+                                    name="2022"
+                                    length={this.state.cityMetadata.pnb_2022}
+                                    unit="%"
+                                />
+                            }
+                            {
+                                this.state.cityMetadata.pnb_2021!==undefined &&
+                                <DataLine
+                                    name="2021"
+                                    length={this.state.cityMetadata.pnb_2021}
+                                    unit="%"
+                                />
+                            }
+                            {
+                                this.state.cityMetadata.pnb_2020!==undefined &&
+                                <DataLine
+                                    name="2020"
+                                    length={this.state.cityMetadata.pnb_2020}
+                                    unit="%"
+                                />
+                            }
+                            {
+                                this.state.cityMetadata.pnb_2019!==undefined &&
+                                <DataLine
+                                    name="2019"
+                                    length={this.state.cityMetadata.pnb_2019}
+                                    unit="%"
+                                />
+                            }
+                            {
+                                this.state.cityMetadata.pnb_2018!==undefined &&
+                                <DataLine
+                                    name="2018"
+                                    length={this.state.cityMetadata.pnb_2018}
+                                    unit="%"
+                                />
+                            } */}
+
+                            {
+                                pnbEvolutionData.length >= 2 &&
+                                <div>
+                                    <div className="w-full mt-3" style={{ height: 124, marginBottom: -24 }}>
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart
+                                                data={pnbEvolutionData}
+                                                margin={{
+                                                    right: 12,
+                                                    left: 12,
+                                                    top: 1
+                                                }}
+                                            >
+                                                <XAxis
+                                                    dataKey="year"
+                                                    tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
+                                                    ticks={["2018", "2020", "2022", "2024"]}
+                                                    interval={"preserveStartEnd"}
+                                                    margin={{ left: 8, right: 8 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                />
+                                                <YAxis
+                                                    // domain={['dataMin', 'dataMax']}
+                                                    domain={[0, 50]}
+                                                    ticks={[15, 30, 50]}
+                                                    interval={"preserveEnd"}
+                                                    tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    mirror={true}
+                                                />
+                                                <CartesianGrid
+                                                    stroke="currentColor"
+                                                    strokeOpacity={0.2}
+                                                    strokeWidth={0.5}
+                                                />
+                                                <Tooltip />
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="value"
+                                                    stroke={isDarkMode ? '#a8c957' : '#386641'}
+                                                    strokeWidth={2}
+                                                    dot={{ r: 1 }}
+                                                />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            }
+
+                            
                         </Section>
                     }
 
@@ -375,7 +491,7 @@ class AnalyticsSidebar extends Component {
 }
 
 const BigNum = ({children}) =>
-    <div className="text-2xl font-regular tracking-tighter -mt-2 mb-1">
+    <div className="text-3xl font-regular tracking-tighter -mt-2 mb-1">
         { children }
     </div>
 
