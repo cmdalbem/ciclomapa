@@ -225,7 +225,7 @@ class AnalyticsSidebar extends Component {
                         this.state.cityMetadata && this.state.cityMetadata.ideciclo!==undefined &&
                         <Section
                             title="IDECiclo"
-                            link="https://plataformadedados.netlify.app/ideciclo/"
+                            link="https://www.ideciclo.org/"
                             year={this.state.cityMetadata.ideciclo_year}
                             description={<>
                                 <p>
