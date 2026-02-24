@@ -8,15 +8,6 @@ import {
 } from 'antd';
 
 import {
-    // MdFileDownload as IconDownload,
-    // MdSync as IconUpdate,
-    // MdExpandMore as IconCaret,
-    // MdModeEdit as IconEdit,
-    // MdAccessTime as IconInfo,
-    MdDataUsage as IconAnalytics,
-    // MdMap as IconMap,
-} from "react-icons/md";
-import {
     HiOutlineMap as IconMap,
     HiOutlineRefresh as IconUpdate,
     HiOutlineChevronDown as IconCaret,
@@ -276,7 +267,7 @@ class TopBar extends Component {
                                     {
                                         !this.props.isSidebarOpen &&
                                         <Button className="glass-bg" onClick={() => this.props.toggleSidebar(true)}>
-                                            <IconAnalytics/> Métricas
+                                            Métricas
                                         </Button>
                                     }
                                 </div>
