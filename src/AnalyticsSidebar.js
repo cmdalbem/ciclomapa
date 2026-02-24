@@ -254,8 +254,8 @@ class AnalyticsSidebar extends Component {
                             <p>
                                 Para vias que tem estrutura dos dois lados nós desenvolvemos um método que automaticamente detecta estes casos e remove esta contagem dupla do total.
                             </p>
-                            <p className="italic opacity-50 text-xs">
-                                Estes números não são dados oficiais e podem não corresponder à realidade. Eles dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap.
+                            <p className="italic opacity-50">
+                                Estes números se baseiam no estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap e não são dados oficiais, podendo não refletir a realidade com precisão.
                             </p>
                         </>}
                     >
@@ -330,8 +330,8 @@ class AnalyticsSidebar extends Component {
                     <Section
                         title="Pontos de interesse"
                         description={<>
-                            <p className="italic opacity-50 text-xs">
-                                Estes números não são dados oficiais e podem não corresponder à realidade. Eles dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap.
+                            <p className="italic opacity-50">
+                                Estes números se baseiam no estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap e não são dados oficiais, podendo não refletir a realidade com precisão.
                             </p>
                         </>}
                     >
