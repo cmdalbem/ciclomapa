@@ -1032,7 +1032,7 @@ class Map extends Component {
                                 ["exponential", 1.5],
                                 ["zoom"], 
                                 8, 0,
-                                COMMENTS_ZOOM_THRESHOLD, 1
+                                COMMENTS_ZOOM_THRESHOLD, .5
                             ],
                             "icon-allow-overlap": [
                                 'step',
