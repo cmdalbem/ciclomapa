@@ -67,6 +67,51 @@ const typeSizes = {
 
 export const sizeOf = value => typeSizes[typeof value](value);
 
+export function formatTimeAgo(dateInput, options = {}) {
+    const { locale = 'pt-BR', capitalizeFirstLetter = false } = options;
+    const date = new Date(dateInput);
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    const diffInSeconds = Math.round((date.getTime() - Date.now()) / 1000);
+    const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+    let formatted;
+
+    if (Math.abs(diffInSeconds) < 60) {
+        formatted = rtf.format(diffInSeconds, 'second');
+    } else {
+        const diffInMinutes = Math.round(diffInSeconds / 60);
+        if (Math.abs(diffInMinutes) < 60) {
+            formatted = rtf.format(diffInMinutes, 'minute');
+        } else {
+            const diffInHours = Math.round(diffInMinutes / 60);
+            if (Math.abs(diffInHours) < 24) {
+                formatted = rtf.format(diffInHours, 'hour');
+            } else {
+                const diffInDays = Math.round(diffInHours / 24);
+                if (Math.abs(diffInDays) < 30) {
+                    formatted = rtf.format(diffInDays, 'day');
+                } else {
+                    const diffInMonths = Math.round(diffInDays / 30);
+                    if (Math.abs(diffInMonths) < 12) {
+                        formatted = rtf.format(diffInMonths, 'month');
+                    } else {
+                        const diffInYears = Math.round(diffInMonths / 12);
+                        formatted = rtf.format(diffInYears, 'year');
+                    }
+                }
+            }
+        }
+    }
+
+    if (!capitalizeFirstLetter || !formatted) {
+        return formatted;
+    }
+
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
 // Thanks https://stackoverflow.com/questions/3177836/how-to-format-time-since-xxx-e-g-4-minutes-ago-similar-to-stack-exchange-site
 export function timeSince(date) {
     date = new Date(date);
