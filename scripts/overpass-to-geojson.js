@@ -17,6 +17,7 @@
  *   --include-layers    Comma-separated list of layer names to include
  *   --exclude-layers    Comma-separated list of layer names to exclude
  *   --include-poi        Include POI (Point of Interest) layers in the query
+ *   --date <ISO date>   Historical snapshot date (e.g. "2020-01-01T00:00:00Z")
  * 
  * Note: If no --endpoint is specified, the script will automatically try multiple
  * Overpass API servers in sequence if one fails, providing better reliability.
@@ -72,6 +73,8 @@ function parseArgs() {
             config.excludeLayers = args[++i].split(',').map(s => s.trim()).filter(s => s);
         } else if (arg === '--include-poi') {
             config.includePoi = true;
+        } else if (arg === '--date' && i + 1 < args.length) {
+            config.date = args[++i];
         } else if (arg === '--help' || arg === '-h') {
             console.log(`
 Overpass Query to GeoJSON Converter
@@ -90,6 +93,7 @@ Optional Options:
   --include-layers    Comma-separated list of layer names to include
   --exclude-layers    Comma-separated list of layer names to exclude
   --include-poi        Include POI (Point of Interest) layers in the query
+  --date <ISO date>   Historical snapshot date (e.g. "2020-01-01T00:00:00Z")
   --help, -h          Show this help message
 
 Note: If no --endpoint is specified, the script will automatically try multiple
@@ -138,7 +142,8 @@ async function generateQuery(config) {
             null, // bbox
             config.includeLayers,
             config.excludeLayers,
-            config.includePoi
+            config.includePoi,
+            config.date
         );
         return result;
     } catch (error) {
@@ -256,7 +261,7 @@ async function getAreaId(areaName, spinner = null) {
 }
 
 // Generate query from layers.json (same logic as OSMController.getQuery)
-function generateQueryFromLayers(areaId, bbox = null, includeLayers = null, excludeLayers = null, includePoi = false) {
+function generateQueryFromLayers(areaId, bbox = null, includeLayers = null, excludeLayers = null, includePoi = false, date = null) {
     const layersPath = path.join(__dirname, '..', 'src', 'layers.json');
     const layers = JSON.parse(fs.readFileSync(layersPath, 'utf8'));
     
@@ -369,9 +374,13 @@ function generateQueryFromLayers(areaId, bbox = null, includeLayers = null, excl
         ).join("")
     ).join("");
 
+    const dateClause = date ? `[date:"${date}"]` : '';
+
+    const areaClause = bbox ? '' : `area(${areaId})->.a;`;
+
     const query = `
-        [out:json][timeout:500];
-        ${!bbox && `area(${areaId})->.a;`}
+        [out:json][timeout:500]${dateClause};
+        ${areaClause}
         (
             ${body}
         );
@@ -674,5 +683,15 @@ if (require.main === module) {
     main();
 }
 
-module.exports = { main, executeOverpassQuery, executeOverpassQueryWithFallback, convertToGeoJSON };
+module.exports = {
+    main,
+    executeOverpassQuery,
+    executeOverpassQueryWithFallback,
+    convertToGeoJSON,
+    generateQueryFromLayers,
+    getAreaId,
+    slugify,
+    Spinner,
+    OVERPASS_SERVERS,
+};
 

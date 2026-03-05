@@ -130,6 +130,14 @@ export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 12;
 const DEFAULT_PMTILES_FILENAME = 'la_es_pt.pmtiles';
 export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAULT_PMTILES_FILENAME;
 
+/*
+ * Animation mode (historical snapshots playback)
+ * Set to true to enable animation mode. All normal UI is hidden and
+ * the app cycles through pre-fetched historical GeoJSON snapshots.
+ * Run `node scripts/fetch-history.js` first to generate the data.
+ */
+export const ANIMATION_MODE = new URLSearchParams(window.location.search).has('animation');
+
 /* 
  * Debug & local development
  */
