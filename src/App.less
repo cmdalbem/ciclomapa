@@ -304,6 +304,9 @@ body.animation-mode {
   letter-spacing: 2px;
   user-select: none;
   transition: opacity 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .animation-loading,
@@ -332,42 +335,23 @@ body.animation-mode {
   gap: 10px;
   padding: 10px 16px;
   margin-bottom: 20px;
-  backdrop-filter: blur(8px);
   border-radius: 12px;
-  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 13px;
   user-select: none;
-  background: rgba(255, 255, 255, 0.85);
-  color: #1a1a1a;
 
-  button {
-    background: none;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    color: #1a1a1a;
-    padding: 4px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background 0.15s;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.1);
-    }
+  .ant-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
   }
 }
 
-body.theme-dark .animation-controls {
-  background: rgba(0, 0, 0, 0.75);
-  color: white;
+.animation-settings-divider {
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+}
 
-  button {
-    border-color: rgba(255, 255, 255, 0.3);
-    color: white;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.15);
-    }
-  }
+body.theme-dark .animation-settings-divider {
+  border-right-color: rgba(255, 255, 255, 0.12);
 }
 
 .animation-timeline {
@@ -377,6 +361,7 @@ body.theme-dark .animation-controls {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  margin: 0 12px;
 }
 
 .animation-scrubber {
@@ -435,44 +420,13 @@ body.theme-dark .animation-tick--labeled::before {
   background: rgba(255, 255, 255, 0.5);
 }
 
-.animation-frame-info {
-  min-width: 36px;
-  text-align: center;
-  opacity: 0.8;
-  font-variant-numeric: tabular-nums;
-}
-
-.animation-speed-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  opacity: 0.8;
-
-  input[type="range"] {
-    width: 80px;
-    accent-color: #059669;
-  }
-
-  span {
-    min-width: 42px;
-    font-size: 11px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-}
-
 .animation-feature-count {
-  min-width: 90px;
-  text-align: right;
-  opacity: 0.6;
-  font-size: 11px;
+  font-size: 16px;
+  font-weight: 400;
+  opacity: 0.7;
+  letter-spacing: 0.5px;
   font-variant-numeric: tabular-nums;
-}
-
-.animation-hint {
-  opacity: 0.4;
-  font-size: 11px;
-  font-style: italic;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
 }
 
 // Transition-in effect

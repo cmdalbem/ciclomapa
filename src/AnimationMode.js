@@ -1,4 +1,7 @@
 import React, { Component } from 'react';
+import { Button, Switch, Slider } from 'antd';
+import { HiCog } from 'react-icons/hi';
+import { HiPlay, HiPause } from 'react-icons/hi2';
 
 // Playback timing
 const TARGET_DURATION_MS = 5000;
@@ -32,6 +35,14 @@ class AnimationMode extends Component {
             baseFrameMs: DEFAULT_FRAME_MS,
             speedMultiplier: 1,
             controlsVisible: true,
+            settingsOpen: false,
+            settings: {
+                highlightChanges: true,
+                loopPlayback: false,
+                showBirthEffect: true,
+                effectDuration: 'normal',
+                showHud: true,
+            },
         };
         this.rafId = null;
         this.effectsRafId = null;
@@ -41,6 +52,7 @@ class AnimationMode extends Component {
         this.currentBaseFeatures = [];
         this.featureBirthTimes = new Map();
         this.previousFeatureIds = new Set();
+        this.previousFingerprints = new Map();
         this.effectsDirty = false;
     }
 
@@ -84,6 +96,12 @@ class AnimationMode extends Component {
                 e.preventDefault();
                 this.setState(prev => ({ controlsVisible: !prev.controlsVisible }));
                 break;
+            case 'Escape':
+                if (this.state.settingsOpen) {
+                    e.preventDefault();
+                    this.setState({ settingsOpen: false });
+                }
+                break;
             default:
                 break;
         }
@@ -100,7 +118,13 @@ class AnimationMode extends Component {
         };
     }
 
-    buildInterpolatedFrames(snapshots) {
+    featureFingerprint(feature) {
+        const { id, _opacity, _width, ...props } = feature.properties;
+        return JSON.stringify(feature.geometry) + JSON.stringify(props);
+    }
+
+    buildInterpolatedFrames(snapshots, settings = this.state?.settings) {
+        const highlightChanges = settings?.highlightChanges ?? true;
         const frames = [];
 
         for (let i = 0; i < snapshots.length; i++) {
@@ -113,35 +137,62 @@ class AnimationMode extends Component {
             }
 
             const next = snapshots[i + 1];
-            const currentIds = new Set(current.geoJson.features.map(f => f.properties.id || f.id));
-            const persistedFeatures = current.geoJson.features;
-            const newFeatures = next.geoJson.features.filter(f => {
+            const currentMap = new Map(
+                current.geoJson.features.map(f => [f.properties.id || f.id, f])
+            );
+
+            const newFeatures = [];
+            const changedFeatures = [];
+
+            next.geoJson.features.forEach(f => {
                 const fid = f.properties.id || f.id;
-                return !currentIds.has(fid);
+                const existing = currentMap.get(fid);
+                if (!existing) {
+                    newFeatures.push(f);
+                } else if (this.featureFingerprint(existing) !== this.featureFingerprint(f)) {
+                    changedFeatures.push(f);
+                }
             });
 
             frames.push({ label: year.toString(), geoJson: current.geoJson, isKeyframe: true });
 
-            if (newFeatures.length === 0) continue;
+            const transitioning = highlightChanges
+                ? [...newFeatures, ...changedFeatures]
+                : [...newFeatures];
+            if (transitioning.length === 0) continue;
 
-            const steps = Math.min(INTERPOLATION_STEPS, newFeatures.length);
-            const batchSize = Math.ceil(newFeatures.length / steps);
+            const changedIds = highlightChanges
+                ? new Set(changedFeatures.map(f => f.properties.id || f.id))
+                : new Set();
+            const steps = Math.min(INTERPOLATION_STEPS, transitioning.length);
+            const batchSize = Math.ceil(transitioning.length / steps);
             const batches = [];
             for (let b = 0; b < steps; b++) {
-                batches.push(newFeatures.slice(b * batchSize, (b + 1) * batchSize));
+                batches.push(transitioning.slice(b * batchSize, (b + 1) * batchSize));
             }
 
             for (let s = 1; s <= steps; s++) {
                 const progress = Math.round((s / steps) * 100);
-                const addedFeatures = [];
+                const revealed = [];
+                const revealedChangedIds = new Set();
                 for (let b = 0; b < s; b++) {
-                    addedFeatures.push(...batches[b]);
+                    for (const f of batches[b]) {
+                        revealed.push(f);
+                        const fid = f.properties.id || f.id;
+                        if (changedIds.has(fid)) {
+                            revealedChangedIds.add(fid);
+                        }
+                    }
                 }
+                const baseFeatures = current.geoJson.features.filter(f => {
+                    const fid = f.properties.id || f.id;
+                    return !revealedChangedIds.has(fid);
+                });
                 frames.push({
                     label: `${year} +${progress}%`,
                     geoJson: {
                         type: 'FeatureCollection',
-                        features: [...persistedFeatures, ...addedFeatures],
+                        features: [...baseFeatures, ...revealed],
                     },
                     isKeyframe: false,
                 });
@@ -205,6 +256,12 @@ class AnimationMode extends Component {
                 this.previousFeatureIds = new Set(
                     firstFrame.geoJson.features.map(f => f.properties.id || f.id)
                 );
+                this.previousFingerprints = new Map(
+                    firstFrame.geoJson.features.map(f => [
+                        f.properties.id || f.id,
+                        this.featureFingerprint(f),
+                    ])
+                );
                 this.currentBaseFeatures = firstFrame.geoJson.features;
                 this.effectsDirty = true;
             }
@@ -255,10 +312,14 @@ class AnimationMode extends Component {
 
         if (elapsed >= frameMs) {
             this.lastFrameTime = now;
-            const nextFrame = this.state.currentFrame + 1;
+            let nextFrame = this.state.currentFrame + 1;
             if (nextFrame >= this.state.frames.length) {
-                this.stopPlayback();
-                return;
+                if (this.state.settings.loopPlayback) {
+                    nextFrame = 0;
+                } else {
+                    this.stopPlayback();
+                    return;
+                }
             }
             this.showFrame(nextFrame);
             this.setState({ currentFrame: nextFrame });
@@ -282,11 +343,16 @@ class AnimationMode extends Component {
 
         const now = performance.now();
         const newFeatureIds = new Set();
+        const newFingerprints = new Map();
 
         frame.geoJson.features.forEach(f => {
             const fid = f.properties.id || f.id;
+            const fp = this.featureFingerprint(f);
             newFeatureIds.add(fid);
-            if (!this.previousFeatureIds.has(fid)) {
+            newFingerprints.set(fid, fp);
+            const isNew = !this.previousFeatureIds.has(fid);
+            const isChanged = !isNew && this.previousFingerprints.get(fid) !== fp;
+            if (isNew || (isChanged && this.state.settings.highlightChanges)) {
                 this.featureBirthTimes.set(fid, now);
             }
         });
@@ -299,6 +365,7 @@ class AnimationMode extends Component {
 
         this.currentBaseFeatures = frame.geoJson.features;
         this.previousFeatureIds = newFeatureIds;
+        this.previousFingerprints = newFingerprints;
         this.effectsDirty = true;
     }
 
@@ -307,22 +374,26 @@ class AnimationMode extends Component {
     }
 
     effectsTick = (now) => {
-        const hasActiveEffects = this.featureBirthTimes.size > 0;
+        const { showBirthEffect, effectDuration } = this.state.settings;
+        const hasActiveEffects = showBirthEffect && this.featureBirthTimes.size > 0;
 
         if ((this.effectsDirty || hasActiveEffects) && this.currentBaseFeatures.length > 0) {
             this.effectsDirty = false;
 
             let features;
             if (hasActiveEffects) {
-                const maxDuration = Math.max(SCALE_DURATION_MS, COLOR_DURATION_MS);
+                const durationScale = { fast: 0.5, normal: 1, slow: 2 }[effectDuration] || 1;
+                const scaleDur = SCALE_DURATION_MS * durationScale;
+                const colorDur = COLOR_DURATION_MS * durationScale;
+                const maxDuration = Math.max(scaleDur, colorDur);
                 features = this.currentBaseFeatures.map(f => {
                     const fid = f.properties.id || f.id;
                     const birthTime = this.featureBirthTimes.get(fid);
                     if (birthTime !== undefined) {
                         const age = now - birthTime;
                         if (age < maxDuration) {
-                            const opacity = Math.min(1, age / COLOR_DURATION_MS);
-                            const t = Math.min(1, age / SCALE_DURATION_MS);
+                            const opacity = Math.min(1, age / colorDur);
+                            const t = Math.min(1, age / scaleDur);
                             const width = t < 0.5
                                 ? t * 4        // 0 → 2
                                 : 2 - (t - 0.5) * 2; // 2 → 1
@@ -402,6 +473,29 @@ class AnimationMode extends Component {
         this.setState({ currentFrame: index });
     }
 
+    toggleSettings = () => {
+        this.setState(prev => ({ settingsOpen: !prev.settingsOpen }));
+    }
+
+    updateSetting = (key, value) => {
+        this.setState(prev => {
+            const newSettings = { ...prev.settings, [key]: value };
+
+            if (key === 'highlightChanges') {
+                const frames = this.buildInterpolatedFrames(prev.snapshots, newSettings);
+                const baseFrameMs = Math.max(MIN_FRAME_MS, Math.round(TARGET_DURATION_MS / frames.length));
+                const currentFrame = Math.min(prev.currentFrame, frames.length - 1);
+                return { settings: newSettings, frames, baseFrameMs, currentFrame };
+            }
+
+            return { settings: newSettings };
+        }, () => {
+            if (key === 'highlightChanges') {
+                this.showFrame(this.state.currentFrame);
+            }
+        });
+    }
+
     renderTicks() {
         const { frames } = this.state;
         if (frames.length < 2) return null;
@@ -455,13 +549,13 @@ class AnimationMode extends Component {
     }
 
     render() {
-        const { isLoading, error, loadProgress, frames, currentFrame, isPlaying, speedMultiplier, baseFrameMs, controlsVisible } = this.state;
+        const { isLoading, error, loadProgress, frames, currentFrame, isPlaying, speedMultiplier, baseFrameMs, controlsVisible, settingsOpen, settings } = this.state;
 
         if (isLoading) {
             return (
                 <div className="animation-overlay">
                     <div className="animation-loading">
-                        Loading snapshots... {loadProgress}%
+                        Carregando dados... {loadProgress}%
                     </div>
                 </div>
             );
@@ -477,60 +571,109 @@ class AnimationMode extends Component {
 
         return (
             <div className="animation-overlay">
-                <div className="animation-year-display">
-                    {this.getYearDisplay()}
-                </div>
-
-                {controlsVisible && (
-                    <div className="animation-controls">
-                        <button onClick={() => this.jumpToKeyframe(-1)} title="Previous year (Shift+←)">⏮</button>
-                        <button onClick={this.stepBackward} title="Previous frame (←)">◀</button>
-                        <button onClick={this.togglePlayback} title="Play/Pause (Space)">
-                            {isPlaying ? '⏸' : '▶'}
-                        </button>
-                        <button onClick={this.stepForward} title="Next frame (→)">▶</button>
-                        <button onClick={() => this.jumpToKeyframe(1)} title="Next year (Shift+→)">⏭</button>
-
-                        <div className="animation-timeline">
-                            <input
-                                type="range"
-                                min={0}
-                                max={frames.length - 1}
-                                value={currentFrame}
-                                onChange={this.onScrub}
-                                className="animation-scrubber"
-                                title="Timeline"
-                            />
-                            <div className="animation-tick-marks">
-                                {this.renderTicks()}
-                            </div>
-                        </div>
-
-                        <span className="animation-frame-info">
-                            {this.getYearDisplay()}
-                        </span>
-
-                        <label className="animation-speed-label" title="Playback speed">
-                            Speed:
-                            <input
-                                type="range"
-                                min={MIN_SPEED}
-                                max={MAX_SPEED}
-                                step={SPEED_STEP}
-                                value={speedMultiplier}
-                                onChange={this.onSpeedChange}
-                            />
-                            <span>{speedMultiplier.toFixed(2)}x ({Math.round(frames.length * baseFrameMs / speedMultiplier / 1000)}s)</span>
-                        </label>
-
+                {settings.showHud && (
+                    <div className="animation-year-display">
+                        {this.getYearDisplay()}
                         <span className="animation-feature-count">
-                            {this.getCurrentFeatureCount()} features
-                        </span>
-
-                        <span className="animation-hint">
-                            H to hide
+                            {this.getCurrentFeatureCount()} elementos
                         </span>
                     </div>
+                )}
+
+                {controlsVisible && (
+                    <>
+                        {settingsOpen && (
+                            <div className="pointer-events-auto flex gap-0 mb-2 rounded-xl overflow-hidden glass-bg text-xs select-none animation-settings-panel">
+                                <div className="flex flex-col gap-2 px-4 py-3 animation-settings-divider">
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider opacity-45">Efeitos</span>
+                                    <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap" title="Elementos novos aparecem com efeito de escala e transparência">
+                                        <Switch size="small" checked={settings.showBirthEffect} onChange={v => this.updateSetting('showBirthEffect', v)} />
+                                        <span>Animação de entrada</span>
+                                    </label>
+                                    <label className={`flex items-center gap-2 whitespace-nowrap ${settings.showBirthEffect ? 'cursor-pointer' : 'opacity-35 pointer-events-none'}`} title="Animar elementos cuja geometria ou tipo mudou entre períodos">
+                                        <Switch size="small" checked={settings.highlightChanges} onChange={v => this.updateSetting('highlightChanges', v)} disabled={!settings.showBirthEffect} />
+                                        <span>Destacar modificados</span>
+                                    </label>
+                                    <div className={`flex items-center gap-2 whitespace-nowrap ${settings.showBirthEffect ? '' : 'opacity-35 pointer-events-none'}`} title="Quão rápido os efeitos de entrada são reproduzidos">
+                                        <span>Vel. do efeito</span>
+                                        <Slider
+                                            min={0} max={2} step={1}
+                                            value={{ fast: 0, normal: 1, slow: 2 }[settings.effectDuration] ?? 1}
+                                            onChange={v => this.updateSetting('effectDuration', ['fast', 'normal', 'slow'][v])}
+                                            disabled={!settings.showBirthEffect}
+                                            tooltipVisible={false}
+                                            className="w-16 m-0"
+                                        />
+                                        <span className="tabular-nums min-w-[38px] text-right opacity-70">{{ fast: 'Rápido', normal: 'Normal', slow: 'Lento' }[settings.effectDuration]}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-2 px-4 py-3 animation-settings-divider">
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider opacity-45">Reprodução</span>
+                                    <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap" title="Reiniciar automaticamente do início quando chegar ao fim">
+                                        <Switch size="small" checked={settings.loopPlayback} onChange={v => this.updateSetting('loopPlayback', v)} />
+                                        <span>Loop</span>
+                                    </label>
+                                    <div className="flex items-center gap-2 whitespace-nowrap" title={'Duração total estimada: ' + Math.round(frames.length * baseFrameMs / speedMultiplier / 1000) + 's'}>
+                                        <span>Velocidade</span>
+                                        <Slider
+                                            min={MIN_SPEED} max={MAX_SPEED} step={SPEED_STEP}
+                                            value={speedMultiplier}
+                                            onChange={v => this.setState({ speedMultiplier: v })}
+                                            tooltipVisible={false}
+                                            className="w-16 m-0"
+                                        />
+                                        <span className="tabular-nums min-w-[38px] text-right opacity-70">{speedMultiplier.toFixed(2)}x</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-2 px-4 py-3">
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider opacity-45">Exibição</span>
+                                    <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap" title="Mostrar o ano atual e a quantidade de elementos sobre o mapa">
+                                        <Switch size="small" checked={settings.showHud} onChange={v => this.updateSetting('showHud', v)} />
+                                        <span>Ano e contagem</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap" title="Alternar entre o tema claro e escuro do mapa">
+                                        <Switch size="small" checked={this.props.isDarkMode} onChange={() => this.props.toggleTheme()} />
+                                        <span>Modo escuro</span>
+                                    </label>
+                                    <span className="opacity-40 italic mt-1">H para ocultar</span>
+                                </div>
+                            </div>
+                        )}
+                        <div className="animation-controls glass-bg">
+                            <Button
+                                type="primary"
+                                shape="circle"
+                                icon={isPlaying ? <HiPause /> : <HiPlay />}
+                                onClick={this.togglePlayback}
+                                title="Reproduzir/Pausar (Espaço)"
+                            />
+
+                            <div className="animation-timeline">
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={frames.length - 1}
+                                    value={currentFrame}
+                                    onChange={this.onScrub}
+                                    className="animation-scrubber"
+                                    title="Linha do tempo"
+                                />
+                                <div className="animation-tick-marks">
+                                    {this.renderTicks()}
+                                </div>
+                            </div>
+
+                            <Button
+                                type={settingsOpen ? 'primary' : 'default'}
+                                shape="circle"
+                                icon={<HiCog />}
+                                onClick={this.toggleSettings}
+                                title="Configurações"
+                            />
+                        </div>
+                    </>
                 )}
             </div>
         );

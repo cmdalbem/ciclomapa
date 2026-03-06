@@ -1023,6 +1023,8 @@ class App extends Component {
                             ANIMATION_MODE &&
                             <AnimationMode
                                 onDataChange={this.onAnimationDataChange}
+                                isDarkMode={this.state.isDarkMode}
+                                toggleTheme={this.toggleTheme}
                             />
                         }
 
