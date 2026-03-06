@@ -753,7 +753,10 @@ class App extends Component {
 
             this.updateData();
 
-            document.querySelector('.city-picker span').setAttribute('style','opacity: 1');
+            const cityPickerSpan = document.querySelector('.city-picker span');
+            if (cityPickerSpan) {
+                cityPickerSpan.setAttribute('style','opacity: 1');
+            }
 
             // Only redo the query if we need new data
             // if (!doesAContainsB(largestBoundsYet, newBounds)) {

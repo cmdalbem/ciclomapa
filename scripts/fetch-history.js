@@ -47,7 +47,7 @@ function parseArgs() {
         outputDir: path.join(__dirname, '..', 'public', 'history'),
         concurrency: OVERPASS_SERVERS.length,
         bbox: null,
-        includePoi: false,
+        includePoi: true,
     };
 
     for (let i = 0; i < args.length; i++) {
@@ -59,7 +59,7 @@ function parseArgs() {
         else if (arg === '--output-dir' && i + 1 < args.length) config.outputDir = args[++i];
         else if (arg === '--concurrency' && i + 1 < args.length) config.concurrency = parseInt(args[++i], 10);
         else if (arg === '--bbox' && i + 1 < args.length) config.bbox = args[++i];
-        else if (arg === '--include-poi') config.includePoi = true;
+        else if (arg === '--exclude-poi') config.includePoi = false;
         else if (arg === '--help' || arg === '-h') {
             console.log(`
 Fetch Historical OSM Snapshots
@@ -75,13 +75,13 @@ Options:
   --output-dir <dir>       Output directory (default: public/history)
   --concurrency <n>        Max parallel requests (default: ${OVERPASS_SERVERS.length})
   --bbox <s,w,n,e>         Bounding box override (auto-resolved otherwise)
-  --include-poi            Include POI layers (bike shops, rentals, parking)
+  --exclude-poi            Exclude POI layers (bike shops, rentals, parking)
   --help, -h               Show this help message
 
 Examples:
   node scripts/fetch-history.js --area "Fortaleza" --start-year 2020
   node scripts/fetch-history.js --area "Brazil"
-  node scripts/fetch-history.js --interval-months 6 --include-poi
+  node scripts/fetch-history.js --interval-months 6
             `);
             process.exit(0);
         }

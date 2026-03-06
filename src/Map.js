@@ -2735,23 +2735,26 @@ class Map extends Component {
             // Remove all event listeners to prevent memory leaks
             this.map.off();
             
-            // Remove all layers
-            const style = this.map.getStyle();
-            if (style && style.layers) {
-                style.layers.forEach(layer => {
-                    if (this.map.getLayer(layer.id)) {
-                        this.map.removeLayer(layer.id);
-                    }
-                });
-            }
-            
-            // Remove all sources
-            if (style && style.sources) {
-                Object.keys(style.sources).forEach(sourceId => {
-                    if (this.map.getSource(sourceId)) {
-                        this.map.removeSource(sourceId);
-                    }
-                });
+            // Style may not be loaded yet if the component unmounts early
+            try {
+                const style = this.map.getStyle();
+                if (style && style.layers) {
+                    style.layers.forEach(layer => {
+                        if (this.map.getLayer(layer.id)) {
+                            this.map.removeLayer(layer.id);
+                        }
+                    });
+                }
+                
+                if (style && style.sources) {
+                    Object.keys(style.sources).forEach(sourceId => {
+                        if (this.map.getSource(sourceId)) {
+                            this.map.removeSource(sourceId);
+                        }
+                    });
+                }
+            } catch (e) {
+                // getStyle() throws if the style hasn't finished loading
             }
             
             // Remove the map instance

@@ -20,6 +20,7 @@ export const BIRTH_COLOR_LIGHT = '#386641';
 
 // Timeline UI
 const MIN_LABEL_PCT = 15;
+const SHORT_MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 class AnimationMode extends Component {
     constructor(props) {
@@ -36,7 +37,7 @@ class AnimationMode extends Component {
             loadProgress: 0,
             error: null,
             baseFrameMs: DEFAULT_FRAME_MS,
-            speedMultiplier: 1,
+            speedMultiplier: 0.25,
             controlsVisible: true,
             settingsOpen: false,
             cityPickerOpen: false,
@@ -128,10 +129,13 @@ class AnimationMode extends Component {
 
         for (let i = 0; i < snapshots.length; i++) {
             const current = snapshots[i];
-            const year = new Date(current.date).getUTCFullYear();
+            const date = new Date(current.date);
+            const year = date.getUTCFullYear();
+            const month = date.getUTCMonth();
+            const label = month === 0 ? year.toString() : `${year} ${SHORT_MONTHS[month]}`;
 
             if (i === snapshots.length - 1) {
-                frames.push({ label: year.toString(), geoJson: current.geoJson, isKeyframe: true });
+                frames.push({ label, geoJson: current.geoJson, isKeyframe: true });
                 break;
             }
 
@@ -153,7 +157,7 @@ class AnimationMode extends Component {
                 }
             });
 
-            frames.push({ label: year.toString(), geoJson: current.geoJson, isKeyframe: true });
+            frames.push({ label, geoJson: current.geoJson, isKeyframe: true });
 
             const transitioning = highlightChanges
                 ? [...newFeatures, ...changedFeatures]
@@ -188,7 +192,7 @@ class AnimationMode extends Component {
                     return !revealedChangedIds.has(fid);
                 });
                 frames.push({
-                    label: `${year} +${progress}%`,
+                    label: `${label} +${progress}%`,
                     geoJson: {
                         type: 'FeatureCollection',
                         features: [...baseFeatures, ...revealed],
@@ -223,6 +227,7 @@ class AnimationMode extends Component {
             this.setState({ manifest, cityKeys, currentCity: cityKey });
             await this.loadCity(manifest, cityKey);
             this.startEffectsLoop();
+            this.startPlayback();
         } catch (error) {
             this.setState({ error: error.message, isLoading: false });
         }

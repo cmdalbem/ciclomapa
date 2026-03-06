@@ -1,64 +1,120 @@
 {
-  "generatedAt": "2026-03-06T10:55:48.225Z",
+  "generatedAt": "2026-03-06T17:43:57.680Z",
   "cities": {
     "sao-paulo": {
-      "area": "São Paulo",
+      "area": "Sao Paulo",
       "snapshots": [
         {
           "date": "2011-01-01T00:00:00Z",
           "file": "sao-paulo-2011-01.geojson"
         },
         {
+          "date": "2011-07-01T00:00:00Z",
+          "file": "sao-paulo-2011-07.geojson"
+        },
+        {
           "date": "2012-01-01T00:00:00Z",
           "file": "sao-paulo-2012-01.geojson"
+        },
+        {
+          "date": "2012-07-01T00:00:00Z",
+          "file": "sao-paulo-2012-07.geojson"
         },
         {
           "date": "2013-01-01T00:00:00Z",
           "file": "sao-paulo-2013-01.geojson"
         },
         {
+          "date": "2013-07-01T00:00:00Z",
+          "file": "sao-paulo-2013-07.geojson"
+        },
+        {
           "date": "2014-01-01T00:00:00Z",
           "file": "sao-paulo-2014-01.geojson"
+        },
+        {
+          "date": "2014-07-01T00:00:00Z",
+          "file": "sao-paulo-2014-07.geojson"
         },
         {
           "date": "2015-01-01T00:00:00Z",
           "file": "sao-paulo-2015-01.geojson"
         },
         {
+          "date": "2015-07-01T00:00:00Z",
+          "file": "sao-paulo-2015-07.geojson"
+        },
+        {
           "date": "2016-01-01T00:00:00Z",
           "file": "sao-paulo-2016-01.geojson"
+        },
+        {
+          "date": "2016-07-01T00:00:00Z",
+          "file": "sao-paulo-2016-07.geojson"
         },
         {
           "date": "2017-01-01T00:00:00Z",
           "file": "sao-paulo-2017-01.geojson"
         },
         {
+          "date": "2017-07-01T00:00:00Z",
+          "file": "sao-paulo-2017-07.geojson"
+        },
+        {
           "date": "2018-01-01T00:00:00Z",
           "file": "sao-paulo-2018-01.geojson"
+        },
+        {
+          "date": "2018-07-01T00:00:00Z",
+          "file": "sao-paulo-2018-07.geojson"
         },
         {
           "date": "2019-01-01T00:00:00Z",
           "file": "sao-paulo-2019-01.geojson"
         },
         {
+          "date": "2019-07-01T00:00:00Z",
+          "file": "sao-paulo-2019-07.geojson"
+        },
+        {
           "date": "2020-01-01T00:00:00Z",
           "file": "sao-paulo-2020-01.geojson"
+        },
+        {
+          "date": "2020-07-01T00:00:00Z",
+          "file": "sao-paulo-2020-07.geojson"
         },
         {
           "date": "2021-01-01T00:00:00Z",
           "file": "sao-paulo-2021-01.geojson"
         },
         {
+          "date": "2021-07-01T00:00:00Z",
+          "file": "sao-paulo-2021-07.geojson"
+        },
+        {
           "date": "2022-01-01T00:00:00Z",
           "file": "sao-paulo-2022-01.geojson"
+        },
+        {
+          "date": "2022-07-01T00:00:00Z",
+          "file": "sao-paulo-2022-07.geojson"
         },
         {
           "date": "2023-01-01T00:00:00Z",
           "file": "sao-paulo-2023-01.geojson"
         },
         {
+          "date": "2023-07-01T00:00:00Z",
+          "file": "sao-paulo-2023-07.geojson"
+        },
+        {
           "date": "2024-01-01T00:00:00Z",
           "file": "sao-paulo-2024-01.geojson"
+        },
+        {
+          "date": "2024-07-01T00:00:00Z",
+          "file": "sao-paulo-2024-07.geojson"
         },
         {
           "date": "2025-01-01T00:00:00Z",
@@ -74,56 +130,112 @@
           "file": "fortaleza-2011-01.geojson"
         },
         {
+          "date": "2011-07-01T00:00:00Z",
+          "file": "fortaleza-2011-07.geojson"
+        },
+        {
           "date": "2012-01-01T00:00:00Z",
           "file": "fortaleza-2012-01.geojson"
+        },
+        {
+          "date": "2012-07-01T00:00:00Z",
+          "file": "fortaleza-2012-07.geojson"
         },
         {
           "date": "2013-01-01T00:00:00Z",
           "file": "fortaleza-2013-01.geojson"
         },
         {
+          "date": "2013-07-01T00:00:00Z",
+          "file": "fortaleza-2013-07.geojson"
+        },
+        {
           "date": "2014-01-01T00:00:00Z",
           "file": "fortaleza-2014-01.geojson"
+        },
+        {
+          "date": "2014-07-01T00:00:00Z",
+          "file": "fortaleza-2014-07.geojson"
         },
         {
           "date": "2015-01-01T00:00:00Z",
           "file": "fortaleza-2015-01.geojson"
         },
         {
+          "date": "2015-07-01T00:00:00Z",
+          "file": "fortaleza-2015-07.geojson"
+        },
+        {
           "date": "2016-01-01T00:00:00Z",
           "file": "fortaleza-2016-01.geojson"
+        },
+        {
+          "date": "2016-07-01T00:00:00Z",
+          "file": "fortaleza-2016-07.geojson"
         },
         {
           "date": "2017-01-01T00:00:00Z",
           "file": "fortaleza-2017-01.geojson"
         },
         {
+          "date": "2017-07-01T00:00:00Z",
+          "file": "fortaleza-2017-07.geojson"
+        },
+        {
           "date": "2018-01-01T00:00:00Z",
           "file": "fortaleza-2018-01.geojson"
+        },
+        {
+          "date": "2018-07-01T00:00:00Z",
+          "file": "fortaleza-2018-07.geojson"
         },
         {
           "date": "2019-01-01T00:00:00Z",
           "file": "fortaleza-2019-01.geojson"
         },
         {
+          "date": "2019-07-01T00:00:00Z",
+          "file": "fortaleza-2019-07.geojson"
+        },
+        {
           "date": "2020-01-01T00:00:00Z",
           "file": "fortaleza-2020-01.geojson"
+        },
+        {
+          "date": "2020-07-01T00:00:00Z",
+          "file": "fortaleza-2020-07.geojson"
         },
         {
           "date": "2021-01-01T00:00:00Z",
           "file": "fortaleza-2021-01.geojson"
         },
         {
+          "date": "2021-07-01T00:00:00Z",
+          "file": "fortaleza-2021-07.geojson"
+        },
+        {
           "date": "2022-01-01T00:00:00Z",
           "file": "fortaleza-2022-01.geojson"
+        },
+        {
+          "date": "2022-07-01T00:00:00Z",
+          "file": "fortaleza-2022-07.geojson"
         },
         {
           "date": "2023-01-01T00:00:00Z",
           "file": "fortaleza-2023-01.geojson"
         },
         {
+          "date": "2023-07-01T00:00:00Z",
+          "file": "fortaleza-2023-07.geojson"
+        },
+        {
           "date": "2024-01-01T00:00:00Z",
           "file": "fortaleza-2024-01.geojson"
+        },
+        {
+          "date": "2024-07-01T00:00:00Z",
+          "file": "fortaleza-2024-07.geojson"
         },
         {
           "date": "2025-01-01T00:00:00Z",
