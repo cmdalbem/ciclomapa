@@ -75,22 +75,6 @@ class AnimationMode extends Component {
                 e.preventDefault();
                 this.togglePlayback();
                 break;
-            case 'ArrowRight':
-                e.preventDefault();
-                if (e.shiftKey) {
-                    this.jumpToKeyframe(1);
-                } else {
-                    this.stepForward();
-                }
-                break;
-            case 'ArrowLeft':
-                e.preventDefault();
-                if (e.shiftKey) {
-                    this.jumpToKeyframe(-1);
-                } else {
-                    this.stepBackward();
-                }
-                break;
             case 'h':
             case 'H':
                 e.preventDefault();
@@ -584,8 +568,8 @@ class AnimationMode extends Component {
                     <>
                         {settingsOpen && (
                             <div className="pointer-events-auto flex gap-0 mb-2 rounded-xl overflow-hidden glass-bg text-xs select-none animation-settings-panel">
-                                <div className="flex flex-col gap-2 px-4 py-3 animation-settings-divider">
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider opacity-45">Efeitos</span>
+                                <div className="flex flex-col gap-2 px-4 py-3 w-52 animation-settings-divider">
+                                    <span className="text-xs font-semibold opacity-60">Efeitos</span>
                                     <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap" title="Elementos novos aparecem com efeito de escala e transparência">
                                         <Switch size="small" checked={settings.showBirthEffect} onChange={v => this.updateSetting('showBirthEffect', v)} />
                                         <span>Animação de entrada</span>
@@ -608,8 +592,8 @@ class AnimationMode extends Component {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-2 px-4 py-3 animation-settings-divider">
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider opacity-45">Reprodução</span>
+                                <div className="flex flex-col gap-2 px-4 py-3 w-52 animation-settings-divider">
+                                    <span className="text-xs font-semibold opacity-60">Reprodução</span>
                                     <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap" title="Reiniciar automaticamente do início quando chegar ao fim">
                                         <Switch size="small" checked={settings.loopPlayback} onChange={v => this.updateSetting('loopPlayback', v)} />
                                         <span>Loop</span>
@@ -625,10 +609,11 @@ class AnimationMode extends Component {
                                         />
                                         <span className="tabular-nums min-w-[38px] text-right opacity-70">{speedMultiplier.toFixed(2)}x</span>
                                     </div>
+                                    <span className="opacity-40 mt-1"><kbd className="px-1.5 py-0.5 rounded border border-current opacity-60 text-[10px] font-mono">Espaço</kbd> play/pause</span>
                                 </div>
 
-                                <div className="flex flex-col gap-2 px-4 py-3">
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider opacity-45">Exibição</span>
+                                <div className="flex flex-col gap-2 px-4 py-3 w-52">
+                                    <span className="text-xs font-semibold opacity-60">Exibição</span>
                                     <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap" title="Mostrar o ano atual e a quantidade de elementos sobre o mapa">
                                         <Switch size="small" checked={settings.showHud} onChange={v => this.updateSetting('showHud', v)} />
                                         <span>Ano e contagem</span>
@@ -637,7 +622,7 @@ class AnimationMode extends Component {
                                         <Switch size="small" checked={this.props.isDarkMode} onChange={() => this.props.toggleTheme()} />
                                         <span>Modo escuro</span>
                                     </label>
-                                    <span className="opacity-40 italic mt-1">H para ocultar</span>
+                                    <span className="opacity-40 mt-1"><kbd className="px-1.5 py-0.5 rounded border border-current opacity-60 text-[10px] font-mono">H</kbd> ocultar UI</span>
                                 </div>
                             </div>
                         )}
