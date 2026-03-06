@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-05T13:39:06.359Z",
+  "generatedAt": "2026-03-06T10:55:48.225Z",
   "cities": {
     "sao-paulo": {
       "area": "São Paulo",
@@ -193,6 +193,71 @@
         {
           "date": "2025-01-01T00:00:00Z",
           "file": "rio-de-janeiro-2025-01.geojson"
+        }
+      ]
+    },
+    "brasilia": {
+      "area": "Brasília",
+      "snapshots": [
+        {
+          "date": "2011-01-01T00:00:00Z",
+          "file": "brasilia-2011-01.geojson"
+        },
+        {
+          "date": "2012-01-01T00:00:00Z",
+          "file": "brasilia-2012-01.geojson"
+        },
+        {
+          "date": "2013-01-01T00:00:00Z",
+          "file": "brasilia-2013-01.geojson"
+        },
+        {
+          "date": "2014-01-01T00:00:00Z",
+          "file": "brasilia-2014-01.geojson"
+        },
+        {
+          "date": "2015-01-01T00:00:00Z",
+          "file": "brasilia-2015-01.geojson"
+        },
+        {
+          "date": "2016-01-01T00:00:00Z",
+          "file": "brasilia-2016-01.geojson"
+        },
+        {
+          "date": "2017-01-01T00:00:00Z",
+          "file": "brasilia-2017-01.geojson"
+        },
+        {
+          "date": "2018-01-01T00:00:00Z",
+          "file": "brasilia-2018-01.geojson"
+        },
+        {
+          "date": "2019-01-01T00:00:00Z",
+          "file": "brasilia-2019-01.geojson"
+        },
+        {
+          "date": "2020-01-01T00:00:00Z",
+          "file": "brasilia-2020-01.geojson"
+        },
+        {
+          "date": "2021-01-01T00:00:00Z",
+          "file": "brasilia-2021-01.geojson"
+        },
+        {
+          "date": "2022-01-01T00:00:00Z",
+          "file": "brasilia-2022-01.geojson"
+        },
+        {
+          "date": "2023-01-01T00:00:00Z",
+          "file": "brasilia-2023-01.geojson"
+        },
+        {
+          "date": "2024-01-01T00:00:00Z",
+          "file": "brasilia-2024-01.geojson"
+        },
+        {
+          "date": "2025-01-01T00:00:00Z",
+          "file": "brasilia-2025-01.geojson"
         }
       ]
     }

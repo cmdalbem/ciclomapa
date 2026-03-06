@@ -25,6 +25,9 @@ const BBOXES = {
     'brazil': '-33.75,-73.99,5.27,-34.79',
     'fortaleza': '-3.88,-38.66,-3.69,-38.40',
     'sao paulo': '-24.01,-46.83,-23.35,-46.36',
+    'brasilia': '-16.05,-48.29,-15.50,-47.31',
+    'brasília': '-16.05,-48.29,-15.50,-47.31',
+    'rio de janeiro': '-23.08,-43.80,-22.74,-43.09',
 };
 
 // Filters that start with broad base tags cause OOM on historical queries.
@@ -267,7 +270,7 @@ async function resolveBbox(area, explicitBbox) {
         const https = require('https');
         const bbox = await new Promise((resolve, reject) => {
             const encoded = encodeURIComponent(area);
-            https.get(`https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`, {
+            https.get(`https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=5&featuretype=city`, {
                 headers: { 'User-Agent': 'CicloMapa History Fetcher' }
             }, (res) => {
                 let data = '';
