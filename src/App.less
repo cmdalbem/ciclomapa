@@ -292,21 +292,39 @@ body.animation-mode {
   align-items: center;
 }
 
-.animation-year-display {
+.animation-hud {
   position: absolute;
   bottom: 80px;
   right: 40px;
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 72px;
-  font-weight: 700;
-  color: white;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
-  letter-spacing: 2px;
-  user-select: none;
-  transition: opacity 0.3s ease;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  user-select: none;
+  transition: opacity 0.3s ease;
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: #1a1a1a;
+  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.6), 0 0 4px rgba(255, 255, 255, 0.4);
+}
+
+body.theme-dark .animation-hud {
+  color: white;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5), 0 0 4px rgba(0, 0, 0, 0.3);
+}
+
+.animation-hud-year {
+  font-size: 80px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.animation-hud-count {
+  font-size: 14px;
+  font-weight: 400;
+  opacity: 0.6;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
 }
 
 .animation-loading,
@@ -352,6 +370,98 @@ body.animation-mode {
 
 body.theme-dark .animation-settings-divider {
   border-right-color: rgba(255, 255, 255, 0.12);
+}
+
+.animation-city-picker {
+  position: relative;
+  pointer-events: auto;
+  margin-bottom: 2px;
+}
+
+.animation-city-picker-trigger {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color1);
+  text-shadow: none;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+  letter-spacing: 0.3px;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.animation-city-picker-chevron {
+  font-size: 12px;
+  opacity: 0.8;
+  transition: transform 0.2s ease;
+
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+.animation-city-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+.animation-city-picker-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border-radius: 10px;
+  min-width: 160px;
+  z-index: 2;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+body.theme-dark .animation-city-picker-menu {
+  background: rgba(30, 30, 30, 0.85);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.animation-city-picker-item {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.75);
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  &.active {
+    font-weight: 600;
+    color: var(--color1);
+  }
+}
+
+body.theme-dark .animation-city-picker-item {
+  color: rgba(255, 255, 255, 0.85);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &.active {
+    color: var(--color1);
+  }
 }
 
 .animation-timeline {
@@ -420,14 +530,6 @@ body.theme-dark .animation-tick--labeled::before {
   background: rgba(255, 255, 255, 0.5);
 }
 
-.animation-feature-count {
-  font-size: 16px;
-  font-weight: 400;
-  opacity: 0.7;
-  letter-spacing: 0.5px;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
-}
 
 // Transition-in effect
 // #ciclomapa #analyticsSidebar,
