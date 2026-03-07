@@ -342,6 +342,40 @@ async function main() {
         console.log(`⏭️  Skipping ${skipped.length} existing snapshot(s)`);
     }
 
+    const manifestPath = path.join(config.outputDir, 'manifest.json');
+
+    async function saveManifest(completedDates) {
+        let manifest = { generatedAt: new Date().toISOString(), cities: {} };
+        try {
+            const existing = JSON.parse(await fs.promises.readFile(manifestPath, 'utf8'));
+            if (existing.cities) {
+                manifest.cities = existing.cities;
+            } else if (existing.areaSlug && existing.snapshots) {
+                manifest.cities[existing.areaSlug] = {
+                    area: existing.area,
+                    snapshots: existing.snapshots,
+                };
+            }
+        } catch {}
+
+        manifest.cities[areaSlug] = {
+            area: config.area,
+            snapshots: completedDates.map(date => ({
+                date,
+                file: getOutputFilename(areaSlug, date),
+            })),
+        };
+        manifest.generatedAt = new Date().toISOString();
+
+        await fs.promises.writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+        return Object.keys(manifest.cities).length;
+    }
+
+    const completedDates = dates.filter(date => {
+        const outputPath = path.join(config.outputDir, getOutputFilename(areaSlug, date));
+        try { fs.accessSync(outputPath); return true; } catch { return false; }
+    });
+
     if (toFetch.length === 0) {
         console.log('\n✅ All snapshots already exist!');
     } else {
@@ -356,6 +390,10 @@ async function main() {
                     layers,
                     concurrency: config.concurrency,
                 });
+                completedDates.push(item.date);
+                completedDates.sort();
+                const cityCount = await saveManifest(completedDates);
+                console.log(`  📋 Manifest updated (${completedDates.length} snapshots, ${cityCount} cities)`);
             } catch (error) {
                 console.error(`\n❌ Failed ${item.filename}: ${error.message}`);
             }
@@ -363,32 +401,8 @@ async function main() {
         }
     }
 
-    // Update manifest (merge with existing data from other cities)
-    const manifestPath = path.join(config.outputDir, 'manifest.json');
-    let manifest = { generatedAt: new Date().toISOString(), cities: {} };
-    try {
-        const existing = JSON.parse(await fs.promises.readFile(manifestPath, 'utf8'));
-        if (existing.cities) {
-            manifest.cities = existing.cities;
-        } else if (existing.areaSlug && existing.snapshots) {
-            manifest.cities[existing.areaSlug] = {
-                area: existing.area,
-                snapshots: existing.snapshots,
-            };
-        }
-    } catch {}
-
-    manifest.cities[areaSlug] = {
-        area: config.area,
-        snapshots: dates.map(date => ({
-            date,
-            file: getOutputFilename(areaSlug, date),
-        })),
-    };
-    manifest.generatedAt = new Date().toISOString();
-
-    await fs.promises.writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
-    console.log(`📋 Manifest saved to ${manifestPath} (${Object.keys(manifest.cities).length} city/cities)`);
+    const cityCount = await saveManifest(completedDates);
+    console.log(`📋 Manifest saved to ${manifestPath} (${cityCount} city/cities)`);
     console.log('\n✨ Done!\n');
 }
 

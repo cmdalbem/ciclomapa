@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-07T15:08:37.882Z",
+  "generatedAt": "2026-03-07T15:26:50.914Z",
   "cities": {
     "sao-paulo": {
       "area": "São Paulo",
@@ -343,6 +343,75 @@
         {
           "date": "2026-01-01T00:00:00Z",
           "file": "porto-alegre-2026-01.geojson"
+        }
+      ]
+    },
+    "recife": {
+      "area": "Recife",
+      "snapshots": [
+        {
+          "date": "2011-01-01T00:00:00Z",
+          "file": "recife-2011-01.geojson"
+        },
+        {
+          "date": "2012-01-01T00:00:00Z",
+          "file": "recife-2012-01.geojson"
+        },
+        {
+          "date": "2013-01-01T00:00:00Z",
+          "file": "recife-2013-01.geojson"
+        },
+        {
+          "date": "2014-01-01T00:00:00Z",
+          "file": "recife-2014-01.geojson"
+        },
+        {
+          "date": "2015-01-01T00:00:00Z",
+          "file": "recife-2015-01.geojson"
+        },
+        {
+          "date": "2016-01-01T00:00:00Z",
+          "file": "recife-2016-01.geojson"
+        },
+        {
+          "date": "2017-01-01T00:00:00Z",
+          "file": "recife-2017-01.geojson"
+        },
+        {
+          "date": "2018-01-01T00:00:00Z",
+          "file": "recife-2018-01.geojson"
+        },
+        {
+          "date": "2019-01-01T00:00:00Z",
+          "file": "recife-2019-01.geojson"
+        },
+        {
+          "date": "2020-01-01T00:00:00Z",
+          "file": "recife-2020-01.geojson"
+        },
+        {
+          "date": "2021-01-01T00:00:00Z",
+          "file": "recife-2021-01.geojson"
+        },
+        {
+          "date": "2022-01-01T00:00:00Z",
+          "file": "recife-2022-01.geojson"
+        },
+        {
+          "date": "2023-01-01T00:00:00Z",
+          "file": "recife-2023-01.geojson"
+        },
+        {
+          "date": "2024-01-01T00:00:00Z",
+          "file": "recife-2024-01.geojson"
+        },
+        {
+          "date": "2025-01-01T00:00:00Z",
+          "file": "recife-2025-01.geojson"
+        },
+        {
+          "date": "2026-01-01T00:00:00Z",
+          "file": "recife-2026-01.geojson"
         }
       ]
     }
