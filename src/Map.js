@@ -66,6 +66,17 @@ import bikerentalIcon2x from './img/icons/poi-bikerental@2x.png';
 import bikerentalIconMini from './img/icons/poi-bikerental-mini.png';
 import bikerentalIconMiniLight from './img/icons/poi-bikerental-mini--light.png';
 import arrowSdf from './img/icons/arrow-sdf.png';
+import arrowCiclovia from './img/icons/arrow-ciclovia.png';
+import arrowCicloviaLight from './img/icons/arrow-ciclovia--light.png';
+import arrowCiclofaixa from './img/icons/arrow-ciclofaixa.png';
+import arrowCiclofaixaLight from './img/icons/arrow-ciclofaixa--light.png';
+
+const arrowIconsByLayer = {
+    "Ciclovia": "arrow-ciclovia",
+    "Calçada compartilhada": "arrow-ciclovia",
+    "Ciclofaixa": "arrow-ciclofaixa",
+    "Ciclorrota": "arrow-ciclofaixa",
+};
 
 const iconsMap = {
     "poi-comment": commentIcon,
@@ -835,6 +846,11 @@ class Map extends Component {
 
         if (sourceId === 'osmdata') {
             const arrowLayerId = normalLayerId + '--arrows';
+            const arrowBase = arrowIconsByLayer[l.name];
+            const useSdf = !arrowBase;
+            const arrowIconName = useSdf
+                ? 'arrowSdf'
+                : (this.props.isDarkMode ? arrowBase : `${arrowBase}--light`);
             
             this.map.addLayer({
                 "id": arrowLayerId,
@@ -852,14 +868,13 @@ class Map extends Component {
                         12, 20,
                         16, 80,
                     ],
-                    // "symbol-spacing": 60,
-                    "icon-image": "arrowSdf",
+                    "icon-image": arrowIconName,
                     "icon-size": [
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"],
-                            10, Math.max(1, l.style.lineWidth/5)/32,
-                            18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER/24,
+                            10, Math.max(1, l.style.lineWidth/5)/32 * (useSdf ? 1 : 0.5),
+                            18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER/24 * (useSdf ? 1 : 0.5),
                     ],
                     "icon-rotation-alignment": "map",
                     "icon-allow-overlap": true,
@@ -867,13 +882,18 @@ class Map extends Component {
                     "icon-padding": 4,
                     "icon-offset": [
                         "case",
-                            ["==", ['get', "cycleway:right"], 'lane'], [0, 24],
-                            ["==", ['get', "cycleway:left"], 'lane'], [0, -24],
+                            ["==", ['get', "cycleway:right"], 'lane'], [0, 44],
+                            ["==", ['get', "cycleway:left"], 'lane'], [0, -44],
                             [0, 0]
                     ],
                 },
                 "paint": {
-                    "icon-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.0 : -0.1, 'hsl'),
+                    ...(useSdf && {
+                        "icon-color": adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.0 : -0.1, 'hsl'),
+                        'icon-halo-width': 1,
+                        'icon-halo-blur': 0,
+                        'icon-halo-color': this.props.isDarkMode ? '#1c1a17' : '#dcdad8',
+                    }),
                     "icon-opacity": [
                         "case",
                             ['==', ['get', 'oneway:bicycle'], 'no'], 0,
@@ -882,9 +902,6 @@ class Map extends Component {
                             ['==', ['get', 'oneway'], 'yes'], 1,
                             0
                     ],
-                    'icon-halo-width': 1,
-                    'icon-halo-blur': 0,
-                    'icon-halo-color': this.props.isDarkMode ? '#1c1a17' : '#dcdad8',
                 }
             }, layerUnderneathName);
         }
@@ -2574,6 +2591,19 @@ class Map extends Component {
         this.map.loadImage( arrowSdf, (error, image) => {
             if (error) throw error;
             this.map.addImage('arrowSdf', image, { sdf: true });
+        });
+
+        const arrowImages = {
+            'arrow-ciclovia': arrowCiclovia,
+            'arrow-ciclovia--light': arrowCicloviaLight,
+            'arrow-ciclofaixa': arrowCiclofaixa,
+            'arrow-ciclofaixa--light': arrowCiclofaixaLight,
+        };
+        Object.entries(arrowImages).forEach(([key, src]) => {
+            this.map.loadImage(src, (error, image) => {
+                if (error) throw error;
+                this.map.addImage(key, image);
+            });
         });
     }
 
