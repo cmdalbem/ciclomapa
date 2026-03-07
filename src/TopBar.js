@@ -18,6 +18,7 @@ import {
     HiChatAlt as IconComment,
     HiSun as IconSun,
     HiMoon as IconMoon,
+    HiColorSwatch as IconLogo,
 } from "react-icons/hi"
 
 import { IconContext } from "react-icons";
@@ -255,6 +256,14 @@ class TopBar extends Component {
                                         onClick={this.props.openAboutModal}
                                     >
                                         Sobre
+                                    </Button>
+
+                                    <Button className="glass-bg"
+                                        type="link"
+                                        onClick={this.props.openLogoGenerator}
+                                        title="Logo Generator"
+                                    >
+                                        <IconLogo />
                                     </Button>
 
                                     <Dropdown menu={collaborateMenu}>

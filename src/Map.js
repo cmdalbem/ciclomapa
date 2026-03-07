@@ -190,7 +190,7 @@ class Map extends Component {
                 query: lngLat,
                 types: ['place'],
                 limit: 1,
-                language: ['pt-br']
+                // language: ['pt-br']
             })
             .send()
             .then(response => {
@@ -2342,7 +2342,7 @@ class Map extends Component {
             const cityPicker = new MapboxGeocoder({
                 accessToken: mapboxgl.accessToken,
                 mapboxgl: mapboxgl,
-                language: 'pt-br',
+                // language: 'pt-br',
                 placeholder: `Buscar cidades ${IS_PROD ? 'brasileiras' : 'no mundo'}`,
                 countries: IS_PROD ? 'br' : '',
                 types: 'place',
@@ -2540,10 +2540,23 @@ class Map extends Component {
     }
 
     async initializeAfterStyleLoad() {
+        this.hideBaseMapLabels(); // TEMP: hidden
         await this.initLayers();
         this.initMapControls();
         this.setRealisticLighting();
         this.updateBoundaryMask();
+    }
+
+    // TEMP: Hide all base map label layers
+    hideBaseMapLabels() {
+        const style = this.map.getStyle();
+        if (style && style.layers) {
+            style.layers.forEach(layer => {
+                if (layer.id.includes('label') || layer.id.includes('place-') || layer.id.includes('poi-')) {
+                    this.map.setLayoutProperty(layer.id, 'visibility', 'none');
+                }
+            });
+        }
     }
 
     loadImages() {

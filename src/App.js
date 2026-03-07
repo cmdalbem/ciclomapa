@@ -17,6 +17,7 @@ import {
 
 import AboutModal from './AboutModal.js'
 import LayersLegendModal from './LayersLegendModal.js'
+import LogoGenerator from './LogoGenerator.js'
 import Analytics from './Analytics.js'
 import Map from './Map.js'
 import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
@@ -83,6 +84,8 @@ class App extends Component {
         this.closeAboutModal = this.closeAboutModal.bind(this);
         this.openLayersLegendModal = this.openLayersLegendModal.bind(this);
         this.closeLayersLegendModal = this.closeLayersLegendModal.bind(this);
+        this.openLogoGenerator = this.openLogoGenerator.bind(this);
+        this.closeLogoGenerator = this.closeLogoGenerator.bind(this);
         this.onChangeStrategy = this.onChangeStrategy.bind(this);
         this.setMapRef = this.setMapRef.bind(this);
         this.toggleTheme = this.toggleTheme.bind(this);
@@ -161,6 +164,7 @@ class App extends Component {
             isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : DEFAULT_SIDEBAR_OPEN,
             hideUI: !urlParams.embed,
             aboutModal: false,
+            logoGeneratorModal: false,
             layersLegendModal: false,
             layersLegendScrollToSection: null,
             lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
@@ -241,6 +245,14 @@ class App extends Component {
             layersLegendModal: false,
             layersLegendScrollToSection: null
         })
+    }
+
+    openLogoGenerator() {
+        this.setState({ logoGeneratorModal: true });
+    }
+
+    closeLogoGenerator() {
+        this.setState({ logoGeneratorModal: false });
     }
 
     initLayers(prevLayersStates, isDarkMode, isDebugMode) {
@@ -852,6 +864,13 @@ class App extends Component {
             this.saveStateToLocalStorage();
         });
 
+        window.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'L') {
+                e.preventDefault();
+                this.setState(prev => ({ logoGeneratorModal: !prev.logoGeneratorModal }));
+            }
+        });
+
         // Reverse geocode URL-loaded points to get proper place names
         this.reverseGeocodeURLPoints();
 
@@ -973,6 +992,7 @@ class App extends Component {
                                 toggleSidebar={this.toggleSidebar}
                                 embedMode={this.state.embedMode}
                                 openAboutModal={this.openAboutModal}
+                                openLogoGenerator={this.openLogoGenerator}
                                 isDarkMode={this.state.isDarkMode}
                                 toggleTheme={this.toggleTheme}
                                 loading={this.state.loading}
@@ -1093,6 +1113,11 @@ class App extends Component {
                     layers={this.state.layers}
                     isDarkMode={this.state.isDarkMode}
                     scrollToSection={this.state.layersLegendScrollToSection}
+                />
+
+                <LogoGenerator
+                    visible={this.state.logoGeneratorModal}
+                    onClose={this.closeLogoGenerator}
                 />
 
                 </div>

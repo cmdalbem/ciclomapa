@@ -137,7 +137,7 @@ const RouteSortDropdown = ({ currentKey, onChange, items }) => {
 
 const googlePlacesGeocoder = new GooglePlacesGeocoder({
     apiKey: GOOGLE_PLACES_API_KEY,
-    language: 'pt-BR',
+    // language: 'pt-BR',
     region: 'br'
 });
 
@@ -848,7 +848,7 @@ class DirectionsPanel extends Component {
         try {
             await ensureGeocoderReady();
             const result = await googlePlacesGeocoder.reverseGeocode(lngLat, {
-                language: 'pt-BR'
+                // language: 'pt-BR'
             });
 
             console.debug('Reverse geocode result:', result);

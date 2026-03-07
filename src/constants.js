@@ -27,7 +27,7 @@ export const OVERPASS_SERVERS = [
 export const AREA_ID_OVERRIDES = {
     'Vitória, Espirito Santo, Brasil': 3601825817,
     'Brasília, Distrito Federal, Brasil': 3602662005,
-    'København, Capital RegionDenmark, Denmark': 3613707878,
+    // 'København, Capital RegionDenmark, Denmark': 3613707878,
     'Comuna 1, Buenos Aires, Argentina': 3601224652,
     'Stockholm, Stockholm, Sweden': 3600398021,
     'Madri, Madrid, Espanha': 3605326784,
@@ -57,7 +57,7 @@ export const HYBRID_MAX_RESULTS = 3;
 export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
 export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = false;
-export const ENABLE_COMMENTS = true;
+export const ENABLE_COMMENTS = false; // TEMP: hidden
 export const ENABLE_SATELLITE_TOGGLE = false;
 
 export const ROUTE_COLORS = {
