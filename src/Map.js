@@ -399,7 +399,7 @@ class Map extends Component {
             "description": l.description,
             type: 'circle',
             minzoom: ANIMATION_MODE ? 10 : MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
-            maxzoom: l.zoomThreshold,
+            maxzoom: ANIMATION_MODE ? 22 : l.zoomThreshold,
             'paint': {
                 ...(ANIMATION_MODE ? {
                     'circle-radius-transition': { duration: 0, delay: 0 },
