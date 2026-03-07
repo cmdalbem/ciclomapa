@@ -16,6 +16,7 @@ const DEFAULT_SPEED = 0.5;
 const INTERPOLATION_STEPS = 12;
 const SCALE_DURATION_MS = 400;
 const COLOR_DURATION_MS = 800;
+const SHRINK_DURATION_MS = 400;
 export const BIRTH_COLOR_DARK = '#ffffff';
 export const BIRTH_COLOR_LIGHT = '#386641';
 
@@ -61,7 +62,10 @@ class AnimationMode extends Component {
         this.currentBaseFeatures = [];
         this.featureBirthTimes = new Map();
         this.featureBirthTypes = new Map();
+        this.featureDeathTimes = new Map();
+        this.dyingFeatures = new Map();
         this.previousFeatureIds = new Set();
+        this.previousFeaturesMap = new Map();
         this.previousFingerprints = new Map();
         this.effectsDirty = false;
     }
@@ -279,7 +283,10 @@ class AnimationMode extends Component {
 
         this.featureBirthTimes.clear();
         this.featureBirthTypes.clear();
+        this.featureDeathTimes.clear();
+        this.dyingFeatures.clear();
         this.previousFeatureIds = new Set();
+        this.previousFeaturesMap = new Map();
         this.previousFingerprints = new Map();
 
         if (frames.length > 0) {
@@ -428,7 +435,21 @@ class AnimationMode extends Component {
                 this.featureBirthTimes.set(fid, now);
                 this.featureBirthTypes.set(fid, isNew ? 'new' : 'changed');
             }
+            if (newFeatureIds.has(fid)) {
+                this.dyingFeatures.delete(fid);
+                this.featureDeathTimes.delete(fid);
+            }
         });
+
+        for (const fid of this.previousFeatureIds) {
+            if (!newFeatureIds.has(fid) && !this.featureDeathTimes.has(fid)) {
+                const prevFeature = this.previousFeaturesMap.get(fid);
+                if (prevFeature) {
+                    this.featureDeathTimes.set(fid, now);
+                    this.dyingFeatures.set(fid, prevFeature);
+                }
+            }
+        }
 
         for (const fid of this.featureBirthTimes.keys()) {
             if (!newFeatureIds.has(fid)) {
@@ -439,6 +460,9 @@ class AnimationMode extends Component {
 
         this.currentBaseFeatures = frame.geoJson.features;
         this.previousFeatureIds = newFeatureIds;
+        this.previousFeaturesMap = new Map(
+            frame.geoJson.features.map(f => [f.properties.id || f.id, f])
+        );
         this.previousFingerprints = newFingerprints;
         this.effectsDirty = true;
     }
@@ -449,13 +473,15 @@ class AnimationMode extends Component {
 
     effectsTick = (now) => {
         const { showBirthEffect, effectDuration } = this.state.settings;
-        const hasActiveEffects = showBirthEffect && this.featureBirthTimes.size > 0;
+        const hasActiveBirths = showBirthEffect && this.featureBirthTimes.size > 0;
+        const hasActiveDeaths = showBirthEffect && this.featureDeathTimes.size > 0;
+        const hasActiveEffects = hasActiveBirths || hasActiveDeaths;
 
         if ((this.effectsDirty || hasActiveEffects) && this.currentBaseFeatures.length > 0) {
             this.effectsDirty = false;
 
             let features;
-            if (hasActiveEffects) {
+            if (hasActiveBirths) {
                 const durationScale = { fast: 0.5, normal: 1, slow: 2 }[effectDuration] || 1;
                 const scaleDur = SCALE_DURATION_MS * durationScale;
                 const colorDur = COLOR_DURATION_MS * durationScale;
@@ -483,7 +509,27 @@ class AnimationMode extends Component {
                     return f;
                 });
             } else {
-                features = this.currentBaseFeatures;
+                features = [...this.currentBaseFeatures];
+            }
+
+            if (hasActiveDeaths) {
+                const durationScale = { fast: 0.5, normal: 1, slow: 2 }[effectDuration] || 1;
+                const shrinkDur = SHRINK_DURATION_MS * durationScale;
+                for (const [fid, deathTime] of this.featureDeathTimes) {
+                    const age = now - deathTime;
+                    if (age < shrinkDur) {
+                        const t = age / shrinkDur;
+                        const opacity = 1 - t;
+                        const width = 1 - t;
+                        const dyingFeature = this.dyingFeatures.get(fid);
+                        if (dyingFeature) {
+                            features.push(this.withEffects(dyingFeature, opacity, width));
+                        }
+                    } else {
+                        this.featureDeathTimes.delete(fid);
+                        this.dyingFeatures.delete(fid);
+                    }
+                }
             }
 
             if (this.props.onDataChange) {
@@ -610,7 +656,7 @@ class AnimationMode extends Component {
         if (frames.length < 2) return null;
 
         const keyframes = frames
-            .map((f, i) => f.isKeyframe ? { index: i, label: f.label, pct: (i / (frames.length - 1)) * 100 } : null)
+            .map((f, i) => f.isKeyframe && /^\d{4}$/.test(f.label) ? { index: i, label: f.label, pct: (i / (frames.length - 1)) * 100 } : null)
             .filter(Boolean);
 
         let lastLabelPct = -Infinity;
