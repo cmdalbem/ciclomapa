@@ -240,14 +240,24 @@
             "description": "Displayed as 'Baixa velocidade' (low speed zone, 20 km/h)."
         },
         {
+            "key": "surface",
+            "object_types": ["way"],
+            "description": "Surface type shown in cycleway detail popups."
+        },
+        {
+            "key": "tunnel",
+            "object_types": ["way"],
+            "description": "Shown in cycleway detail popups."
+        },
+        {
             "key": "oneway",
             "object_types": ["way"],
-            "description": "Used in duplicate way detection algorithm for km calculation."
+            "description": "Shown in cycleway detail popups and used in duplicate way detection for km calculation."
         },
         {
             "key": "oneway:bicycle",
             "object_types": ["way"],
-            "description": "Used in duplicate way detection algorithm for km calculation."
+            "description": "Shown in cycleway detail popups and used in duplicate way detection for km calculation."
         },
         {
             "key": "name",
@@ -310,7 +320,7 @@
         {
             "key": "lit",
             "object_types": ["node", "way", "area"],
-            "description": "Shown in bicycle parking detail popups."
+            "description": "Shown in cycleway and bicycle parking detail popups."
         },
         {
             "key": "ref",
@@ -436,6 +446,11 @@
             "key": "phone",
             "object_types": ["node", "way"],
             "description": "Shown in POI detail popups."
+        },
+        {
+            "key": "facebook",
+            "object_types": ["node", "way"],
+            "description": "Social media link shown in POI detail popups."
         },
         {
             "key": "email",
