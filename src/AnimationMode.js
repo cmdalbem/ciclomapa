@@ -7,9 +7,10 @@ import { HiPlay, HiPause, HiChevronDown } from 'react-icons/hi2';
 const TARGET_DURATION_MS = 5000;
 const DEFAULT_FRAME_MS = 33;
 const MIN_FRAME_MS = 10;
-const MIN_SPEED = 0.25;
-const MAX_SPEED = 4;
-const SPEED_STEP = 0.25;
+const MIN_SPEED = 0.07;
+const MAX_SPEED = 1;
+const SPEED_STEP = 0.05;
+const DEFAULT_SPEED = 0.5;
 
 // Transition effects
 const INTERPOLATION_STEPS = 12;
@@ -37,7 +38,7 @@ class AnimationMode extends Component {
             loadProgress: 0,
             error: null,
             baseFrameMs: DEFAULT_FRAME_MS,
-            speedMultiplier: 0.25,
+            speedMultiplier: DEFAULT_SPEED,
             controlsVisible: true,
             settingsOpen: false,
             cityPickerOpen: false,
@@ -47,6 +48,9 @@ class AnimationMode extends Component {
                 showBirthEffect: true,
                 effectDuration: 'normal',
                 showHud: true,
+                interpolate: true,
+                autoInterpolationSteps: true,
+                interpolationSteps: INTERPOLATION_STEPS,
             },
         };
         this.rafId = null;
@@ -56,6 +60,7 @@ class AnimationMode extends Component {
 
         this.currentBaseFeatures = [];
         this.featureBirthTimes = new Map();
+        this.featureBirthTypes = new Map();
         this.previousFeatureIds = new Set();
         this.previousFingerprints = new Map();
         this.effectsDirty = false;
@@ -125,6 +130,8 @@ class AnimationMode extends Component {
 
     buildInterpolatedFrames(snapshots, settings = this.state?.settings) {
         const highlightChanges = settings?.highlightChanges ?? true;
+        const interpolate = settings?.interpolate ?? true;
+        const maxSteps = settings?.interpolationSteps ?? INTERPOLATION_STEPS;
         const frames = [];
 
         for (let i = 0; i < snapshots.length; i++) {
@@ -138,6 +145,10 @@ class AnimationMode extends Component {
                 frames.push({ label, geoJson: current.geoJson, isKeyframe: true });
                 break;
             }
+
+            frames.push({ label, geoJson: current.geoJson, isKeyframe: true });
+
+            if (!interpolate) continue;
 
             const next = snapshots[i + 1];
             const currentMap = new Map(
@@ -157,8 +168,6 @@ class AnimationMode extends Component {
                 }
             });
 
-            frames.push({ label, geoJson: current.geoJson, isKeyframe: true });
-
             const transitioning = highlightChanges
                 ? [...newFeatures, ...changedFeatures]
                 : [...newFeatures];
@@ -167,7 +176,7 @@ class AnimationMode extends Component {
             const changedIds = highlightChanges
                 ? new Set(changedFeatures.map(f => f.properties.id || f.id))
                 : new Set();
-            const steps = Math.min(INTERPOLATION_STEPS, transitioning.length);
+            const steps = Math.min(maxSteps, transitioning.length);
             const batchSize = Math.ceil(transitioning.length / steps);
             const batches = [];
             for (let b = 0; b < steps; b++) {
@@ -261,10 +270,15 @@ class AnimationMode extends Component {
 
         snapshots.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        const frames = this.buildInterpolatedFrames(snapshots);
+        let settings = this.state.settings;
+        if (settings.autoInterpolationSteps && settings.interpolate) {
+            settings = { ...settings, interpolationSteps: this.computeAutoSteps(this.state.speedMultiplier) };
+        }
+        const frames = this.buildInterpolatedFrames(snapshots, settings);
         const baseFrameMs = Math.max(MIN_FRAME_MS, Math.round(TARGET_DURATION_MS / frames.length));
 
         this.featureBirthTimes.clear();
+        this.featureBirthTypes.clear();
         this.previousFeatureIds = new Set();
         this.previousFingerprints = new Map();
 
@@ -286,6 +300,7 @@ class AnimationMode extends Component {
         this.setState({
             snapshots,
             frames,
+            settings,
             isLoading: false,
             currentFrame: 0,
             baseFrameMs,
@@ -411,12 +426,14 @@ class AnimationMode extends Component {
             const isChanged = !isNew && this.previousFingerprints.get(fid) !== fp;
             if (isNew || (isChanged && this.state.settings.highlightChanges)) {
                 this.featureBirthTimes.set(fid, now);
+                this.featureBirthTypes.set(fid, isNew ? 'new' : 'changed');
             }
         });
 
         for (const fid of this.featureBirthTimes.keys()) {
             if (!newFeatureIds.has(fid)) {
                 this.featureBirthTimes.delete(fid);
+                this.featureBirthTypes.delete(fid);
             }
         }
 
@@ -448,15 +465,20 @@ class AnimationMode extends Component {
                     const birthTime = this.featureBirthTimes.get(fid);
                     if (birthTime !== undefined) {
                         const age = now - birthTime;
-                        if (age < maxDuration) {
+                        const birthType = this.featureBirthTypes.get(fid);
+                        const applyScale = birthType === 'new';
+                        const effectDur = applyScale ? maxDuration : colorDur;
+                        if (age < effectDur) {
                             const opacity = Math.min(1, age / colorDur);
-                            const t = Math.min(1, age / scaleDur);
-                            const width = t < 0.5
-                                ? t * 4        // 0 → 2
-                                : 2 - (t - 0.5) * 2; // 2 → 1
+                            const width = applyScale
+                                ? (Math.min(1, age / scaleDur) < 0.5
+                                    ? Math.min(1, age / scaleDur) * 4
+                                    : 2 - (Math.min(1, age / scaleDur) - 0.5) * 2)
+                                : 1;
                             return this.withEffects(f, opacity, width);
                         }
                         this.featureBirthTimes.delete(fid);
+                        this.featureBirthTypes.delete(fid);
                     }
                     return f;
                 });
@@ -519,8 +541,29 @@ class AnimationMode extends Component {
         });
     }
 
+    computeAutoSteps(speedMultiplier) {
+        const raw = Math.round(3 * INTERPOLATION_STEPS * DEFAULT_SPEED / speedMultiplier);
+        return Math.max(2, Math.min(50, raw));
+    }
+
     onSpeedChange = (e) => {
         this.setState({ speedMultiplier: parseFloat(e.target.value) });
+    }
+
+    onSpeedSliderAfterChange = (v) => {
+        const multiplier = 1 / v;
+        if (!this.state.settings.autoInterpolationSteps || !this.state.settings.interpolate) return;
+        this.setState(prev => {
+            const autoSteps = this.computeAutoSteps(multiplier);
+            if (autoSteps === prev.settings.interpolationSteps) return null;
+            const newSettings = { ...prev.settings, interpolationSteps: autoSteps };
+            const frames = this.buildInterpolatedFrames(prev.snapshots, newSettings);
+            const baseFrameMs = Math.max(MIN_FRAME_MS, Math.round(TARGET_DURATION_MS / frames.length));
+            const currentFrame = Math.min(prev.currentFrame, frames.length - 1);
+            return { settings: newSettings, frames, baseFrameMs, currentFrame };
+        }, () => {
+            this.showFrame(this.state.currentFrame);
+        });
     }
 
     onScrub = (e) => {
@@ -538,7 +581,15 @@ class AnimationMode extends Component {
         this.setState(prev => {
             const newSettings = { ...prev.settings, [key]: value };
 
-            if (key === 'highlightChanges') {
+            if (key === 'autoInterpolationSteps' && value === true) {
+                newSettings.interpolationSteps = this.computeAutoSteps(prev.speedMultiplier);
+            }
+            if (key === 'interpolate' && value === true && newSettings.autoInterpolationSteps) {
+                newSettings.interpolationSteps = this.computeAutoSteps(prev.speedMultiplier);
+            }
+
+            const rebuildKeys = ['highlightChanges', 'interpolate', 'interpolationSteps', 'autoInterpolationSteps'];
+            if (rebuildKeys.includes(key)) {
                 const frames = this.buildInterpolatedFrames(prev.snapshots, newSettings);
                 const baseFrameMs = Math.max(MIN_FRAME_MS, Math.round(TARGET_DURATION_MS / frames.length));
                 const currentFrame = Math.min(prev.currentFrame, frames.length - 1);
@@ -547,7 +598,8 @@ class AnimationMode extends Component {
 
             return { settings: newSettings };
         }, () => {
-            if (key === 'highlightChanges') {
+            const rebuildKeys = ['highlightChanges', 'interpolate', 'interpolationSteps', 'autoInterpolationSteps'];
+            if (rebuildKeys.includes(key)) {
                 this.showFrame(this.state.currentFrame);
             }
         });
@@ -603,6 +655,92 @@ class AnimationMode extends Component {
         const { frames, currentFrame } = this.state;
         if (frames.length === 0) return 0;
         return frames[currentFrame].geoJson.features.length;
+    }
+
+    getChartData() {
+        const { frames } = this.state;
+        if (frames.length === 0) return [];
+        return frames
+            .map((f, i) => f.isKeyframe ? { index: i, count: f.geoJson.features.length } : null)
+            .filter(Boolean);
+    }
+
+    renderSparkline() {
+        const data = this.getChartData();
+        if (data.length < 2) return null;
+
+        const { frames, currentFrame } = this.state;
+        const totalFrames = frames.length - 1;
+
+        const W = 180;
+        const H = 48;
+        const PAD_TOP = 4;
+        const PAD_BOT = 2;
+
+        const maxCount = Math.max(...data.map(d => d.count));
+        const minCount = Math.min(...data.map(d => d.count));
+        const range = maxCount - minCount || 1;
+
+        const points = data.map(d => {
+            const x = totalFrames > 0 ? (d.index / totalFrames) * W : 0;
+            const y = PAD_TOP + (1 - (d.count - minCount) / range) * (H - PAD_TOP - PAD_BOT);
+            return { x, y };
+        });
+
+        const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+        const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},${H} L${points[0].x.toFixed(1)},${H} Z`;
+
+        const progressX = totalFrames > 0 ? (currentFrame / totalFrames) * W : 0;
+
+        const currentCount = this.getCurrentFeatureCount();
+        const dotY = PAD_TOP + (1 - (currentCount - minCount) / range) * (H - PAD_TOP - PAD_BOT);
+
+        return (
+            <svg
+                className="animation-hud-chart"
+                width={W}
+                height={H}
+                viewBox={`0 0 ${W} ${H}`}
+            >
+                <defs>
+                    <linearGradient id="sparkFillPast" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="currentColor" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="currentColor" stopOpacity="0.05" />
+                    </linearGradient>
+                    <linearGradient id="sparkFillFuture" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="currentColor" stopOpacity="0.1" />
+                        <stop offset="100%" stopColor="currentColor" stopOpacity="0.01" />
+                    </linearGradient>
+                    <clipPath id="clipPast">
+                        <rect x="0" y="0" width={progressX} height={H} />
+                    </clipPath>
+                    <clipPath id="clipFuture">
+                        <rect x={progressX} y="0" width={W - progressX} height={H} />
+                    </clipPath>
+                </defs>
+
+                {/* Past (played) — stronger */}
+                <g clipPath="url(#clipPast)">
+                    <path d={areaPath} fill="url(#sparkFillPast)" />
+                    <path d={linePath} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" opacity="0.7" />
+                </g>
+
+                {/* Future (upcoming) — dimmed */}
+                <g clipPath="url(#clipFuture)">
+                    <path d={areaPath} fill="url(#sparkFillFuture)" />
+                    <path d={linePath} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" opacity="0.2" />
+                </g>
+
+                <line
+                    x1={progressX} y1={0} x2={progressX} y2={H}
+                    stroke="currentColor" strokeWidth="1" opacity="0.3"
+                />
+                <circle
+                    cx={progressX} cy={dotY} r="2.5"
+                    fill="currentColor" opacity="0.9"
+                />
+            </svg>
+        );
     }
 
     render() {
@@ -664,6 +802,7 @@ class AnimationMode extends Component {
                             </div>
                         )}
                         <span className="animation-hud-year">{this.getYearDisplay()}</span>
+                        {this.renderSparkline()}
                         <span className="animation-hud-count">
                             {this.getCurrentFeatureCount()} elementos
                         </span>
@@ -682,7 +821,7 @@ class AnimationMode extends Component {
                                     </label>
                                     <label className={`flex items-center gap-2 whitespace-nowrap ${settings.showBirthEffect ? 'cursor-pointer' : 'opacity-35 pointer-events-none'}`} title="Animar elementos cuja geometria ou tipo mudou entre períodos">
                                         <Switch size="small" checked={settings.highlightChanges} onChange={v => this.updateSetting('highlightChanges', v)} disabled={!settings.showBirthEffect} />
-                                        <span>Destacar modificados</span>
+                                        <span>Animar alterações</span>
                                     </label>
                                     <div className={`flex items-center gap-2 whitespace-nowrap ${settings.showBirthEffect ? '' : 'opacity-35 pointer-events-none'}`} title="Quão rápido os efeitos de entrada são reproduzidos">
                                         <span>Vel. do efeito</span>
@@ -702,23 +841,56 @@ class AnimationMode extends Component {
                                     <span className="text-xs font-semibold opacity-60">Reprodução</span>
                                     <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap" title="Reiniciar automaticamente do início quando chegar ao fim">
                                         <Switch size="small" checked={settings.loopPlayback} onChange={v => this.updateSetting('loopPlayback', v)} />
-                                        <span>Reiniciar automaticamente</span>
+                                        <span>Loop</span>
                                     </label>
-                                    <div className="flex items-center gap-2 whitespace-nowrap" title={'Duração total estimada: ' + Math.round(frames.length * baseFrameMs / speedMultiplier / 1000) + 's'}>
-                                        <span>Velocidade</span>
+                                    <div className="flex items-center gap-2 whitespace-nowrap">
+                                        <span>Duração total</span>
                                         <Slider
-                                            min={MIN_SPEED} max={MAX_SPEED} step={SPEED_STEP}
-                                            value={speedMultiplier}
-                                            onChange={v => this.setState({ speedMultiplier: v })}
+                                            min={1 / MAX_SPEED} max={1 / MIN_SPEED} step={SPEED_STEP}
+                                            value={1 / speedMultiplier}
+                                            onChange={v => this.setState({ speedMultiplier: 1 / v })}
+                                            onAfterChange={this.onSpeedSliderAfterChange}
                                             tooltipVisible={false}
                                             className="w-16 m-0"
                                         />
-                                        <span className="tabular-nums min-w-[38px] text-right opacity-70">{speedMultiplier.toFixed(2)}x</span>
+                                        {(() => {
+                                            const totalS = Math.round(frames.length * baseFrameMs / speedMultiplier / 1000);
+                                            const min = Math.floor(totalS / 60);
+                                            const sec = totalS % 60;
+                                            return <span className="tabular-nums min-w-[38px] text-right opacity-70">{min > 0 ? `${min}m${sec > 0 ? `${sec}s` : ''}` : `${sec}s`}</span>;
+                                        })()}
                                     </div>
                                     <div className="opacity-40 mt-auto pt-2 flex flex-col gap-1">
                                         <span><kbd className="px-1.5 py-0.5 rounded border border-current opacity-60 text-[10px] font-mono">Espaço</kbd> play/pause</span>
                                         <span><kbd className="px-1.5 py-0.5 rounded border border-current opacity-60 text-[10px] font-mono">← →</kbd> avançar/voltar</span>
                                     </div>
+                                </div>
+
+                                <div className="flex flex-col gap-2 px-4 py-3 w-52 animation-settings-divider">
+                                    <span className="text-xs font-semibold opacity-60">Interpolação</span>
+                                    <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap" title="Revelar novos elementos gradualmente entre snapshots">
+                                        <Switch size="small" checked={settings.interpolate} onChange={v => this.updateSetting('interpolate', v)} />
+                                        <span>Interpolar snapshots</span>
+                                    </label>
+                                    <label className={`flex items-center gap-2 whitespace-nowrap ${settings.interpolate ? 'cursor-pointer' : 'opacity-35 pointer-events-none'}`} title="Calcular steps automaticamente baseado na velocidade de reprodução">
+                                        <Switch size="small" checked={settings.autoInterpolationSteps} onChange={v => this.updateSetting('autoInterpolationSteps', v)} disabled={!settings.interpolate} />
+                                        <span>Automático</span>
+                                    </label>
+                                    <div className={`flex items-center gap-2 whitespace-nowrap ${!settings.interpolate || settings.autoInterpolationSteps ? 'opacity-35 pointer-events-none' : ''}`} title="Número máximo de quadros intermediários entre snapshots">
+                                        <span>Steps</span>
+                                        <Slider
+                                            min={2} max={50} step={1}
+                                            value={settings.interpolationSteps}
+                                            onChange={v => this.updateSetting('interpolationSteps', v)}
+                                            disabled={!settings.interpolate || settings.autoInterpolationSteps}
+                                            tooltipVisible={false}
+                                            className="w-16 m-0"
+                                        />
+                                        <span className="tabular-nums min-w-[24px] text-right opacity-70">{settings.interpolationSteps}</span>
+                                    </div>
+                                    <span className="opacity-40 text-[10px] mt-auto">
+                                        {frames.length} quadros · {Math.round(1000 * speedMultiplier / baseFrameMs)} fps
+                                    </span>
                                 </div>
 
                                 <div className="flex flex-col gap-2 px-4 py-3 w-52">
