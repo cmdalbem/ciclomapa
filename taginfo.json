@@ -1,0 +1,491 @@
+{
+    "data_format": 1,
+    "data_url": "https://raw.githubusercontent.com/cmdalbem/ciclomapa/master/taginfo.json",
+    "project": {
+        "name": "CicloMapa",
+        "description": "An open platform to visualize cycling infrastructure of Brazilian cities using OpenStreetMap data.",
+        "project_url": "https://ciclomapa.org.br",
+        "doc_url": "https://github.com/cmdalbem/ciclomapa",
+        "icon_url": "https://ciclomapa.org.br/favicon.ico",
+        "contact_name": "CicloMapa",
+        "contact_email": "contato@ciclomapa.org.br"
+    },
+    "tags": [
+        {
+            "key": "highway",
+            "value": "cycleway",
+            "object_types": ["way"],
+            "description": "Displayed as 'Ciclovia' (dedicated cycleway with physical separation)."
+        },
+        {
+            "key": "highway",
+            "value": "footway",
+            "object_types": ["way"],
+            "description": "Combined with bicycle=designated, displayed as 'Calçada compartilhada' (shared sidewalk)."
+        },
+        {
+            "key": "highway",
+            "value": "pedestrian",
+            "object_types": ["way"],
+            "description": "Combined with bicycle=designated or yes, displayed as 'Calçada compartilhada' (shared pedestrian area)."
+        },
+        {
+            "key": "highway",
+            "value": "living_street",
+            "object_types": ["way"],
+            "description": "Combined with bicycle=yes, displayed as 'Baixa velocidade' (low speed street)."
+        },
+        {
+            "key": "highway",
+            "value": "track",
+            "object_types": ["way"],
+            "description": "Combined with bicycle=designated or yes, displayed as 'Trilha' (trail accessible by bicycle)."
+        },
+        {
+            "key": "highway",
+            "value": "path",
+            "object_types": ["way"],
+            "description": "Combined with bicycle=designated or yes, displayed as 'Trilha' (path accessible by bicycle)."
+        },
+        {
+            "key": "cycleway",
+            "value": "track",
+            "object_types": ["way"],
+            "description": "Displayed as 'Ciclovia' (segregated cycle track)."
+        },
+        {
+            "key": "cycleway",
+            "value": "opposite_track",
+            "object_types": ["way"],
+            "description": "Displayed as 'Ciclovia' (contra-flow segregated cycle track)."
+        },
+        {
+            "key": "cycleway",
+            "value": "lane",
+            "object_types": ["way"],
+            "description": "Displayed as 'Ciclofaixa' (painted cycle lane)."
+        },
+        {
+            "key": "cycleway",
+            "value": "opposite_lane",
+            "object_types": ["way"],
+            "description": "Displayed as 'Ciclofaixa' (contra-flow painted cycle lane)."
+        },
+        {
+            "key": "cycleway",
+            "value": "buffered_lane",
+            "object_types": ["way"],
+            "description": "Displayed as 'Ciclorrota' (buffered cycle lane)."
+        },
+        {
+            "key": "cycleway",
+            "value": "shared_lane",
+            "object_types": ["way"],
+            "description": "Displayed as 'Ciclorrota' (shared lane marking)."
+        },
+        {
+            "key": "cycleway",
+            "value": "share_busway",
+            "object_types": ["way"],
+            "description": "Displayed as 'Ciclorrota' (shared bus lane)."
+        },
+        {
+            "key": "cycleway",
+            "value": "opposite_share_busway",
+            "object_types": ["way"],
+            "description": "Displayed as 'Ciclorrota' (contra-flow shared bus lane)."
+        },
+        {
+            "key": "cycleway",
+            "value": "sidepath",
+            "object_types": ["way"],
+            "description": "Displayed as 'Calçada compartilhada' (sidepath alongside road)."
+        },
+        {
+            "key": "cycleway:left",
+            "value": "track",
+            "object_types": ["way"],
+            "description": "Left-side cycle track, displayed as 'Ciclovia'."
+        },
+        {
+            "key": "cycleway:left",
+            "value": "opposite_track",
+            "object_types": ["way"],
+            "description": "Left-side contra-flow cycle track, displayed as 'Ciclovia'."
+        },
+        {
+            "key": "cycleway:left",
+            "value": "lane",
+            "object_types": ["way"],
+            "description": "Left-side cycle lane, displayed as 'Ciclofaixa'."
+        },
+        {
+            "key": "cycleway:left",
+            "value": "opposite_lane",
+            "object_types": ["way"],
+            "description": "Left-side contra-flow cycle lane, displayed as 'Ciclofaixa'."
+        },
+        {
+            "key": "cycleway:left",
+            "value": "buffered_lane",
+            "object_types": ["way"],
+            "description": "Left-side buffered lane, displayed as 'Ciclorrota'."
+        },
+        {
+            "key": "cycleway:left",
+            "value": "shared_lane",
+            "object_types": ["way"],
+            "description": "Left-side shared lane, displayed as 'Ciclorrota'."
+        },
+        {
+            "key": "cycleway:left",
+            "value": "share_busway",
+            "object_types": ["way"],
+            "description": "Left-side shared bus lane, displayed as 'Ciclorrota'."
+        },
+        {
+            "key": "cycleway:left",
+            "value": "sidepath",
+            "object_types": ["way"],
+            "description": "Left-side sidepath, displayed as 'Calçada compartilhada'."
+        },
+        {
+            "key": "cycleway:right",
+            "value": "track",
+            "object_types": ["way"],
+            "description": "Right-side cycle track, displayed as 'Ciclovia'."
+        },
+        {
+            "key": "cycleway:right",
+            "value": "opposite_track",
+            "object_types": ["way"],
+            "description": "Right-side contra-flow cycle track, displayed as 'Ciclovia'."
+        },
+        {
+            "key": "cycleway:right",
+            "value": "lane",
+            "object_types": ["way"],
+            "description": "Right-side cycle lane, displayed as 'Ciclofaixa'."
+        },
+        {
+            "key": "cycleway:right",
+            "value": "opposite_lane",
+            "object_types": ["way"],
+            "description": "Right-side contra-flow cycle lane, displayed as 'Ciclofaixa'."
+        },
+        {
+            "key": "cycleway:right",
+            "value": "buffered_lane",
+            "object_types": ["way"],
+            "description": "Right-side buffered lane, displayed as 'Ciclorrota'."
+        },
+        {
+            "key": "cycleway:right",
+            "value": "shared_lane",
+            "object_types": ["way"],
+            "description": "Right-side shared lane, displayed as 'Ciclorrota'."
+        },
+        {
+            "key": "cycleway:right",
+            "value": "share_busway",
+            "object_types": ["way"],
+            "description": "Right-side shared bus lane, displayed as 'Ciclorrota'."
+        },
+        {
+            "key": "cycleway:right",
+            "value": "sidepath",
+            "object_types": ["way"],
+            "description": "Right-side sidepath, displayed as 'Calçada compartilhada'."
+        },
+        {
+            "key": "cycleway:both",
+            "value": "lane",
+            "object_types": ["way"],
+            "description": "Cycle lanes on both sides, displayed as 'Ciclofaixa'."
+        },
+        {
+            "key": "bicycle",
+            "value": "designated",
+            "object_types": ["way"],
+            "description": "Used to identify shared paths designated for cycling."
+        },
+        {
+            "key": "bicycle",
+            "value": "yes",
+            "object_types": ["way"],
+            "description": "Used to identify paths and streets where cycling is permitted."
+        },
+        {
+            "key": "bicycle",
+            "value": "no",
+            "object_types": ["way"],
+            "description": "Displayed as 'Proibido' (cycling prohibited)."
+        },
+        {
+            "key": "bicycle",
+            "value": "dismount",
+            "object_types": ["way"],
+            "description": "Displayed as 'Proibido' (must dismount bicycle)."
+        },
+        {
+            "key": "maxspeed",
+            "value": "30",
+            "object_types": ["way"],
+            "description": "Displayed as 'Baixa velocidade' (low speed zone, 30 km/h)."
+        },
+        {
+            "key": "maxspeed",
+            "value": "20",
+            "object_types": ["way"],
+            "description": "Displayed as 'Baixa velocidade' (low speed zone, 20 km/h)."
+        },
+        {
+            "key": "surface",
+            "object_types": ["way"],
+            "description": "Surface type shown in cycleway detail popups."
+        },
+        {
+            "key": "tunnel",
+            "object_types": ["way"],
+            "description": "Shown in cycleway detail popups."
+        },
+        {
+            "key": "oneway",
+            "object_types": ["way"],
+            "description": "Shown in cycleway detail popups and used in duplicate way detection for km calculation."
+        },
+        {
+            "key": "oneway:bicycle",
+            "object_types": ["way"],
+            "description": "Shown in cycleway detail popups and used in duplicate way detection for km calculation."
+        },
+        {
+            "key": "name",
+            "object_types": ["way", "node"],
+            "description": "Shown in POI popups and used for duplicate way detection by street name."
+        },
+        {
+            "key": "shop",
+            "value": "bicycle",
+            "object_types": ["node", "way"],
+            "description": "Displayed as 'Oficinas & lojas' (bike shops and repair services)."
+        },
+        {
+            "key": "amenity",
+            "value": "bicycle_rental",
+            "object_types": ["node", "way"],
+            "description": "Displayed as 'Estações de bicicleta' (bike sharing stations)."
+        },
+        {
+            "key": "amenity",
+            "value": "bicycle_parking",
+            "object_types": ["node", "way", "area"],
+            "description": "Displayed as 'Bicicletários' (bicycle parking facilities)."
+        },
+        {
+            "key": "bicycle_parking",
+            "object_types": ["node", "way", "area"],
+            "description": "Parking type shown in bicycle parking detail popups."
+        },
+        {
+            "key": "covered",
+            "object_types": ["node", "way", "area"],
+            "description": "Shown in bicycle parking detail popups."
+        },
+        {
+            "key": "access",
+            "object_types": ["node", "way", "area"],
+            "description": "Shown in bicycle parking detail popups."
+        },
+        {
+            "key": "capacity",
+            "object_types": ["node", "way", "area"],
+            "description": "Shown in bicycle parking detail popups."
+        },
+        {
+            "key": "maxstay",
+            "object_types": ["node", "way", "area"],
+            "description": "Shown in bicycle parking detail popups."
+        },
+        {
+            "key": "surveillance",
+            "object_types": ["node", "way", "area"],
+            "description": "Shown in bicycle parking detail popups."
+        },
+        {
+            "key": "supervised",
+            "object_types": ["node", "way", "area"],
+            "description": "Shown in bicycle parking detail popups."
+        },
+        {
+            "key": "lit",
+            "object_types": ["node", "way", "area"],
+            "description": "Shown in cycleway and bicycle parking detail popups."
+        },
+        {
+            "key": "ref",
+            "object_types": ["node", "way"],
+            "description": "Reference number shown in bike sharing station popups."
+        },
+        {
+            "key": "network",
+            "object_types": ["node", "way"],
+            "description": "Network name shown in bike sharing station popups."
+        },
+        {
+            "key": "operator",
+            "object_types": ["node", "way"],
+            "description": "Operator shown in bike sharing and shop popups."
+        },
+        {
+            "key": "operator:type",
+            "object_types": ["node", "way"],
+            "description": "Operator type shown in bike sharing station popups."
+        },
+        {
+            "key": "payment:cash",
+            "object_types": ["node", "way"],
+            "description": "Payment method shown in bike sharing station popups."
+        },
+        {
+            "key": "payment:credit_cards",
+            "object_types": ["node", "way"],
+            "description": "Payment method shown in bike sharing station popups."
+        },
+        {
+            "key": "payment:debit_cards",
+            "object_types": ["node", "way"],
+            "description": "Payment method shown in bike sharing station popups."
+        },
+        {
+            "key": "payment:bilhete_único",
+            "object_types": ["node", "way"],
+            "description": "Brazilian transit card payment shown in bike sharing station popups."
+        },
+        {
+            "key": "payment:mobile_app",
+            "object_types": ["node", "way"],
+            "description": "Payment method shown in bike sharing station popups."
+        },
+        {
+            "key": "service:bicycle:repair",
+            "object_types": ["node", "way"],
+            "description": "Bicycle repair service shown in bike shop detail popups."
+        },
+        {
+            "key": "service:bicycle:rental",
+            "object_types": ["node", "way"],
+            "description": "Bicycle rental service shown in bike shop detail popups."
+        },
+        {
+            "key": "service:bicycle:pump",
+            "object_types": ["node", "way"],
+            "description": "Air pump availability shown in bike shop detail popups."
+        },
+        {
+            "key": "service:bicycle:diy",
+            "object_types": ["node", "way"],
+            "description": "DIY repair availability shown in bike shop detail popups."
+        },
+        {
+            "key": "service:bicycle:cleaning",
+            "object_types": ["node", "way"],
+            "description": "Cleaning service shown in bike shop detail popups."
+        },
+        {
+            "key": "service:bicycle:second_hand",
+            "object_types": ["node", "way"],
+            "description": "Second-hand bicycle service shown in bike shop detail popups."
+        },
+        {
+            "key": "service:bicycle:charging",
+            "object_types": ["node", "way"],
+            "description": "E-bike charging service shown in bike shop detail popups."
+        },
+        {
+            "key": "service:bicycle:retail",
+            "object_types": ["node", "way"],
+            "description": "Bicycle retail shown in bike shop detail popups."
+        },
+        {
+            "key": "service:bicycle:parts",
+            "object_types": ["node", "way"],
+            "description": "Parts availability shown in bike shop detail popups."
+        },
+        {
+            "key": "service:bicycle:tools",
+            "object_types": ["node", "way"],
+            "description": "Tools availability shown in bike shop detail popups."
+        },
+        {
+            "key": "service:bicycle:chaintool",
+            "object_types": ["node", "way"],
+            "description": "Chain tool availability shown in bike shop detail popups."
+        },
+        {
+            "key": "repair",
+            "object_types": ["node", "way"],
+            "description": "Repair availability shown in bike shop detail popups."
+        },
+        {
+            "key": "second_hand",
+            "object_types": ["node", "way"],
+            "description": "Second-hand sales shown in bike shop detail popups."
+        },
+        {
+            "key": "opening_hours",
+            "object_types": ["node", "way"],
+            "description": "Shown in all POI detail popups."
+        },
+        {
+            "key": "website",
+            "object_types": ["node", "way"],
+            "description": "Shown in all POI detail popups."
+        },
+        {
+            "key": "phone",
+            "object_types": ["node", "way"],
+            "description": "Shown in POI detail popups."
+        },
+        {
+            "key": "facebook",
+            "object_types": ["node", "way"],
+            "description": "Social media link shown in POI detail popups."
+        },
+        {
+            "key": "email",
+            "object_types": ["node", "way"],
+            "description": "Shown in POI detail popups."
+        },
+        {
+            "key": "wheelchair",
+            "object_types": ["node", "way"],
+            "description": "Wheelchair accessibility shown in POI detail popups."
+        },
+        {
+            "key": "description",
+            "object_types": ["node", "way"],
+            "description": "Shown in bike sharing station popups."
+        },
+        {
+            "key": "start_date",
+            "object_types": ["node", "way"],
+            "description": "Shown in bike shop detail popups."
+        },
+        {
+            "key": "level",
+            "object_types": ["node", "way"],
+            "description": "Floor level shown in bike shop detail popups."
+        },
+        {
+            "key": "addr:street",
+            "object_types": ["node", "way"],
+            "description": "Combined with addr:housenumber to build address shown in POI popups."
+        },
+        {
+            "key": "addr:housenumber",
+            "object_types": ["node", "way"],
+            "description": "Combined with addr:street to build address shown in POI popups."
+        }
+    ]
+}
