@@ -185,7 +185,7 @@ class LayersLegendModal extends Component {
                                 }}
                             />
                         )}
-                        <div className="flex justify-between gap-2 mb-1">
+                        <div className="flex justify-between gap-2 mb-1 items-center">
                             <h3 className="font-semibold text-base mb-0">
                                 {layer.displayName || layer.name}
                             </h3>
