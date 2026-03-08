@@ -53,7 +53,9 @@ export const TOPBAR_HEIGHT = 64;
 
 // Settings
 
-export const HYBRID_MAX_RESULTS = 3;
+export const HYBRID_MAX_RESULTS_DESKTOP = 5;
+export const HYBRID_MAX_RESULTS_MOBILE = 3;
+export const HYBRID_MAX_RESULTS = IS_MOBILE ? HYBRID_MAX_RESULTS_MOBILE : HYBRID_MAX_RESULTS_DESKTOP;
 export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
 export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = false;
@@ -96,13 +98,20 @@ export const DIRECTIONS_LINE_BORDER_WIDTH = 4;
 export const ROUTE_FIXED_WIDTH = 8;
 export const ROUTE_LINE_PADDING_WIDTH = 2;
 export const ROUTE_LINE_BORDER_WIDTH = 1;
-export const ROUTE_LINE_BORDER_OPACITY = 0.6;
+export const ROUTE_LINE_BORDER_OPACITY = 0.1;
 
 export const ROUTE_LINE_WIDTH = ROUTE_FIXED_WIDTH;
 export const ROUTE_LINE_PADDING_GAP_WIDTH = ROUTE_FIXED_WIDTH + ROUTE_LINE_PADDING_WIDTH;
 export const ROUTE_LINE_GAP_WIDTH = ROUTE_FIXED_WIDTH - ROUTE_LINE_BORDER_WIDTH - 1;
 
 export const NEAR_DESTINATION_POI_RADIUS_KM = 0.6; // Radius in kilometers for showing POIs near destination during route planning
+
+// At low zoom, line widths are scaled down by dividing lineWidth by these values.
+export const LOW_ZOOM_WIDTH_DIVISOR = 5;
+export const ROUTES_ACTIVE_LOW_ZOOM_WIDTH_DIVISOR = 15;
+
+// At high zoom, line widths are scaled by multiplying lineWidth by these values.
+export const ROUTES_ACTIVE_HIGH_ZOOM_WIDTH_MULTIPLIER = 0.5;
 
 
 /* 
