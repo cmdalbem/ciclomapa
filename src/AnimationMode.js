@@ -719,7 +719,9 @@ class AnimationMode extends Component {
         const totalFrames = frames.length - 1;
 
         const W = 180;
-        const H = 48;
+        const CHART_H = 48;
+        const LABEL_SPACE = 16;
+        const H = CHART_H + LABEL_SPACE;
         const PAD_TOP = 4;
         const PAD_BOT = 2;
 
@@ -729,17 +731,18 @@ class AnimationMode extends Component {
 
         const points = data.map(d => {
             const x = totalFrames > 0 ? (d.index / totalFrames) * W : 0;
-            const y = PAD_TOP + (1 - (d.count - minCount) / range) * (H - PAD_TOP - PAD_BOT);
+            const y = PAD_TOP + (1 - (d.count - minCount) / range) * (CHART_H - PAD_TOP - PAD_BOT);
             return { x, y };
         });
 
         const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-        const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},${H} L${points[0].x.toFixed(1)},${H} Z`;
+        const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},${CHART_H} L${points[0].x.toFixed(1)},${CHART_H} Z`;
 
         const progressX = totalFrames > 0 ? (currentFrame / totalFrames) * W : 0;
 
         const currentCount = this.getCurrentFeatureCount();
-        const dotY = PAD_TOP + (1 - (currentCount - minCount) / range) * (H - PAD_TOP - PAD_BOT);
+        const dotY = PAD_TOP + (1 - (currentCount - minCount) / range) * (CHART_H - PAD_TOP - PAD_BOT);
+        const labelX = Math.max(10, Math.min(W - 10, progressX));
 
         return (
             <svg
@@ -758,10 +761,10 @@ class AnimationMode extends Component {
                         <stop offset="100%" stopColor="currentColor" stopOpacity="0.01" />
                     </linearGradient>
                     <clipPath id="clipPast">
-                        <rect x="0" y="0" width={progressX} height={H} />
+                        <rect x="0" y="0" width={progressX} height={CHART_H} />
                     </clipPath>
                     <clipPath id="clipFuture">
-                        <rect x={progressX} y="0" width={W - progressX} height={H} />
+                        <rect x={progressX} y="0" width={W - progressX} height={CHART_H} />
                     </clipPath>
                 </defs>
 
@@ -778,13 +781,21 @@ class AnimationMode extends Component {
                 </g>
 
                 <line
-                    x1={progressX} y1={0} x2={progressX} y2={H}
+                    x1={progressX} y1={0} x2={progressX} y2={CHART_H}
                     stroke="currentColor" strokeWidth="1" opacity="0.3"
                 />
                 <circle
                     cx={progressX} cy={dotY} r="2.5"
                     fill="currentColor" opacity="0.9"
                 />
+                <text
+                    className="animation-hud-chart-count"
+                    x={labelX}
+                    y={CHART_H + 12}
+                    textAnchor="middle"
+                >
+                    {currentCount}
+                </text>
             </svg>
         );
     }
@@ -849,9 +860,6 @@ class AnimationMode extends Component {
                         )}
                         <span className="animation-hud-year">{this.getYearDisplay()}</span>
                         {this.renderSparkline()}
-                        <span className="animation-hud-count">
-                            {this.getCurrentFeatureCount()} elementos
-                        </span>
                     </div>
                 )}
 
