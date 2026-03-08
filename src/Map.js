@@ -403,16 +403,16 @@ class Map extends Component {
                     'interpolate',
                     ["exponential", 1.5],
                     ['zoom'],
-                    10, 2,
-                    14, 4
+                    12, 1,
+                    15, 4
                 ],
                 'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? 0.2 : 0.2),
                 'circle-stroke-width': [
                     'interpolate',
                     ["exponential", 1.5],
                     ['zoom'],
-                    12, 1,
-                    14, 2
+                    12, 0,
+                    15, 2
                 ],
                 'circle-opacity': ['case',
                     ['boolean', ['feature-state', 'hover'], false],
