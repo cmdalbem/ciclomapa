@@ -42,10 +42,10 @@ const InfrastructureBadge = ({
         const badgeColor = layerColors[infrastructure];
         if (badgeColor) {
             if (infrastructure === 'ciclovia' || infrastructure === 'calçada') {
-                textColor = isDarkMode ? 'black' : adjustColorBrightness(badgeColor, -0.2);
-                backgroundColor = hexToRgba(badgeColor, isDarkMode ? 0.9 : 0.22);
+                textColor = adjustColorBrightness(badgeColor, isDarkMode ? 0.8 : -0.4);
+                backgroundColor = hexToRgba(badgeColor, isDarkMode ? 0.9 : 0.13);
             } else if (infrastructure === 'ciclofaixa' || infrastructure === 'ciclorrota') {
-                textColor = isDarkMode ? 'white' : adjustColorBrightness(badgeColor, -0.5);
+                textColor = isDarkMode ? badgeColor : adjustColorBrightness(badgeColor, -0.4);
                 backgroundColor = hexToRgba(badgeColor, isDarkMode ? 0.4 : 0.2);
             }
         }
