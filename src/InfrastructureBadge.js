@@ -57,7 +57,7 @@ const InfrastructureBadge = ({
     
     return (
         <span
-            className="rounded-full font-medium text-xs px-1 py-0.5 flex items-center gap-1"
+            className="rounded-full font-medium text-xs px-1 py-0.5 flex items-center gap-1 text-nowrap whitespace-nowrap shrink-0"
             style={{
                 color: textColor,
                 backgroundColor: backgroundColor
