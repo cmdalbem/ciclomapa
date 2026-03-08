@@ -2406,7 +2406,8 @@ class Map extends Component {
                     enableHighAccuracy: true
                 },
                 trackUserLocation: IS_MOBILE ? true : false,
-                showUserHeading: IS_MOBILE ? true : false
+                showUserHeading: IS_MOBILE ? true : false,
+                followUserLocation: IS_MOBILE ? true : false
             });
             
             // Store reference to geolocate control
