@@ -266,10 +266,17 @@ class DirectionsPanel extends Component {
             this.setState({ toSearchValue: this.props.toPoint.result.place_name });
         }
 
-        // Notify parent component about initial panel state
+        // Auto-expand the panel when route points are loaded from URL
+        if (this.props.fromPoint && this.props.toPoint) {
+            this.setState({ collapsed: false });
+            if (this.props.onDirectionsPanelToggle) {
+                this.props.onDirectionsPanelToggle(true);
+            }
+        } else {
         if (this.props.onDirectionsPanelToggle) {
             this.props.onDirectionsPanelToggle(!this.state.collapsed);
         }
+    }
     }
 
     componentDidUpdate(prevProps) {
