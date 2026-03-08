@@ -32,6 +32,9 @@ import {
     ROUTE_LINE_PADDING_WIDTH,
     NEAR_DESTINATION_POI_RADIUS_KM,
     PMTILES_FILENAME,
+    LOW_ZOOM_WIDTH_DIVISOR,
+    ROUTES_ACTIVE_LOW_ZOOM_WIDTH_DIVISOR,
+    ROUTES_ACTIVE_HIGH_ZOOM_WIDTH_MULTIPLIER,
 } from './constants.js'
 
 import Analytics from './Analytics.js'
@@ -340,6 +343,11 @@ class Map extends Component {
                 if (this.map.getLayer(layerId)) {
                     const newFilter = this.convertFilterToMapboxFilter(layer, 'pmtiles-source');
                     this.map.setFilter(layerId, newFilter);
+                }
+                const routesActiveLayerId = layer.id + '--routes-active--pmtiles';
+                if (this.map.getLayer(routesActiveLayerId)) {
+                    const newFilter = this.convertFilterToMapboxFilter(layer, 'pmtiles-source');
+                    this.map.setFilter(routesActiveLayerId, newFilter);
                 }
             } else if (layer.type === 'poi' && layer.filters) {
                 const layerId = layer.id + '--pmtiles';
@@ -833,7 +841,7 @@ class Map extends Component {
                     "interpolate",
                         ["exponential", 1.5],
                         ["zoom"],
-                        10, Math.max(1, l.style.lineWidth/5),
+                        10, Math.max(1, l.style.lineWidth / LOW_ZOOM_WIDTH_DIVISOR),
                         18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
                     ],
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
@@ -873,7 +881,7 @@ class Map extends Component {
                         "interpolate",
                             ["exponential", 1.5],
                             ["zoom"],
-                            10, Math.max(1, l.style.lineWidth/5)/32 * (useSdf ? 1 : 0.5),
+                            10, Math.max(1, l.style.lineWidth / LOW_ZOOM_WIDTH_DIVISOR)/32 * (useSdf ? 1 : 0.5),
                             18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER/24 * (useSdf ? 1 : 0.5),
                     ],
                     "icon-rotation-alignment": "map",
@@ -906,8 +914,13 @@ class Map extends Component {
             }, layerUnderneathName);
         }
 
-        // Layer for routes active
-        // It is hidden by default and is shown when a route is selected
+        // Muted duplicate of the cycling layer shown only while routes are displayed.
+        // Differences from the normal layer above:
+        //   - Single flat color (no hover/selected states) derived from the Ciclovia base color
+        //   - Dimmed brightness so route lines remain the visual focus
+        //   - Thinner at low zoom (ROUTES_ACTIVE_LOW_ZOOM_WIDTH_DIVISOR vs LOW_ZOOM_WIDTH_DIVISOR)
+        //   - No line-offset for cycleway lanes
+        //   - Starts hidden; toggled visible by updateLayerVisibility() when hasRoutes is true
         this.map.addLayer({
             "id": routesActiveLayerId,
             "type": "line",
@@ -920,15 +933,14 @@ class Map extends Component {
                 "line-occlusion-opacity": 1,
                 "line-color": adjustColorBrightness(
                     this.props.layers.find(layer => layer.name === "Ciclovia").style.lineColor,
-                    this.props.isDarkMode ? -0.6 : 0.4,
-                    // 'hsl'
+                    this.props.isDarkMode ? -0.6 : 0.5,
                 ),
                 "line-width": [
                     "interpolate",
                         ["exponential", 1.5],
                         ["zoom"],
-                        10, Math.max(1, l.style.lineWidth/5),
-                        18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
+                        10, Math.max(1, l.style.lineWidth / ROUTES_ACTIVE_LOW_ZOOM_WIDTH_DIVISOR),
+                        18, l.style.lineWidth * ROUTES_ACTIVE_HIGH_ZOOM_WIDTH_MULTIPLIER
                     ],
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
@@ -2181,9 +2193,13 @@ class Map extends Component {
                     const routesActiveLayerId = layer.id + '--routes-active' + sourceSuffix;
                     const arrowLayerId = baseLayerId + '--arrows';
                     
+                    // Swap between normal and routes-active variants:
+                    //   - routesActiveLayerId (idx 1): visible only WITH routes (muted background)
+                    //   - baseLayerId & interactiveLayerId (idx 0, 2): visible only WITHOUT routes
                     [baseLayerId, routesActiveLayerId, interactiveLayerId].forEach((id, idx) => {
                         if (!map.getLayer(id)) return;
-                        const status = idx === 1 
+                        const isRoutesActiveLayer = idx === 1;
+                        const status = isRoutesActiveLayer
                             ? (layer.isActive && hasRoutes ? 'visible' : 'none')
                             : (layer.isActive && !hasRoutes ? 'visible' : 'none');
                         map.setLayoutProperty(id, 'visibility', status);
