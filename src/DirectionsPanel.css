@@ -235,7 +235,7 @@
     
     #directionsPanel #directionsPanel--results {
         overflow: scroll;
-        max-height: 130px;
+        max-height: 144px;
     }
 
     #directionsPanelMobileButton {

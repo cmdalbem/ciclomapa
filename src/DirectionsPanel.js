@@ -124,7 +124,7 @@ const RouteSortDropdown = ({ currentKey, onChange, items }) => {
             }}
             placement="bottomRight"
         >
-            <Button size="small" type="text" className="text-xs opacity-80 hover:opacity-100">
+            <Button size="small" type="text" className="text-xs opacity-80 hover:opacity-100 md:-m-1 md:my-1">
                 <div className="flex items-center gap-1">
                     <span className="opacity-75">Ordenar por:</span>
                     <span className="font-medium">{current.label}</span>
@@ -273,10 +273,10 @@ class DirectionsPanel extends Component {
                 this.props.onDirectionsPanelToggle(true);
             }
         } else {
-        if (this.props.onDirectionsPanelToggle) {
-            this.props.onDirectionsPanelToggle(!this.state.collapsed);
+            if (this.props.onDirectionsPanelToggle) {
+                this.props.onDirectionsPanelToggle(!this.state.collapsed);
+            }
         }
-    }
     }
 
     componentDidUpdate(prevProps) {
@@ -1133,35 +1133,22 @@ class DirectionsPanel extends Component {
                                 // Default header
                                 <>
                                     <h3 className=" font-semibold flex items-center mb-0">
-                                        <IconRoute className="mr-2" />
-                                        Rotas de bici
+                                        {/* <IconRoute className="mr-2" /> */}
+                                        Rotas
                                         <span className="bg-white opacity-50 ml-2 px-1 py-0 rounded-full text-black text-xs leading-normal tracking-wider" style={{fontSize: 10}}>
                                             Novo
                                         </span>
                                     </h3>
 
-                                    <div className="flex items-start" style={{marginTop: '-5px'}}>
+                                    <div className="flex items-start -mr-1" style={{marginTop: '-5px'}}>
                                         {(directions || this.props.fromPoint || this.props.toPoint) && (
                                             <Button
                                             onClick={this.clearDirections}
-                                            type="text" 
+                                            // type="text" 
                                             shape="circle"
                                             icon={<IconTrash style={{
                                                 display: 'inline-block',
                                             }}/>}
-                                            />
-                                        )}
-                                        {this.props.fromPoint && this.props.toPoint && (
-                                            <Button 
-                                                type="text"
-                                                shape="circle"
-                                                icon={
-                                                    <IconSwap style={{
-                                                        display: 'inline-block',
-                                                    }}/>}
-                                                onClick={this.swapOriginDestination}
-                                                className="swap-button flex-shrink-0 text-white"
-                                                title="Trocar origem e destino"
                                             />
                                         )}
                                         
@@ -1189,7 +1176,7 @@ class DirectionsPanel extends Component {
                                         {/* { IS_MOBILE && ( */}
                                             <Button
                                                 onClick={this.toggleCollapse}
-                                                type="text" 
+                                                // type="text" 
                                                 shape="circle"
                                                 icon={<IconClose style={{
                                                     display: 'inline-block',
@@ -1202,20 +1189,30 @@ class DirectionsPanel extends Component {
                         </div>
 
                         {!showResultsOnMobile && (
-                            <Space direction="vertical" size="small" className="w-full mt-3">
-                                <div className="flex gap-2">
+                            <div className="flex items-center mt-3 -mr-1">
+                                <Space direction="vertical" size="small" className="flex-1 min-w-0">
                                     <LocationSearchInput
                                         inputType="from"
                                         parentComponent={this}
-                                        className="flex-1"
                                     />
-                                </div>
-
-                                <LocationSearchInput
-                                    inputType="to"
-                                    parentComponent={this}
+                                    <LocationSearchInput
+                                        inputType="to"
+                                        parentComponent={this}
+                                    />
+                                </Space>
+                                <Button 
+                                    type="text"
+                                    shape="circle"
+                                    disabled={!this.props.fromPoint || !this.props.toPoint}
+                                    icon={
+                                        <IconSwap style={{
+                                            display: 'inline-block',
+                                        }}/>}
+                                    onClick={this.swapOriginDestination}
+                                    className="swap-button flex-shrink-0 text-white"
+                                    title="Trocar origem e destino"
                                 />
-                            </Space>
+                            </div>
                         )}
 
                         {directionsLoading && (
@@ -1240,7 +1237,7 @@ class DirectionsPanel extends Component {
                         )}
 
                         {directions && !directionsLoading && (
-                            <div id="directionsPanel--results" className="mt-3">
+                            <div id="directionsPanel--results" className="md:mt-3">
                                 <div className="flex mb-2">
                                     {
                                         !IS_MOBILE && (
@@ -1251,16 +1248,16 @@ class DirectionsPanel extends Component {
                                         )
                                     }
                                 </div>
-                                <div className="space-y-1">
+                                <div className="md:space-y-2 space-y-1">
                                     {routes.map((route, index) => {
                                         const originalIndex = route._originalIndex !== undefined ? route._originalIndex : index;
                                         return (
                                         <div
                                             key={index}
-                                            className={`rounded-lg p-2 cursor-pointer transition-colors ${
-                                                this.props.selectedRouteIndex === originalIndex ? '' : 'opacity-50'
+                                            className={`rounded-lg p-2 md:p-3 md:-m-2 cursor-pointer transition-colors ${
+                                                this.props.selectedRouteIndex === originalIndex ? 'bg-black bg-opacity-70' : ''
                                             } ${
-                                                this.props.hoveredRouteIndex === originalIndex ? 'bg-white bg-opacity-5 opacity-100' : ''
+                                                this.props.hoveredRouteIndex === originalIndex ? 'bg-black bg-opacity-40 opacity-100' : ''
                                             }`}
                                             onMouseEnter={() => this.handleRouteHover(originalIndex)}
                                             onMouseLeave={this.handleRouteLeave}
