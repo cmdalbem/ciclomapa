@@ -1,283 +1,241 @@
-#directionsPanel {
-    border-radius: 8px;
-    /* box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); */
-    position: absolute;
-    top: 64px;  
-    left: 24px;
-    width: 440px;
-    z-index: 1;
+/* BEM pilot: .cm-panel block (see docs/styling.md). Theme via CSS variables below. */
+#directionsPanel.cm-panel {
+  border-radius: var(--radius-md);
+  position: absolute;
+  top: var(--spacing-topbar-height);
+  left: var(--spacing-panel);
+  width: var(--spacing-panel-width);
+  z-index: 1;
 
-    #fromGeocoder {
-        z-index: 1001;
-        position: relative;
-    }
+  #fromGeocoder {
+    z-index: 1001;
+    position: relative;
+  }
 
-    /* AutoComplete styles for the new geocoder structure */
-    .ant-select {
-        width: 100%;
-    }
-    
-    .ant-select .ant-select-selector {
-        border-radius: 8px;
-        font-size: 14px;
-        background: rgba(28, 23, 23, 0.5);
-        border: none;
-        color: white;
-        height: 36px;
-        min-height: 36px;
-    }
+  .ant-select {
+    width: 100%;
+  }
 
-    .ant-input-prefix {
-        margin-right: 8px;
-    }
+  .ant-select .ant-select-selector {
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    background: var(--cm-panel-input-bg);
+    border: none;
+    color: var(--cm-panel-input-color);
+    height: 36px;
+    min-height: 36px;
+  }
 
-    .ant-input:focus {
-        outline: none;
-        border: none;
-        box-shadow: none !important;
-    }
-    
-    .ant-select-focused .ant-select-selector {
-        border: none;
-        box-shadow: none;
-    }
-    
-    .ant-select .ant-select-selection-placeholder {
-        color: rgba(255, 255, 255, 0.6);
-    }
-    
-    .ant-select .ant-select-selection-item {
-        color: white;
-    }
-    
-    .directions--legLabel {
-        max-width: 14rem;
-    }
+  .ant-input-prefix {
+    margin-right: 8px;
+  }
+
+  .ant-input:focus {
+    outline: none;
+    border: none;
+    box-shadow: none;
+  }
+
+  .ant-select-focused .ant-select-selector {
+    border: none;
+    box-shadow: none;
+  }
+
+  .ant-select .ant-select-selection-placeholder {
+    color: var(--cm-panel-placeholder-color);
+  }
+
+  .ant-select .ant-select-selection-item {
+    color: var(--cm-panel-input-color);
+  }
 }
 
-.theme-dark {
-    #directionsPanel {
-        .ant-select .ant-select-selector {
-            background: rgba(28, 23, 23, 0.5);
-            color: white;
-            border: none;
-            height: 36px;
-            min-height: 36px;
-        }
-        
-        .ant-select-focused .ant-select-selector {
-            border: none;
-            box-shadow: none;
-        }
-        
-        .ant-select .ant-select-selection-placeholder {
-            color: rgba(255, 255, 255, 0.6);
-        }
-        
-        .ant-select .ant-select-selection-item {
-            color: white;
-        }
-        
-        /* Input prefix and suffix icons */
-        .ant-input-affix-wrapper {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            height: 36px;
-            min-height: 36px;
-        }
-        
-        .ant-input-affix-wrapper-focused {
-            border: none;
-            box-shadow: none;
-        }
-        
-        .ant-input-affix-wrapper .ant-input {
-            background: transparent;
-            color: white;
-        }
-        
-        .ant-input-affix-wrapper .ant-input::placeholder {
-            color: rgba(255, 255, 255, 0.6);
-        }
-    }
+.cm-panel__leg-label,
+.directions--legLabel {
+  max-width: 14rem;
+}
+
+/* Theme: single wrapper sets variables (dark = default) */
+:root {
+  --cm-panel-input-bg: rgba(28, 23, 23, 0.5);
+  --cm-panel-affix-bg: rgba(255, 255, 255, 0.1);
+  --cm-panel-input-color: white;
+  --cm-panel-placeholder-color: rgba(255, 255, 255, 0.6);
+}
+
+.theme-light {
+  --cm-panel-input-bg: rgba(255, 255, 255, 0.9);
+  --cm-panel-affix-bg: rgba(255, 255, 255, 0.9);
+  --cm-panel-input-color: rgba(0, 0, 0, 0.85);
+  --cm-panel-placeholder-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Affix wrapper (origin/destination inputs) uses theme variables */
+#directionsPanel.cm-panel .ant-input-affix-wrapper {
+  background: var(--cm-panel-affix-bg);
+  border: none;
+  color: var(--cm-panel-input-color);
+  height: 36px;
+  min-height: 36px;
+}
+
+#directionsPanel.cm-panel .ant-input-affix-wrapper-focused {
+  border: none;
+  box-shadow: none;
+}
+
+#directionsPanel.cm-panel .ant-input-affix-wrapper .ant-input {
+  background: transparent;
+  color: var(--cm-panel-input-color);
+}
+
+#directionsPanel.cm-panel .ant-input-affix-wrapper .ant-input::placeholder {
+  color: var(--cm-panel-placeholder-color);
 }
 
 /* Custom marker styles */
 .origin-destination-marker {
-    width: 32px;
-    height: 32px;
-    cursor: grab;
+  width: 32px;
+  height: 32px;
+  cursor: grab;
 }
 
 .origin-destination-marker:hover {
-    opacity: 0.8;
+  opacity: 0.8;
 }
 
 .origin-destination-marker--dragging {
-    cursor: grabbing;
-    opacity: 0.5;
+  cursor: grabbing;
+  opacity: 0.5;
 }
-
 
 /* DirectionsPanel light mode overrides */
 
 .theme-light #layersPanelMobileButton,
 .theme-light .directions-panel-button {
-    border: 0;
+  border: 0;
 }
 
-.theme-light #layersPanelMobileButton.collapsed,
-.theme-light .directions-panel-button.collapsed {
-    color: black !important;
-    background: #ffffff !important;
+/* Higher specificity to override Ant Design button styles without !important */
+body.theme-light #layersPanelMobileButton.collapsed,
+body.theme-light .directions-panel-button.collapsed {
+  color: black;
+  background: #ffffff;
 }
 
-.theme-light #layersPanelMobileButton.expanded,
-.theme-light .directions-panel-button.expanded {
-    color: #111827 !important;
-    background: #f3f4f6 !important;
+body.theme-light #layersPanelMobileButton.expanded,
+body.theme-light .directions-panel-button.expanded {
+  color: #111827;
+  background: #f3f4f6;
 }
 
-.theme-light {
-    color: rgba(0, 0, 0, 0.85) !important;
+body.theme-light {
+  color: rgba(0, 0, 0, 0.85);
 }
 
 .theme-light * {
-    color: inherit;
+  color: inherit;
 }
 
-.theme-light {
-    #directionsPanel {
-        .ant-select .ant-select-selector {
-            background: rgba(255, 255, 255, 0.9);
-            color: rgba(0, 0, 0, 0.85);
-            border: none;
-            height: 36px;
-            min-height: 36px;
-        }
-        
-        .ant-select-focused .ant-select-selector {
-            border: none;
-            box-shadow: none;
-        }
-        
-        .ant-select .ant-select-selection-placeholder {
-            color: rgba(0, 0, 0, 0.4);
-        }
-        
-        .ant-select .ant-select-selection-item {
-            color: rgba(0, 0, 0, 0.85);
-        }
-        
-        /* Input prefix and suffix icons */
-        .ant-input-affix-wrapper {
-            background: rgba(255, 255, 255, 0.9);
-            border: none;
-            color: rgba(0, 0, 0, 0.85);
-            height: 36px;
-            min-height: 36px;
-        }
-        
-        .ant-input-affix-wrapper-focused {
-            border: none;
-            box-shadow: none;
-        }
-        
-        .ant-input-affix-wrapper .ant-input {
-            background: transparent;
-            color: rgba(0, 0, 0, 0.85);
-        }
-        
-        .ant-input-affix-wrapper .ant-input::placeholder {
-            color: rgba(0, 0, 0, 0.4);
-        }
+/* Light theme clear button (variables set in .theme-light above) */
+.theme-light #directionsPanel.cm-panel .ant-select-clear {
+  width: 32px;
+  right: 8px;
+  background: var(--cm-panel-input-bg);
+  color: rgba(0, 0, 0, 0.45);
+}
 
-        .ant-select-clear {
-            width: 32px;
-            right: 8px;
-            background: rgba(255, 255, 255, 0.9);
-            color: rgba(0, 0, 0, 0.45);
-        }
+.theme-light #directionsPanel.cm-panel .ant-select-clear:hover {
+  color: rgba(0, 0, 0, 0.7);
+}
 
-        .ant-select-clear:hover {
-            color: rgba(0, 0, 0, 0.7);
-        }
-    }
+@media (prefers-reduced-motion: reduce) {
+  #directionsPanel.cm-panel .origin-destination-marker {
+    transition: none;
+  }
+  #directionsPanel {
+    transition: none;
+  }
+  .animate-pulse-2x,
+  .animate-pulse {
+    animation: none;
+  }
 }
 
 /* Mobile */
 @media (min-width: 320px) and (max-width: 480px) {
-    #directionsPanel {
-        z-index: 1;
-        left: 8px;
-        right: 8px;
-        top: 8px;
-        width: calc(100% - 16px);
-        transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
-        transform: translateY(-100%);
-        opacity: 0;
-    }
+  #directionsPanel {
+    z-index: 1;
+    left: 8px;
+    right: 8px;
+    top: 8px;
+    width: calc(100% - 16px);
+    transition:
+      transform 0.3s ease-in-out,
+      opacity 0.3s ease-in-out;
+    transform: translateY(-100%);
+    opacity: 0;
+  }
 
-    #directionsPanel.directions-panel-open {
-        transform: translateY(0);
-        opacity: 1;
-    }
+  #directionsPanel.directions-panel-open {
+    transform: translateY(0);
+    opacity: 1;
+  }
 
-    #directionsPanel .ant-input-affix-wrapper {
-        height: 44px;
-        font-size: 12px;
-    }
+  #directionsPanel .ant-input-affix-wrapper {
+    height: 44px;
+    font-size: 12px;
+  }
 
-    #directionsPanel .ant-input-affix-wrapper .ant-input {
-        font-size: 12px;
-    }
-    
-    #directionsPanel #directionsPanel--results {
-        overflow: scroll;
-        max-height: 144px;
-    }
+  #directionsPanel .ant-input-affix-wrapper .ant-input {
+    font-size: 12px;
+  }
 
-    #directionsPanelMobileButton {
-        z-index: 2;
-    }
+  #directionsPanel #directionsPanel--results {
+    overflow: scroll;
+    max-height: 144px;
+  }
+
+  #directionsPanelMobileButton {
+    z-index: 2;
+  }
 }
 
 #layersPanelMobileButton,
 .directions-panel-button {
-    padding: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 99px;
-    font-size: 1.125rem;
-    position: fixed;
-    bottom: 94px;
-    left: 8px;
-    cursor: pointer;
-    z-index: 1;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 99px;
+  font-size: 1.125rem;
+  position: fixed;
+  bottom: 94px;
+  left: 8px;
+  cursor: pointer;
+  z-index: 1;
 }
 
 .directions-panel-button {
-    right: 12px;
-    left: auto;
+  right: 12px;
+  left: auto;
 }
 
 #ciclomapa.analyticsSidebarOpen .directions-panel-button {
-    /* Analytics sidebar uses Tailwind `w-60` (= 15rem). Shift button left to avoid overlap. */
-    right: calc(12px + 15rem);
+  /* Analytics sidebar uses Tailwind `w-60` (= 15rem). Shift button left to avoid overlap. */
+  right: calc(12px + 15rem);
 }
 
 #layersPanelMobileButton.collapsed,
 .directions-panel-button.collapsed {
-    color: #d1d5db;
-    background: #1c1717;
+  color: #d1d5db;
+  background: #1c1717;
 }
 
 #layersPanelMobileButton.expanded,
 .directions-panel-button.expanded {
-    color: #111827;
-    background: #f3f4f6;
+  color: #111827;
+  background: #f3f4f6;
 }
 
 .animate-pulse-2x {
-    animation: pulse 1s cubic-bezier(.4,0,.6,1) infinite;
+  animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

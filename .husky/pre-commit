@@ -1,0 +1,7 @@
+if git diff --cached --name-status | grep -q '^[AM][[:space:]]\+package-lock\.json$'; then
+  echo "Refusing commit: package-lock.json is staged. This repo uses yarn.lock only."
+  exit 1
+fi
+
+npx lint-staged
+yarn test --watchAll=false

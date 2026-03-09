@@ -4,66 +4,62 @@ import dark from './img/dark.png';
 import satellite from './img/satelite.png';
 import light from './img/light.png';
 
-import { MAP_STYLES } from './constants.js';
+import { MAP_STYLES } from './config/constants.js';
 
-import './MapStyleSwitcher.css'
+import './MapStyleSwitcher.css';
 
 class MapStyleSwitcher extends Component {
-    state = { selected: this.props.showSatellite ? 1 : 0 };
+  state = { selected: this.props.showSatellite ? 1 : 0 };
 
-    getOptions() {
-        const isDarkMode = this.props.isDarkMode;
-        
-        return [
-            {
-                name: 'default',
-                img: isDarkMode ? dark : light,
-                url: isDarkMode 
-                    ? MAP_STYLES.DARK
-                    : MAP_STYLES.LIGHT
-            },
-            {
-                name: 'satellite',
-                img: satellite
-            }
-        ];
+  getOptions() {
+    const isDarkMode = this.props.isDarkMode;
+
+    return [
+      {
+        name: 'default',
+        img: isDarkMode ? dark : light,
+        url: isDarkMode ? MAP_STYLES.DARK : MAP_STYLES.LIGHT,
+      },
+      {
+        name: 'satellite',
+        img: satellite,
+      },
+    ];
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    const options = this.getOptions();
+
+    // Handle style selection changes
+    if (this.state !== prevState) {
+      const selected = options[this.state.selected];
+      if (selected.name === 'default' || selected.name === 'satellite') {
+        this.props.onMapShowSatelliteChanged(selected.name === 'satellite');
+      }
+
+      if (selected.url) {
+        this.props.onMapStyleChange(selected.url);
+      }
     }
+  }
 
-    componentDidUpdate(prevProps, prevState) {
-        const options = this.getOptions();
-        
-        // Handle style selection changes
-        if (this.state !== prevState) {
-            const selected = options[this.state.selected];
-            if (selected.name === 'default' || selected.name === 'satellite') {
-                this.props.onMapShowSatelliteChanged(selected.name === 'satellite');
-            }
+  render() {
+    const options = this.getOptions();
 
-            if (selected.url) {
-                this.props.onMapStyleChange(selected.url);
-            }
-        }
-    }
-
-    render() {
-        const options = this.getOptions();
-        
-        return (
-            <div id="mapSwitcher" className="switcher-bar">
-                {
-                    options.map( (option, i) =>
-                        <div
-                            onClick={() => this.setState({ selected: i })}
-                            className={this.state.selected === i ? 'selected' : ''}
-                            key={option.name}
-                        >
-                            <img src={option.img} alt=""/>
-                        </div>
-                    )
-                }
-            </div>
-        )
-    }
+    return (
+      <div id="mapSwitcher" className="switcher-bar">
+        {options.map((option, i) => (
+          <div
+            onClick={() => this.setState({ selected: i })}
+            className={this.state.selected === i ? 'selected' : ''}
+            key={option.name}
+          >
+            <img src={option.img} alt="" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 }
 
 export default MapStyleSwitcher;
