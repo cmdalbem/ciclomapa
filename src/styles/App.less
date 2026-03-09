@@ -2,39 +2,45 @@
 @import './antd.customize.less';
 
 html {
-    height: 100%;
-    overflow: hidden;
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    overflow: hidden;
-    transition: background-color 0.3s ease;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  transition: background-color var(--motion-duration-normal, 0.3s) ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
 }
 
 #root {
-    height: 100%;
-    overflow: hidden;
+  height: 100%;
+  overflow: hidden;
 }
 
 #ciclomapa {
-    height: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  > .flex {
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    
-    > .flex {
-        flex: 1;
-        min-height: 0;
-        overflow: hidden;
-        
-        > .relative {
-            // height: 100%;
-            position: relative;
-        }
+
+    > .relative {
+      // height: 100%;
+      position: relative;
     }
+  }
 }
 
 button.ant-btn {
@@ -42,11 +48,31 @@ button.ant-btn {
 }
 
 .theme-dark body {
-    background: #1a1a1a;
+  background: var(--color-bg-dark);
 }
 
-*, .mapboxgl-ctrl-geocoder--input {
-    font-family: 'IBM Plex Sans', sans-serif;
+/* Global focus ring for keyboard / a11y */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Visually hidden but available to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+*,
+.mapboxgl-ctrl-geocoder--input {
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 a {
@@ -62,44 +88,33 @@ a {
 }
 
 #gradient-backdrop {
-    position: absolute;
-    width: 100%;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    left: 0;
-    pointer-events: none;
-    transition: box-shadow 0.3s ease;
+  position: absolute;
+  width: 100%;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  pointer-events: none;
+  transition: box-shadow var(--motion-duration-normal, 0.3s) ease;
 
-    opacity: 0.5;
-    // display: none;
-    
-    // background: linear-gradient(90deg, #1a1a1a 0%, transparent 30%, transparent 70%, #282622 100%);
-    // background: radial-gradient(circle, transparent 60%, #1a1a1a 100%);
+  opacity: 0.5;
+  // display: none;
+
+  // background: linear-gradient(90deg, #1a1a1a 0%, transparent 30%, transparent 70%, #282622 100%);
+  // background: radial-gradient(circle, transparent 60%, #1a1a1a 100%);
 }
 
 .theme-light #gradient-backdrop {
-    box-shadow: inset 0px 60px 50px 0px #EDEEED;
+  box-shadow: inset 0px 60px 50px 0px var(--color-bg-light);
 }
 
 .theme-dark #gradient-backdrop {
-    box-shadow: inset 0px 60px 50px 0px #1a1a1a;
+  box-shadow: inset 0px 60px 50px 0px var(--color-bg-dark);
 }
 
 .loader-container {
-    /* --color1: #65df97;
-    --color2: orange;
-    --color3: #996633;
-    --color4: red; */
-
-    --color1: #059669;
-    --color2: #b4fad0;
-    --color3: #f8c9ae;
-    --color4: #FFA500;
-    
-    --spinner-size: 60px;
-    --progress-bar-height: 4px;
-} 
+  /* Colors and sizes come from design tokens (injected on :root) */
+}
 
 #spinnersvg {
   width: var(--spinner-size);
@@ -109,7 +124,9 @@ a {
 #spinnersvg .path {
   stroke-dasharray: 1, 200;
   stroke-dashoffset: 0;
-  animation: dash 1s ease-in-out infinite, color 6s ease-in-out infinite;
+  animation:
+    dash 1s ease-in-out infinite,
+    color 6s ease-in-out infinite;
   stroke-linecap: round;
 }
 
@@ -153,38 +170,38 @@ a {
 
 /* Thanks https://codepen.io/salazarr-js/pen/aJdmvw */
 .progress-materializecss {
-//   margin: 5px 0;
+  //   margin: 5px 0;
   position: relative;
   height: var(--progress-bar-height);
   display: block;
   width: 100%;
-//   background-color: #27272A;
+  //   background-color: #27272A;
   /* border-radius: 2px; */
-//   margin: 0.5rem 0 1rem 0;
+  //   margin: 0.5rem 0 1rem 0;
   overflow: hidden;
 }
 .indeterminate {
   animation: bgColors 6s ease-in-out infinite;
 }
 .indeterminate:before {
-  content:          '';
-  position:         absolute;
+  content: '';
+  position: absolute;
   background-color: inherit;
-  top:              0;
-  left:             0;
-  bottom:           0;
-  will-change:      left, right;
-  animation:        indeterminate 2.1s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  will-change: left, right;
+  animation: indeterminate 2.1s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
 }
 .indeterminate:after {
-  content:          '';
-  position:         absolute;
+  content: '';
+  position: absolute;
   background-color: inherit;
-  top:              0;
-  left:             0;
-  bottom:           0;
-  will-change:      left, right;
-  animation:        indeterminate-short 2.1s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  will-change: left, right;
+  animation: indeterminate-short 2.1s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
   animation-delay: 1.15s;
 }
 
@@ -241,20 +258,36 @@ a {
 
 .theme-light {
   .glass-bg {
-      background: rgba(255, 255, 255, 0.5);
-      border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.1);
   }
 }
 
 .theme-dark {
   .glass-bg {
-      background: rgba(23, 23, 23, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(23, 23, 23, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
 }
 
 .bg-orange-600 {
   background-color: #ea580c !important;
+}
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  #gradient-backdrop {
+    transition: none;
+  }
+  #spinnersvg,
+  #spinnersvg .path {
+    animation-duration: 0.01ms;
+  }
+  .indeterminate,
+  .indeterminate:before,
+  .indeterminate:after {
+    animation-duration: 0.01ms;
+  }
 }
 
 // Transition-in effect

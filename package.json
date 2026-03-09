@@ -7,10 +7,10 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@turf/bbox": "^7.2.0",
     "@craco/craco": "^7.1.0",
     "@mapbox/mapbox-gl-geocoder": "^5.0.3",
     "@mapbox/mapbox-sdk": "^0.16.2",
+    "@turf/bbox": "^7.2.0",
     "@turf/circle": "^7.2.0",
     "@turf/distance": "^7.2.0",
     "@turf/length": "^7.2.0",
@@ -28,6 +28,7 @@
     "mapbox-pmtiles": "^1.0.54",
     "osmtogeojson": "^3.0.0-beta.4",
     "pako": "^2.0.3",
+    "prop-types": "^15.8.1",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-icons": "^5.4.0",
@@ -41,14 +42,18 @@
     "start": "craco start",
     "build": "craco build",
     "test": "craco test",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "lint": "eslint src/",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "format": "prettier --write \"{src,scripts,docs}/**/*.{js,jsx,ts,tsx,json,css,less,md}\"",
+    "format:check": "prettier --check \"{src,scripts,docs}/**/*.{js,jsx,ts,tsx,json,css,less,md}\"",
     "eject": "react-scripts eject",
     "predeploy": "yarn run build",
     "deploy": "gh-pages -d build",
     "dev:vercel": "vercel dev",
-    "overpass": "node scripts/overpass-to-geojson.js"
-  },
-  "eslintConfig": {
-    "extends": "react-app"
+    "overpass": "node scripts/overpass-to-geojson.js",
+    "prepare": "husky || true"
   },
   "browserslist": {
     "production": [
@@ -68,7 +73,29 @@
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@babel/preset-env": "^7.28.3",
     "@babel/preset-typescript": "^7.27.1",
+    "@playwright/test": "^1.52.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^14.2.1",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "babel-loader": "^10.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.1.7",
+    "jest-axe": "^10.0.0",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.4.2",
+    "typescript": "^4.9.5",
     "vercel": "^48.0.1"
+  },
+  "lint-staged": {
+    "src/**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "src/**/*.{json,css,less,md}": [
+      "prettier --write"
+    ]
   }
 }

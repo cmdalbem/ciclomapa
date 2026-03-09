@@ -2,7 +2,19 @@ import React from 'react';
 import ReactDOM from 'react-dom/client'; // Note the updated import
 import App from './App';
 import * as serviceWorker from './serviceWorker';
-import { BrowserRouter as Router } from "react-router-dom";
+import { BrowserRouter as Router } from 'react-router-dom';
+import { getCssCustomProperties } from './config/design-tokens.js';
+
+// No-op console.debug in production to reduce noise
+if (process.env.NODE_ENV === 'production') {
+  console.debug = () => {};
+}
+
+// Expose design tokens as CSS custom properties
+const tokens = getCssCustomProperties();
+Object.entries(tokens).forEach(([key, value]) => {
+  document.documentElement.style.setProperty(key, value);
+});
 
 // Function to set viewport height CSS custom property
 // This accounts for mobile browser UI (address bar, navigation bar) which 100vh doesn't
@@ -38,10 +50,18 @@ if (window.visualViewport) {
 // Create a root using ReactDOM.createRoot
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
+const shouldExposeDebugHandles =
+  new URLSearchParams(window.location.search).has('debug') && process.env.NODE_ENV !== 'production';
+
 // Render the app using the new root API
 root.render(
   <Router>
-    <App ref={(app) => { window.ciclomapa = app }} />
+    <App
+      ref={(app) => {
+        if (!shouldExposeDebugHandles) return;
+        window.ciclomapa = app;
+      }}
+    />
   </Router>
 );
 
