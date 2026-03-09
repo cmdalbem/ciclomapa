@@ -1,1133 +1,1021 @@
 import React, { Component } from 'react';
-import {
-    useLocation,
-    useNavigate,
-    useParams,
-  } from "react-router-dom";
-  import debounce from 'lodash.debounce';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import debounce from 'lodash.debounce';
 
 import { notification } from 'antd';
 
 import { get, set } from 'idb-keyval';
 
-import { 
-    MdRemove as IconRemove,
-    MdAdd as IconAdd,
-} from "react-icons/md";
+import { MdRemove as IconRemove, MdAdd as IconAdd } from 'react-icons/md';
 
-import AboutModal from './AboutModal.js'
-import LayersLegendModal from './LayersLegendModal.js'
-import Analytics from './Analytics.js'
-import Map from './Map.js'
-import CitySwitcherBackdrop from './CitySwitcherBackdrop.js'
-import TopBar from './TopBar.js'
-import MapStyleSwitcher from './MapStyleSwitcher.js'
-import LayersPanel from './LayersPanel.js'
-import LayersBar from './LayersBar.js'
-import DirectionsPanel from './DirectionsPanel.js'
-import AnalyticsSidebar from './AnalyticsSidebar.js'
-import OSMController from './OSMController.js'
-import Storage from './Storage.js'
-import { downloadObjectAsJson } from './utils.js'
-import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './geojsonUtils.js'
-import { DirectionsProvider } from './DirectionsContext.js'
+import Analytics from './Analytics.js';
+import OSMController from './OSMController.js';
+import AppLayout from './AppLayout.js';
+import Storage from './Storage.js';
+import { downloadObjectAsJson } from './utils/utils.js';
+import { getSystemThemePreference } from './utils/themeUtils.js';
+import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './utils/geojsonUtils.js';
+import { DirectionsProvider } from './contexts/DirectionsContext';
 import {
-    DEFAULT_LAT,
-    DEFAULT_LNG,
-    DEFAULT_ZOOM,
-    OSM_DATA_MAX_AGE_DAYS,
-    SAVE_TO_FIREBASE,
-    DISABLE_DATA_HEALTY_TEST,
-    IS_PROD,
-    THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE,
-    IS_MOBILE,
-    FORCE_RECALCULATE_LENGTHS_ALWAYS,
-    DEFAULT_LENGTH_CALCULATE_STRATEGIES,
-    MAP_STYLES,
-    MAPBOX_ACCESS_TOKEN,
-    DEFAULT_SIDEBAR_OPEN,
-    ENABLE_SATELLITE_TOGGLE
-} from './constants.js'
+  DEFAULT_LAT,
+  DEFAULT_LNG,
+  DEFAULT_ZOOM,
+  OSM_DATA_MAX_AGE_DAYS,
+  SAVE_TO_FIREBASE,
+  DISABLE_DATA_HEALTY_TEST,
+  IS_PROD,
+  THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE,
+  IS_MOBILE,
+  FORCE_RECALCULATE_LENGTHS_ALWAYS,
+  DEFAULT_LENGTH_CALCULATE_STRATEGIES,
+  MAP_STYLES,
+  MAPBOX_ACCESS_TOKEN,
+  DEFAULT_SIDEBAR_OPEN,
+  ENABLE_SATELLITE_TOGGLE,
+} from './config/constants.js';
 
-import './App.less';
-import './antd.light.css';
+import './styles/App.less';
+import './styles/antd.light.css';
 
 class App extends Component {
-    geoJson;
-    storage = new Storage();
-    osmController = OSMController;
-    currentOSMRequest = null;
+  geoJson;
+  storage = new Storage();
+  osmController = OSMController;
+  currentOSMRequest = null;
 
-    // Detect system theme preference
-    getSystemThemePreference() {
-        if (window.matchMedia) {
-            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            console.log('System theme preference detected:', isDark ? 'dark' : 'light');
-            return isDark;
-        }
-        console.log('matchMedia not supported, defaulting to light mode');
-        return false; // Light mode as fallback
-    }
+  constructor(props) {
+    super(props);
+    this.updateData = this.updateData.bind(this);
+    this.onMapStyleChange = this.onMapStyleChange.bind(this);
+    this.onMapShowSatelliteChanged = this.onMapShowSatelliteChanged.bind(this);
+    this.onMapMoved = this.onMapMoved.bind(this);
+    this.onLayersChange = this.onLayersChange.bind(this);
+    this.downloadData = this.downloadData.bind(this);
+    this.forceUpdate = this.forceUpdate.bind(this);
+    this.toggleSidebar = this.toggleSidebar.bind(this);
+    this.openAboutModal = this.openAboutModal.bind(this);
+    this.closeAboutModal = this.closeAboutModal.bind(this);
+    this.openLayersLegendModal = this.openLayersLegendModal.bind(this);
+    this.closeLayersLegendModal = this.closeLayersLegendModal.bind(this);
+    this.onChangeStrategy = this.onChangeStrategy.bind(this);
+    this.setMapRef = this.setMapRef.bind(this);
+    this.toggleTheme = this.toggleTheme.bind(this);
+    this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
+    this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
+    this.onDirectionsPanelToggle = this.onDirectionsPanelToggle.bind(this);
+    this.setArea = this.setArea.bind(this);
+    this.debouncedUpdateURL = debounce(this.updateURL, 300);
 
-    constructor(props) {
-        super(props);
-        this.updateData = this.updateData.bind(this);
-        this.onMapStyleChange = this.onMapStyleChange.bind(this);
-        this.onMapShowSatelliteChanged = this.onMapShowSatelliteChanged.bind(this);
-        this.onMapMoved = this.onMapMoved.bind(this);
-        this.onLayersChange = this.onLayersChange.bind(this);
-        this.downloadData = this.downloadData.bind(this);
-        this.forceUpdate = this.forceUpdate.bind(this);
-        this.toggleSidebar = this.toggleSidebar.bind(this);
-        this.openAboutModal = this.openAboutModal.bind(this);
-        this.closeAboutModal = this.closeAboutModal.bind(this);
-        this.openLayersLegendModal = this.openLayersLegendModal.bind(this);
-        this.closeLayersLegendModal = this.closeLayersLegendModal.bind(this);
-        this.onChangeStrategy = this.onChangeStrategy.bind(this);
-        this.setMapRef = this.setMapRef.bind(this);
-        this.toggleTheme = this.toggleTheme.bind(this);
-        this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
-        this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
-        this.onDirectionsPanelToggle = this.onDirectionsPanelToggle.bind(this);
-        this.setArea = this.setArea.bind(this);
-        this.debouncedUpdateURL = debounce(this.updateURL, 300);
+    this.initState();
+  }
 
-        this.initState();
-    }
+  initState() {
+    const urlParams = this.getParamsFromURL();
+    const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
+    console.log('Previous saved state:', prev);
 
+    // On mobile, always use system theme preference since toggle isn't available
+    // On desktop, use saved preference if available, otherwise fallback to system theme preference
+    const isDarkMode = IS_MOBILE
+      ? getSystemThemePreference()
+      : prev.isDarkMode !== undefined
+        ? prev.isDarkMode
+        : getSystemThemePreference();
+    console.log(
+      'Theme preference:',
+      isDarkMode ? 'dark' : 'light',
+      IS_MOBILE
+        ? '(mobile - system preference)'
+        : prev.isDarkMode !== undefined
+          ? '(saved preference)'
+          : '(system preference)'
+    );
 
-    initState() {
-        const urlParams = this.getParamsFromURL();
-        const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
-        console.log('Previous saved state:', prev);
-        
-        // On mobile, always use system theme preference since toggle isn't available
-        // On desktop, use saved preference if available, otherwise fallback to system theme preference
-        const isDarkMode = IS_MOBILE
-            ? this.getSystemThemePreference()
-            : (prev.isDarkMode !== undefined 
-                ? prev.isDarkMode 
-                : this.getSystemThemePreference());
-        console.log('Theme preference:', isDarkMode ? 'dark' : 'light', 
-            IS_MOBILE ? '(mobile - system preference)' :
-            (prev.isDarkMode !== undefined ? '(saved preference)' : '(system preference)'));
+    // Parse route data from URL
+    let fromPoint = null;
+    let toPoint = null;
 
-        // Parse route data from URL
-        let fromPoint = null;
-        let toPoint = null;
-        
-        if (urlParams.from) {
-            const [lng, lat] = urlParams.from.split(',').map(Number);
-            if (!isNaN(lng) && !isNaN(lat)) {
-                fromPoint = {
-                    result: {
-                        center: [lng, lat],
-                        place_name: 'Origem carregada da URL'
-                    }
-                };
-            }
-        }
-        
-        if (urlParams.to) {
-            const [lng, lat] = urlParams.to.split(',').map(Number);
-            if (!isNaN(lng) && !isNaN(lat)) {
-                toPoint = {
-                    result: {
-                        center: [lng, lat],
-                        place_name: 'Destino carregado da URL'
-                    }
-                };
-            }
-        }
-
-        this.state = {
-            area: prev.area || '',
-            showSatellite: ENABLE_SATELLITE_TOGGLE
-                ? (prev.showSatellite !== undefined ? prev.showSatellite : false)
-                : false,
-            zoom: prev.zoom || urlParams.z || DEFAULT_ZOOM,
-            lat: parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
-            lng: parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
-            geoJson: null,
-            debugMode: urlParams.debug || false,
-            loading: false,
-            mapStyle: isDarkMode ? 
-                MAP_STYLES.DARK : 
-                MAP_STYLES.LIGHT,
-            layers: this.initLayers(prev.layersStates, isDarkMode, urlParams.debug || false),
-            lengths: {},
-            isTrackingUserLocation: IS_MOBILE && prev.isTrackingUserLocation === true ? true : false,
-            embedMode: urlParams.embed,
-            isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : DEFAULT_SIDEBAR_OPEN,
-            hideUI: !urlParams.embed,
-            aboutModal: false,
-            layersLegendModal: false,
-            layersLegendScrollToSection: null,
-            lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
-            map: null,
-            isDarkMode: isDarkMode,
-            mapKey: 0,
-            fromPoint: fromPoint,
-            toPoint: toPoint,
-            isDirectionsPanelOpen: false,
+    if (urlParams.from) {
+      const [lng, lat] = urlParams.from.split(',').map(Number);
+      if (!isNaN(lng) && !isNaN(lat)) {
+        fromPoint = {
+          result: {
+            center: [lng, lat],
+            place_name: 'Origem carregada da URL',
+          },
         };
-
-        this.updateData();
+      }
     }
 
-
-    onChangeStrategy(event) {
-        this.setState({ lengthCalculationStrategy: event.target.value });
+    if (urlParams.to) {
+      const [lng, lat] = urlParams.to.split(',').map(Number);
+      if (!isNaN(lng) && !isNaN(lat)) {
+        toPoint = {
+          result: {
+            center: [lng, lat],
+            place_name: 'Destino carregado da URL',
+          },
+        };
+      }
     }
 
-    toggleTheme(newIsDark) {
-        const currentIsDark = this.state.isDarkMode;
+    this.state = {
+      area: prev.area || '',
+      showSatellite: ENABLE_SATELLITE_TOGGLE
+        ? prev.showSatellite !== undefined
+          ? prev.showSatellite
+          : false
+        : false,
+      zoom: prev.zoom || urlParams.z || DEFAULT_ZOOM,
+      lat: parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
+      lng: parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
+      geoJson: null,
+      debugMode: urlParams.debug || false,
+      loading: false,
+      mapStyle: isDarkMode ? MAP_STYLES.DARK : MAP_STYLES.LIGHT,
+      layers: this.initLayers(prev.layersStates, isDarkMode, urlParams.debug || false),
+      lengths: {},
+      isTrackingUserLocation: IS_MOBILE && prev.isTrackingUserLocation === true ? true : false,
+      embedMode: urlParams.embed,
+      isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : DEFAULT_SIDEBAR_OPEN,
+      hideUI: !urlParams.embed,
+      aboutModal: false,
+      layersLegendModal: false,
+      layersLegendScrollToSection: null,
+      lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
+      map: null,
+      isDarkMode: isDarkMode,
+      mapKey: 0,
+      fromPoint: fromPoint,
+      toPoint: toPoint,
+      isDirectionsPanelOpen: false,
+    };
 
-        if (newIsDark !== undefined && newIsDark === currentIsDark) {
-            return;
+    this.updateData();
+  }
+
+  onChangeStrategy(event) {
+    this.setState({ lengthCalculationStrategy: event.target.value });
+  }
+
+  toggleTheme(newIsDark) {
+    const currentIsDark = this.state.isDarkMode;
+
+    if (newIsDark !== undefined && newIsDark === currentIsDark) {
+      return;
+    }
+
+    if (newIsDark === undefined) {
+      newIsDark = !currentIsDark;
+    }
+
+    // Apply theme class to body
+    document.body.className = newIsDark ? 'theme-dark' : 'theme-light';
+
+    // // Update map style if default style is selected (not satellite)
+    // if (!this.state.showSatellite) {
+    //     const newMapStyle = newIsDark
+    //         ? MAP_STYLES.DARK
+    //         : MAP_STYLES.LIGHT;
+    //     this.setState({ mapStyle: newMapStyle });
+    // }
+
+    this.setState(
+      {
+        layers: this.initLayers(this.state.layers, newIsDark, this.state.debugMode),
+        isDarkMode: newIsDark,
+      },
+      () => {
+        // TEMP while we don't update everything dynamically
+        // window.location.reload();
+        this.forceMapReinitialization();
+        // Save preference to localStorage
+        this.saveStateToLocalStorage();
+      }
+    );
+  }
+
+  toggleSidebar(state) {
+    this.setState({ isSidebarOpen: state });
+  }
+
+  openAboutModal() {
+    this.setState({ aboutModal: true });
+  }
+
+  closeAboutModal() {
+    this.setState({
+      aboutModal: false,
+      hideUI: false,
+    });
+  }
+
+  openLayersLegendModal(scrollToSection = null) {
+    this.setState({
+      layersLegendModal: true,
+      layersLegendScrollToSection: scrollToSection,
+    });
+  }
+
+  closeLayersLegendModal() {
+    this.setState({
+      layersLegendModal: false,
+      layersLegendScrollToSection: null,
+    });
+  }
+
+  initLayers(prevLayersStates, isDarkMode, isDebugMode) {
+    const layers = OSMController.getLayers(isDarkMode, isDebugMode);
+
+    // Merge with locally saved state
+    if (prevLayersStates && Object.keys(prevLayersStates).length > 0) {
+      layers.forEach((l) => {
+        if (prevLayersStates[l.id] !== undefined) {
+          l.isActive = prevLayersStates[l.id];
         }
-
-        if (newIsDark === undefined) {
-            newIsDark = !currentIsDark;
-        }
-
-        // Apply theme class to body
-        document.body.className = newIsDark ? 'theme-dark' : 'theme-light';
-         
-        // // Update map style if default style is selected (not satellite)
-        // if (!this.state.showSatellite) {
-        //     const newMapStyle = newIsDark 
-        //         ? MAP_STYLES.DARK
-        //         : MAP_STYLES.LIGHT;
-        //     this.setState({ mapStyle: newMapStyle });
-        // }
-
-        this.setState({ 
-            layers: this.initLayers(this.state.layers, newIsDark, this.state.debugMode),
-            isDarkMode: newIsDark
-        }, () => {
-            // TEMP while we don't update everything dynamically
-            // window.location.reload();
-            this.forceMapReinitialization();
-            // Save preference to localStorage
-            this.saveStateToLocalStorage();
-        });
+      });
     }
 
-    toggleSidebar(state) {
-        this.setState({isSidebarOpen: state});
-    }
-
-    openAboutModal() {
-        this.setState({ aboutModal: true })
-    } 
-
-    closeAboutModal() {
-        this.setState({
-            aboutModal: false,
-            hideUI: false
-        })
-    }
-
-    openLayersLegendModal(scrollToSection = null) {
-        this.setState({ 
-            layersLegendModal: true,
-            layersLegendScrollToSection: scrollToSection
-        })
-    }
-
-    closeLayersLegendModal() {
-        this.setState({ 
-            layersLegendModal: false,
-            layersLegendScrollToSection: null
-        })
-    }
-
-    initLayers(prevLayersStates, isDarkMode, isDebugMode) {
-        const layers = OSMController.getLayers(isDarkMode, isDebugMode); 
-
-        // Merge with locally saved state
-        if (prevLayersStates && Object.keys(prevLayersStates).length > 0) {
-            layers.forEach(l => {
-                if (prevLayersStates[l.id] !== undefined) {
-                    l.isActive = prevLayersStates[l.id];
-                }
-            });
-        }
-
-        return layers;
-    }
-
-    getStateFromLocalStorage() {
-        const savedState = JSON.parse(window.localStorage.getItem('appstate'));
-        console.debug('Retrived saved state from local storage:', savedState);
-        return savedState || {};
-    }
-
-    saveStateToLocalStorage() {
-        // requestAnimationFrame( () => {
-            let layersStates = {};
-            this.state.layers.forEach(l => {
-                layersStates[l.id] = l.isActive;
-            });
-
-            const state = {
-                area: this.state.area,
-                showSatellite: this.state.showSatellite,
-                zoom: this.state.zoom,
-                lng: this.state.lng,
-                lat: this.state.lat,
-                isSidebarOpen: this.state.isSidebarOpen,
-                layersStates: layersStates,
-                isDarkMode: this.state.isDarkMode,
-                isTrackingUserLocation: this.state.isTrackingUserLocation,
-            }
-
-            let str = JSON.stringify(state);
-            window.localStorage.setItem('appstate', str);
-        // });
-    }
-
-    getParamsFromURL() {
-        const possibleParams = [ 'z', 'lat', 'lng', 'embed', 'debug', 'from', 'to' ];
-        const urlParams = new URLSearchParams(this.props.location.search);
-        let paramsObj = {}
-
-        possibleParams.forEach( p => {
-            let value = urlParams.get(p);
-            if (value) {
-                paramsObj[p] = value;
-            }
-        })
-
-        console.debug('url params obj:', paramsObj);
-
-        return paramsObj;
-    }
-
-    async reverseGeocodeURLPoints() {
-        // Reverse geocode URL-loaded points to get proper place names
-        if (this.state.fromPoint && this.state.fromPoint.result.place_name === 'Origem carregada da URL') {
-            try {
-                const response = await fetch(
-                    `https://api.mapbox.com/geocoding/v5/mapbox.places/${this.state.fromPoint.result.center[0]},${this.state.fromPoint.result.center[1]}.json?access_token=${MAPBOX_ACCESS_TOKEN}&language=pt-BR`
-                );
-                const data = await response.json();
-                if (data.features && data.features.length > 0) {
-                    const placeName = data.features[0].place_name;
-                    this.setState({
-                        fromPoint: {
-                            ...this.state.fromPoint,
-                            result: {
-                                ...this.state.fromPoint.result,
-                                place_name: placeName
-                            }
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Error reverse geocoding from point:', error);
-            }
-        }
-
-        if (this.state.toPoint && this.state.toPoint.result.place_name === 'Destino carregado da URL') {
-            try {
-                const response = await fetch(
-                    `https://api.mapbox.com/geocoding/v5/mapbox.places/${this.state.toPoint.result.center[0]},${this.state.toPoint.result.center[1]}.json?access_token=${MAPBOX_ACCESS_TOKEN}&language=pt-BR`
-                );
-                const data = await response.json();
-                if (data.features && data.features.length > 0) {
-                    const placeName = data.features[0].place_name;
-                    this.setState({
-                        toPoint: {
-                            ...this.state.toPoint,
-                            result: {
-                                ...this.state.toPoint.result,
-                                place_name: placeName
-                            }
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Error reverse geocoding to point:', error);
-            }
-        }
-    }
-
-    updateURL() {
-        const currentParams = new URLSearchParams(window.location.search);
-        
-        currentParams.set('lat', this.state.lat.toFixed(7));
-        currentParams.set('lng', this.state.lng.toFixed(7));
-        currentParams.set('z', this.state.zoom.toFixed(2));
-        
-        if (this.state.debugMode) {
-            currentParams.set('debug', 'true');
-        } else {
-            currentParams.delete('debug');
-        }
-        
-        if (this.state.embedMode) {
-            currentParams.set('embed', 'true');
-        } else {
-            currentParams.delete('embed');
-        }
-        
-        if (this.state.fromPoint && this.state.toPoint) {
-            currentParams.set('from', `${this.state.fromPoint.result.center[0]},${this.state.fromPoint.result.center[1]}`);
-            currentParams.set('to', `${this.state.toPoint.result.center[0]},${this.state.toPoint.result.center[1]}`);
-        } else {
-            currentParams.delete('from');
-            currentParams.delete('to');
-        }
-
-        const newSearch = currentParams.toString();
-        
-        // Determine the base path - use /routes/ when there are route parameters, otherwise keep current path
-        let basePath = window.location.pathname;
-        const hasRouteParams = this.state.fromPoint && this.state.toPoint;
-        
-        if (hasRouteParams) {
-            // If we have route parameters, ensure we're on /routes/ path
-            if (!basePath.endsWith('/routes/') && !basePath.endsWith('/routes')) {
-                basePath = basePath.endsWith('/') ? basePath + 'routes/' : basePath + '/routes/';
-            }
-        } else {
-            // If no route parameters, remove /routes/ from path if it exists
-            basePath = basePath.replace(/\/routes\/?$/, '') || '/';
-        }
-        
-        const newUrl = `${basePath}${newSearch ? '?' + newSearch : ''}`;
-        
-        // Use browser history API directly for reliable URL updates
-        window.history.replaceState(null, '', newUrl);
-    }
-
-
-    isDataFresh(lastUpdatedAt) {
-        const now = new Date();
-        const dataLastUpdate = new Date(lastUpdatedAt);
-        const ageInDays = Math.round((now - dataLastUpdate) / (24 * 60 * 60 * 1000));
-        const isFresh = ageInDays < OSM_DATA_MAX_AGE_DAYS;
-
-        if (isFresh) {
-            console.debug(`Database data is fresh (${ageInDays} days old).`);
-        } else {
-            console.debug(`Database data is stale (${ageInDays} days old), fetching fresh data from OSM...`);
-        }
-
-        return isFresh;
-    }
-
-    forceUpdate() {
-        Analytics.event('force_update', {
-            city_name: this.state.area
-        });
-        this.updateData(true);
-    }
-
-    geoJsonDiff(oldData, newData) {
-        console.debug('oldData', oldData);
-        console.debug('newData', newData);
-
-        if (!(oldData && oldData.features &&
-            newData && newData.features)) {
-            return;
-        }
-
-        let a = new Set(oldData.features.map(i => i.id));
-        let b = new Set(newData.features.map(i => i.id));
-        
-        // @todo compare full data, not only IDs
-        // let a = new Set(oldData.features.map(i => JSON.stringify(i)));
-        // let b = new Set(newData.features.map(i => JSON.stringify(i)));
-
-        let a_minus_b = new Set([...a].filter(x => !b.has(x)));
-        let b_minus_a = new Set([...b].filter(x => !a.has(x)));
-        let a_intersect_b = new Set([...a].filter(x => b.has(x)));
-
-        // a_minus_b = [...a_minus_b].map(i => JSON.parse(i));
-        // b_minus_a = [...b_minus_a].map(i => JSON.parse(i));
-        // a_intersect_b = [...a_intersect_b].map(i => JSON.parse(i));
-
-        a_minus_b = [...a_minus_b];
-        b_minus_a = [...b_minus_a];
-        a_intersect_b = [...a_intersect_b];
-
-        // console.debug('Removed:', a_minus_b);
-        // console.debug('Added:', b_minus_a);
-        // console.debug('Might\'ve changed:', a_intersect_b);
-
-        notification.success({
-            message: 'Dados atualizados com sucesso',
-            description:
-                a_minus_b.length === 0 && b_minus_a.length === 0 ?
-                <div>
-                    Não houve alterações no mapa cicloviários desde a última atualização.
-                </div>
-                :
-                <div>
-                    <div>
-                        <IconAdd className="inline"/> <b>{b_minus_a.length}</b> adicionados
-                    </div>
-                    <div>
-                        <IconRemove className="inline"/> <b>{a_minus_b.length}</b> removidos
-                    </div>
-                </div>
-        });
-    }
-
-    // Sometimes some Overpass servers return empty results instead of an error state 
-    isOSMDataHealthy(oldData, newData) {
-        let isHealthy, before, after;
-
-        if (DISABLE_DATA_HEALTY_TEST) {
-            isHealthy = true;
-        }
-
-        if (!oldData || !oldData.features) {
-            isHealthy = true;
-        } else {
-            before = oldData && oldData.features.length;
-            after = newData && newData.features.length;
-    
-            console.debug('before', before);
-            console.debug('after', after);
-            console.debug('diff', after - before);
-    
-            isHealthy = !(after === 0 || after < before * THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE);
-        }
-
-        Analytics.event('get_from_osm', {
-            city_name: this.state.area,
-            is_healthy: isHealthy,
-            new_features: after - before 
-        });
-
-        return isHealthy;
-    }
-
-    getDataFromOSM(options = {}) {
-        const {areaName = this.state.area, forceUpdate, backgroundUpdate} = options;
-
-        // Cancel any existing OSM request
-        if (this.currentOSMRequest) {
-            console.debug('Cancelling previous OSM request');
-            // notification.warning({
-            //     message: 'OSM Request Cancelled',
-            //     description: 'Previous OSM request was cancelled to start a new one.',
-            //     duration: 2
-            // });
-            this.currentOSMRequest.abort();
-            this.currentOSMRequest = null;
-        }
-
-        if (!backgroundUpdate) {
-            this.setState({ loading: true });
-        }
-        
-        const parts = areaName.split(',');
-        const city = parts[0];
-        
-        // notification.info({
-        //     message: 'OSM Request Started',
-        //     description: `Starting OSM data request for ${city}`,
-        //     duration: 2
-        // });
-        
-        // notification.info({
-        //     message: `Carregando mapa cicloviário de ${city}`,
-        //     description: 'Baixando dados atualizados do OpenStreetMap. Dependendo do tamanho da cidade, isso pode levar alguns segundos ou até mais de um minuto.',
-        //     duration: 0
-        // });
-
-        this.currentOSMRequest = OSMController.getData({ area: areaName });
-        return this.currentOSMRequest
-            .then(newData => {
-                this.geoJsonDiff(this.state.geoJson, newData.geoJson);
-
-                if (forceUpdate && !this.isOSMDataHealthy(this.state.geoJson, newData.geoJson)) {
-                    throw new Error('New data is not healthy.');
-                } else {
-                    // Since this is a heavy operation we only do it when syncing with new OSM data
-                    const lengths = calculateLayersLengths(newData.geoJson, this.state.layers, this.state.lengthCalculationStrategy);
-                    
-                    if (SAVE_TO_FIREBASE) {
-                        this.storage.save(areaName, newData.geoJson, lengths)
-                            .then(() => {
-                                if (this.state.debugMode) {
-                                notification.success({
-                                        message: 'Banco de dados atualizado',
-                                        description: "O banco do CicloMapa foi atualizado com a versão mais recente dos dados desta cidade."
-                                    });
-                                }
-                            }).catch(e => {
-                                console.error('Error saving lengths to database:', e);
-                                // notification['error']({
-                                //     message: 'Erro ao atualizar banco de dados',
-                                //     description:
-                                //         'Por alguma razão não conseguimos atualizar o banco de dados com esta versão dos dados. Por favor tente novamente ou contate os desenvolvedores.',
-                                // });
-                            });
-                    }
-
-                    this.setState({
-                        geoJson: newData.geoJson,
-                        dataUpdatedAt: new Date(),
-                        ...(backgroundUpdate ? {} : { loading: false }),
-                        lengths: lengths
-                    });
-                    
-                    notification.destroy();
-                    
-                    // notification.success({
-                    //     message: 'OSM Request Completed',
-                    //     description: `Successfully loaded data for ${city}`,
-                    //     duration: 2
-                    // });
-                }
-                
-                // Clear the current request reference
-                this.currentOSMRequest = null;
-            }).catch(e => {
-                console.error(e);
-                this.setState({
-                    loading: false
-                });
-                
-                notification.destroy();
-                
-                // Check if the error is due to request abortion
-                if (e.message === 'Request aborted') {
-                    console.debug('OSM request was cancelled due to a new request');
-                    // notification.warning({
-                    //     message: 'OSM Request Aborted',
-                    //     description: 'OSM request was cancelled due to a new request.',
-                    //     duration: 2
-                    // });
-                } else {
-                    notification.error({
-                        message: 'Ops',
-                        description: 'O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.',
-                    });
-                }
-                
-                // Clear the current request reference
-                this.currentOSMRequest = null;
-            });
-    }
-
-    updateData(forceUpdate) {
-        if (this.state.area) {
-            if (forceUpdate) {
-                this.getDataFromOSM({forceUpdate: true});
-            } else {
-                
-                // Try to retrieve this area's geojson data from the database
-                this.storage.load(this.state.area)
-                    .then(data => {
-                        if (data) {
-                            if (!this.isDataFresh(data.updatedAt)) {
-                                // If data is not fresh, fetch fresh data from OSM assync
-                                this.getDataFromOSM({backgroundUpdate: true});
-                            }
-
-                            if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
-                                console.debug('Recalculating lengths...');
-                                data.lengths = calculateLayersLengths(data.geoJson, this.state.layers, this.state.lengthCalculationStrategy);
-                            }
-
-                            this.setState({
-                                geoJson: data.geoJson,
-                                lengths: data.lengths,
-                                dataUpdatedAt: new Date(data.updatedAt),
-                            });
-                        } else { 
-                            console.debug(`Couldn't find previously saved data for area ${this.state.area}, hitting OSM...`);
-
-                            this.setState({
-                                geoJson: null,
-                                lengths: {},
-                            })
-
-                            this.getDataFromOSM();
-                        }
-                    }).catch(e => {
-                        console.error(e);
-                        // notification['error']({
-                        //     message: 'Erro',
-                        //     description:
-                        //         'Ocorreu um erro ao acessar o banco de dados.',
-                        // });
-                    });
-            }
-        } else {
-            this.setState({ loading: false });
-        }
-    }
-
-    onMapStyleChange(newMapStyle) {
-        this.setState({ mapStyle: newMapStyle});
-    }
-
-    onMapShowSatelliteChanged(showSatellite) {
-        if (!ENABLE_SATELLITE_TOGGLE) {
-            // Ensure satellite mode is never enabled when the flag is off.
-            if (this.state.showSatellite !== false) {
-                this.setState({ showSatellite: false });
-            }
-            return;
-        }
-
-        this.setState({ showSatellite: showSatellite });
-    }
-
-    onLayersChange(idOrChanges, newVal) {
-        let newLayers = [...this.state.layers];
-        
-        // Handle batch updates (array of {id, isActive} objects)
-        if (Array.isArray(idOrChanges)) {
-            idOrChanges.forEach(change => {
-                const layerIndex = newLayers.findIndex(layer => layer.id === change.id);
-                if (layerIndex === -1) {
-                    console.warn(`onLayersChange: Layer with id ${change.id} not found`);
-                    return;
-                }
-                newLayers[layerIndex] = { ...newLayers[layerIndex], isActive: change.isActive };
-            });
-        } else {
-            // Handle single layer update (backward compatibility)
-            const layerIndex = newLayers.findIndex(layer => layer.id === idOrChanges);
-            if (layerIndex === -1) {
-                console.warn(`onLayersChange: Layer with id ${idOrChanges} not found`);
-                return;
-            }
-            newLayers[layerIndex] = { ...newLayers[layerIndex], isActive: newVal };
-        }
-
-        this.setState({ layers: newLayers });
-    }
-
-    downloadData() {
-        Analytics.event('purchase', {
-            items: [{
-                item_name : this.state.area,
-                item_category: 'download',
-                item_variant: 'geojson file'
-            }],
-        });
-
-        // Enable only layers of type "way" to download
-        const layerWays = this.state.layers.filter(l => l.type === 'way');
-        
-        // Deep object clone
-        var data = JSON.parse(JSON.stringify(this.state.geoJson));
-
-        computeTypologies(data, layerWays);
-        cleanUpOSMTags(data);
-        downloadObjectAsJson(data, `ciclomapa-${this.state.area}`);
-    }
-
-    componentDidUpdate(prevProps, prevState) {
-        if (this.props.location !== prevProps.location) {
-            this.onRouteChanged();
-        }
-
-        if (this.state.area !== prevState.area) {
-            console.debug(`Changed area from ${prevState.area} to ${this.state.area}`);
-            
-            Analytics.event('switch_city', {
-                city_name: this.state.area
-            });
-
-            this.directionsPanel.clearDirections();
-
-            this.updateData();
-
-            document.querySelector('.city-picker span').setAttribute('style','opacity: 1');
-
-            // Only redo the query if we need new data
-            // if (!doesAContainsB(largestBoundsYet, newBounds)) {
-            //     this.updateData();
-            //     largestBoundsYet = newBounds;
-
-            //     if (DEBUG_BOUNDS_OPTIMIZATION) {
-            //         this.updateDebugPolygon(largestBoundsYet, 1);
-            //     }
-            // }
-        }
-
-        if (this.state.isDarkMode !== prevState.isDarkMode) {
-            if (!this.state.showSatellite) {
-                const newMapStyle = this.state.isDarkMode 
-                    ? MAP_STYLES.DARK
-                    : MAP_STYLES.LIGHT;
-                this.setState({ mapStyle: newMapStyle });
-            }
-        }
-
-        if (this.state.geoJson !== prevState.geoJson) {
-            if (!this.state.geoJson || (this.state.geoJson.features && this.state.geoJson.features.length === 0)) {
-                // @todo link to our tutorials and invite the user to start mapping it
-                // notification['warning']({
-                //     message: 'Ops',
-                //     description:
-                //         'Não há dados cicloviários para esta cidade. Que tal colaborar no OpenStreetMap?',
-                //     // action: <a href={getOsmUrl(this.state.lat, this.state.lng, this.state.zoom)} target="_blank" rel="noopener noreferrer">Editar no OSM</a> // not available in current Ant Design version
-                // });
-            } else {
-                // @todo this seem to be being called every time!!!!
-                // Retrocompatibility case where lengths weren't saved to database
-                // if (!this.state.lengths) {
-                //     console.debug('database didnt have lengths, computing...');
-                //     this.calculateLengths();
-                // }
-            }
-        }
-        
-            if (this.state.zoom !== prevState.zoom ||
-                this.state.lat !== prevState.lat ||
-                this.state.lng !== prevState.lng ||
-                this.state.fromPoint !== prevState.fromPoint ||
-                this.state.toPoint !== prevState.toPoint) {
-                this.debouncedUpdateURL();
-            }
-
-        if (this.state.lengthCalculationStrategy !== prevState.lengthCalculationStrategy) {
-            // @todo olha a gambiarra!
-            // Deep clone geoJson data to force Mapbox to update the data layers
-            const clone = JSON.parse(JSON.stringify(this.state.geoJson));
-            this.setState({
-                geoJson: clone,
-                lengths: calculateLayersLengths(clone, this.state.layers, this.state.lengthCalculationStrategy)
-            });
-        }
-    }
-
-    calculateLengths() {
-        this.setState({
-            lengths: calculateLayersLengths(this.state.geoJson, this.state.layers, this.state.lengthCalculationStrategy)
-        });
-    }
-
-    updateLengths = () => {
-        this.calculateLengths();
-    }
-
-    componentDidMount() {
-        // Initialize theme
-        document.body.className = this.state.isDarkMode ? 'theme-dark' : 'theme-light';
-
-        // Listen for system theme changes
-        if (window.matchMedia) {
-            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-            const handleThemeChange = (e) => {
-                const newTheme = e.matches;
-                this.toggleTheme(newTheme);
-            };
-            mediaQuery.addEventListener('change', handleThemeChange);
-            
-            // Store the listener reference for cleanup
-            this.themeChangeListener = handleThemeChange;
-        }
-
-        if (!this.state.embedMode) {
-            get('hasSeenWelcomeMsg')
-                .then(data => {
-                    if (!data) {
-                        console.log('show welcome!!!!')
-                        this.openAboutModal();
-                        set('hasSeenWelcomeMsg', true);
-                    }
-                });
-        }
-
-        setTimeout(() => {
-            if (!this.state.aboutModal) {
-                this.setState({hideUI: false});
-            }
-        }, 1000);
-
-        window.addEventListener('beforeunload', e => {
-            this.saveStateToLocalStorage();
-        });
-
-        // Reverse geocode URL-loaded points to get proper place names
-        this.reverseGeocodeURLPoints();
-
-        // if (!this.state.debugMode) {
-        //     const emptyFunc = () => {};
-        //     console.log = emptyFunc;
-        //     console.debug = emptyFunc;
-        //     console.warn = emptyFunc;
-        //     console.error = emptyFunc;
-        // }
-    }
-
-    componentWillUnmount() {
-        // Clean up theme change listener
-        if (this.themeChangeListener && window.matchMedia) {
-            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-            mediaQuery.removeEventListener('change', this.themeChangeListener);
-        }
-        
-        // Cancel any pending OSM request
-        if (this.currentOSMRequest) {
-            console.debug('Cancelling OSM request on component unmount');
-            // notification.info({
-            //     message: 'OSM Request Cancelled',
-            //     description: 'OSM request was cancelled due to component unmount.',
-            //     duration: 2
-            // });
-            this.currentOSMRequest.abort();
-            this.currentOSMRequest = null;
-        }
-        
-        // Cancel any pending debounced URL updates
-        if (this.debouncedUpdateURL) {
-            this.debouncedUpdateURL.cancel();
-        }
-    }
-
-    onRouteChanged() {
-        // @todo Fix infinite loop
-        // this.setState(this.getParamsFromURL());
-    }
-
-    onMapMoved(newState) {
-        // Update App state to reflect map position for URL updates
-        // This does NOT control the map - the map manages its own position
-        requestAnimationFrame(() => {
-            this.setState(newState);
-        });
-    }
-
-    setMapRef(map) {
-        this.setState({ map });
-    }
-
-    setDirectionsPanelRef(directionsPanel) {
-        this.directionsPanel = directionsPanel;
-    }
-
-    onDirectionsPanelToggle(isOpen) {
-        this.setState({ isDirectionsPanelOpen: isOpen });
-    }
-
-    setFromPoint = (point) => {
-        this.setState({ fromPoint: point });
-    }
-
-    setToPoint = (point) => {
-        this.setState({ toPoint: point });
-    }
-
-    clearRoutePoints = () => {
-        this.setState({ fromPoint: null, toPoint: null });
-    }
-
-    setArea(newArea) {
-        if (newArea && newArea !== this.state.area) {
-            this.setState({ area: newArea });
-        }
-    }
-
-    forceMapReinitialization() {
-        this.setState(prevState => ({
-            mapKey: prevState.mapKey + 1
-        }));
-    }
-
-    render() {
-        return (
-            <DirectionsProvider>
-                <div
-                    id="ciclomapa"
-                    className={[
-                        this.state.hideUI ? 'hideUI' : '',
-                        this.state.isSidebarOpen ? 'analyticsSidebarOpen' : '',
-                    ].filter(Boolean).join(' ')}
-                >
-                {
-                    !IS_PROD &&
-                    <div className="fixed bottom-0 left-0 right-0 z-10 flex bg-yellow-300 text-black items-center justify-center text-center text-xs py-1">
-                        Você está em um <b className="ml-1">ambiente de teste</b>, pode futricar à vontade! ;)
-                    </div>
-                } 
-                
-                <div className="flex">
-                    <div className="relative w-full">
-                        { 
-                            IS_MOBILE && this.state.isDirectionsPanelOpen ? '' :
-                            <TopBar
-                                title={this.state.area}
-                                lastUpdate={this.state.dataUpdatedAt}
-                                lat={this.state.lat}
-                                lng={this.state.lng}
-                                z={this.state.zoom}
-                                downloadData={this.downloadData}
-                                // isDownloadUnavailable={this.state.isDownloadUnavailable}
-                                onMapMoved={this.onMapMoved}
-                                forceUpdate={this.forceUpdate}
-                                isSidebarOpen={this.state.isSidebarOpen}
-                                toggleSidebar={this.toggleSidebar}
-                                embedMode={this.state.embedMode}
-                                openAboutModal={this.openAboutModal}
-                                isDarkMode={this.state.isDarkMode}
-                                toggleTheme={this.toggleTheme}
-                                loading={this.state.loading}
-                            />
-                        }
-                        <Map
-                            key={this.state.mapKey}
-                            ref={(map) => { window.map = map }}
-                            data={this.state.geoJson}
-                            layers={this.state.layers}
-                            style={this.state.mapStyle}
-                            zoom={this.state.zoom}
-                            lat={this.state.lat}
-                            lng={this.state.lng}
-                            showSatellite={ENABLE_SATELLITE_TOGGLE ? this.state.showSatellite : false}
-                            location={this.state.area}
-                            onMapMoved={this.onMapMoved}
-                            updateLengths={this.updateLengths}
-                            isSidebarOpen={this.state.isSidebarOpen}
-                            embedMode={this.state.embedMode}
-                            debugMode={this.state.debugMode}
-                            isDarkMode={this.state.isDarkMode}
-                            setMapRef={this.setMapRef}
-                            directionsPanelRef={this.directionsPanel}
-                            toPoint={this.state.toPoint}
-                            isTrackingUserLocation={this.state.isTrackingUserLocation}
-                            onTrackingUserLocationChange={(isTracking) => {
-                                this.setState({ isTrackingUserLocation: isTracking });
-                                this.saveStateToLocalStorage();
-                            }}
-                        />
-                        
-                        {
-                            !this.state.embedMode &&
-                            ENABLE_SATELLITE_TOGGLE &&
-                            <MapStyleSwitcher 
-                                showSatellite={this.state.showSatellite}
-                                onMapStyleChange={this.onMapStyleChange}
-                                onMapShowSatelliteChanged={this.onMapShowSatelliteChanged}
-                                isDarkMode={this.state.isDarkMode}
-                            />
-                        }
-
-                        {
-                            !this.state.embedMode && !IS_MOBILE &&
-                            <div id="gradient-backdrop"/>
-                        }
-                    </div>
-
-                    {
-                        !IS_MOBILE &&
-                        !this.state.embedMode &&
-                        this.state.isSidebarOpen &&
-                            <AnalyticsSidebar
-                                layers={this.state.layers}
-                                lengths={this.state.lengths}
-                                open={this.state.isSidebarOpen}
-                                location={this.state.area}
-                                lengthCalculationStrategy={this.state.lengthCalculationStrategy}
-                                debugMode={this.state.debugMode}
-                                isDarkMode={this.state.isDarkMode}
-                                toggle={this.toggleSidebar}
-                                onChangeStrategy={this.onChangeStrategy}
-                                downloadData={this.downloadData}
-                            />
-                    }
-                </div>
-
-                <CitySwitcherBackdrop/>
-
-                {
-                    IS_MOBILE && this.state.isDirectionsPanelOpen ? '' :
-                    <LayersBar
-                        layers={this.state.layers}
-                        onLayersChange={this.onLayersChange}
-                        embedMode={this.state.embedMode}
-                        isDarkMode={this.state.isDarkMode}
-                        openLayersLegendModal={this.openLayersLegendModal}
-                    />
-                }
-                
-                <LayersPanel
-                    layers={this.state.layers}
-                    lengths={this.state.lengths}
-                    onLayersChange={this.onLayersChange}
-                    embedMode={this.state.embedMode}
-                    isDarkMode={this.state.isDarkMode}
-                />
-
-                <DirectionsPanel
-                    ref={this.setDirectionsPanelRef}
-                    embedMode={this.state.embedMode}
-                    map={this.state.map}
-                    geoJson={this.state.geoJson}
-                    layers={this.state.layers}
-                    area={this.state.area}
-                    fromPoint={this.state.fromPoint}
-                    toPoint={this.state.toPoint}
-                    onFromPointChange={this.setFromPoint}
-                    onToPointChange={this.setToPoint}
-                    onClearRoutePoints={this.clearRoutePoints}
-                    onDirectionsPanelToggle={this.onDirectionsPanelToggle}
-                    isDarkMode={this.state.isDarkMode}
-                    debugMode={this.state.debugMode}
-                    onAreaChange={this.setArea}
-                    openLayersLegendModal={this.openLayersLegendModal}
-                />
-
-                <AboutModal
-                    visible={this.state.aboutModal}
-                    onClose={this.closeAboutModal}
-                    openLayersLegendModal={this.openLayersLegendModal}
-                />
-
-                <LayersLegendModal
-                    visible={this.state.layersLegendModal}
-                    onClose={this.closeLayersLegendModal}
-                    layers={this.state.layers}
-                    isDarkMode={this.state.isDarkMode}
-                    scrollToSection={this.state.layersLegendScrollToSection}
-                />
-
-                </div>
-            </DirectionsProvider>
+    return layers;
+  }
+
+  getStateFromLocalStorage() {
+    const savedState = JSON.parse(window.localStorage.getItem('appstate'));
+    console.debug('Retrived saved state from local storage:', savedState);
+    return savedState || {};
+  }
+
+  saveStateToLocalStorage() {
+    // requestAnimationFrame( () => {
+    let layersStates = {};
+    this.state.layers.forEach((l) => {
+      layersStates[l.id] = l.isActive;
+    });
+
+    const state = {
+      area: this.state.area,
+      showSatellite: this.state.showSatellite,
+      zoom: this.state.zoom,
+      lng: this.state.lng,
+      lat: this.state.lat,
+      isSidebarOpen: this.state.isSidebarOpen,
+      layersStates: layersStates,
+      isDarkMode: this.state.isDarkMode,
+      isTrackingUserLocation: this.state.isTrackingUserLocation,
+    };
+
+    let str = JSON.stringify(state);
+    window.localStorage.setItem('appstate', str);
+    // });
+  }
+
+  getParamsFromURL() {
+    const possibleParams = ['z', 'lat', 'lng', 'embed', 'debug', 'from', 'to'];
+    const urlParams = new URLSearchParams(this.props.location.search);
+    let paramsObj = {};
+
+    possibleParams.forEach((p) => {
+      let value = urlParams.get(p);
+      if (value) {
+        paramsObj[p] = value;
+      }
+    });
+
+    console.debug('url params obj:', paramsObj);
+
+    return paramsObj;
+  }
+
+  async reverseGeocodeURLPoints() {
+    // Reverse geocode URL-loaded points to get proper place names
+    if (
+      this.state.fromPoint &&
+      this.state.fromPoint.result.place_name === 'Origem carregada da URL'
+    ) {
+      try {
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${this.state.fromPoint.result.center[0]},${this.state.fromPoint.result.center[1]}.json?access_token=${MAPBOX_ACCESS_TOKEN}&language=pt-BR`
         );
+        const data = await response.json();
+        if (data.features && data.features.length > 0) {
+          const placeName = data.features[0].place_name;
+          this.setState({
+            fromPoint: {
+              ...this.state.fromPoint,
+              result: {
+                ...this.state.fromPoint.result,
+                place_name: placeName,
+              },
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error reverse geocoding from point:', error);
+      }
     }
+
+    if (this.state.toPoint && this.state.toPoint.result.place_name === 'Destino carregado da URL') {
+      try {
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${this.state.toPoint.result.center[0]},${this.state.toPoint.result.center[1]}.json?access_token=${MAPBOX_ACCESS_TOKEN}&language=pt-BR`
+        );
+        const data = await response.json();
+        if (data.features && data.features.length > 0) {
+          const placeName = data.features[0].place_name;
+          this.setState({
+            toPoint: {
+              ...this.state.toPoint,
+              result: {
+                ...this.state.toPoint.result,
+                place_name: placeName,
+              },
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error reverse geocoding to point:', error);
+      }
+    }
+  }
+
+  updateURL() {
+    const currentParams = new URLSearchParams(window.location.search);
+
+    currentParams.set('lat', this.state.lat.toFixed(7));
+    currentParams.set('lng', this.state.lng.toFixed(7));
+    currentParams.set('z', this.state.zoom.toFixed(2));
+
+    if (this.state.debugMode) {
+      currentParams.set('debug', 'true');
+    } else {
+      currentParams.delete('debug');
+    }
+
+    if (this.state.embedMode) {
+      currentParams.set('embed', 'true');
+    } else {
+      currentParams.delete('embed');
+    }
+
+    if (this.state.fromPoint && this.state.toPoint) {
+      currentParams.set(
+        'from',
+        `${this.state.fromPoint.result.center[0]},${this.state.fromPoint.result.center[1]}`
+      );
+      currentParams.set(
+        'to',
+        `${this.state.toPoint.result.center[0]},${this.state.toPoint.result.center[1]}`
+      );
+    } else {
+      currentParams.delete('from');
+      currentParams.delete('to');
+    }
+
+    const newSearch = currentParams.toString();
+
+    // Determine the base path - use /routes/ when there are route parameters, otherwise keep current path
+    let basePath = window.location.pathname;
+    const hasRouteParams = this.state.fromPoint && this.state.toPoint;
+
+    if (hasRouteParams) {
+      // If we have route parameters, ensure we're on /routes/ path
+      if (!basePath.endsWith('/routes/') && !basePath.endsWith('/routes')) {
+        basePath = basePath.endsWith('/') ? basePath + 'routes/' : basePath + '/routes/';
+      }
+    } else {
+      // If no route parameters, remove /routes/ from path if it exists
+      basePath = basePath.replace(/\/routes\/?$/, '') || '/';
+    }
+
+    const newUrl = `${basePath}${newSearch ? '?' + newSearch : ''}`;
+
+    // Use browser history API directly for reliable URL updates
+    window.history.replaceState(null, '', newUrl);
+  }
+
+  isDataFresh(lastUpdatedAt) {
+    const now = new Date();
+    const dataLastUpdate = new Date(lastUpdatedAt);
+    const ageInDays = Math.round((now - dataLastUpdate) / (24 * 60 * 60 * 1000));
+    const isFresh = ageInDays < OSM_DATA_MAX_AGE_DAYS;
+
+    if (isFresh) {
+      console.debug(`Database data is fresh (${ageInDays} days old).`);
+    } else {
+      console.debug(
+        `Database data is stale (${ageInDays} days old), fetching fresh data from OSM...`
+      );
+    }
+
+    return isFresh;
+  }
+
+  forceUpdate() {
+    Analytics.event('force_update', {
+      city_name: this.state.area,
+    });
+    this.updateData(true);
+  }
+
+  geoJsonDiff(oldData, newData) {
+    console.debug('oldData', oldData);
+    console.debug('newData', newData);
+
+    if (!(oldData && oldData.features && newData && newData.features)) {
+      return;
+    }
+
+    let a = new Set(oldData.features.map((i) => i.id));
+    let b = new Set(newData.features.map((i) => i.id));
+
+    // @todo compare full data, not only IDs
+    // let a = new Set(oldData.features.map(i => JSON.stringify(i)));
+    // let b = new Set(newData.features.map(i => JSON.stringify(i)));
+
+    let a_minus_b = new Set([...a].filter((x) => !b.has(x)));
+    let b_minus_a = new Set([...b].filter((x) => !a.has(x)));
+    let a_intersect_b = new Set([...a].filter((x) => b.has(x)));
+
+    // a_minus_b = [...a_minus_b].map(i => JSON.parse(i));
+    // b_minus_a = [...b_minus_a].map(i => JSON.parse(i));
+    // a_intersect_b = [...a_intersect_b].map(i => JSON.parse(i));
+
+    a_minus_b = [...a_minus_b];
+    b_minus_a = [...b_minus_a];
+    a_intersect_b = [...a_intersect_b];
+
+    // console.debug('Removed:', a_minus_b);
+    // console.debug('Added:', b_minus_a);
+    // console.debug('Might\'ve changed:', a_intersect_b);
+
+    notification.success({
+      message: 'Dados atualizados com sucesso',
+      description:
+        a_minus_b.length === 0 && b_minus_a.length === 0 ? (
+          <div>Não houve alterações no mapa cicloviários desde a última atualização.</div>
+        ) : (
+          <div>
+            <div>
+              <IconAdd className="inline" /> <b>{b_minus_a.length}</b> adicionados
+            </div>
+            <div>
+              <IconRemove className="inline" /> <b>{a_minus_b.length}</b> removidos
+            </div>
+          </div>
+        ),
+    });
+  }
+
+  // Sometimes some Overpass servers return empty results instead of an error state
+  isOSMDataHealthy(oldData, newData) {
+    let isHealthy, before, after;
+
+    if (DISABLE_DATA_HEALTY_TEST) {
+      isHealthy = true;
+    }
+
+    if (!oldData || !oldData.features) {
+      isHealthy = true;
+    } else {
+      before = oldData && oldData.features.length;
+      after = newData && newData.features.length;
+
+      console.debug('before', before);
+      console.debug('after', after);
+      console.debug('diff', after - before);
+
+      isHealthy = !(after === 0 || after < before * THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE);
+    }
+
+    Analytics.event('get_from_osm', {
+      city_name: this.state.area,
+      is_healthy: isHealthy,
+      new_features: after - before,
+    });
+
+    return isHealthy;
+  }
+
+  getDataFromOSM(options = {}) {
+    const { areaName = this.state.area, forceUpdate, backgroundUpdate } = options;
+
+    // Cancel any existing OSM request
+    if (this.currentOSMRequest) {
+      console.debug('Cancelling previous OSM request');
+      // notification.warning({
+      //     message: 'OSM Request Cancelled',
+      //     description: 'Previous OSM request was cancelled to start a new one.',
+      //     duration: 2
+      // });
+      this.currentOSMRequest.abort();
+      this.currentOSMRequest = null;
+    }
+
+    if (!backgroundUpdate) {
+      this.setState({ loading: true });
+    }
+
+    const parts = areaName.split(',');
+    const city = parts[0];
+
+    // notification.info({
+    //     message: 'OSM Request Started',
+    //     description: `Starting OSM data request for ${city}`,
+    //     duration: 2
+    // });
+
+    // notification.info({
+    //     message: `Carregando mapa cicloviário de ${city}`,
+    //     description: 'Baixando dados atualizados do OpenStreetMap. Dependendo do tamanho da cidade, isso pode levar alguns segundos ou até mais de um minuto.',
+    //     duration: 0
+    // });
+
+    this.currentOSMRequest = OSMController.getData({ area: areaName });
+    return this.currentOSMRequest
+      .then((newData) => {
+        this.geoJsonDiff(this.state.geoJson, newData.geoJson);
+
+        if (forceUpdate && !this.isOSMDataHealthy(this.state.geoJson, newData.geoJson)) {
+          throw new Error('New data is not healthy.');
+        } else {
+          // Since this is a heavy operation we only do it when syncing with new OSM data
+          const lengths = calculateLayersLengths(
+            newData.geoJson,
+            this.state.layers,
+            this.state.lengthCalculationStrategy
+          );
+
+          if (SAVE_TO_FIREBASE) {
+            this.storage
+              .save(areaName, newData.geoJson, lengths)
+              .then(() => {
+                if (this.state.debugMode) {
+                  notification.success({
+                    message: 'Banco de dados atualizado',
+                    description:
+                      'O banco do CicloMapa foi atualizado com a versão mais recente dos dados desta cidade.',
+                  });
+                }
+              })
+              .catch((e) => {
+                console.error('Error saving lengths to database:', e);
+                // notification['error']({
+                //     message: 'Erro ao atualizar banco de dados',
+                //     description:
+                //         'Por alguma razão não conseguimos atualizar o banco de dados com esta versão dos dados. Por favor tente novamente ou contate os desenvolvedores.',
+                // });
+              });
+          }
+
+          this.setState({
+            geoJson: newData.geoJson,
+            dataUpdatedAt: new Date(),
+            ...(backgroundUpdate ? {} : { loading: false }),
+            lengths: lengths,
+          });
+
+          notification.destroy();
+
+          // notification.success({
+          //     message: 'OSM Request Completed',
+          //     description: `Successfully loaded data for ${city}`,
+          //     duration: 2
+          // });
+        }
+
+        // Clear the current request reference
+        this.currentOSMRequest = null;
+      })
+      .catch((e) => {
+        console.error(e);
+        this.setState({
+          loading: false,
+        });
+
+        notification.destroy();
+
+        // Check if the error is due to request abortion
+        if (e.message === 'Request aborted') {
+          console.debug('OSM request was cancelled due to a new request');
+          // notification.warning({
+          //     message: 'OSM Request Aborted',
+          //     description: 'OSM request was cancelled due to a new request.',
+          //     duration: 2
+          // });
+        } else {
+          notification.error({
+            message: 'Ops',
+            description:
+              'O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.',
+          });
+        }
+
+        // Clear the current request reference
+        this.currentOSMRequest = null;
+      });
+  }
+
+  updateData(forceUpdate) {
+    if (this.state.area) {
+      if (forceUpdate) {
+        this.getDataFromOSM({ forceUpdate: true });
+      } else {
+        // Try to retrieve this area's geojson data from the database
+        this.storage
+          .load(this.state.area)
+          .then((data) => {
+            if (data) {
+              if (!this.isDataFresh(data.updatedAt)) {
+                // If data is not fresh, fetch fresh data from OSM assync
+                this.getDataFromOSM({ backgroundUpdate: true });
+              }
+
+              if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
+                console.debug('Recalculating lengths...');
+                data.lengths = calculateLayersLengths(
+                  data.geoJson,
+                  this.state.layers,
+                  this.state.lengthCalculationStrategy
+                );
+              }
+
+              this.setState({
+                geoJson: data.geoJson,
+                lengths: data.lengths,
+                dataUpdatedAt: new Date(data.updatedAt),
+              });
+            } else {
+              console.debug(
+                `Couldn't find previously saved data for area ${this.state.area}, hitting OSM...`
+              );
+
+              this.setState({
+                geoJson: null,
+                lengths: {},
+              });
+
+              this.getDataFromOSM();
+            }
+          })
+          .catch((e) => {
+            console.error(e);
+            // notification['error']({
+            //     message: 'Erro',
+            //     description:
+            //         'Ocorreu um erro ao acessar o banco de dados.',
+            // });
+          });
+      }
+    } else {
+      this.setState({ loading: false });
+    }
+  }
+
+  onMapStyleChange(newMapStyle) {
+    this.setState({ mapStyle: newMapStyle });
+  }
+
+  onMapShowSatelliteChanged(showSatellite) {
+    if (!ENABLE_SATELLITE_TOGGLE) {
+      // Ensure satellite mode is never enabled when the flag is off.
+      if (this.state.showSatellite !== false) {
+        this.setState({ showSatellite: false });
+      }
+      return;
+    }
+
+    this.setState({ showSatellite: showSatellite });
+  }
+
+  onLayersChange(idOrChanges, newVal) {
+    let newLayers = [...this.state.layers];
+
+    // Handle batch updates (array of {id, isActive} objects)
+    if (Array.isArray(idOrChanges)) {
+      idOrChanges.forEach((change) => {
+        const layerIndex = newLayers.findIndex((layer) => layer.id === change.id);
+        if (layerIndex === -1) {
+          console.warn(`onLayersChange: Layer with id ${change.id} not found`);
+          return;
+        }
+        newLayers[layerIndex] = { ...newLayers[layerIndex], isActive: change.isActive };
+      });
+    } else {
+      // Handle single layer update (backward compatibility)
+      const layerIndex = newLayers.findIndex((layer) => layer.id === idOrChanges);
+      if (layerIndex === -1) {
+        console.warn(`onLayersChange: Layer with id ${idOrChanges} not found`);
+        return;
+      }
+      newLayers[layerIndex] = { ...newLayers[layerIndex], isActive: newVal };
+    }
+
+    this.setState({ layers: newLayers });
+  }
+
+  downloadData() {
+    Analytics.event('purchase', {
+      items: [
+        {
+          item_name: this.state.area,
+          item_category: 'download',
+          item_variant: 'geojson file',
+        },
+      ],
+    });
+
+    // Enable only layers of type "way" to download
+    const layerWays = this.state.layers.filter((l) => l.type === 'way');
+
+    // Deep object clone
+    var data = JSON.parse(JSON.stringify(this.state.geoJson));
+
+    computeTypologies(data, layerWays);
+    cleanUpOSMTags(data);
+    downloadObjectAsJson(data, `ciclomapa-${this.state.area}`);
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (this.props.location !== prevProps.location) {
+      this.onRouteChanged();
+    }
+
+    if (this.state.area !== prevState.area) {
+      console.debug(`Changed area from ${prevState.area} to ${this.state.area}`);
+
+      Analytics.event('switch_city', {
+        city_name: this.state.area,
+      });
+
+      this.directionsPanel.clearDirections();
+
+      this.updateData();
+
+      document.querySelector('.city-picker span').setAttribute('style', 'opacity: 1');
+
+      // Only redo the query if we need new data
+      // if (!doesAContainsB(largestBoundsYet, newBounds)) {
+      //     this.updateData();
+      //     largestBoundsYet = newBounds;
+
+      //     if (DEBUG_BOUNDS_OPTIMIZATION) {
+      //         this.updateDebugPolygon(largestBoundsYet, 1);
+      //     }
+      // }
+    }
+
+    if (this.state.isDarkMode !== prevState.isDarkMode) {
+      if (!this.state.showSatellite) {
+        const newMapStyle = this.state.isDarkMode ? MAP_STYLES.DARK : MAP_STYLES.LIGHT;
+        this.setState({ mapStyle: newMapStyle });
+      }
+    }
+
+    if (this.state.geoJson !== prevState.geoJson) {
+      if (
+        !this.state.geoJson ||
+        (this.state.geoJson.features && this.state.geoJson.features.length === 0)
+      ) {
+        // @todo link to our tutorials and invite the user to start mapping it
+        // notification['warning']({
+        //     message: 'Ops',
+        //     description:
+        //         'Não há dados cicloviários para esta cidade. Que tal colaborar no OpenStreetMap?',
+        //     // action: <a href={getOsmUrl(this.state.lat, this.state.lng, this.state.zoom)} target="_blank" rel="noopener noreferrer">Editar no OSM</a> // not available in current Ant Design version
+        // });
+      } else {
+        // @todo this seem to be being called every time!!!!
+        // Retrocompatibility case where lengths weren't saved to database
+        // if (!this.state.lengths) {
+        //     console.debug('database didnt have lengths, computing...');
+        //     this.calculateLengths();
+        // }
+      }
+    }
+
+    if (
+      this.state.zoom !== prevState.zoom ||
+      this.state.lat !== prevState.lat ||
+      this.state.lng !== prevState.lng ||
+      this.state.fromPoint !== prevState.fromPoint ||
+      this.state.toPoint !== prevState.toPoint
+    ) {
+      this.debouncedUpdateURL();
+    }
+
+    if (this.state.lengthCalculationStrategy !== prevState.lengthCalculationStrategy) {
+      // @todo olha a gambiarra!
+      // Deep clone geoJson data to force Mapbox to update the data layers
+      const clone = JSON.parse(JSON.stringify(this.state.geoJson));
+      this.setState({
+        geoJson: clone,
+        lengths: calculateLayersLengths(
+          clone,
+          this.state.layers,
+          this.state.lengthCalculationStrategy
+        ),
+      });
+    }
+  }
+
+  calculateLengths() {
+    this.setState({
+      lengths: calculateLayersLengths(
+        this.state.geoJson,
+        this.state.layers,
+        this.state.lengthCalculationStrategy
+      ),
+    });
+  }
+
+  updateLengths = () => {
+    this.calculateLengths();
+  };
+
+  componentDidMount() {
+    // Initialize theme
+    document.body.className = this.state.isDarkMode ? 'theme-dark' : 'theme-light';
+
+    // Listen for system theme changes
+    if (window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleThemeChange = (e) => {
+        const newTheme = e.matches;
+        this.toggleTheme(newTheme);
+      };
+      mediaQuery.addEventListener('change', handleThemeChange);
+
+      // Store the listener reference for cleanup
+      this.themeChangeListener = handleThemeChange;
+    }
+
+    if (!this.state.embedMode) {
+      get('hasSeenWelcomeMsg').then((data) => {
+        if (!data) {
+          console.log('show welcome!!!!');
+          this.openAboutModal();
+          set('hasSeenWelcomeMsg', true);
+        }
+      });
+    }
+
+    setTimeout(() => {
+      if (!this.state.aboutModal) {
+        this.setState({ hideUI: false });
+      }
+    }, 1000);
+
+    window.addEventListener('beforeunload', (e) => {
+      this.saveStateToLocalStorage();
+    });
+
+    // Reverse geocode URL-loaded points to get proper place names
+    this.reverseGeocodeURLPoints();
+
+    // if (!this.state.debugMode) {
+    //     const emptyFunc = () => {};
+    //     console.log = emptyFunc;
+    //     console.debug = emptyFunc;
+    //     console.warn = emptyFunc;
+    //     console.error = emptyFunc;
+    // }
+  }
+
+  componentWillUnmount() {
+    // Clean up theme change listener
+    if (this.themeChangeListener && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      mediaQuery.removeEventListener('change', this.themeChangeListener);
+    }
+
+    // Cancel any pending OSM request
+    if (this.currentOSMRequest) {
+      console.debug('Cancelling OSM request on component unmount');
+      // notification.info({
+      //     message: 'OSM Request Cancelled',
+      //     description: 'OSM request was cancelled due to component unmount.',
+      //     duration: 2
+      // });
+      this.currentOSMRequest.abort();
+      this.currentOSMRequest = null;
+    }
+
+    // Cancel any pending debounced URL updates
+    if (this.debouncedUpdateURL) {
+      this.debouncedUpdateURL.cancel();
+    }
+  }
+
+  onRouteChanged() {
+    // @todo Fix infinite loop
+    // this.setState(this.getParamsFromURL());
+  }
+
+  onMapMoved(newState) {
+    // Update App state to reflect map position for URL updates
+    // This does NOT control the map - the map manages its own position
+    requestAnimationFrame(() => {
+      this.setState(newState);
+    });
+  }
+
+  setMapRef(map) {
+    this.setState({ map });
+  }
+
+  setDirectionsPanelRef(directionsPanel) {
+    this.directionsPanel = directionsPanel;
+  }
+
+  onDirectionsPanelToggle(isOpen) {
+    this.setState({ isDirectionsPanelOpen: isOpen });
+  }
+
+  setFromPoint = (point) => {
+    this.setState({ fromPoint: point });
+  };
+
+  setToPoint = (point) => {
+    this.setState({ toPoint: point });
+  };
+
+  clearRoutePoints = () => {
+    this.setState({ fromPoint: null, toPoint: null });
+  };
+
+  setArea(newArea) {
+    if (newArea && newArea !== this.state.area) {
+      this.setState({ area: newArea });
+    }
+  }
+
+  forceMapReinitialization() {
+    this.setState((prevState) => ({
+      mapKey: prevState.mapKey + 1,
+    }));
+  }
+
+  render() {
+    const handlers = {
+      downloadData: this.downloadData,
+      onMapMoved: this.onMapMoved,
+      forceUpdate: this.forceUpdate,
+      toggleSidebar: this.toggleSidebar,
+      openAboutModal: this.openAboutModal,
+      toggleTheme: this.toggleTheme,
+      updateLengths: this.updateLengths,
+      setMapRef: this.setMapRef,
+      onTrackingUserLocationChange: (isTracking) => {
+        this.setState({ isTrackingUserLocation: isTracking });
+        this.saveStateToLocalStorage();
+      },
+      onMapStyleChange: this.onMapStyleChange,
+      onMapShowSatelliteChanged: this.onMapShowSatelliteChanged,
+      onLayersChange: this.onLayersChange,
+      onChangeStrategy: this.onChangeStrategy,
+      setDirectionsPanelRef: this.setDirectionsPanelRef,
+      setFromPoint: this.setFromPoint,
+      setToPoint: this.setToPoint,
+      clearRoutePoints: this.clearRoutePoints,
+      onDirectionsPanelToggle: this.onDirectionsPanelToggle,
+      setArea: this.setArea,
+      openLayersLegendModal: this.openLayersLegendModal,
+      closeAboutModal: this.closeAboutModal,
+      closeLayersLegendModal: this.closeLayersLegendModal,
+    };
+    return (
+      <DirectionsProvider>
+        <AppLayout
+          state={this.state}
+          handlers={handlers}
+          directionsPanelRef={this.directionsPanel}
+        />
+      </DirectionsProvider>
+    );
+  }
 }
 
 function withRouter(Component) {
-    function ComponentWithRouterProp(props) {
-      let location = useLocation();
-      let navigate = useNavigate();
-      let params = useParams();
-      return (
-        <Component
-          {...props}
-          router={{ location, navigate, params }}
-          location={location}
-        />
-      );
-    }
-  
-    return ComponentWithRouterProp;
-  }  
+  function ComponentWithRouterProp(props) {
+    let location = useLocation();
+    let navigate = useNavigate();
+    let params = useParams();
+    return <Component {...props} router={{ location, navigate, params }} location={location} />;
+  }
 
-const withRouterAndRef = Wrapped => {
-    const WithRouter = withRouter(({ forwardRef, ...otherProps }) => (
-        <Wrapped ref={forwardRef} {...otherProps} />
-    ))
-    const WithRouterAndRef = React.forwardRef((props, ref) => (
-        <WithRouter {...props} forwardRef={ref} />
-    ))
-    const name = Wrapped.displayName || Wrapped.name
-    WithRouterAndRef.displayName = `withRouterAndRef(${name})`
-    return WithRouterAndRef
+  return ComponentWithRouterProp;
 }
+
+const withRouterAndRef = (Wrapped) => {
+  const WithRouter = withRouter(({ forwardRef, ...otherProps }) => (
+    <Wrapped ref={forwardRef} {...otherProps} />
+  ));
+  const WithRouterAndRef = React.forwardRef((props, ref) => (
+    <WithRouter {...props} forwardRef={ref} />
+  ));
+  const name = Wrapped.displayName || Wrapped.name;
+  WithRouterAndRef.displayName = `withRouterAndRef(${name})`;
+  return WithRouterAndRef;
+};
 
 export default withRouterAndRef(App);

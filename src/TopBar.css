@@ -1,41 +1,46 @@
 .react-icon {
-    display: inline-block;
-    font-size: 1em;
-    height: 1em;
-    width: auto;
+  display: inline-block;
+  font-size: 1em;
+  height: 1em;
+  width: auto;
 }
 .react-icon:not(:only-child) {
-    margin-right: 4px;
+  margin-right: 4px;
 }
 
 /* Logo styling for light mode */
 .logo-svg {
-    transition: fill 0.3s ease;
+  transition: fill 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-svg {
+    transition: none;
+  }
 }
 
 .theme-dark .logo-svg {
-    color: #B6F9D1;
+  color: var(--color-logo-dark);
 }
 
 .theme-light .logo-svg {
-    color: #386641;
+  color: var(--color-logo-light);
 }
 
 @media (min-width: 1400px) {
-    .city-picker {
-        position: fixed;
-        left: 50%;
-        transform: translateX(-50%);
-    }
+  .city-picker {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
-
 
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {
-    .city-picker {
-        position: relative;
-        transform: none;
-        left: auto;
-    }
+  .city-picker {
+    position: relative;
+    transform: none;
+    left: auto;
+  }
 }
