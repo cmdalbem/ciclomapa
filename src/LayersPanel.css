@@ -1,55 +1,53 @@
-
 .ant-popover-inner {
-    overflow: hidden;
+  overflow: hidden;
 }
 
 .theme-dark #layersPanel,
 .theme-light #layersPanel {
-    transition: backdrop-filter 0.3s ease-out;
-    backdrop-filter: blur(8px) opacity(0);
+  transition: backdrop-filter 0.3s ease-out;
+  backdrop-filter: blur(8px) opacity(0);
 
-    .layer-panel-name {
-        transition: text-shadow 0.3s ease-out;
-    }
+  .layer-panel-name {
+    transition: text-shadow 0.3s ease-out;
+  }
 }
 
 #layersPanel:hover {
-    backdrop-filter: blur(8px) opacity(1);
-    
-    /* .layer-panel-name {
+  backdrop-filter: blur(8px) opacity(1);
+
+  /* .layer-panel-name {
         text-shadow: -1px -1px 0 #ececec, 1px -1px 0 #ececec, -1px 1px 0 #ececec, 1px 1px 0 #ececec;
     } */
 }
 
-
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {
-    .layers-panel {
-        left: 0;
-        font-size: 8px !important;
-        display: none;
-    }
-    
-    .layer-name {
-        font-weight: 300;
-    }
+  .layers-panel {
+    left: 0;
+    font-size: 8px !important;
+    display: none;
+  }
 
-    .layer-length {
-        display: none;
-    }
+  .layer-name {
+    font-weight: 300;
+  }
 
-    .ant-tooltip,
-    .ant-popover-inner-content,
-    .layer-row .ant-switch {
-        display: none;
-    }
+  .layer-length {
+    display: none;
+  }
 
-    .layer-miniature {
-        min-width: 12px;
-    }
+  .ant-tooltip,
+  .ant-popover-inner-content,
+  .layer-row .ant-switch {
+    display: none;
+  }
 
-    #layersPanelMobileButton {
-        background: #1c1717;
-    }
+  .layer-miniature {
+    min-width: 12px;
+  }
+
+  #layersPanelMobileButton {
+    background: #1c1717;
+  }
 }

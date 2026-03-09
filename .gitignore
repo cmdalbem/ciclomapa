@@ -8,6 +8,8 @@ yarn-debug.log*
 yarn-error.log*
 .npm/
 .vercel
+package-lock.json
+npm-shrinkwrap.json
 
 # Environment variables
 .env
@@ -17,3 +19,4 @@ yarn-error.log*
 # CicloMapa-specific
 *.geojson
 *.pmtiles
+test-results/
