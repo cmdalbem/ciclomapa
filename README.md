@@ -3,7 +3,7 @@
 
 # CicloMapa
 
-## An open platform to democratize access to bike maps of brazilian cities, combining the collaborative power of  with web technologies and easy-to-use design.
+## An open platform to democratize access to bike maps of brazilian cities, combining the collaborative power of OpenStreetMap with web technologies and easy-to-use design.
 
 Today in Brazil we face a big challenge of not having data on the cycling infrastructure available in our cities. This makes it very hard to paint a clear picture of our reality and calculate the relevant metrics to measure the opportunities and impacts to society of improving urban mobility. The most common problems are data not being standardized, making it hard to compare between localities, data not being available publicly or sometimes it not existing at all.
 
@@ -36,8 +36,17 @@ We store a mirror of the OSM data in a Firebase Database. Any user (possibly an 
 
 # Getting started
 
-> This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app), so if you're familiar with the tool you're already know all these commands.
+**Requirements:** Node 22.x (see `engines` in `package.json`).
 
+> This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app), so if you're familiar with the tool you already know all these commands.
+
+## Environment variables
+
+Create a `.env` file in the project root (or set these in your environment) for the app to work fully:
+
+- `REACT_APP_MAPBOX_ACCESS_TOKEN` — Mapbox map tiles and geocoding
+- `REACT_APP_OPENROUTESERVICE_API_KEY` — Route calculations (OpenRouteService)
+- `REACT_APP_GOOGLE_PLACES_API_KEY` — Place autocomplete in the directions panel (optional)
 
 To clone the repository and install everything:
 
@@ -64,26 +73,22 @@ yarn run deploy
 
 ## Contributing
 
-We're using [GitHub Issues](https://github.com/cmdalbem/ciclomapa/issues) for our backlog. Feel free to take a look around and chose the task you want. Use the tags at your advantage:
+We're using [GitHub Issues](https://github.com/cmdalbem/ciclomapa/issues) for our backlog. Feel free to take a look around and choose the task you want. Use the tags at your advantage:
 
 - `complexity` tags tell you how difficult a task *probably* is.
 - `good first issue` is the perfect place to start if you're new to the project, or to coding itself.
 - `help wanted` are issues where external help is currently more needed.
 
-After you've chosen your task, you have no doubts on it and you're ready to start coding, follow these steps:
+Run `yarn test` before committing to ensure you don't introduce regressions.
 
-1. Fork this repository.
-2. Create a branch: `git checkout -b <branch_name>`.
-3. Make your changes and commit them: `git commit -m '<commit_message>'`
-4. Push to the original branch: `git push origin <project_name>/<location>`
-5. Create the pull request.
 
-Alternatively see the GitHub documentation on [creating a pull request](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request).
+## Design & UI
 
+For styling conventions, design tokens, and the BEM pilot, see [docs/styling.md](docs/styling.md). The source layout is described in [docs/structure.md](docs/structure.md).
 
 ## Contact
 
-<contato@ciclomapa.org.br>
+[contato@ciclomapa.org.br](mailto:contato@ciclomapa.org.br)
 
 
 ## License

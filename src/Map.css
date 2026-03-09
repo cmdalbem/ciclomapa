@@ -1,6 +1,12 @@
 @keyframes bounceAndGlow {
-  from { opacity: 1; transform: translateY(0);}
-  to { opacity: .8; transform: translateY(-30%);}
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0.8;
+    transform: translateY(-30%);
+  }
 }
 
 .mapboxgl-canvas,
@@ -9,7 +15,6 @@
   /* Use CSS custom property for viewport height that accounts for mobile browser UI */
   height: var(--viewport-height, 100vh);
 }
-
 
 .mapbox-gl-download-btn {
   background-repeat: no-repeat;
@@ -20,7 +25,7 @@
 }
 
 body.theme-dark .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group {
-  background: #1c1717;
+  background: var(--color-bg-dark);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -58,7 +63,7 @@ body.theme-dark .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group {
 }
 
 .mapboxgl-ctrl-attrib a {
-  color: rgba(255,255,255,0.2);
+  color: rgba(255, 255, 255, 0.2);
 }
 
 .mapboxgl-ctrl-icon.mapboxgl-ctrl-zoom-in,
@@ -70,7 +75,6 @@ body.theme-dark .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group {
 .mapboxgl-ctrl-bottom-right {
   z-index: 1;
 }
-
 
 /* The Big City Selector input */
 
@@ -90,7 +94,9 @@ body.theme-dark .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group {
 }
 
 body.theme-dark .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
-  box-shadow: 0 16px 50px 0px rgba(0, 0, 0, 0.3), 0 10px 7px -8px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 16px 50px 0px rgba(0, 0, 0, 0.3),
+    0 10px 7px -8px rgba(0, 0, 0, 0.2);
   /* box-shadow: 0 16px 50px 0px rgba(250, 250, 250, 0.1), 0 10px 7px -8px rgba(250, 250, 250, 0.5); */
 }
 
@@ -121,27 +127,26 @@ body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
   /* display: none; */
   top: 15px;
   left: 12px;
-  opacity: .3;
+  opacity: 0.3;
 }
 
 .mapboxgl-ctrl-logo {
-  opacity: .2;
+  opacity: 0.2;
 }
-
 
 /* Mobile */
 
-  .mapboxgl-ctrl-group button {
-    width: 50px;
-    height: 50px;
-    border-radius: 99px;
-    padding: 8px;
-  }
+.mapboxgl-ctrl-group button {
+  width: 50px;
+  height: 50px;
+  border-radius: 99px;
+  padding: 8px;
+}
 
-  .mapboxgl-ctrl.mapboxgl-ctrl-group {
-    border-radius: 99px;
-  }
+.mapboxgl-ctrl.mapboxgl-ctrl-group {
+  border-radius: 99px;
+}
 
-  .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl {
-    margin-right: 12px;
-  }
+.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl {
+  margin-right: 12px;
+}

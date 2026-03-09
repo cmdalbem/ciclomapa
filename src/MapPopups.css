@@ -1,5 +1,5 @@
 @keyframes popupFadeIn {
-  0%   {
+  0% {
     transform: translateY(4px);
     opacity: 0;
   }
@@ -11,6 +11,12 @@
 
 .mapboxgl-popup > div {
   animation: popupFadeIn 300ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mapboxgl-popup > div {
+    animation: none;
+  }
 }
 
 .theme-light .mapboxgl-popup-tip {
@@ -88,7 +94,7 @@
   } */
 
   .popup-big .mapboxgl-popup-tip {
-      display: none;
+    display: none;
   }
 
   .popup-big .mapboxgl-popup-content {

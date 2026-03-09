@@ -1,0 +1,271 @@
+[
+  {
+    "name": "DEBUG - Inclusas",
+    "onlyDebug": true,
+    "description": "Vias inclusas no cálculo de total de kilometros da cidade.",
+    "filters": [["ciclomapa:considered", "true"]],
+    "style": {
+      "lineColor": "lightgreen",
+      "lineWidth": 12,
+      "borderColor": "green",
+      "borderStyle": "solid",
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "DEBUG - Vias sem nome",
+    "onlyDebug": true,
+    "description": "Vias sem nome são problemáticas porque nosso algoritmo de detecção de vias duplicadas necessita que a via tenha nome para sabermos que os segmentos pertencem à mesma rua e portanto precisam ser comparados entre sim.",
+    "filters": [["ciclomapa:unnamed", "true"]],
+    "style": {
+      "lineColor": "#e03e3d",
+      "lineWidth": 8
+    }
+  },
+  {
+    "name": "DEBUG - Falsos positivos",
+    "onlyDebug": true,
+    "description": "Vias originalmente detectadas como sendo duplicadas pelo nosso algoritmo porém filtradas depois por uma heurística para detectar faltos positivos.",
+    "filters": [["ciclomapa:ignored", "true"]],
+    "style": {
+      "lineColor": "lightgreen",
+      "lineWidth": 8,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "DEBUG - Lado A (azul)",
+    "onlyDebug": true,
+    "description": "Vias automaticamente detectadas como sendo duplicadas.",
+    "filters": [["ciclomapa:side", "a"]],
+    "style": {
+      "lineColor": "lightblue",
+      "lineWidth": 8,
+      "borderColor": "#0B54FE",
+      "borderStyle": "solid",
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "DEBUG - Lado B (rosa)",
+    "onlyDebug": true,
+    "description": "Vias automaticamente detectadas como sendo duplicadas.",
+    "filters": [["ciclomapa:side", "b"]],
+    "style": {
+      "lineColor": "pink",
+      "lineWidth": 8,
+      "borderColor": "#FC0FC0",
+      "borderStyle": "solid",
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Lojas & oficinas",
+    "displayName": "Lojas e oficinas",
+    "shortName": "Lojas",
+    "description": "Estabelecimentos especializadas em venda e reparo de bicicletas e acessórios.",
+    "filters": [["shop", "bicycle"]],
+    "type": "poi",
+    "icon": "poi-bikeshop",
+    "zoomThreshold": 15,
+    "style": {
+      "textColor": "#2A7BF4"
+    }
+  },
+  {
+    "name": "Estações",
+    "displayName": "Estações de bike compartilhadas",
+    "shortName": "Estações",
+    "description": "Estações de compartilhamento de bicicletas (bike sharing) de diferentes operadoras.",
+    "filters": [["amenity", "bicycle_rental"]],
+    "type": "poi",
+    "icon": "poi-rental",
+    "zoomThreshold": 15,
+    "style": {
+      "textColor": "#E56119"
+    }
+  },
+  {
+    "name": "Bicicletários & paraciclos",
+    "shortName": "Bicicletários",
+    "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos. Sempre verifique a qualidade e segurança oferecida!",
+    "filters": [["amenity", "bicycle_parking"]],
+    "type": "poi",
+    "icon": "poi-bikeparking",
+    "zoomThreshold": 16.5,
+    "style": {
+      "textColor": "#2F904A"
+    }
+  },
+  {
+    "name": "Ciclovia",
+    "displayName": "Ciclovias",
+    "description": "Vias protegidas e exclusivas para bicicletas. Ciclovias são separadas fisicamente por meio-fio, muretas ou outros tipos de segregação fixa que impedem a circulação de veículos.",
+    "protectionLevel": "Alta",
+    "filters": [
+      ["highway", "cycleway"],
+      ["cycleway", "track"],
+      ["cycleway:left", "track"],
+      ["cycleway:right", "track"],
+      ["cycleway", "opposite_track"],
+      ["cycleway:left", "opposite_track"],
+      ["cycleway:right", "opposite_track"]
+    ],
+    "zoomThreshold": 15,
+    "style": {
+      "lineColor": "#386641",
+      "lineColorDark": "#B9FAB7",
+      "textColor": "#FFFFFF",
+      "textColorDark": "#000000",
+      "lineWidth": 8
+    }
+  },
+  {
+    "name": "Calçada compartilhada",
+    "displayName": "Calçadas compartilhadas",
+    "shortName": "Calçadas",
+    "description": "Calçadas com sinalização para circulação compartilhada de bicicletas. Lembre-se que pedestres possuem a prioridade.",
+    "protectionLevel": "Alta",
+    "filters": [
+      [
+        ["highway", "footway"],
+        ["bicycle", "designated"]
+      ],
+      [
+        ["highway", "pedestrian"],
+        ["bicycle", "designated"]
+      ],
+      [
+        ["highway", "pedestrian"],
+        ["bicycle", "yes"]
+      ],
+      ["cycleway", "sidepath"],
+      ["cycleway:left", "sidepath"],
+      ["cycleway:right", "sidepath"]
+    ],
+    "style": {
+      "lineColor": "#386641",
+      "lineColorDark": "#B9FAB7",
+      "textColor": "#FFFFFF",
+      "textColorDark": "#000000",
+      "lineWidth": 8,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Ciclofaixa",
+    "displayName": "Ciclofaixas",
+    "description": "Vias exclusivas para bicicletas mas sem segregação física, apenas demarcada por faixa pintada no chão ou outra sinalização",
+    "protectionLevel": "Média",
+    "filters": [
+      ["cycleway", "lane"],
+      ["cycleway:left", "lane"],
+      ["cycleway:right", "lane"],
+      ["cycleway:both", "lane"],
+      ["cycleway", "opposite_lane"],
+      ["cycleway:right", "opposite_lane"],
+      ["cycleway:left", "opposite_lane"]
+    ],
+    "style": {
+      "lineColor": "#A7C957",
+      "lineColorDark": "#6B8A28",
+      "textColor": "#000000",
+      "textColorDark": "#FFFFFF",
+      "lineWidth": 8
+    }
+  },
+  {
+    "name": "Ciclorrota",
+    "displayName": "Ciclorrotas",
+    "description": "Ruas compartilhadas com carros com sinalização especial que indica preferência das bicicletas.",
+    "protectionLevel": "Baixa",
+    "filters": [
+      ["cycleway", "buffered_lane"],
+      ["cycleway:left", "buffered_lane"],
+      ["cycleway:right", "buffered_lane"],
+      ["cycleway", "shared_lane"],
+      ["cycleway:left", "shared_lane"],
+      ["cycleway:right", "shared_lane"],
+      ["cycleway", "share_busway"],
+      ["cycleway:left", "share_busway"],
+      ["cycleway:right", "share_busway"],
+      ["cycleway", "opposite_share_busway"]
+    ],
+    "style": {
+      "lineColor": "#A7C957",
+      "lineColorDark": "#6B8A28",
+      "textColor": "#000000",
+      "textColorDark": "#FFFFFF",
+      "lineWidth": 8,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Baixa velocidade",
+    "displayName": "Residenciais",
+    "shortName": "Residenciais",
+    "description": "Vias locais com limite de velocidade regulamentado de até 30km/h.",
+    "isActive": false,
+    "filters": [
+      ["maxspeed", "30"],
+      ["maxspeed", "20"],
+      [
+        ["highway", "living_street"],
+        ["bicycle", "yes"]
+      ]
+    ],
+    "style": {
+      "lineColor": "#4FA0AD",
+      "textColor": "#FFFFFF",
+      "lineWidth": 4,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Trilha",
+    "displayName": "Trilhas",
+    "description": "Caminhos não pavimentados com acesso permitido ou destinado a bicicleta.",
+    "isActive": false,
+    "filters": [
+      [
+        ["highway", "track"],
+        ["bicycle", "designated"]
+      ],
+      [
+        ["highway", "track"],
+        ["bicycle", "yes"]
+      ],
+      [
+        ["highway", "path"],
+        ["bicycle", "designated"]
+      ],
+      [
+        ["highway", "path"],
+        ["bicycle", "yes"]
+      ]
+    ],
+    "style": {
+      "lineColor": "#583707",
+      "lineColorDark": "#DC7C3B",
+      "textColor": "#FFFFFF",
+      "lineWidth": 2,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Proibido",
+    "displayName": "Proibidas",
+    "description": "Vias onde é proibido pedalar. Você pode descer da bicicleta e passar empurrando ela.",
+    "isActive": false,
+    "filters": [
+      ["bicycle", "no"],
+      ["bicycle", "dismount"]
+    ],
+    "style": {
+      "lineColor": "#B61815",
+      "textColor": "#FFFFFF",
+      "lineWidth": 2,
+      "lineStyle": "dashed"
+    }
+  }
+]
