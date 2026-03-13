@@ -134,7 +134,7 @@ export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAUL
  * Debug & local development
  */
 
-export const IS_PROD = window.location.hostname === 'ciclomapa.org.br';
+export const IS_PROD = window.location.hostname === 'ciclomapa.app';
 export const DEFAULT_SIDEBAR_OPEN = false;
 export const SAVE_TO_FIREBASE = true;
 export const DISABLE_DATA_HEALTY_TEST = false;
