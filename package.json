@@ -2,7 +2,7 @@
   "name": "ciclomapa",
   "version": "3.0.0",
   "private": true,
-  "homepage": "https://ciclomapa.org.br",
+  "homepage": "https://ciclomapa.app",
   "engines": {
     "node": ">=22.0.0 <23.0.0"
   },

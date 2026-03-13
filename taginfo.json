@@ -4,9 +4,9 @@
     "project": {
         "name": "CicloMapa",
         "description": "An open platform to visualize cycling infrastructure of Brazilian cities using OpenStreetMap data.",
-        "project_url": "https://ciclomapa.org.br",
+        "project_url": "https://ciclomapa.app",
         "doc_url": "https://github.com/cmdalbem/ciclomapa",
-        "icon_url": "https://ciclomapa.org.br/favicon.ico",
+        "icon_url": "https://ciclomapa.app/favicon.ico",
         "contact_name": "CicloMapa",
         "contact_email": "contato@ciclomapa.org.br"
     },
