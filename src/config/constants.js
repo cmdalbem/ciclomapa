@@ -36,9 +36,12 @@ export const AREA_ID_OVERRIDES = {
  * Layout
  */
 
-export const MOBILE_MAX_WIDTH = '430px';
+// Must match CSS media queries (DirectionsPanel, LayersPanel, TopBar, MapPopups, etc.)
+export const MOBILE_MAX_WIDTH = '480px';
 export const IS_MOBILE =
-  window.matchMedia && window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH})`).matches;
+  typeof window !== 'undefined' &&
+  window.matchMedia &&
+  window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH})`).matches;
 
 export { TOPBAR_HEIGHT, ROUTE_COLORS, MAP_COLORS } from './design-tokens.js';
 

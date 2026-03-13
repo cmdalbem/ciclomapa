@@ -16,7 +16,7 @@ import { IconContext } from 'react-icons';
 
 import { timeSince, getOsmUrl } from './utils/utils.js';
 
-import { TOPBAR_HEIGHT, IS_MOBILE } from './config/constants.js';
+import { TOPBAR_HEIGHT } from './config/constants.js';
 
 import EditModal from './EditModal.js';
 import Logo from './components/Logo';
@@ -38,6 +38,7 @@ function TopBar(props) {
     openAboutModal,
     isSidebarOpen,
     toggleSidebar,
+    isMobile = false,
   } = props;
 
   const [editModal, setEditModal] = useState(false);
@@ -114,20 +115,20 @@ function TopBar(props) {
         style={{ height: TOPBAR_HEIGHT, zIndex: 1 }}
       >
         <div className="flex items-start justify-between text-white w-full">
-          {!IS_MOBILE && (
+          {!isMobile && (
             <a href="/" className={'mt-2 ' + (embedMode ? 'opacity-25' : '')}>
               <Logo />
             </a>
           )}
 
           {!embedMode && (
-            <div className={`city-picker sm:text-center ${IS_MOBILE && 'w-full'}`}>
+            <div className={`city-picker sm:text-center ${isMobile && 'w-full'}`}>
               <div className={`flex flex-col items-center sm:mb-1`}>
-                <div className={`relative ${IS_MOBILE && 'w-full'} rounded-full overflow-hidden`}>
+                <div className={`relative ${isMobile && 'w-full'} rounded-full overflow-hidden`}>
                   <Button
                     className="glass-bg"
-                    block={IS_MOBILE}
-                    size={IS_MOBILE ? 'large' : 'middle'}
+                    block={isMobile}
+                    size={isMobile ? 'large' : 'middle'}
                     onClick={showCityPicker}
                   >
                     <h3 className="flex items-center justify-between gap-1">
@@ -149,11 +150,11 @@ function TopBar(props) {
                   )}
                 </div>
 
-                {!IS_MOBILE &&
+                {!isMobile &&
                   (!loading ? (
                     lastUpdate && (
                       <Popover
-                        trigger={IS_MOBILE ? 'click' : 'hover'}
+                        trigger={isMobile ? 'click' : 'hover'}
                         placement="bottom"
                         arrowPointAtCenter={true}
                         content={

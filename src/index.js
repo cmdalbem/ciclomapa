@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'; // Note the updated import
 import App from './App';
 import * as serviceWorker from './serviceWorker';
 import { BrowserRouter as Router } from 'react-router-dom';
+import { MobileProvider } from './contexts/MobileContext.js';
 import { getCssCustomProperties } from './config/design-tokens.js';
 
 // No-op console.debug in production to reduce noise
@@ -55,14 +56,16 @@ const shouldExposeDebugHandles =
 
 // Render the app using the new root API
 root.render(
-  <Router>
-    <App
-      ref={(app) => {
-        if (!shouldExposeDebugHandles) return;
-        window.ciclomapa = app;
-      }}
-    />
-  </Router>
+  <MobileProvider>
+    <Router>
+      <App
+        ref={(app) => {
+          if (!shouldExposeDebugHandles) return;
+          window.ciclomapa = app;
+        }}
+      />
+    </Router>
+  </MobileProvider>
 );
 
 // If you want your app to work offline and load faster, you can change

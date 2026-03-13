@@ -469,7 +469,8 @@ class Map extends Component {
   }
 
   focusFeatureOnMobile(feature) {
-    if (!IS_MOBILE || !this.map) {
+    const isMobile = this.props.isMobile ?? IS_MOBILE;
+    if (!isMobile || !this.map) {
       return;
     }
 
@@ -933,7 +934,7 @@ class Map extends Component {
             (l) => l.id === e.features[0].layer.id.split('--')[0]
           );
           self.popups.showCyclewayPopup(e, layer);
-          if (IS_MOBILE && e.features && e.features[0]) {
+          if ((this.props.isMobile ?? IS_MOBILE) && e.features && e.features[0]) {
             const bb = turfBbox(e.features[0]); // [minX, minY, maxX, maxY]
             const bounds = new mapboxgl.LngLatBounds([bb[0], bb[1]], [bb[2], bb[3]]);
             self.map.fitBounds(bounds, {
@@ -1689,9 +1690,10 @@ class Map extends Component {
       this.updateOverlappingCyclepathsFromUnifiedData(routes);
 
       if (routes.bbox) {
-        const padding = IS_MOBILE
-          ? { top: 250, bottom: 50, left: 50, right: 50 }
-          : { top: 100, bottom: 100, left: 500, right: 100 };
+        const padding =
+          (this.props.isMobile ?? IS_MOBILE)
+            ? { top: 250, bottom: 50, left: 50, right: 50 }
+            : { top: 100, bottom: 100, left: 500, right: 100 };
         map.fitBounds(routes.bbox, { padding: padding, duration: 2000 });
       }
     } else {
@@ -2421,9 +2423,9 @@ class Map extends Component {
         positionOptions: {
           enableHighAccuracy: true,
         },
-        trackUserLocation: IS_MOBILE ? true : false,
-        showUserHeading: IS_MOBILE ? true : false,
-        followUserLocation: IS_MOBILE ? true : false,
+        trackUserLocation: (this.props.isMobile ?? IS_MOBILE) ? true : false,
+        showUserHeading: (this.props.isMobile ?? IS_MOBILE) ? true : false,
+        followUserLocation: (this.props.isMobile ?? IS_MOBILE) ? true : false,
       });
 
       // Store reference to geolocate control
@@ -2446,7 +2448,7 @@ class Map extends Component {
       // Listen to tracking events to sync state for persistence
       // The control handles all button clicks and tracking logic internally
       // We just sync the state to React for localStorage persistence
-      if (IS_MOBILE && this.props.onTrackingUserLocationChange) {
+      if ((this.props.isMobile ?? IS_MOBILE) && this.props.onTrackingUserLocationChange) {
         geolocate.on('trackuserlocationstart', () => {
           console.debug('Geolocation tracking started');
           this.props.onTrackingUserLocationChange(true);
@@ -2474,7 +2476,7 @@ class Map extends Component {
       // Note: trigger() will start tracking if trackUserLocation is true
       // It may prompt for permission if not already granted
       if (
-        IS_MOBILE &&
+        (this.props.isMobile ?? IS_MOBILE) &&
         this.props.isTrackingUserLocation &&
         this.props.onTrackingUserLocationChange
       ) {

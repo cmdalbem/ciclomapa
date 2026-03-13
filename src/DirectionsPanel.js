@@ -544,7 +544,7 @@ class DirectionsPanel extends Component {
     }
 
     // On mobile, when opening the panel (collapsed -> expanded), auto-trigger geolocation
-    if (IS_MOBILE && newCollapsedState === false) {
+    if ((this.props.isMobile ?? IS_MOBILE) && newCollapsedState === false) {
       this.autoTriggerGeolocation();
     }
   }
@@ -772,7 +772,12 @@ class DirectionsPanel extends Component {
 
       // On mobile, when auto-triggered geolocation happens on first panel open,
       // check if the user's current city matches the app's current city
-      if (IS_MOBILE && isAutoTriggered && type === 'from' && this.props.area) {
+      if (
+        (this.props.isMobile ?? IS_MOBILE) &&
+        isAutoTriggered &&
+        type === 'from' &&
+        this.props.area
+      ) {
         const appCity = this.props.area.split(',')[0].trim();
         const geolocationCity = this.getCityFromResultLike(result);
 
@@ -982,7 +987,8 @@ class DirectionsPanel extends Component {
     });
 
     const routes = sortedRoutes.slice(0, HYBRID_MAX_RESULTS);
-    const showResultsOnMobile = IS_MOBILE && (directions || directionsLoading);
+    const isMobile = this.props.isMobile ?? IS_MOBILE;
+    const showResultsOnMobile = isMobile && (directions || directionsLoading);
 
     return (
       <>
@@ -1001,7 +1007,7 @@ class DirectionsPanel extends Component {
           className={`
                         cm-panel glass-bg fixed text-white cursor-pointer
                         ${
-                          IS_MOBILE
+                          isMobile
                             ? this.state.collapsed
                               ? ''
                               : 'directions-panel-open'
@@ -1035,7 +1041,7 @@ class DirectionsPanel extends Component {
                   >
                     Voltar
                   </Button>
-                  {IS_MOBILE && (
+                  {isMobile && (
                     <>
                       <RouteSortDropdown
                         currentKey={this.state.routeSortMode}
@@ -1083,7 +1089,7 @@ class DirectionsPanel extends Component {
                       />
                     )}
 
-                    {!IS_MOBILE && this.props.debugMode && (
+                    {!isMobile && this.props.debugMode && (
                       <Popover
                         content={this.renderSettingsContent()}
                         title={null}
@@ -1190,7 +1196,7 @@ class DirectionsPanel extends Component {
             {directions && !directionsLoading && (
               <div id="directionsPanel--results" className="md:mt-3">
                 <div className="flex mb-2">
-                  {!IS_MOBILE && (
+                  {!isMobile && (
                     <RouteSortDropdown
                       currentKey={this.state.routeSortMode}
                       onChange={(key) => this.handleRouteSortChange(key)}

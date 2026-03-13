@@ -13,9 +13,11 @@ import LayersPanel from './LayersPanel.js';
 import LayersBar from './LayersBar.js';
 import DirectionsPanel from './DirectionsPanel.js';
 import AnalyticsSidebar from './AnalyticsSidebar.js';
-import { IS_MOBILE, IS_PROD, ENABLE_SATELLITE_TOGGLE } from './config/constants.js';
+import { useIsMobile } from './contexts/MobileContext.js';
+import { IS_PROD, ENABLE_SATELLITE_TOGGLE } from './config/constants.js';
 
 export default function AppLayout({ state, handlers, directionsPanelRef }) {
+  const isMobile = useIsMobile();
   return (
     <div
       id="ciclomapa"
@@ -32,9 +34,10 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
 
       <div className="flex">
         <main className="relative w-full" id="main-map" aria-label="Mapa">
-          {!(IS_MOBILE && state.isDirectionsPanelOpen) && (
+          {!(isMobile && state.isDirectionsPanelOpen) && (
             <header id="topbar-wrapper" aria-label="Barra superior">
               <TopBar
+                isMobile={isMobile}
                 title={state.area}
                 lastUpdate={state.dataUpdatedAt}
                 lat={state.lat}
@@ -54,6 +57,7 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
             </header>
           )}
           <Map
+            isMobile={isMobile}
             key={state.mapKey}
             ref={(map) => {
               if (!IS_PROD && state.debugMode) {
@@ -88,10 +92,10 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
               isDarkMode={state.isDarkMode}
             />
           )}
-          {!state.embedMode && !IS_MOBILE && <div id="gradient-backdrop" />}
+          {!state.embedMode && !isMobile && <div id="gradient-backdrop" />}
         </main>
 
-        {!IS_MOBILE && !state.embedMode && state.isSidebarOpen && (
+        {!isMobile && !state.embedMode && state.isSidebarOpen && (
           <aside aria-label="Painel de análises">
             <AnalyticsSidebar
               layers={state.layers}
@@ -111,9 +115,10 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
 
       <CitySwitcherBackdrop />
 
-      {!(IS_MOBILE && state.isDirectionsPanelOpen) && (
+      {!(isMobile && state.isDirectionsPanelOpen) && (
         <nav aria-label="Camadas do mapa">
           <LayersBar
+            isMobile={isMobile}
             layers={state.layers}
             onLayersChange={handlers.onLayersChange}
             embedMode={state.embedMode}
@@ -125,6 +130,7 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
 
       <aside aria-label="Painel de camadas">
         <LayersPanel
+          isMobile={isMobile}
           layers={state.layers}
           lengths={state.lengths}
           onLayersChange={handlers.onLayersChange}
@@ -135,6 +141,7 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
 
       <aside aria-label="Painel de rotas">
         <DirectionsPanel
+          isMobile={isMobile}
           ref={handlers.setDirectionsPanelRef}
           embedMode={state.embedMode}
           map={state.map}

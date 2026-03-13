@@ -13,8 +13,6 @@ import InfrastructureBadge from './components/InfrastructureBadge';
 
 import './LayersPanel.css';
 
-import { IS_MOBILE } from './config/constants.js';
-
 import commentIcon from './img/icons/poi-comment-flat.png';
 import bikeparkingIcon from './img/icons/poi-bikeparking@2x.png';
 import bikeshopIcon from './img/icons/poi-bikeshop@2x.png';
@@ -44,7 +42,7 @@ class LayersPanel extends Component {
 
     this.state = {
       hover: false,
-      collapsed: IS_MOBILE,
+      collapsed: props.isMobile ?? false,
     };
   }
 
@@ -61,7 +59,8 @@ class LayersPanel extends Component {
   render() {
     const { layers, embedMode } = this.props;
 
-    if (!layers || (embedMode && IS_MOBILE)) {
+    const isMobile = this.props.isMobile ?? false;
+    if (!layers || (embedMode && isMobile)) {
       return null;
     }
 
@@ -87,14 +86,14 @@ class LayersPanel extends Component {
           id="layersPanel"
           className={`
                         fixed text-white p-2 rounded-xl
-                        ${IS_MOBILE && 'bg-black rounded-xl border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
-                        ${IS_MOBILE && this.state.collapsed ? 'hidden ' : ''}
+                        ${isMobile && 'bg-black rounded-xl border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
+                        ${isMobile && this.state.collapsed ? 'hidden ' : ''}
                         ${embedMode ? 'pointer-events-none ' : 'cursor-pointer '}
                     `}
           style={{
-            bottom: IS_MOBILE ? 100 : 16,
+            bottom: isMobile ? 100 : 16,
             left: 8,
-            zIndex: IS_MOBILE ? 1000 : 1,
+            zIndex: isMobile ? 1000 : 1,
           }}
           onMouseEnter={() => this.setState({ hover: true })}
           onMouseLeave={() => this.setState({ hover: false })}
@@ -171,7 +170,7 @@ class LayersPanel extends Component {
 
                   <div className="flex items-center">
                     <div
-                      className={`ml-2 transition-opacity duration-300 ${this.state.hover || IS_MOBILE ? 'opacity-100' : 'opacity-0'}`}
+                      className={`ml-2 transition-opacity duration-300 ${this.state.hover || isMobile ? 'opacity-100' : 'opacity-0'}`}
                     >
                       {l.isActive ? <IconVisible /> : <IconHidden />}
                     </div>

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { IS_MOBILE, TOPBAR_HEIGHT } from './config/constants.js';
+import { TOPBAR_HEIGHT } from './config/constants.js';
 
 import bikeparkingIcon from './img/icons/poi-bikeparking-mini.png';
 import bikeparkingIconLight from './img/icons/poi-bikeparking-mini--light.png';
@@ -247,7 +247,8 @@ class LayersBar extends Component {
   render() {
     const { layers, embedMode, isDarkMode } = this.props;
 
-    if (!IS_MOBILE || !layers || embedMode) {
+    const isMobile = this.props.isMobile ?? false;
+    if (!isMobile || !layers || embedMode) {
       return null;
     }
 
@@ -272,6 +273,7 @@ class LayersBar extends Component {
         style={{
           top: `${TOPBAR_HEIGHT - 8}px`,
           scrollbarWidth: 'none',
+          zIndex: 10,
         }}
       >
         <div className="flex justify-start space-x-1 transition-all duration-300">
