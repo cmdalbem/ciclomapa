@@ -40,7 +40,7 @@ class EditModal extends Component {
                     </p>
 
                     <p>
-                        Sua interface de edição pode parecer intimidadora na primeira vez, mas para te ajudar preparamos uma <a className="underline" href="https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/" title="CicloMapa | UCB - União de Ciclistas do Brasil" target="_blank" rel="noopener noreferrer">série de tutoriais</a>. Se mesmo assim tiver dúvidas <a className="underline" href="mailto:contato@ciclomapa.app">entre em contato</a> com a nossa equipe.
+                        Sua interface de edição pode parecer intimidadora na primeira vez, mas para te ajudar preparamos uma <a className="underline" href="https://www.uniaodeciclistas.org.br/atuacao/ciclomapa/" title="CicloMapa | UCB - União de Ciclistas do Brasil" target="_blank" rel="noopener noreferrer">série de tutoriais</a>. Se mesmo assim tiver dúvidas <a className="underline" href="mailto:contato@ciclomapa.org.br">entre em contato</a> com a nossa equipe.
                     </p>
 
                     <p className="mb-8">

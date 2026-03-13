@@ -83,7 +83,7 @@ Alternatively see the GitHub documentation on [creating a pull request](https://
 
 ## Contact
 
-<contato@ciclomapa.app>
+<contato@ciclomapa.org.br>
 
 
 ## License
