@@ -33,9 +33,7 @@ async function generateWithSharp() {
     const padding = maskable ? Math.round(size * 0.1) : 0;
     const innerSize = size - padding * 2;
 
-    const resizedLogo = await sharp(logoBuffer)
-      .resize(innerSize, innerSize)
-      .toBuffer();
+    const resizedLogo = await sharp(logoBuffer).resize(innerSize, innerSize).toBuffer();
 
     const bgSvg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${BACKGROUND_COLOR}"/></svg>`;
     const outputPath = path.join(PUBLIC_DIR, name);
