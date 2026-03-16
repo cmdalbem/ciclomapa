@@ -7,6 +7,13 @@ if (typeof global.TextDecoder === 'undefined') {
   global.TextEncoder = TextEncoder;
 }
 
+// Polyfill for mapbox-gl (and other deps) in jsdom
+if (typeof global.TextDecoder === 'undefined') {
+  const { TextDecoder, TextEncoder } = require('util');
+  global.TextDecoder = TextDecoder;
+  global.TextEncoder = TextEncoder;
+}
+
 // JSDOM does not implement IntersectionObserver (used by LayersLegendModal and others in tests)
 if (typeof global.IntersectionObserver === 'undefined') {
   global.IntersectionObserver = class IntersectionObserver {
