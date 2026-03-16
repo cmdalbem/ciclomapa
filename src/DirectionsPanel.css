@@ -1,5 +1,5 @@
 /* BEM pilot: .cm-panel block (see docs/styling.md). Theme via CSS variables below. */
-#directionsPanel.cm-panel {
+#directionsPanel {
   border-radius: var(--radius-md);
   position: absolute;
   top: var(--spacing-topbar-height);
