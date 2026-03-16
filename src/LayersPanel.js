@@ -5,11 +5,10 @@ import {
     HiEye as IconVisible,
     HiEyeOff as IconHidden,
 } from "react-icons/hi";
-import {
-    BsLayersFill as IconLayers,
-} from "react-icons/bs";
+import { MdSignalCellularAlt2Bar as IconSignal2, MdSignalCellularAlt as IconSignal3, MdSignalCellularAlt1Bar as IconSignal1 } from "react-icons/md";
 
 import { slugify } from './utils.js'
+import InfrastructureBadge from './InfrastructureBadge.js';
 
 import './LayersPanel.css';
 
@@ -18,9 +17,18 @@ import {
 } from './constants.js'
 
 import commentIcon from './img/icons/poi-comment-flat.png';
-import bikeparkingIcon from './img/icons/poi-bikeparking.png';
-import bikeshopIcon from './img/icons/poi-bikeshop.png';
-import bikerentalIcon from './img/icons/poi-bikerental.png';
+import bikeparkingIcon from './img/icons/poi-bikeparking@2x.png';
+import bikeshopIcon from './img/icons/poi-bikeshop@2x.png';
+import bikerentalIcon from './img/icons/poi-bikerental@2x.png';
+
+const getInfrastructureFromLayerName = (layerName) => {
+    const name = layerName.toLowerCase();
+    if (name.includes('ciclovia')) return 'ciclovia';
+    if (name.includes('calçada')) return 'calçada';
+    if (name.includes('ciclofaixa')) return 'ciclofaixa';
+    if (name.includes('ciclorrota')) return 'ciclorrota';
+    return null;
+};
 
 const iconsMap = {
     "poi-comment": commentIcon,
@@ -34,7 +42,7 @@ class LayersPanel extends Component {
     constructor(props) {
         super(props);
 
-        this.toggleCollapse = this.toggleCollapse.bind(this);
+        this.toggleMobileCollapse = this.toggleMobileCollapse.bind(this);
         
         this.state = {
             hover: false,
@@ -46,7 +54,7 @@ class LayersPanel extends Component {
         this.props.onLayersChange(id, newVal)
     }
 
-    toggleCollapse() {
+    toggleMobileCollapse() {
         this.setState({
             collapsed: !this.state.collapsed
         });
@@ -61,35 +69,34 @@ class LayersPanel extends Component {
 
         return (
             <>
-                {
+                {/* {
                     IS_MOBILE &&
                         <div
                             id="layersPanelMobileButton"
                             className={`
-                                p-4 border border-white border-opacity-20 rounded text-lg fixed
-                                ${this.state.collapsed ? 'text-gray-300' : 'text-gray-900 bg-gray-100'}`}
-                            onClick={this.toggleCollapse}
+                                p-4 border border-white border-opacity-20 rounded-full text-lg fixed
+                                ${this.state.collapsed ? 'collapsed' : 'expanded'}`}
+                            onClick={this.toggleMobileCollapse}
                             style={{
                                 bottom: 30,
                                 left: 8,
-                                background: this.state.collapsed ? '#1c1717' : ''
                             }}
                         >
                             <IconLayers/>
                         </div>
-                }
+                } */}
                 <div
                     id="layersPanel"
                     className={`
-                        fixed text-white 
-                        ${IS_MOBILE && 'rounded border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
+                        fixed text-white p-2 rounded-xl
+                        ${IS_MOBILE && 'bg-black rounded-xl border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
                         ${IS_MOBILE && this.state.collapsed ? 'hidden ' : ''}
                         ${embedMode ? 'pointer-events-none ' : 'cursor-pointer '}
                     `}
                     style={{
-                        bottom: IS_MOBILE ? 100 : 30,
+                        bottom: IS_MOBILE ? 100 : 16,
                         left: 8,
-                        background: IS_MOBILE && '#1c1717'
+                        zIndex: IS_MOBILE ? 1000 : 1
                     }}
                     onMouseEnter={() => this.setState({hover: true})}
                     onMouseLeave={() => this.setState({hover: false})}
@@ -100,30 +107,44 @@ class LayersPanel extends Component {
                         .map(l =>
                             <Popover
                                 placement="left"
-                                arrowPointAtCenter={true} key={l.name}
+                                key={l.name}
                                 content={(
                                     <div style={{width: 320}}>
-                                        <h3 className="text-lg">
-                                            { l.name }
-                                        </h3>
-
                                         {
                                             l.type === 'way' &&
-                                            <img
-                                                className="w-full mb-2" alt=""
-                                                src={'/' + slugify(l.name) + '.png'}/>
+                                                <img
+                                                    className="mb-3 -m-4" alt=""
+                                                    style={{ width: '352px', maxWidth: 'none' }}
+                                                    src={'/' + slugify(l.name) + '.png'}/>
                                         }
+
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="text-2xl mb-0 tracking-tight">
+                                                { l.displayName || l.name }
+                                            </h3>
+                                            { l.protectionLevel && l.style && (
+                                                <InfrastructureBadge 
+                                                    infrastructure={getInfrastructureFromLayerName(l.name)}
+                                                    isDarkMode={this.props.isDarkMode}
+                                                >
+                                                    {l.protectionLevel === 'Alta' && <IconSignal3/>}
+                                                    {l.protectionLevel === 'Média' && <IconSignal2/>}
+                                                    {l.protectionLevel === 'Baixa' && <IconSignal1/>}
+                                                    {l.protectionLevel} proteção
+                                                </InfrastructureBadge>
+                                            )}
+                                        </div>
                                         
                                         { l.description }
                                     </div>
                                 )}
                             >
                                 <div
-                                    className="flex items-center justify-between px-4 py-2 sm:py-1 sm:px-3 hover:bg-black hover:bg-opacity-50"
+                                    className="flex rounded-md items-center justify-between px-2 py-1 hover:bg-black hover:bg-opacity-70"
                                     onClick={this.onChange.bind(this, l.id, !l.isActive)}
                                     style={{ opacity: l.isActive ? 1 : .5 }}
                                 >
-                                    <div className="flex items-center">
+                                    <div className="layer-panel-name flex items-center">
                                         <span className="w-6 mr-2 inline-block flex justify-center">
                                         {
                                             l.type === 'way' ?
@@ -147,7 +168,7 @@ class LayersPanel extends Component {
                                         </span>
 
                                         <span className={`font-semibold ${embedMode ? 'text-xs' : ''}`}>
-                                            {l.name} 
+                                            {l.displayName || l.name} 
                                         </span>
 
                                     </div>

@@ -1,9 +1,24 @@
 .react-icon {
     display: inline-block;
-    margin-right: 4px;
     font-size: 1em;
     height: 1em;
     width: auto;
+}
+.react-icon:not(:only-child) {
+    margin-right: 4px;
+}
+
+/* Logo styling for light mode */
+.logo-svg {
+    transition: fill 0.3s ease;
+}
+
+.theme-dark .logo-svg {
+    color: #B6F9D1;
+}
+
+.theme-light .logo-svg {
+    color: #386641;
 }
 
 @media (min-width: 1400px) {

@@ -6,12 +6,14 @@ import {
     Button
 } from 'antd';
 
+import { getOsmUrl } from './utils.js';
+
 class EditModal extends Component {
     render() {
         return (
             <Modal
                 title="Editar no OSM"
-                visible={this.props.visible}
+                open={this.props.open}
                 onCancel={this.props.onClose}
                 showCancel={false}
                 footer={[
@@ -28,7 +30,7 @@ class EditModal extends Component {
                         <a
                             className="hover:text-white"
                             target="_BLANK" rel="noopener noreferrer"
-                            href={this.props.getOsmUrl()}
+                            href={getOsmUrl(this.props.lat, this.props.lng, this.props.z)}
                         >
                             Ir para OSM
                         </a>
@@ -37,7 +39,7 @@ class EditModal extends Component {
                 centered={true}
                 maskClosable={true}
             >
-                <div>
+                <div className="text-white">
                     <p>
                         Obrigado por contribuir para melhorar os mapas cicloviários das cidades brasileiras!
                     </p>

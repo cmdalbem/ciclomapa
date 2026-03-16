@@ -9,10 +9,37 @@ import {
     DEFAULT_BORDER_WIDTH,
     OVERPASS_SERVERS,
     AREA_ID_OVERRIDES,
+    BLACKLISTED_CITIES_FOR_EXTRA_LAYERS,
 } from './constants.js'
 import { slugify } from './utils.js'
 
 import * as layersDefinitions from './layers.json';
+
+// Helper function to parse area name into city, state, country components
+function parseAreaName(areaName) {
+    // Split by comma and clean up whitespace
+    const parts = areaName.split(',').map(part => part.trim());
+    
+    if (parts.length >= 3) {
+        return {
+            city: parts[0],
+            state: parts[1],
+            country: parts[2]
+        };
+    } else if (parts.length === 2) {
+        return {
+            city: parts[0],
+            state: parts[1],
+            country: parts[1] // Use state as country if no country specified
+        };
+    } else {
+        return {
+            city: parts[0],
+            state: parts[0], // Use city as state if only one part
+            country: parts[0] // Use city as country if only one part
+        };
+    }
+}
 
 class OSMController {
     // getQuery() converts our CicloMapa layers filter syntax to the OSM Overpass query syntax
@@ -33,7 +60,18 @@ class OSMController {
     static getQuery(constraints) {
         const bbox = constraints.bbox;
         const areaId = constraints.areaId;
-        const filteredLayers = layersDefinitions.default.filter(l => l.filters);
+        const areaName = constraints.areaName;
+        
+        const isBlacklisted = areaId && BLACKLISTED_CITIES_FOR_EXTRA_LAYERS.includes(areaId);
+        const extraLayersToExclude = ['Baixa velocidade', 'Trilha', 'Proibido'];
+        
+        const filteredLayers = layersDefinitions.default.filter(l => {
+            if (!l.filters) return false;
+            if (isBlacklisted && extraLayersToExclude.includes(l.name)) {
+                return false;
+            }
+            return true;
+        });
 
         const body = filteredLayers.map(l =>
             (l.type === 'poi' ? ['node', 'way'] : ['way']).map( element =>
@@ -53,9 +91,35 @@ class OSMController {
             ).join("")
         ).join("");
 
+        const boundaryQuery = areaName ? (() => {
+            const { city, state, country } = parseAreaName(areaName);
+            return `
+                (
+                    rel
+                    ["boundary"="administrative"]
+                    ["admin_level"~"^(6|7|8|9|10)$"]
+                    ["name"="${city}"]
+                    ["is_in:state"="${state}"]
+                    ["is_in:country"="${country}"];
+                    rel
+                    ["boundary"="administrative"]
+                    ["admin_level"~"^(6|7|8|9|10)$"]
+                    ["name"="${city}"]
+                    ["is_in:country"="${country}"];
+                    rel
+                    ["boundary"="administrative"]
+                    ["admin_level"~"^(6|7|8|9|10)$"]
+                    ["name"="${city}"];
+                );
+                map_to_area ->.cityArea;
+                out geom;
+            `;
+        })() : '';
+
         return `
             [out:json][timeout:500];
             ${!bbox && `area(${areaId})->.a;`}
+            ${boundaryQuery}
             (
                 ${body}
             );
@@ -63,8 +127,11 @@ class OSMController {
         `;
     }
 
-    static getLayers(debugMode) {
-        let layers = layersDefinitions.default;
+    static getLayers(isDarkMode, isDebugMode) {
+        let layers = layersDefinitions.default.map(layer => ({
+            ...layer,
+            style: layer.style ? { ...layer.style } : undefined,
+        }));
         
         layers.forEach(l => {
             // Generate an ID based on name
@@ -74,16 +141,21 @@ class OSMController {
             l.isActive = l.isActive !== undefined ? l.isActive : true;
             l.type = l.type || 'way';
             if (l.style) {
+                if (isDarkMode) {
+                    l.style.lineColor = l.style.lineColorDark ? l.style.lineColorDark : l.style.lineColor;
+                    l.style.textColor = l.style.textColorDark ? l.style.textColorDark : l.style.textColor;
+                }
+ 
                 l.style.lineStyle = l.style.lineStyle || 'solid';
 
-                if (l.style.borderColor) {
+                if (l.style.borderColor) { 
                     l.style.borderStyle = l.style.borderStyle || 'solid';
                     l.style.borderWidth = l.style.borderWidth || DEFAULT_BORDER_WIDTH;
                 }
             }
         });
 
-        if (!debugMode) {
+        if (!isDebugMode) {
             layers = layers.filter(l => !l.onlyDebug || l.onlyDebug && l.onlyDebug === false);
         }
 
@@ -121,7 +193,7 @@ class OSMController {
                             
                             resolve(areaId);
                         } else {
-                            reject();
+                            reject(new Error('Area not found'));
                         }
                         
                     })
@@ -132,19 +204,30 @@ class OSMController {
                             description: 'Ops, erro na API do Nominatim. Abra o console para ver mais detalhes.',
                         });
     
-                        reject();
+                        reject(e);
                     });
             }
         });
     }
 
     static getData(constraints) {
-        return new Promise((resolve, reject) => {
+        let abortController = new AbortController();
+        let isAborted = false;
+        
+        const promise = new Promise((resolve, reject) => {
             let geoJson;
             
             this.getAreaId(constraints.area)
                 .then(areaId => {
-                    const query = OSMController.getQuery({areaId});
+                    if (isAborted) {
+                        reject(new Error('Request aborted'));
+                        return;
+                    }
+                    
+                    const query = OSMController.getQuery({
+                        areaId,
+                        areaName: constraints.area
+                    });
                     console.debug('generated query: ', query);
         
                     const encodedQuery = encodeURI(query);
@@ -158,6 +241,10 @@ class OSMController {
                         requests[i] = $.getJSON(
                             endpoint,
                             data => {
+                                if (isAborted) {
+                                    return;
+                                }
+                                
                                 if (data.elements.length > 0) {
                                     console.debug(`[SERVER #${i}] Success!`);
                                     for (let r = 0; r < requests.length; r++) {
@@ -168,7 +255,10 @@ class OSMController {
                                     }
         
                                     console.debug('osm data: ', data);
-                                    geoJson = osmtogeojson(data, { flatProperties: true });
+                                    
+                                    // Convert all data to GeoJSON without filtering
+                                    geoJson = osmtogeojson({ elements: data.elements }, { flatProperties: true });
+                                    
                                     console.debug('converted to geoJSON: ', geoJson);
                                     
                                     resolve({
@@ -188,21 +278,34 @@ class OSMController {
                                     }
                                     if (isLastRemainingRequest) {
                                         console.debug(`[SERVER #${i}] I was the last one, so probably the result is empty.`);
-                                        resolve({ geoJson: null });
+                                        resolve({ 
+                                            geoJson: null
+                                        });
                                     }
                                 }
                             }).fail(e => {
-                                if (e.statusText !== 'abort') {
+                                if (e.statusText !== 'abort' && !isAborted) {
                                     console.error(`[SERVER #${i}] Error:`, e);
                                 }
                             });
                     }
                 })
                 .catch(e => {
-                    console.error(e);
-                    reject();
+                    if (!isAborted) {
+                        console.error(e);
+                        reject(e);
+                    }
                 });
         });
+        
+        // Add abort method to the promise
+        promise.abort = () => {
+            console.debug('OSM request aborted');
+            isAborted = true;
+            abortController.abort();
+        };
+        
+        return promise;
     }
 }
 

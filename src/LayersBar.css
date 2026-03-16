@@ -1,0 +1,55 @@
+@keyframes emergeFromPill {
+    from {
+        opacity: 0.8;
+        filter: blur(2px);
+        transform: translateX(-12px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        filter: blur(0);
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes categoryCollapse {
+    from {
+        filter: blur(2px);
+        opacity: 0.8;
+        padding-left: 32px;
+        padding-right: 64px;
+    }
+    to {
+        filter: blur(0);
+        opacity: 1;
+        padding-right: 12px;
+    }
+}
+
+@keyframes categoryExpand {
+    from {
+        filter: blur(0);
+        opacity: 1;
+    }
+    to {
+        filter: blur(2px);
+        opacity: 0.8;
+        padding-left: 32px;
+        padding-right: 64px;
+    }
+}
+
+.animate-slide-in {
+    opacity: 0;
+    transform-origin: left center;
+    animation: emergeFromPill 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-category-collapse {
+    opacity: 0;
+    animation: categoryCollapse 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-category-expand {
+    animation: categoryExpand 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+

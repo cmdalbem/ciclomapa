@@ -1,0 +1,55 @@
+[out:json][timeout:500];     
+{{geocodeArea:Spain}}->.a;
+(
+    node["shop"="bicycle"](area.a);
+    way["shop"="bicycle"](area.a);
+    node["amenity"="bicycle_rental"](area.a);
+    way["amenity"="bicycle_rental"](area.a);
+    node["amenity"="bicycle_parking"](area.a);
+    way["amenity"="bicycle_parking"](area.a);
+    way["highway"="cycleway"](area.a);
+    
+    way["cycleway"="track"](area.a);
+    way["cycleway:left"="track"](area.a);
+    way["cycleway:right"="track"](area.a);
+    way["cycleway"="opposite_track"](area.a);
+    way["cycleway:left"="opposite_track"](area.a);
+    way["cycleway:right"="opposite_track"](area.a);
+    way["cycleway"="lane"](area.a);
+    way["cycleway:left"="lane"](area.a);
+    way["cycleway:right"="lane"](area.a);
+    way["cycleway:both"="lane"](area.a);
+    way["cycleway"="opposite_lane"](area.a);
+    way["cycleway:right"="opposite_lane"](area.a);
+    way["cycleway:left"="opposite_lane"](area.a);
+    way["highway"="footway"]["bicycle"="designated"](area.a);
+    way["highway"="pedestrian"]["bicycle"="designated"](area.a);
+    way["highway"="pedestrian"]["bicycle"="yes"](area.a);
+    way["cycleway"="sidepath"](area.a);
+    way["cycleway:left"="sidepath"](area.a);
+    way["cycleway:right"="sidepath"](area.a);
+    way["cycleway"="buffered_lane"](area.a);
+    way["cycleway:left"="buffered_lane"](area.a);
+    way["cycleway:right"="buffered_lane"](area.a);
+    way["cycleway"="shared_lane"](area.a);
+    way["cycleway:left"="shared_lane"](area.a);
+    way["cycleway:right"="shared_lane"](area.a);
+    way["cycleway"="share_busway"](area.a);
+    way["cycleway:left"="share_busway"](area.a);
+    way["cycleway:right"="share_busway"](area.a);
+    way["cycleway"="opposite_share_busway"](area.a);
+
+    way["maxspeed"="30"](area.a);
+    way["maxspeed"="20"](area.a);
+
+    way["highway"="living_street"]["bicycle"="yes"](area.a);
+    way["highway"="track"]["bicycle"="designated"](area.a);
+    way["highway"="track"]["bicycle"="yes"](area.a);
+    way["highway"="path"]["bicycle"="designated"](area.a);
+    way["highway"="path"]["bicycle"="yes"](area.a);
+
+    way["bicycle"="no"](area.a);
+    way["bicycle"="dismount"](area.a);
+
+);
+out body geom;

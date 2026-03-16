@@ -1,18 +1,21 @@
 import React, { Component } from 'react';
 import { Popover, Button } from 'antd';
 
+import './AnalyticsSidebar.css';
+
 import { PieChart, Pie } from 'recharts';
 
 import { 
     HiX as IconClose,
-    HiInformationCircle as IconInfo
+    HiInformationCircle as IconInfo,
+    HiDownload as IconDownload
 } from "react-icons/hi";
 
 import {
     MdDataUsage as IconAnalytics,
 } from "react-icons/md";
 
-import { removeAccents } from './utils.js';
+
 import AirtableDatabase from './AirtableDatabase.js'
 
 import {
@@ -38,16 +41,17 @@ class AnalyticsSidebar extends Component {
     }
 
     async loadMetadata() {
+        const allMetadata = await this.airtableDatabase.getMetadata();
         this.setState({
-            allMetadata: await this.airtableDatabase.getMetadata()
+            allMetadata: allMetadata
+        }, () => {
+            this.updateLocation();
         });
-
-        this.updateLocation();
     }
 
     updateLocation() {
         let search;
-        if (this.state.allMetadata && this.state.allMetadata.length > 0) {
+        if (this.state.allMetadata && this.state.allMetadata.length > 0 && this.props.location) {
             search = this.state.allMetadata.find(
                 v => this.props.location
                     .toLowerCase()
@@ -62,6 +66,22 @@ class AnalyticsSidebar extends Component {
                 cityMetadata: search && search.fields
             });
         }
+    }
+
+    generatePatterns(layers) {
+        return layers
+            .filter(l => l.style && l.style.lineStyle === 'dashed')
+            .map(l => (
+                <pattern 
+                    key={`pattern-${l.id}`}
+                    id={`pattern-${l.id}`} 
+                    width="4" 
+                    height="4" 
+                    patternUnits="userSpaceOnUse" 
+                >
+                    <circle cx="2" cy="2" r="1.5" fill={l.style.lineColor} />
+                </pattern>
+            ));
     }
 
     updateData() {
@@ -79,10 +99,16 @@ class AnalyticsSidebar extends Component {
                         l.id === 'ciclofaixa' ||
                         l.id === 'ciclorrota' ||
                         l.id === 'calcada-compartilhada')
+                    .filter(l => lengths && Math.floor(lengths[l.id]) > 0)
+                    .sort((a, b) => {
+                        const lenA = lengths && lengths[a.id] ? lengths[a.id] : 0;
+                        const lenB = lengths && lengths[b.id] ? lengths[b.id] : 0;
+                        return lenB - lenA; // Sort descending by length
+                    })
                     .map(l => lengths && 
                         {
                             value: lengths[l.id],
-                            fill: l.style.lineColor
+                            fill: l.style.lineStyle === 'solid' ? l.style.lineColor : `url(#pattern-${l.id})`,
                         }
                     )
             });
@@ -101,7 +127,7 @@ class AnalyticsSidebar extends Component {
     }
 
     render() {
-        const { lengths, layers } = this.props;
+        const { lengths, layers, isDarkMode } = this.props;
         
         if (!layers) {
             return;
@@ -133,16 +159,15 @@ class AnalyticsSidebar extends Component {
             <div
                 id="analyticsSidebar"
                 className={`
-                    background-black border-l border-opacity-10 border-white h-screen ${this.state.open ? 'w-60 overflow-y-auto flex-none' : ''}
+                    border-l border-opacity-10 border-white h-screen ${this.state.open ? 'w-60 overflow-y-auto flex-none' : ''}
                     transform transition-transform duration-500 ${this.state.open ? '' : 'translate-x-full'}`}
-                style={{background: '#211F1C'}}
             >
                 <div className="px-4">
                     <div className="flex w-full justify-between items-center pt-2 mt-1">
                         <div className="flex items-center">
-                            <IconAnalytics/>
+                            <IconAnalytics className="mr-1" />
 
-                            <h2 className="my-0 pl-1">
+                            <h2 className="my-0">
                                 Métricas
                             </h2>
                         </div>
@@ -154,6 +179,18 @@ class AnalyticsSidebar extends Component {
                             <IconClose/>
                         </div>
                     </div>
+
+                    {
+                        this.props.location &&
+                        <>
+                            <div className="mt-3 text-3xl tracking-tighter leading-none">
+                                {this.props.location.split(',')[0]}
+                            </div>
+                            <div className="mb-2 mt-0 text-xl tracking-tight opacity-50">
+                                {this.props.location.split(',')[1] && `${this.props.location.split(',')[1]}`}
+                            </div>
+                        </>
+                    }
 
                     {
                         this.state.cityMetadata && this.state.cityMetadata.pnb_total!==undefined &&
@@ -210,7 +247,6 @@ class AnalyticsSidebar extends Component {
 
                     <Section
                         title="Vias"
-                        beta={true}
                         description={<>
                             <p>
                                 As extensões totais das vias são calculadas automaticamente com base nos dados do OpenStreetMap. 
@@ -219,7 +255,7 @@ class AnalyticsSidebar extends Component {
                                 Para vias que tem estrutura dos dois lados nós desenvolvemos um método que automaticamente detecta estes casos e remove esta contagem dupla do total.
                             </p>
                             <p className="italic opacity-50 text-xs">
-                                Estes números podem não corresponder à realidade. Eles não são dados oficiais e dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap e da precisão do nosso método de detecção automática de contagens duplas.
+                                Estes números não são dados oficiais e podem não corresponder à realidade. Eles dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap.
                             </p>
                         </>}
                     >
@@ -230,28 +266,37 @@ class AnalyticsSidebar extends Component {
 
                         <div className="relative">
                             <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
+                                <defs>
+                                    {this.generatePatterns(layers)}
+                                </defs>
                                 <Pie
-                                    data={this.state.chartsData} dataKey="value"
+                                    data={this.state.chartsData && this.state.totalLength && this.state.totalLength > 0
+                                        ? this.state.chartsData 
+                                        : [{ value: 1, fill: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }]} 
+                                    dataKey="value"
                                     cx={'50%'} cy={'50%'}
                                     innerRadius={90} outerRadius={100}
-                                    paddingAngle={4} strokeWidth={0}
+                                    paddingAngle={this.state.chartsData && this.state.totalLength && this.state.totalLength > 0 ? 4 : 0} strokeWidth={0}
                                     startAngle={90} endAngle={-2700}
                                 />
                             </PieChart>
 
-                            {
-                                this.state.totalLength && this.state.totalLength >= 0 &&
-                                <div
-                                    className="absolute top-0 w-full flex flex-col items-center justify-center text-xs"
-                                    style={{height: PIE_CHART_WIDTH_PX+'px'}}
-                                >
-                                    TOTAL
-                                    <div className="text-4xl font-regular tracking-tighter">
-                                        { this.state.totalLength.toFixed(1)}
-                                    </div> 
-                                    km
-                                </div>
-                            }
+                            <div
+                                className="absolute top-0 w-full flex flex-col items-center justify-center text-xs"
+                                style={{height: PIE_CHART_WIDTH_PX+'px'}}
+                            >
+                                {this.state.totalLength && this.state.totalLength >= 0 ? (
+                                    <>
+                                        TOTAL
+                                        <div className="text-4xl font-regular tracking-tighter">
+                                            { this.state.totalLength.toFixed(1) }
+                                        </div>
+                                        km
+                                    </>
+                                ) : (
+                                    <span className="opacity-50">Sem dados</span>
+                                )}
+                            </div>
                         </div>
                         
                         <div className="mt-2">
@@ -262,13 +307,19 @@ class AnalyticsSidebar extends Component {
                                         l.id === 'ciclofaixa' ||
                                         l.id === 'ciclorrota' ||
                                         l.id === 'calcada-compartilhada')
+                                    .sort((a, b) => {
+                                        const lenA = lengths && lengths[a.id] ? lengths[a.id] : 0;
+                                        const lenB = lengths && lengths[b.id] ? lengths[b.id] : 0;
+                                        return lenB - lenA; // Sort descending by length
+                                    })
                                     .map(l => 
                                         <DataLineWithBarChart
-                                            name={l.name}
+                                            name={l.shortName || l.displayName}
                                             key={l.name}
                                             length={lengths && lengths[l.id]}
-                                            percent={lengths && lengths[l.id] * 100 / this.state.totalLength}
-                                            color={l.style.lineColor}
+                                            percent={lengths && Math.floor(lengths[l.id] * 100 / this.state.totalLength) || 0}
+                                            lineStyle={l.style.lineStyle}
+                                            lineColor={l.style.lineColor}
                                             unit="km"
                                         />
                                     )
@@ -279,11 +330,8 @@ class AnalyticsSidebar extends Component {
                     <Section
                         title="Pontos de interesse"
                         description={<>
-                            <p>
-                                Contagem total dos pontos de interesse do ciclista de cada um dos tipos com que o CicloMapa trabalha.
-                            </p>
                             <p className="italic opacity-50 text-xs">
-                                Estes números podem não corresponder à realidade. Eles não são dados oficiais e dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap.
+                                Estes números não são dados oficiais e podem não corresponder à realidade. Eles dependem do estado atual do mapeamento da infraestrutura da cidade no OpenStreetMap.
                             </p>
                         </>}
                     >
@@ -299,6 +347,26 @@ class AnalyticsSidebar extends Component {
                                 )
                         }
                     </Section>
+
+                    {
+                        this.props.downloadData &&
+                        <Section
+                            title="Dados"
+                            description={<>
+                                <p>
+                                    Baixe os dados da infraestrutura cicloviária desta cidade em formato GeoJSON para uso em seus próprios projetos e análises.
+                                </p>
+                            </>}
+                        >
+                            <Button 
+                                className="glass-bg" 
+                                onClick={this.props.downloadData}
+                                block
+                            >
+                                <IconDownload className="inline-block mr-1" /> Baixar dados
+                            </Button>
+                        </Section>
+                    }
                 </div>
 
             </div>
@@ -307,7 +375,7 @@ class AnalyticsSidebar extends Component {
 }
 
 const BigNum = ({children}) =>
-    <div className="text-5xl font-regular tracking-tighter -mt-2 mb-1">
+    <div className="text-2xl font-regular tracking-tighter -mt-2 mb-1">
         { children }
     </div>
 
@@ -315,15 +383,19 @@ const DataLineWithBarChart = (props) =>
     <div className="mb-2"> 
         <DataLine {...props}/>
 
-        <div className="w-full h-1 relative bg-white bg-opacity-10 mt-1">
-            <div 
-                className="h-1"
-                style={{ 
-                    transition: 'width 1500ms ease',
-                    background: props.color,
-                    width: (props.percent || 0) + '%'
-                }}> 
-            </div>
+        <div className="w-full h-1 relative bg-white bg-opacity-10 mt-1 rounded-full">
+            { props.percent > 0 &&
+                <div 
+                    className="h-1 rounded-full"
+                    style={{ 
+                        transition: 'width 1500ms ease',
+                        background: props.lineStyle === 'solid' 
+                            ? props.lineColor
+                            : `repeating-linear-gradient(90deg, ${props.lineColor}, ${props.lineColor} 4px, transparent 4px, transparent 6px)`,
+                        width: (props.percent || 0) + '%'
+                    }}> 
+                </div>
+            }
         </div>
     </div>
 
@@ -333,10 +405,15 @@ const DataLine = (props) =>
             { props.name } 
         </span>
 
-        <span>
-            { props.length !== undefined && Math.round(props.length) }
-            { props.length !== undefined && props.unit && ' ' + props.unit }
-        </span>
+        <div className="flex items-center gap-2">
+            <span className="opacity-50">
+                { props.percent !== undefined && props.percent + '%' }
+            </span>
+            <span>
+                { props.length !== undefined && Math.round(props.length) }
+                { props.length !== undefined && props.unit }
+            </span>
+        </div>
     </div>
 
 const Section = (props) =>
@@ -377,7 +454,7 @@ const Section = (props) =>
 
                             {
                                 props.link &&
-                                <Button ghost target="_BLANK" href={props.link}>
+                                <Button className='glass-bg' target="_BLANK" href={props.link}>
                                     Saiba mais
                                 </Button> 
                             }
