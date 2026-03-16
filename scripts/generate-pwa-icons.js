@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-const LOGO_PATH = path.join(PUBLIC_DIR, 'logo.svg');
+const LOGO_PATH = path.join(PUBLIC_DIR, 'icon.png');
 
 // Brand colors from logo.svg
 const BACKGROUND_COLOR = '#1a1a1a';
@@ -32,12 +32,9 @@ async function generateWithSharp() {
   for (const { name, size, maskable } of sizes) {
     const padding = maskable ? Math.round(size * 0.1) : 0;
     const innerSize = size - padding * 2;
-    // Logo aspect ratio ~105:18, fit by width
-    const logoWidth = innerSize;
-    const logoHeight = Math.round(innerSize * (18 / 105));
 
     const resizedLogo = await sharp(logoBuffer)
-      .resize(logoWidth, logoHeight)
+      .resize(innerSize, innerSize)
       .toBuffer();
 
     const bgSvg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${BACKGROUND_COLOR}"/></svg>`;
@@ -46,7 +43,7 @@ async function generateWithSharp() {
       .composite([
         {
           input: resizedLogo,
-          top: Math.round((size - logoHeight) / 2),
+          top: padding,
           left: padding,
         },
       ])
