@@ -52,37 +52,32 @@ async function generateWithSharp() {
     console.log(`Generated ${name}`);
   }
 
-  // Favicon: use circle icon (from logo's "O") - 48x48 and 32x32
-  const faviconSvg = `
-    <svg width="48" height="48" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" fill="${BACKGROUND_COLOR}"/>
-      <circle cx="24" cy="24" r="18" fill="none" stroke="${ACCENT_COLOR}" stroke-width="4"/>
-    </svg>
-  `;
-  const favicon48Path = path.join(PUBLIC_DIR, 'favicon-48.png');
-  await sharp(Buffer.from(faviconSvg)).png().toFile(favicon48Path);
+  // Favicon: resize icon.png to standard favicon sizes
+  const faviconSizes = [16, 32, 48];
+  const faviconBuffers = [];
 
-  const favicon32Svg = `
-    <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-      <rect width="32" height="32" fill="${BACKGROUND_COLOR}"/>
-      <circle cx="16" cy="16" r="12" fill="none" stroke="${ACCENT_COLOR}" stroke-width="2.5"/>
-    </svg>
-  `;
-  const favicon32Path = path.join(PUBLIC_DIR, 'favicon-32.png');
-  await sharp(Buffer.from(favicon32Svg)).png().toFile(favicon32Path);
+  for (const size of faviconSizes) {
+    const buf = await sharp(logoBuffer).resize(size, size).png().toBuffer();
+    faviconBuffers.push(buf);
+  }
+
+  const favicon48Path = path.join(PUBLIC_DIR, 'favicon-48.png');
+  fs.writeFileSync(favicon48Path, faviconBuffers[2]);
+
+  const faviconPngPath = path.join(PUBLIC_DIR, 'favicon.png');
+  fs.writeFileSync(faviconPngPath, faviconBuffers[2]);
+  console.log('Generated favicon.png');
 
   try {
     const toIco = require('to-ico');
-    const icon32 = fs.readFileSync(favicon32Path);
-    const icoBuffer = await toIco([icon32]);
+    const icoBuffer = await toIco(faviconBuffers);
     fs.writeFileSync(path.join(PUBLIC_DIR, 'favicon.ico'), icoBuffer);
-    console.log('Generated favicon.ico');
+    console.log('Generated favicon.ico (16x16, 32x32, 48x48)');
   } catch {
-    fs.copyFileSync(favicon32Path, path.join(PUBLIC_DIR, 'favicon.ico'));
-    console.log('Generated favicon.ico (PNG format - add to-ico for proper ICO)');
+    fs.copyFileSync(favicon48Path, path.join(PUBLIC_DIR, 'favicon.ico'));
+    console.log('Generated favicon.ico (PNG fallback - add to-ico for proper ICO)');
   }
   fs.unlinkSync(favicon48Path);
-  fs.unlinkSync(favicon32Path);
 }
 
 async function main() {
