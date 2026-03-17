@@ -38,6 +38,38 @@
   }
 }
 
+.cm-layersbar__pill {
+  position: relative;
+}
+
+/* When pills overlap (negative margin), the underlying pill bleeds through the
+   translucent "glass" of the top pill. This mask makes the overlap region truly
+   transparent so the top pill overlays the map, not the pill behind. */
+.cm-layersbar__pill--merge-next {
+  /* Must match LayersBar.js: marginRight/paddingRight values */
+  --cm-layersbar-overlap: -4px;
+  --cm-layersbar-cutout-r: 18px;
+
+  /* Single circular cutout (no strip removal) */
+  -webkit-mask-image: radial-gradient(
+    circle var(--cm-layersbar-cutout-r) at calc(100% - var(--cm-layersbar-overlap)) 50%,
+    rgba(0, 0, 0, 0) 98%,
+    rgba(0, 0, 0, 1) 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-position: 0 0;
+
+  mask-image: radial-gradient(
+    circle var(--cm-layersbar-cutout-r) at calc(100% - var(--cm-layersbar-overlap)) 50%,
+    rgba(0, 0, 0, 0) 98%,
+    rgba(0, 0, 0, 1) 100%
+  );
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+  mask-position: 0 0;
+}
+
 .animate-slide-in {
   opacity: 0;
   transform-origin: left center;
