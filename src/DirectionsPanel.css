@@ -72,7 +72,9 @@
 
 /* Affix wrapper (origin/destination inputs) uses theme variables */
 #directionsPanel.cm-panel .ant-input-affix-wrapper {
-  background: var(--cm-panel-affix-bg);
+  /* Default input background (may be overridden for the swap cutout effect) */
+  background-color: var(--cm-panel-affix-bg);
+  background-image: none;
   border: none;
   color: var(--cm-panel-input-color);
   height: 36px;
@@ -91,6 +93,101 @@
 
 #directionsPanel.cm-panel .ant-input-affix-wrapper .ant-input::placeholder {
   color: var(--cm-panel-placeholder-color);
+}
+
+.cm-route-points {
+  position: relative;
+}
+
+.cm-route-points__inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Swap button between origin/destination + "cutout" masks so panel glass shows through. */
+:root {
+  --cm-route-swap-cutout-r: 14px;
+}
+
+/* Top input: hole at bottom-center */
+#directionsPanel .cm-route-points__input--from.ant-select {
+  -webkit-mask: radial-gradient(
+      var(--cm-route-swap-cutout-r) at 50% calc(100% + 5px),
+      #0000 98%,
+      #000
+    )
+    0 0 / 100% 100% no-repeat;
+  mask: radial-gradient(var(--cm-route-swap-cutout-r) at 50% calc(100% + 5px), #0000 98%, #000) 0
+    0 / 100% 100% no-repeat;
+}
+
+/* Bottom input: hole at top-center */
+#directionsPanel .cm-route-points__input--to.ant-select {
+  -webkit-mask: radial-gradient(
+      var(--cm-route-swap-cutout-r) at 50% calc(0% - 5px),
+      #0000 98%,
+      #000
+    )
+    0 0 / 100% 100% no-repeat;
+  mask: radial-gradient(var(--cm-route-swap-cutout-r) at 50% calc(0% - 5px), #0000 98%, #000) 0 0 /
+    100% 100% no-repeat;
+}
+
+/* Fallback: if mask isn't supported, don't try to fake it */
+@supports not ((mask: radial-gradient(10px at 10px 10px, #0000 98%, #000))) {
+  #directionsPanel .cm-route-points__input--from.ant-select,
+  #directionsPanel .cm-route-points__input--to.ant-select {
+    -webkit-mask: none;
+    mask: none;
+  }
+}
+
+#directionsPanel .cm-route-points__swap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#directionsPanel .swap-button.cm-route-points__swap {
+  /* Keep button visually "backgroundless" (cutout does the work). */
+  background: transparent;
+  border: none;
+}
+
+/* Prevent AntD "active/hover" backgrounds on the swap button */
+#directionsPanel .swap-button.cm-route-points__swap,
+#directionsPanel .swap-button.cm-route-points__swap:hover,
+#directionsPanel .swap-button.cm-route-points__swap:active,
+#directionsPanel .swap-button.cm-route-points__swap:focus,
+#directionsPanel .swap-button.cm-route-points__swap:focus-visible,
+#directionsPanel .swap-button.cm-route-points__swap.ant-btn-text:not(:disabled):hover,
+#directionsPanel .swap-button.cm-route-points__swap.ant-btn-text:not(:disabled):active {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+#directionsPanel .swap-button.cm-route-points__swap::after {
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+#directionsPanel .swap-button.cm-route-points__swap {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.theme-light #directionsPanel .swap-button.cm-route-points__swap {
+  color: rgba(0, 0, 0, 0.85);
 }
 
 /* Custom marker styles */
