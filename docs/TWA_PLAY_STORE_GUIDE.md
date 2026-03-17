@@ -135,7 +135,8 @@ This produces an AAB (Android App Bundle) for Play Store upload.
 | `public/icon-maskable-512.png`  | Not used                                                                         |
 | `public/favicon.ico`            | New — Favicon (from logo)                                                        |
 | `src/service-worker.js`         | New — Workbox service worker (precache, routing)                                 |
-| `src/index.js`                  | `serviceWorker.register()` instead of `unregister()`                             |
+| `src/index.js`                  | `serviceWorkerRegistration.register()` (enables PWA service worker)              |
+| `src/serviceWorkerRegistration.js` | Renamed — service worker registration helper (was `src/serviceWorker.js`)     |
 | `scripts/generate-pwa-icons.js` | New — Icon generation from logo                                                  |
 | `package.json`                  | `generate-pwa-icons` script, sharp, to-ico devDependencies                       |
 
