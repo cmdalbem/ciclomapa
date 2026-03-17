@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { useDirections } from './contexts/DirectionsContext';
-import { Button, Space, Select } from 'antd';
+import { Button, Select } from 'antd';
 import { HiX as IconClose, HiOutlineArrowLeft as IconBack } from 'react-icons/hi';
 import { FaDirections as IconRoute } from 'react-icons/fa';
 import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash } from 'react-icons/hi2';
@@ -1131,19 +1131,21 @@ class DirectionsPanel extends Component {
             </div>
 
             {!showResultsOnMobile && (
-              <div className="flex items-center mt-3 -mr-1">
-                <Space direction="vertical" size="small" className="flex-1 min-w-0">
+              <div className="cm-route-points mt-3">
+                <div className="cm-route-points__inputs">
                   <LocationSearchInput
                     inputType="from"
                     parentComponent={this}
                     googlePlacesGeocoder={googlePlacesGeocoder}
+                    className="w-full cm-route-points__input cm-route-points__input--from"
                   />
                   <LocationSearchInput
                     inputType="to"
                     parentComponent={this}
                     googlePlacesGeocoder={googlePlacesGeocoder}
+                    className="w-full cm-route-points__input cm-route-points__input--to"
                   />
-                </Space>
+                </div>
                 <Button
                   type="text"
                   shape="circle"
@@ -1156,7 +1158,7 @@ class DirectionsPanel extends Component {
                     />
                   }
                   onClick={this.swapOriginDestination}
-                  className="swap-button flex-shrink-0 text-white"
+                  className="swap-button cm-route-points__swap text-white"
                   title="Trocar origem e destino"
                   aria-label="Trocar origem e destino"
                 />
