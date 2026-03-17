@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client'; // Note the updated import
 import App from './App';
-import * as serviceWorker from './serviceWorker';
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { getCssCustomProperties } from './config/design-tokens.js';
 
@@ -66,4 +66,4 @@ root.render(
 );
 
 // Register service worker for PWA/TWA (production only; uses ciclomapa.org.br origin)
-serviceWorker.register();
+serviceWorkerRegistration.register();
