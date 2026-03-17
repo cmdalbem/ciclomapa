@@ -850,12 +850,17 @@ class App extends Component {
     }
 
     if (!this.state.embedMode) {
+      const WELCOME_STORAGE_KEY = 'ciclomapa_hasSeenWelcomeMsg';
+      if (window.localStorage.getItem(WELCOME_STORAGE_KEY)) {
+        return;
+      }
       get('hasSeenWelcomeMsg').then((data) => {
-        if (!data) {
-          console.log('show welcome!!!!');
-          this.openAboutModal();
-          set('hasSeenWelcomeMsg', true);
+        if (window.localStorage.getItem(WELCOME_STORAGE_KEY) || data) {
+          return;
         }
+        window.localStorage.setItem(WELCOME_STORAGE_KEY, '1');
+        this.openAboutModal();
+        set('hasSeenWelcomeMsg', true);
       });
     }
 
