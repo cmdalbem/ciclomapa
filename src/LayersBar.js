@@ -196,7 +196,7 @@ class LayersBar extends Component {
     isExpanding = false,
   }) {
     const baseClasses =
-      'flex items-center space-x-2 px-3 py-2 rounded-full text-xs transition-all duration-200 glass-bg flex-shrink-0';
+      'cm-layersbar__pill flex items-center space-x-2 px-3 py-2 rounded-full text-xs transition-all duration-200 glass-bg flex-shrink-0';
     const activeClasses = isActive ? 'text-white bg-black bg-opacity-50' : 'text-gray-500';
     const animationClasses = isAnimated
       ? isCategoryPill
@@ -205,6 +205,7 @@ class LayersBar extends Component {
           : 'animate-category-collapse'
         : 'animate-slide-in'
       : '';
+    const mergeClasses = shouldMergeWithNext ? 'cm-layersbar__pill--merge-next' : '';
 
     const style = shouldMergeWithNext
       ? {
@@ -219,7 +220,7 @@ class LayersBar extends Component {
       <button
         key={id}
         onClick={onClick}
-        className={`${baseClasses} ${activeClasses} ${animationClasses} ${className}`}
+        className={`${baseClasses} ${activeClasses} ${animationClasses} ${mergeClasses} ${className}`}
         style={style}
       >
         {(icon || lineStyle) && (
