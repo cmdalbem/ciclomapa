@@ -27,7 +27,7 @@ When prompted:
 - **Launcher Name**: CicloMapa
 - **Start URL**: `https://ciclomapa.app/`
 - **Icon URL**: `https://ciclomapa.app/icon-512.png`
-- **Maskable Icon URL**: `https://ciclomapa.app/icon-maskable-512.png`
+- **Maskable Icon URL**: Not used (current `icon-512.png` is safe to mask)
 - **Theme Color**: `#1c1717`
 - **Background Color**: `#1a1a1a`
 
@@ -131,8 +131,8 @@ This produces an AAB (Android App Bundle) for Play Store upload.
 | `public/manifest.json`          | start_url `/`, scope, theme/background colors, icon entries (192, 512, maskable) |
 | `public/icon-192.png`           | New — PWA icon                                                                   |
 | `public/icon-512.png`           | New — PWA icon                                                                   |
-| `public/icon-maskable-192.png`  | New — Maskable icon                                                              |
-| `public/icon-maskable-512.png`  | New — Maskable icon                                                              |
+| `public/icon-maskable-192.png`  | Not used                                                                         |
+| `public/icon-maskable-512.png`  | Not used                                                                         |
 | `public/favicon.ico`            | New — Favicon (from logo)                                                        |
 | `src/service-worker.js`         | New — Workbox service worker (precache, routing)                                 |
 | `src/index.js`                  | `serviceWorker.register()` instead of `unregister()`                             |
