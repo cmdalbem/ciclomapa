@@ -388,6 +388,7 @@ class DirectionsPanel extends Component {
             await ensureGeocoderReady();
             const results = await googlePlacesGeocoder.search(value, {
                 proximity: this.props.map ? [this.props.map.getCenter().lng, this.props.map.getCenter().lat] : null,
+                countryCodes: ['br', 'es', 'pt'],
                 limit: 5
             });
 
