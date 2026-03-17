@@ -3,84 +3,122 @@
  * Generates PWA icons from the CicloMapa logo.
  * Run: node scripts/generate-pwa-icons.js
  *
- * Requires: sharp (npm install sharp --save-dev)
- * Fallback: If sharp is not available, prints instructions.
+ * Expects two source files in public/:
+ *   icon-dark.png  — for light theme (dark icon on light background)
+ *   icon-light.png — for dark theme (light icon on dark background)
+ *
+ * Requires: sharp, to-ico (yarn add -D sharp to-ico)
  */
 
 const fs = require('fs');
 const path = require('path');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-const LOGO_PATH = path.join(PUBLIC_DIR, 'icon.png');
-
-// Brand colors from logo.svg
-const BACKGROUND_COLOR = '#1a1a1a';
-const ACCENT_COLOR = '#B6F9D1';
+const ICON_PATH = path.join(PUBLIC_DIR, 'icon.png');
+const FAVICON_DARK_PATH = path.join(PUBLIC_DIR, 'favicon-dark.png');
+const FAVICON_LIGHT_PATH = path.join(PUBLIC_DIR, 'favicon-light.png');
 
 async function generateWithSharp() {
   const sharp = require('sharp');
 
-  const logoBuffer = fs.readFileSync(LOGO_PATH);
+  const iconBuffer = fs.readFileSync(ICON_PATH);
+  const faviconDarkBuffer = fs.readFileSync(FAVICON_DARK_PATH);
+  const faviconLightBuffer = fs.readFileSync(FAVICON_LIGHT_PATH);
 
-  const sizes = [
+  // PWA icons: resize icon.png (main icon) to standard sizes
+  const pwaIconSizes = [
     { name: 'icon-192.png', size: 192 },
     { name: 'icon-512.png', size: 512 },
     { name: 'icon-maskable-192.png', size: 192, maskable: true },
     { name: 'icon-maskable-512.png', size: 512, maskable: true },
   ];
 
-  for (const { name, size, maskable } of sizes) {
+  for (const { name, size, maskable } of pwaIconSizes) {
     const padding = maskable ? Math.round(size * 0.1) : 0;
     const innerSize = size - padding * 2;
 
-    const resizedLogo = await sharp(logoBuffer).resize(innerSize, innerSize).toBuffer();
-
-    const bgSvg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${BACKGROUND_COLOR}"/></svg>`;
-    const outputPath = path.join(PUBLIC_DIR, name);
-    await sharp(Buffer.from(bgSvg))
-      .composite([
-        {
-          input: resizedLogo,
-          top: padding,
-          left: padding,
-        },
-      ])
-      .png()
-      .toFile(outputPath);
+    if (maskable) {
+      const resized = await sharp(iconBuffer).resize(innerSize, innerSize).toBuffer();
+      const { channels } = await sharp(iconBuffer).metadata();
+      const bg = await sharp({
+        create: { width: size, height: size, channels, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+      })
+        .png()
+        .toBuffer();
+      await sharp(bg)
+        .composite([{ input: resized, top: padding, left: padding }])
+        .png()
+        .toFile(path.join(PUBLIC_DIR, name));
+    } else {
+      await sharp(iconBuffer).resize(size, size).png().toFile(path.join(PUBLIC_DIR, name));
+    }
     console.log(`Generated ${name}`);
   }
 
-  // Favicon: resize icon.png to standard favicon sizes
+  // Favicons: generate dark and light theme variants
   const faviconSizes = [16, 32, 48];
-  const faviconBuffers = [];
+  const variants = [
+    { suffix: '-dark', icon: faviconDarkBuffer },
+    { suffix: '-light', icon: faviconLightBuffer },
+  ];
 
-  for (const size of faviconSizes) {
-    const buf = await sharp(logoBuffer).resize(size, size).png().toBuffer();
-    faviconBuffers.push(buf);
+  for (const { suffix, icon } of variants) {
+    const buffers = [];
+
+    for (const size of faviconSizes) {
+      const buf = await sharp(icon).resize(size, size).png().toBuffer();
+      buffers.push(buf);
+    }
+
+    const pngPath = path.join(PUBLIC_DIR, `favicon${suffix}.png`);
+    fs.writeFileSync(pngPath, buffers[2]);
+    console.log(`Generated favicon${suffix}.png`);
+
+    try {
+      const toIco = require('to-ico');
+      const icoBuffer = await toIco(buffers);
+      fs.writeFileSync(path.join(PUBLIC_DIR, `favicon${suffix}.ico`), icoBuffer);
+      console.log(`Generated favicon${suffix}.ico (16x16, 32x32, 48x48)`);
+    } catch {
+      fs.copyFileSync(pngPath, path.join(PUBLIC_DIR, `favicon${suffix}.ico`));
+      console.log(`Generated favicon${suffix}.ico (PNG fallback - add to-ico for proper ICO)`);
+    }
   }
 
-  const favicon48Path = path.join(PUBLIC_DIR, 'favicon-48.png');
-  fs.writeFileSync(favicon48Path, faviconBuffers[2]);
+  // Default favicon.ico (dark variant) for legacy compatibility
+  fs.copyFileSync(path.join(PUBLIC_DIR, 'favicon-dark.ico'), path.join(PUBLIC_DIR, 'favicon.ico'));
+  console.log('Generated favicon.ico (copy of dark variant)');
 
-  const faviconPngPath = path.join(PUBLIC_DIR, 'favicon.png');
-  fs.writeFileSync(faviconPngPath, faviconBuffers[2]);
-  console.log('Generated favicon.png');
-
-  try {
-    const toIco = require('to-ico');
-    const icoBuffer = await toIco(faviconBuffers);
-    fs.writeFileSync(path.join(PUBLIC_DIR, 'favicon.ico'), icoBuffer);
-    console.log('Generated favicon.ico (16x16, 32x32, 48x48)');
-  } catch {
-    fs.copyFileSync(favicon48Path, path.join(PUBLIC_DIR, 'favicon.ico'));
-    console.log('Generated favicon.ico (PNG fallback - add to-ico for proper ICO)');
-  }
-  fs.unlinkSync(favicon48Path);
+  // SVG favicon with embedded prefers-color-scheme (works in Chrome, Firefox, Safari)
+  const darkBase64 = (await sharp(faviconDarkBuffer).resize(32, 32).png().toBuffer()).toString(
+    'base64'
+  );
+  const lightBase64 = (await sharp(faviconLightBuffer).resize(32, 32).png().toBuffer()).toString(
+    'base64'
+  );
+  const svgFavicon = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+  <style>
+    image.light { display: none; }
+    image.dark { display: inline; }
+    @media (prefers-color-scheme: light) {
+      image.light { display: inline; }
+      image.dark { display: none; }
+    }
+  </style>
+  <image class="dark" width="32" height="32" href="data:image/png;base64,${darkBase64}"/>
+  <image class="light" width="32" height="32" href="data:image/png;base64,${lightBase64}"/>
+</svg>`;
+  fs.writeFileSync(path.join(PUBLIC_DIR, 'favicon.svg'), svgFavicon);
+  console.log('Generated favicon.svg (auto dark/light switching)');
 }
 
 async function main() {
-  if (!fs.existsSync(LOGO_PATH)) {
-    console.error('Logo not found at', LOGO_PATH);
+  const missing = [ICON_PATH, FAVICON_DARK_PATH, FAVICON_LIGHT_PATH].filter(
+    (p) => !fs.existsSync(p)
+  );
+  if (missing.length) {
+    console.error('Missing source icon(s):');
+    missing.forEach((p) => console.error(`  ${p}`));
     process.exit(1);
   }
 
