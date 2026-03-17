@@ -29,29 +29,10 @@ async function generateWithSharp() {
   const pwaIconSizes = [
     { name: 'icon-192.png', size: 192 },
     { name: 'icon-512.png', size: 512 },
-    { name: 'icon-maskable-192.png', size: 192, maskable: true },
-    { name: 'icon-maskable-512.png', size: 512, maskable: true },
   ];
 
-  for (const { name, size, maskable } of pwaIconSizes) {
-    const padding = maskable ? Math.round(size * 0.1) : 0;
-    const innerSize = size - padding * 2;
-
-    if (maskable) {
-      const resized = await sharp(iconBuffer).resize(innerSize, innerSize).toBuffer();
-      const { channels } = await sharp(iconBuffer).metadata();
-      const bg = await sharp({
-        create: { width: size, height: size, channels, background: { r: 0, g: 0, b: 0, alpha: 0 } },
-      })
-        .png()
-        .toBuffer();
-      await sharp(bg)
-        .composite([{ input: resized, top: padding, left: padding }])
-        .png()
-        .toFile(path.join(PUBLIC_DIR, name));
-    } else {
-      await sharp(iconBuffer).resize(size, size).png().toFile(path.join(PUBLIC_DIR, name));
-    }
+  for (const { name, size } of pwaIconSizes) {
+    await sharp(iconBuffer).resize(size, size).png().toFile(path.join(PUBLIC_DIR, name));
     console.log(`Generated ${name}`);
   }
 
