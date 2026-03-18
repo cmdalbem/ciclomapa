@@ -209,7 +209,7 @@ class LayersBar extends Component {
 
     const style = shouldMergeWithNext
       ? {
-          marginRight: '-16px',
+          marginRight: '-18px',
           borderTopRightRadius: '0',
           borderBottomRightRadius: '0',
           paddingRight: '16px',

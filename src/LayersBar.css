@@ -47,8 +47,8 @@
    transparent so the top pill overlays the map, not the pill behind. */
 .cm-layersbar__pill--merge-next {
   /* Must match LayersBar.js: marginRight/paddingRight values */
-  --cm-layersbar-overlap: -4px;
-  --cm-layersbar-cutout-r: 18px;
+  --cm-layersbar-overlap: -3px;
+  --cm-layersbar-cutout-r: 17px;
 
   /* Single circular cutout (no strip removal) */
   -webkit-mask-image: radial-gradient(
