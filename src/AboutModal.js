@@ -43,7 +43,7 @@ function AboutModal({ visible, onClose, openLayersLegendModal }) {
     >
       <div className="relative max-w-lg p-4 sm:p-0">
         <div className="mt-12">
-          <img className="h-10 mb-8" src="logo.svg" alt="CicloMapa"></img>
+          <img className="h-10 mb-8" src={`${process.env.PUBLIC_URL}/logo.svg`} alt="CicloMapa" />
 
           <div className="mb-8 text-sm md:text-lg">
             <p>
