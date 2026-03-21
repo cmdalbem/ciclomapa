@@ -1,7 +1,19 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 import { formatDistance, formatDuration } from '../../../utils/routeUtils.js';
 import { LuBike as IconBike } from 'react-icons/lu';
+
+const nullableNumber = PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]);
+
+RoutesList.propTypes = {
+  routes: PropTypes.arrayOf(PropTypes.object).isRequired,
+  selectedRouteIndex: nullableNumber.isRequired,
+  hoveredRouteIndex: nullableNumber.isRequired,
+  onRouteHover: PropTypes.func.isRequired,
+  onRouteLeave: PropTypes.func.isRequired,
+  onRouteClick: PropTypes.func.isRequired,
+};
 
 export default function RoutesList({
   routes,
@@ -12,13 +24,13 @@ export default function RoutesList({
   onRouteClick,
 }) {
   return (
-    <div className="md:space-y-2 space-y-1">
+    <div className="space-y-2">
       {routes.map((route, index) => {
         const originalIndex = route._originalIndex !== undefined ? route._originalIndex : index;
         return (
           <div
             key={index}
-            className={`rounded-lg p-2 md:p-3 md:-m-2 cursor-pointer transition-colors ${
+            className={`rounded-lg p-2 md:p-3 -m-2 cursor-pointer transition-colors ${
               selectedRouteIndex === originalIndex ? 'bg-black bg-opacity-70' : ''
             } ${hoveredRouteIndex === originalIndex ? 'bg-black bg-opacity-40 opacity-100' : ''}`}
             onMouseEnter={() => onRouteHover(originalIndex)}
