@@ -1015,7 +1015,7 @@ class DirectionsPanel extends Component {
           <div className="cm-panel__body p-4">
             <div
               id="directionsPanel--header"
-              className="cm-panel__header flex justify-between items-start h-6"
+              className="cm-panel__header flex justify-between items-start h-6 md:mb-0 mb-2"
             >
               {showResultsOnMobile ? (
                 <>
@@ -1034,7 +1034,7 @@ class DirectionsPanel extends Component {
                       />
                     }
                   >
-                    Voltar
+                    {/* Voltar */}
                   </Button>
                   {IS_MOBILE && (
                     <>
@@ -1059,27 +1059,15 @@ class DirectionsPanel extends Component {
                   <h3 className=" font-semibold flex items-center mb-0">
                     {/* <IconRoute className="mr-2" /> */}
                     Rotas
-                    <span
-                      className="bg-white opacity-50 ml-2 px-1 py-0 rounded-full text-black text-xs leading-normal tracking-wider"
-                      style={{ fontSize: 10 }}
-                    >
-                      Novo
-                    </span>
                   </h3>
 
-                  <div className="flex items-start -mr-1" style={{ marginTop: '-5px' }}>
+                  <div className="flex items-start gap-2 -mr-1" style={{ marginTop: '-5px' }}>
                     {(directions || this.props.fromPoint || this.props.toPoint) && (
                       <Button
                         onClick={this.clearDirections}
                         // type="text"
                         shape="circle"
-                        icon={
-                          <IconTrash
-                            style={{
-                              display: 'inline-block',
-                            }}
-                          />
-                        }
+                        icon={<IconTrash />}
                         aria-label="Limpar rotas"
                       />
                     )}
@@ -1096,13 +1084,7 @@ class DirectionsPanel extends Component {
                         <Button
                           type="text"
                           shape="circle"
-                          icon={
-                            <IconCog
-                              style={{
-                                display: 'inline-block',
-                              }}
-                            />
-                          }
+                          icon={<IconCog />}
                           className="flex-shrink-0 text-white"
                           title="Configurações do serviço"
                           aria-label="Configurações do serviço de rotas"
@@ -1115,13 +1097,7 @@ class DirectionsPanel extends Component {
                       onClick={this.toggleCollapse}
                       // type="text"
                       shape="circle"
-                      icon={
-                        <IconClose
-                          style={{
-                            display: 'inline-block',
-                          }}
-                        />
-                      }
+                      icon={<IconClose />}
                       aria-label="Fechar painel de rotas"
                     />
                     {/* // )} */}
@@ -1166,15 +1142,40 @@ class DirectionsPanel extends Component {
             )}
 
             {directionsLoading && (
-              <div className="cm-panel__results directionsPanel--results md:mt-3 space-y-1">
-                {Array.from({ length: HYBRID_MAX_RESULTS }, (_, index) => index + 1).map(
-                  (index) => (
+              <div
+                id="directionsPanel--results"
+                className="cm-panel__results directionsPanel--results md:mt-3 md:space-y-2 space-y-1"
+              >
+                {!IS_MOBILE && (
+                  <div className="flex mb-2">
                     <div
-                      key={index}
-                      className={`rounded-lg h-14 bg-white bg-opacity-10 animate-pulse-2x`}
+                      className="h-7 w-44 max-w-full rounded-md bg-white bg-opacity-10 animate-pulse-2x"
+                      aria-hidden
                     />
-                  )
+                  </div>
                 )}
+                {Array.from({ length: HYBRID_MAX_RESULTS }, (_, i) => (
+                  <div key={i} className="rounded-lg p-2 md:p-3 -m-2 flex justify-between gap-1">
+                    <div className="flex items-start min-w-0 flex-1">
+                      <div
+                        className="w-8 h-8 md:w-9 md:h-9 rounded-md bg-white bg-opacity-10 animate-pulse-2x flex-shrink-0 mr-2"
+                        aria-hidden
+                      />
+                      <div className="flex flex-col gap-2 min-w-0 flex-1 pt-0.5">
+                        <div className="h-3 md:h-3.5 w-24 rounded bg-white bg-opacity-10 animate-pulse-2x" />
+                        <div className="flex flex-wrap gap-1">
+                          <div className="h-2.5 w-12 rounded bg-white bg-opacity-5 animate-pulse-2x" />
+                          {/* <div className="h-2.5 w-12 rounded bg-white bg-opacity-5 animate-pulse-2x" /> */}
+                          {/* <div className="h-2.5 w-7 rounded bg-white bg-opacity-5 animate-pulse-2x" /> */}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0 pt-0.5">
+                      <div className="h-3 md:h-3.5 w-11 rounded bg-white bg-opacity-10 animate-pulse-2x mb-0.5" />
+                      <div className="h-3 w-14 rounded bg-white bg-opacity-5 animate-pulse-2x" />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -1210,9 +1211,9 @@ class DirectionsPanel extends Component {
                 />
 
                 {/* Disclaimer */}
-                <div className="p-2 text-gray-500 hover:text-white text-xs flex flex-col">
+                <div className="mt-2 text-gray-500 hover:text-white text-xs flex flex-col">
                   <div
-                    className="cursor-pointer flex items-center mt-2 mb-0"
+                    className="cursor-pointer flex items-center mb-0"
                     onClick={() =>
                       this.props.openLayersLegendModal &&
                       this.props.openLayersLegendModal('routes-section')
