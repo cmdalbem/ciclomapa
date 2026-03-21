@@ -50,6 +50,13 @@
   }
 }
 
+/* Icon-only header buttons: center react-icons in Ant circle buttons (same idea as .cm-route-points__swap) */
+#directionsPanel #directionsPanel--header .ant-btn.ant-btn-icon-only {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .cm-panel__leg-label,
 .directions--legLabel {
   max-width: 14rem;
@@ -113,24 +120,24 @@
 /* Top input: hole at bottom-center */
 #directionsPanel .cm-route-points__input--from.ant-select {
   -webkit-mask: radial-gradient(
-      var(--cm-route-swap-cutout-r) at 50% calc(100% + 5px),
+      var(--cm-route-swap-cutout-r) at 80% calc(100% + 5px),
       #0000 98%,
       #000
     )
     0 0 / 100% 100% no-repeat;
-  mask: radial-gradient(var(--cm-route-swap-cutout-r) at 50% calc(100% + 5px), #0000 98%, #000) 0
+  mask: radial-gradient(var(--cm-route-swap-cutout-r) at 80% calc(100% + 5px), #0000 98%, #000) 0
     0 / 100% 100% no-repeat;
 }
 
 /* Bottom input: hole at top-center */
 #directionsPanel .cm-route-points__input--to.ant-select {
   -webkit-mask: radial-gradient(
-      var(--cm-route-swap-cutout-r) at 50% calc(0% - 5px),
+      var(--cm-route-swap-cutout-r) at 80% calc(0% - 5px),
       #0000 98%,
       #000
     )
     0 0 / 100% 100% no-repeat;
-  mask: radial-gradient(var(--cm-route-swap-cutout-r) at 50% calc(0% - 5px), #0000 98%, #000) 0 0 /
+  mask: radial-gradient(var(--cm-route-swap-cutout-r) at 80% calc(0% - 5px), #0000 98%, #000) 0 0 /
     100% 100% no-repeat;
 }
 
@@ -145,7 +152,7 @@
 
 #directionsPanel .cm-route-points__swap {
   position: absolute;
-  left: 50%;
+  left: 80%;
   top: 50%;
   transform: translate(-50%, -50%);
   z-index: 2;
@@ -288,9 +295,9 @@ body.theme-light {
     font-size: 12px;
   }
 
-  #directionsPanel #directionsPanel--results {
+  #directionsPanel {
     overflow: scroll;
-    max-height: 144px;
+    max-height: 190px;
   }
 
   #directionsPanelMobileButton {
