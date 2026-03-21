@@ -1,6 +1,51 @@
 // Import dark theme by default (existing behavior)
 @import './antd.customize.less';
 
+// Tailwind CDN extensions (unpkg build has no theme.extend — add utilities here)
+// Matches Tailwind v2 default breakpoints (docs/styling.md): text-xxs, sm:text-xxs, …
+
+@text-xxs-font-size: 0.625rem; // 10px — between default browser text and text-xs (12px)
+@text-xxs-line-height: 1rem;
+
+.define-text-xxs() {
+  font-size: @text-xxs-font-size;
+  line-height: @text-xxs-line-height;
+}
+
+.text-xxs {
+  .define-text-xxs();
+}
+
+@media (min-width: 640px) {
+  .sm\:text-xxs {
+    .define-text-xxs();
+  }
+}
+
+@media (min-width: 768px) {
+  .md\:text-xxs {
+    .define-text-xxs();
+  }
+}
+
+@media (min-width: 1024px) {
+  .lg\:text-xxs {
+    .define-text-xxs();
+  }
+}
+
+@media (min-width: 1280px) {
+  .xl\:text-xxs {
+    .define-text-xxs();
+  }
+}
+
+@media (min-width: 1536px) {
+  .\32xl\:text-xxs {
+    .define-text-xxs();
+  }
+}
+
 html {
   height: 100%;
   overflow: hidden;
