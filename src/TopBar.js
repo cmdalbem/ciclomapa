@@ -92,7 +92,7 @@ function TopBar(props) {
         label: hasDismissedEditModal ? (
           <a
             className="inline-block w-full hover:text-white"
-            target="_BLANK"
+            target="_blank"
             rel="noopener noreferrer"
             href={getOsmUrl(lat, lng, z)}
           >
@@ -236,7 +236,7 @@ function TopBar(props) {
                 )}
               </div>
             ) : (
-              <Button target="_BLANK" href={window.location.href.replace(/&embed=true/g, '')}>
+              <Button target="_blank" href={window.location.href.replace(/&embed=true/g, '')}>
                 <IconMap /> Ver mapa completo
               </Button>
             )}
