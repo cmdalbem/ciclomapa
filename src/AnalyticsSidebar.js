@@ -510,19 +510,16 @@ class AnalyticsSidebar extends Component {
           </Section>
 
           {this.props.downloadData && (
-            <Section
-              title="Dados"
-              description={
-                <>
-                  <p>
-                    Baixe os dados da infraestrutura cicloviária desta cidade em formato GeoJSON
-                    para uso em seus próprios projetos e análises.
+            <Section title="Download dados">
+              <p className="text-xs opacity-50">
+                Baixe os dados da infraestrutura cicloviária desta cidade em formato GeoJSON para
+                uso em seus próprios projetos e análises.
                   </p>
-                </>
-              }
-            >
-              <Button className="glass-bg" onClick={this.props.downloadData} block>
-                <IconDownload className="inline-block mr-1" /> Baixar dados
+              <Button ghost onClick={this.props.downloadData} block>
+                <IconDownload className="inline-block mr-1" />
+                <span className="font-mono text-xs">
+                  {this.props.location.split(',')[0]}.geojson
+                </span>
               </Button>
             </Section>
           )}
