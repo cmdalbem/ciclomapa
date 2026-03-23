@@ -7,7 +7,7 @@ import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
 import premiobicicletabrasil from './img/premiobicicletabrasil.png';
 
-import { handleModalKeyDown, setupModalFocus, restoreModalFocus } from './modalFocusTrap.js';
+import { handleModalKeyDown, setupModalFocus, restoreModalFocus } from './modalFocusTrap';
 
 function AboutModal({ visible, onClose, openLayersLegendModal }) {
   const modalRef = useRef(null);

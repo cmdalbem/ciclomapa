@@ -17,7 +17,7 @@ import {
   MdSignalCellularAlt1Bar as IconSignal1,
 } from 'react-icons/md';
 
-import { handleModalKeyDown, setupModalFocus, restoreModalFocus } from './modalFocusTrap.js';
+import { handleModalKeyDown, setupModalFocus, restoreModalFocus } from './modalFocusTrap';
 
 const getInfrastructureFromLayerName = (layerName) => {
   const name = layerName.toLowerCase();
