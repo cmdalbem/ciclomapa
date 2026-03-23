@@ -92,6 +92,11 @@
     "typescript": "^4.9.5",
     "vercel": "^48.0.1"
   },
+  "jest": {
+    "moduleNameMapper": {
+      "\\.(png|jpg|jpeg|gif|webp|svg)$": "<rootDir>/src/__mocks__/fileMock.js"
+    }
+  },
   "lint-staged": {
     "src/**/*.{js,jsx,ts,tsx}": [
       "eslint --fix",
