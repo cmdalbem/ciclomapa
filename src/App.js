@@ -13,7 +13,7 @@ import OSMController from './OSMController.js';
 import AppLayout from './AppLayout.js';
 import Storage from './Storage.js';
 import { downloadObjectAsJson } from './utils/utils.js';
-import { getSystemThemePreference } from './utils/themeUtils.js';
+import { getSystemThemePreference } from './utils/themeUtils';
 import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './utils/geojsonUtils.js';
 import { DirectionsProvider } from './contexts/DirectionsContext';
 import {

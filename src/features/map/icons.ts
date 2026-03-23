@@ -25,14 +25,14 @@ import arrowCicloviaLight from '../../img/icons/arrow-ciclovia--light.png';
 import arrowCiclofaixa from '../../img/icons/arrow-ciclofaixa.png';
 import arrowCiclofaixaLight from '../../img/icons/arrow-ciclofaixa--light.png';
 
-export const arrowIconsByLayer = {
+export const arrowIconsByLayer: Record<string, string> = {
   Ciclovia: 'arrow-ciclovia',
   'Calçada compartilhada': 'arrow-ciclovia',
   Ciclofaixa: 'arrow-ciclofaixa',
   Ciclorrota: 'arrow-ciclofaixa',
 };
 
-export const iconsMap = {
+export const iconsMap: Record<string, string> = {
   'poi-comment': commentIcon,
   'poi-comment--light': commentIconLight,
   'poi-bikeparking': bikeparkingIcon,
@@ -52,7 +52,7 @@ export const iconsMap = {
   'poi-rental-mini--light': bikerentalIconMiniLight,
 };
 
-export const arrowIcons = {
+export const arrowIcons: Record<string, string> = {
   'arrow-ciclovia': arrowCiclovia,
   'arrow-ciclovia--light': arrowCicloviaLight,
   'arrow-ciclofaixa': arrowCiclofaixa,

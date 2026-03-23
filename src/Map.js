@@ -48,8 +48,8 @@ import {
   calculateSunPosition,
   getCurrentSunPosition,
   isCurrentlyDaytime,
-} from './sunPositionUtils.js';
-import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/map/icons.js';
+} from './sunPositionUtils';
+import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/map/icons';
 import { reverseGeocodePlace } from './features/map/geocoding.js';
 
 import './Map.css';

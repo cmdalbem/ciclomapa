@@ -7,7 +7,7 @@ import { cleanUpInternalTags } from './utils/geojsonUtils.js';
 import { slugify, sizeOf } from './utils/utils.js';
 import { stringify, parse } from 'zipson';
 
-import { osmi18n } from './osmi18n.js';
+import { osmi18n } from './osmi18n';
 
 import { IS_PROD, DISABLE_LOCAL_STORAGE } from './config/constants.js';
 
