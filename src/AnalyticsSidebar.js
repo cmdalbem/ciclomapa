@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { Popover, Button } from 'antd';
+import { Popover, Button, Tooltip } from 'antd';
 
 import './AnalyticsSidebar.css';
 
@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   CartesianGrid,
 } from 'recharts';
 
@@ -34,6 +34,32 @@ import { LENGTH_CALCULATE_STRATEGIES } from './config/constants.js';
 
 const PIE_CHART_WIDTH_PX = 207;
 const nullableNumber = PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]);
+
+const INFRA_LAYER_IDS = ['ciclovia', 'ciclofaixa', 'ciclorrota', 'calcada-compartilhada'];
+
+const DEFAULT_LENGTHS_INCLUDE = () =>
+  INFRA_LAYER_IDS.reduce((acc, id) => {
+    acc[id] = true;
+    return acc;
+  }, {});
+
+const STORAGE_KEY_LENGTHS_INCLUDE = 'analyticsViasLengthsInclude';
+
+function readLengthsIncludeFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_LENGTHS_INCLUDE);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    const next = DEFAULT_LENGTHS_INCLUDE();
+    for (const id of INFRA_LAYER_IDS) {
+      if (typeof parsed[id] === 'boolean') next[id] = parsed[id];
+    }
+    return next;
+  } catch {
+    return null;
+  }
+}
 
 const layerShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
@@ -68,12 +94,12 @@ class AnalyticsSidebar extends Component {
 
     this.state = {
       open: this.props.open,
+      lengthsInclude: readLengthsIncludeFromStorage() || DEFAULT_LENGTHS_INCLUDE(),
     };
   }
 
   componentDidMount() {
     this.loadMetadata();
-    this.updateData();
   }
 
   async loadMetadata() {
@@ -118,49 +144,69 @@ class AnalyticsSidebar extends Component {
       ));
   }
 
-  updateData() {
-    const { lengths, layers } = this.props;
-
-    if (lengths && layers) {
-      this.setState({
-        totalLength:
-          lengths['ciclovia'] +
-          lengths['ciclofaixa'] +
-          lengths['ciclorrota'] +
-          lengths['calcada-compartilhada'],
-        chartsData: layers
-          .filter(
-            (l) =>
-              l.id === 'ciclovia' ||
-              l.id === 'ciclofaixa' ||
-              l.id === 'ciclorrota' ||
-              l.id === 'calcada-compartilhada'
-          )
-          .filter((l) => lengths && Math.floor(lengths[l.id]) > 0)
-          .sort((a, b) => {
-            const lenA = lengths && lengths[a.id] ? lengths[a.id] : 0;
-            const lenB = lengths && lengths[b.id] ? lengths[b.id] : 0;
-            return lenB - lenA; // Sort descending by length
-          })
-          .map(
-            (l) =>
-              lengths && {
-                value: lengths[l.id],
-                fill: l.style.lineStyle === 'solid' ? l.style.lineColor : `url(#pattern-${l.id})`,
-              }
-          ),
-      });
-    }
+  toggleLengthsInclude(layerId) {
+    this.setState((prev) => {
+      const next = { ...prev.lengthsInclude, [layerId]: !prev.lengthsInclude[layerId] };
+      if (!INFRA_LAYER_IDS.some((id) => next[id])) {
+        return null;
+      }
+      try {
+        localStorage.setItem(STORAGE_KEY_LENGTHS_INCLUDE, JSON.stringify(next));
+      } catch {
+        /* ignore quota / private mode */
+      }
+      return { lengthsInclude: next };
+    });
   }
 
   componentDidUpdate(prevProps) {
     if (prevProps.location !== this.props.location) {
       this.updateLocation();
     }
+  }
 
-    if (prevProps.layers !== this.props.layers || prevProps.lengths !== this.props.lengths) {
-      this.updateData();
-    }
+  getInfraLayersSorted() {
+    const { lengths, layers } = this.props;
+    if (!layers) return [];
+    return layers
+      .filter((l) => INFRA_LAYER_IDS.includes(l.id))
+      .sort((a, b) => {
+        const lenA = lengths && lengths[a.id] ? lengths[a.id] : 0;
+        const lenB = lengths && lengths[b.id] ? lengths[b.id] : 0;
+        return lenB - lenA;
+      });
+  }
+
+  getViasMetrics() {
+    const { lengths, layers, isDarkMode } = this.props;
+    const { lengthsInclude } = this.state;
+    const infraLayers = this.getInfraLayersSorted();
+
+    const rawTotal = INFRA_LAYER_IDS.reduce((sum, id) => sum + (lengths && lengths[id] ? lengths[id] : 0), 0);
+
+    const effectiveTotal = INFRA_LAYER_IDS.reduce((sum, id) => {
+      if (!lengthsInclude[id]) return sum;
+      return sum + (lengths && lengths[id] ? lengths[id] : 0);
+    }, 0);
+
+    const chartsData =
+      lengths &&
+      infraLayers
+        .filter((l) => lengthsInclude[l.id] && Math.floor(lengths[l.id]) > 0)
+        .map((l) => ({
+          value: lengths[l.id],
+          fill: l.style.lineStyle === 'solid' ? l.style.lineColor : `url(#pattern-${l.id})`,
+        }));
+
+    const placeholderFill = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const pieSlices =
+      chartsData && chartsData.length > 0 && effectiveTotal > 0
+        ? chartsData
+        : [{ value: 1, fill: placeholderFill }];
+
+    const hasPieBreakdown = Boolean(chartsData && chartsData.length > 0 && effectiveTotal > 0);
+
+    return { infraLayers, rawTotal, effectiveTotal, pieSlices, hasPieBreakdown };
   }
 
   render() {
@@ -177,6 +223,8 @@ class AnalyticsSidebar extends Component {
     if (!layers) {
       return;
     }
+
+    const vias = this.getViasMetrics();
 
     const translateStrategy = {
       random: 'Aleatório',
@@ -356,7 +404,7 @@ class AnalyticsSidebar extends Component {
                           strokeOpacity={0.2}
                           strokeWidth={0.5}
                         />
-                        <Tooltip />
+                        <RechartsTooltip />
                         <Line
                           type="monotone"
                           dataKey="value"
@@ -421,26 +469,13 @@ class AnalyticsSidebar extends Component {
               <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
                 <defs>{this.generatePatterns(layers)}</defs>
                 <Pie
-                  data={
-                    this.state.chartsData && this.state.totalLength && this.state.totalLength > 0
-                      ? this.state.chartsData
-                      : [
-                          {
-                            value: 1,
-                            fill: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                          },
-                        ]
-                  }
+                  data={vias.pieSlices}
                   dataKey="value"
                   cx={'50%'}
                   cy={'50%'}
                   innerRadius={90}
                   outerRadius={100}
-                  paddingAngle={
-                    this.state.chartsData && this.state.totalLength && this.state.totalLength > 0
-                      ? 4
-                      : 0
-                  }
+                  paddingAngle={vias.hasPieBreakdown ? 4 : 0}
                   strokeWidth={0}
                   startAngle={90}
                   endAngle={-2700}
@@ -451,15 +486,40 @@ class AnalyticsSidebar extends Component {
                 className="absolute top-0 w-full flex flex-col items-center justify-center"
                 style={{ height: `${PIE_CHART_WIDTH_PX}px`, width: `${PIE_CHART_WIDTH_PX}px` }}
               >
-                {this.state.totalLength && this.state.totalLength >= 0 ? (
+                {lengths && vias.rawTotal > 0 ? (
                   <>
-                    <span className="tracking-wides text-xs">TOTAL</span>
-                    <span className="font-regular">
-                      <span className="text-4xl tracking-tighter">
-                        {this.state.totalLength.toFixed(1)}
-                      </span>{' '}
-                      <span className="text-sm">km</span>
-                    </span>
+                    <Tooltip
+                      title={
+                        vias.rawTotal !== vias.effectiveTotal ? (
+                          <div className="text-xs max-w-xs">
+                            <p className="m-0 mb-1">
+                              Total completo (todas as estruturas):{' '}
+                              <strong>{vias.rawTotal.toFixed(1)} km</strong>
+                            </p>
+                            <p className="m-0 opacity-90">
+                              Passe o mouse nas linhas abaixo para incluir ou excluir tipos do total
+                              e do gráfico.
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs">
+                            Soma de ciclovia, ciclofaixa, ciclorrota e calçada compartilhada (dados
+                            do OpenStreetMap).
+                          </span>
+                        )
+                      }
+                      placement="left"
+                    >
+                      <span className="inline-flex flex-col items-center cursor-default">
+                        <span className="tracking-wides text-xs">TOTAL</span>
+                        <span className="font-regular">
+                          <span className="text-4xl tracking-tighter">
+                            {vias.effectiveTotal.toFixed(1)}
+                          </span>{' '}
+                          <span className="text-sm">km</span>
+                        </span>
+                      </span>
+                    </Tooltip>
                     {this.state.cityMetadata &&
                       this.state.cityMetadata.alianca_2025 !== undefined &&
                       this.state.cityMetadata.alianca_2025 !== null && (
@@ -479,6 +539,13 @@ class AnalyticsSidebar extends Component {
                                   oficial da Prefeitura com base no levantamento anual da Aliança
                                   Bike. Última atualização: julho de 2025.
                                 </p>
+                                {vias.rawTotal !== vias.effectiveTotal && (
+                                  <p className="text-xs opacity-80">
+                                    O valor dinâmico no mapa está filtrado; para comparar com o dado
+                                    oficial use o total completo ({vias.rawTotal.toFixed(1)} km) ou
+                                    reative todas as estruturas nas linhas abaixo.
+                                  </p>
+                                )}
                                 <OfficialDisclaimer />
                                 <Button
                                   type="primary"
@@ -509,32 +576,17 @@ class AnalyticsSidebar extends Component {
             </div>
 
             <div className="mt-2">
-              {layers
-                .filter(
-                  (l) =>
-                    l.id === 'ciclovia' ||
-                    l.id === 'ciclofaixa' ||
-                    l.id === 'ciclorrota' ||
-                    l.id === 'calcada-compartilhada'
-                )
-                .sort((a, b) => {
-                  const lenA = lengths && lengths[a.id] ? lengths[a.id] : 0;
-                  const lenB = lengths && lengths[b.id] ? lengths[b.id] : 0;
-                  return lenB - lenA; // Sort descending by length
-                })
-                .map((l) => (
-                  <DataLineWithBarChart
-                    name={l.shortName || l.displayName}
-                    key={l.name}
-                    length={lengths && lengths[l.id]}
-                    percent={
-                      (lengths && Math.floor((lengths[l.id] * 100) / this.state.totalLength)) || 0
-                    }
-                    lineStyle={l.style.lineStyle}
-                    lineColor={l.style.lineColor}
-                    unit="km"
-                  />
-                ))}
+              {vias.infraLayers.map((l) => (
+                <ViaDataRow
+                  key={l.id}
+                  layer={l}
+                  length={lengths && lengths[l.id]}
+                  rawTotal={vias.rawTotal}
+                  effectiveTotal={vias.effectiveTotal}
+                  included={this.state.lengthsInclude[l.id]}
+                  onToggleInclude={() => this.toggleLengthsInclude(l.id)}
+                />
+              ))}
             </div>
           </Section>
 
@@ -602,21 +654,23 @@ const DataLineWithBarChart = (props) => (
   <div className="mb-2">
     <DataLine {...props} />
 
-    <div className="w-full h-1 relative bg-white bg-opacity-10 mt-1 rounded-full">
-      {props.percent > 0 && (
-        <div
-          className="h-1 rounded-full"
-          style={{
-            transition: 'width 1500ms ease',
-            background:
-              props.lineStyle === 'solid'
-                ? props.lineColor
-                : `repeating-linear-gradient(90deg, ${props.lineColor}, ${props.lineColor} 4px, transparent 4px, transparent 6px)`,
-            width: (props.percent || 0) + '%',
-          }}
-        ></div>
-      )}
-    </div>
+    {!props.hideBar && (
+      <div className="w-full h-1 relative bg-white bg-opacity-10 mt-1 rounded-full">
+        {props.percent > 0 && (
+          <div
+            className="h-1 rounded-full"
+            style={{
+              transition: 'width 1500ms ease',
+              background:
+                props.lineStyle === 'solid'
+                  ? props.lineColor
+                  : `repeating-linear-gradient(90deg, ${props.lineColor}, ${props.lineColor} 4px, transparent 4px, transparent 6px)`,
+              width: (props.percent || 0) + '%',
+            }}
+          ></div>
+        )}
+      </div>
+    )}
   </div>
 );
 
@@ -627,6 +681,92 @@ DataLineWithBarChart.propTypes = {
   lineStyle: PropTypes.string,
   lineColor: PropTypes.string,
   unit: PropTypes.string,
+  hideBar: PropTypes.bool,
+};
+
+DataLineWithBarChart.defaultProps = {
+  hideBar: false,
+};
+
+const ViaDataRow = ({
+  layer,
+  length,
+  rawTotal,
+  effectiveTotal,
+  included,
+  onToggleInclude,
+}) => {
+  const km =
+    length !== undefined && length !== null && !Number.isNaN(Number(length)) ? Number(length) : 0;
+  const pctOfRaw = rawTotal > 0 ? (km / rawTotal) * 100 : 0;
+  const pctOfEffective =
+    included && effectiveTotal > 0 ? (km / effectiveTotal) * 100 : null;
+
+  const tooltipTitle = (
+    <div className="text-xs max-w-[220px]">
+      <div className="font-semibold mb-1">{layer.displayName || layer.name}</div>
+      <div className="mb-1">{km.toFixed(1)} km</div>
+      {rawTotal > 0 && (
+        <div className="opacity-90 mb-0.5">
+          {pctOfRaw.toFixed(1)}% do mapeamento completo ({rawTotal.toFixed(1)} km no OSM)
+        </div>
+      )}
+      {pctOfEffective !== null && (
+        <div className="opacity-90 mb-0.5">
+          {pctOfEffective.toFixed(1)}% do total exibido ({effectiveTotal.toFixed(1)} km)
+        </div>
+      )}
+      {!included && (
+        <div className="opacity-90 mb-0.5">Excluído do total central e do gráfico.</div>
+      )}
+      <div className="opacity-75 pt-1 mt-1 border-t border-white border-opacity-20 border-solid">
+        Ao passar o mouse: use a caixa à direita para incluir ou excluir este tipo do total.
+      </div>
+    </div>
+  );
+
+  const barPercent =
+    included && effectiveTotal > 0 ? Math.floor((km * 100) / effectiveTotal) : 0;
+
+  return (
+    <div
+      className={`analytics-via-row group relative rounded -mx-1 px-1 -mr-1 ${
+        included ? '' : 'opacity-50'
+      }`}
+    >
+      <Tooltip title={tooltipTitle} placement="left">
+        <div className="relative pr-7">
+          <DataLineWithBarChart
+            name={layer.shortName || layer.displayName}
+            length={length}
+            percent={barPercent}
+            lineStyle={layer.style.lineStyle}
+            lineColor={layer.style.lineColor}
+            unit="km"
+            hideBar={!included}
+          />
+          <label className="analytics-via-row__toggle absolute right-0 top-1/2 -translate-y-1/2 flex items-center cursor-pointer p-1 rounded hover:bg-white hover:bg-opacity-10">
+            <input
+              type="checkbox"
+              className="analytics-via-row__checkbox m-0 cursor-pointer"
+              checked={included}
+              onChange={onToggleInclude}
+              aria-label={`Incluir ${layer.displayName || layer.name} no total de vias`}
+            />
+          </label>
+        </div>
+      </Tooltip>
+    </div>
+  );
+};
+
+ViaDataRow.propTypes = {
+  layer: layerShape.isRequired,
+  length: nullableNumber,
+  rawTotal: PropTypes.number.isRequired,
+  effectiveTotal: PropTypes.number.isRequired,
+  included: PropTypes.bool.isRequired,
+  onToggleInclude: PropTypes.func.isRequired,
 };
 
 const DataLine = (props) => (
