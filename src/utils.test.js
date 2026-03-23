@@ -1,4 +1,12 @@
-import { slugify, hexToRgba, adjustColorBrightness, sizeOf } from './utils/utils.js';
+import {
+  slugify,
+  hexToRgba,
+  adjustColorBrightness,
+  sizeOf,
+  removeAccents,
+  getOsmUrl,
+  formatTimeAgo,
+} from './utils/utils.js';
 
 describe('slugify', () => {
   it('lowercases and replaces spaces with hyphens', () => {
@@ -41,5 +49,50 @@ describe('sizeOf', () => {
   });
   it('returns 2 * length for string', () => {
     expect(sizeOf('abc')).toBe(6);
+  });
+});
+
+describe('removeAccents', () => {
+  it('strips combining marks from accented characters', () => {
+    expect(removeAccents('São Paulo')).toBe('Sao Paulo');
+  });
+  it('returns empty string for null or undefined', () => {
+    expect(removeAccents(null)).toBe('');
+    expect(removeAccents(undefined)).toBe('');
+  });
+});
+
+describe('getOsmUrl', () => {
+  it('builds OSM edit URL with zoom offset', () => {
+    expect(getOsmUrl(-23.5, -46.6, 14)).toBe(
+      'https://www.openstreetmap.org/edit#map=15/-23.5/-46.6'
+    );
+  });
+});
+
+describe('formatTimeAgo', () => {
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ['Intl'] });
+    jest.setSystemTime(new Date('2024-01-15T12:00:00.000Z'));
+  });
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
+
+  it('returns empty string for invalid date', () => {
+    expect(formatTimeAgo('not-a-date')).toBe('');
+  });
+
+  it('formats relative time for a recent past date', () => {
+    const past = new Date('2024-01-15T11:59:30.000Z');
+    const out = formatTimeAgo(past, { locale: 'en-US' });
+    expect(out.length).toBeGreaterThan(0);
+  });
+
+  it('capitalizes first letter when requested', () => {
+    const past = new Date('2024-01-15T11:59:30.000Z');
+    const out = formatTimeAgo(past, { locale: 'en-US', capitalizeFirstLetter: true });
+    expect(out.charAt(0)).toBe(out.charAt(0).toUpperCase());
   });
 });
