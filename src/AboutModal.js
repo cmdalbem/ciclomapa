@@ -85,7 +85,7 @@ function AboutModal({ visible, onClose, openLayersLegendModal }) {
               <a
                 className="h-full b-and-w"
                 href="https://itdpbrasil.org/"
-                target="_BLANK"
+                target="_blank"
                 rel="noopener noreferrer"
               >
                 <img className="h-full" src={itdp} alt="Logo do ITDP" />
@@ -93,7 +93,7 @@ function AboutModal({ visible, onClose, openLayersLegendModal }) {
               <a
                 className="h-full b-and-w"
                 href="https://www.gov.br/cidades/pt-br/acesso-a-informacao/acoes-e-programas/mobilidade-urbana/programa-bicicleta-brasil/premio-bicicleta-brasil/"
-                target="_BLANK"
+                target="_blank"
                 rel="noopener noreferrer"
               >
                 <img
@@ -105,7 +105,7 @@ function AboutModal({ visible, onClose, openLayersLegendModal }) {
               <a
                 className="h-full b-and-w"
                 href="https://www.uniaodeciclistas.org.br/"
-                target="_BLANK"
+                target="_blank"
                 rel="noopener noreferrer"
               >
                 <img className="h-full" src={ucb} alt="Logo da UCB" />
@@ -148,7 +148,7 @@ function AboutModal({ visible, onClose, openLayersLegendModal }) {
               <a
                 className="underline"
                 href="https://www.cristianodalbem.com/"
-                target="_BLANK"
+                target="_blank"
                 rel="noopener noreferrer"
               >
                 {' '}
@@ -158,7 +158,7 @@ function AboutModal({ visible, onClose, openLayersLegendModal }) {
               <a
                 className="underline"
                 href="https://github.com/cmdalbem/ciclomapa/graphs/contributors/"
-                target="_BLANK"
+                target="_blank"
                 rel="noopener noreferrer"
               >
                 {' '}

@@ -21,7 +21,7 @@ class EditModal extends Component {
           <Button key="3" type="primary">
             <a
               className="hover:text-white"
-              target="_BLANK"
+              target="_blank"
               rel="noopener noreferrer"
               href={getOsmUrl(this.props.lat, this.props.lng, this.props.z)}
             >
