@@ -477,7 +477,7 @@ class AnalyticsSidebar extends Component {
                                 <p>
                                   Quilometragem total de ciclovias e ciclofaixas divulgada como dado
                                   oficial da Prefeitura com base no levantamento anual da Aliança
-                                  Bike (atualização julho de 2025).
+                                  Bike. Última atualização: julho de 2025.
                                 </p>
                                 <OfficialDisclaimer />
                                 <Button
@@ -493,11 +493,8 @@ class AnalyticsSidebar extends Component {
                           >
                             <span className="flex items-center decoration-dotted tracking-tight gap-0.5">
                               <IconVerified className="inline-block opacity-50" />
-                              <div className="flex items-center items-baseline gap-0.5 opacity-70">
-                                <span className="text-md">
-                                  {Number(this.state.cityMetadata.alianca_2025).toFixed(1)}
-                                </span>{' '}
-                                <span className="text-md">km</span>
+                              <div className="flex items-center items-baseline opacity-70">
+                                {Number(this.state.cityMetadata.alianca_2025).toFixed(1)}km
                               </div>
                               {/* <IconInfo /> */}
                             </span>
