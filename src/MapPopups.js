@@ -1,7 +1,7 @@
 import mapboxgl from 'mapbox-gl';
 
 import './MapPopups.css';
-import { osmi18n as i18n } from './osmi18n.js';
+import { osmi18n as i18n } from './osmi18n';
 import Analytics from './Analytics.js';
 import { formatDistance, formatDuration } from './utils/routeUtils.js';
 import { formatTimeAgo } from './utils/utils.js';

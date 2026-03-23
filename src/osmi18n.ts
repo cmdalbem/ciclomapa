@@ -2,11 +2,10 @@
  * Brazilian Portuguese translations for common OSM tags,
  * used to detailed information in the popups.
  */
-export const osmi18n = {
+export const osmi18n: Record<string, string | null> = {
   /*
    * Cycleway tags
    */
-  lit: 'Iluminado',
 
   // Surface types
   surface: 'Superfície',
@@ -25,23 +24,10 @@ export const osmi18n = {
   'oneway:bicycle': 'Sentido único para bicicletas?',
 
   // Road types
-  // highway: 'Estrada',
-  // track: 'Estrada',
   path: 'Caminho',
-  // cycleway: 'Caminho para bicicletas',
-  // footway: 'Caminho para pedestres',
-  // sidewalk: 'Caminho para pedestres',
-  // "cycleway:left": 'Tipo de caminho para bicicletas na esquerda',
-  // "cycleway:right": 'Tipo de caminho para bicicletas na direita',
-  // "cycleway:both": 'Tipo de caminho para bicicletas em ambos lados',
-  // "cycleway:opposite": 'Tipo de caminho para bicicletas (lado oposto)',
-  // "cycleway:opposite:left": 'Tipo de caminho para bicicletas (lado oposto esquerdo)',
-  // "cycleway:opposite:right": 'Tipo de caminho para bicicletas (lado oposto direito)',
-  // "cycleway:opposite:both": 'Tipo de caminho para bicicletas (lado oposto, ambos lados)',
   tertiary: 'Terciária',
   secondary: 'Secundária',
   primary: 'Primária',
-  // motorway: 'Estrada',
   trunk: 'Rodovia',
   unclassified: 'Não classificada',
   living_street: 'Residencial',
@@ -49,10 +35,7 @@ export const osmi18n = {
   service: 'Serviço',
   tunnel: 'Túnel?',
   pedestrian: 'Passeio',
-  // bicycle: 'Bicicleta',
-  // foot: 'Passeio',
   lane: 'Faixa',
-  // lanes: 'Nro de faixas',
   buffered_lane: 'Faixa bufferizada',
   shared_lane: 'Faixa compartilhada',
   share_busway: 'Faixa compartilhada com ônibus',
@@ -62,7 +45,6 @@ export const osmi18n = {
   opposite_lane: 'Faixa oposta',
   opposite_buffered_lane: 'Faixa oposta bufferizada',
   opposite_shared_lane: 'Faixa oposta compartilhada',
-  opposite_share_busway: 'Faixa oposta compartilhada com ônibus',
 
   /*
    * POI tags
@@ -89,8 +71,6 @@ export const osmi18n = {
   anchors: 'Âncora',
   shed: 'Abrigo',
   bollard: '',
-  lockers: 'Armários',
-  // building: 'Prédio',
   informal: 'Informal',
   streetpod: '',
   tree: 'Árvore',
