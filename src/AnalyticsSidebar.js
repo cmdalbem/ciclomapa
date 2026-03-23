@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { Popover, Button } from 'antd';
 
 import './AnalyticsSidebar.css';
@@ -27,6 +28,32 @@ import { removeAccents } from './utils/utils.js';
 import { LENGTH_CALCULATE_STRATEGIES } from './config/constants.js';
 
 const PIE_CHART_WIDTH_PX = 207;
+const nullableNumber = PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]);
+
+const layerShape = PropTypes.shape({
+  id: PropTypes.string.isRequired,
+  name: PropTypes.string.isRequired,
+  shortName: PropTypes.string,
+  displayName: PropTypes.string,
+  type: PropTypes.string,
+  style: PropTypes.shape({
+    lineStyle: PropTypes.string,
+    lineColor: PropTypes.string,
+  }),
+});
+
+const OpenStreetMapDisclaimer = () => (
+  <p className="italic opacity-50">
+    Estes números se baseiam no estado atual do mapeamento colaborativo no OpenStreetMap e não são
+    dados oficiais, podendo não refletir a realidade com precisão.
+  </p>
+);
+
+const OfficialDisclaimer = () => (
+  <p className="italic opacity-50">
+    Estes números são dados oficiais da prefeitura mas podem não refletir a realidade com precisão.
+  </p>
+);
 
 class AnalyticsSidebar extends Component {
   constructor(props) {
@@ -379,11 +406,7 @@ class AnalyticsSidebar extends Component {
                   Para vias que tem estrutura dos dois lados nós desenvolvemos um método que
                   automaticamente detecta estes casos e remove esta contagem dupla do total.
                 </p>
-                <p className="italic opacity-50">
-                  Estes números se baseiam no estado atual do mapeamento da infraestrutura da cidade
-                  no OpenStreetMap e não são dados oficiais, podendo não refletir a realidade com
-                  precisão.
-                </p>
+                <OpenStreetMapDisclaimer />
               </>
             }
           >
@@ -471,11 +494,7 @@ class AnalyticsSidebar extends Component {
             title="Pontos de interesse"
             description={
               <>
-                <p className="italic opacity-50">
-                  Estes números se baseiam no estado atual do mapeamento da infraestrutura da cidade
-                  no OpenStreetMap e não são dados oficiais, podendo não refletir a realidade com
-                  precisão.
-                </p>
+                <OpenStreetMapDisclaimer />
               </>
             }
           >
@@ -513,9 +532,26 @@ class AnalyticsSidebar extends Component {
   }
 }
 
+AnalyticsSidebar.propTypes = {
+  open: PropTypes.bool,
+  toggle: PropTypes.func.isRequired,
+  location: PropTypes.string,
+  lengths: PropTypes.objectOf(nullableNumber),
+  layers: PropTypes.arrayOf(layerShape),
+  isDarkMode: PropTypes.bool,
+  debugMode: PropTypes.bool,
+  onChangeStrategy: PropTypes.func,
+  lengthCalculationStrategy: PropTypes.string,
+  downloadData: PropTypes.func,
+};
+
 const BigNum = ({ children }) => (
   <div className="text-3xl font-regular tracking-tighter -mt-2 mb-1">{children}</div>
 );
+
+BigNum.propTypes = {
+  children: PropTypes.node,
+};
 
 const DataLineWithBarChart = (props) => (
   <div className="mb-2">
@@ -539,6 +575,15 @@ const DataLineWithBarChart = (props) => (
   </div>
 );
 
+DataLineWithBarChart.propTypes = {
+  name: PropTypes.string.isRequired,
+  length: nullableNumber,
+  percent: PropTypes.number,
+  lineStyle: PropTypes.string,
+  lineColor: PropTypes.string,
+  unit: PropTypes.string,
+};
+
 const DataLine = (props) => (
   <div className="flex items-center justify-between px-0 py-0 text-xs font-semibold leading-5">
     <span>{props.name}</span>
@@ -552,6 +597,13 @@ const DataLine = (props) => (
     </div>
   </div>
 );
+
+DataLine.propTypes = {
+  name: PropTypes.string.isRequired,
+  length: nullableNumber,
+  percent: PropTypes.number,
+  unit: PropTypes.string,
+};
 
 const Section = (props) => (
   <div className="mt-7">
@@ -583,7 +635,7 @@ const Section = (props) => (
               {props.description}
 
               {props.link && (
-                <Button className="glass-bg" target="_BLANK" href={props.link}>
+                <Button type="primary" target="_blank" href={props.link}>
                   Saiba mais
                 </Button>
               )}
@@ -600,5 +652,14 @@ const Section = (props) => (
     <div className="mt-2">{props.children}</div>
   </div>
 );
+
+Section.propTypes = {
+  title: PropTypes.string.isRequired,
+  description: PropTypes.node,
+  children: PropTypes.node,
+  link: PropTypes.string,
+  year: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  beta: PropTypes.bool,
+};
 
 export default AnalyticsSidebar;
