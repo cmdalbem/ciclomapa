@@ -99,7 +99,7 @@ class MapPopups {
             let link = untranslatedValue.includes('http')
               ? untranslatedValue
               : 'http://' + untranslatedValue;
-            content = `<a target="_BLANK" rel="noopener" class="underline" href=${link}>${link}</a>`;
+            content = `<a target="_blank" rel="noopener" class="underline" href=${link}>${link}</a>`;
             break;
 
           default:
@@ -156,7 +156,7 @@ class MapPopups {
                 }
 
                 <a class="border border-opacity-25 border-${color} px-2 py-1 rounded-xl mr-1"
-                    target="_BLANK" rel="noopener"
+                    target="_blank" rel="noopener"
                     href="${osmUrl}"
                 >
                     <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-0.5" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M1 8.91695V11H3.08304L8.91638 5.16667L6.83333 3.08362L1 8.91695ZM10.8375 3.24552C11.0542 3.02888 11.0542 2.67893 10.8375 2.4623L9.5377 1.16248C9.32107 0.945841 8.97111 0.945841 8.75448 1.16248L7.73795 2.179L9.821 4.26205L10.8375 3.24552Z"/></svg>    
