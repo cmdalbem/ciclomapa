@@ -22,6 +22,11 @@ import {
   HiDownload as IconDownload,
 } from 'react-icons/hi';
 
+import {
+  HiMiniCheckBadge as IconVerified,
+  HiOutlineCheckBadge as IconVerifiedOutline,
+} from 'react-icons/hi2';
+
 import AirtableDatabase from './AirtableDatabase.js';
 import { removeAccents } from './utils/utils.js';
 
@@ -443,16 +448,62 @@ class AnalyticsSidebar extends Component {
               </PieChart>
 
               <div
-                className="absolute top-0 w-full flex flex-col items-center justify-center text-xs"
-                style={{ height: PIE_CHART_WIDTH_PX + 'px' }}
+                className="absolute top-0 w-full flex flex-col items-center justify-center"
+                style={{ height: `${PIE_CHART_WIDTH_PX}px`, width: `${PIE_CHART_WIDTH_PX}px` }}
               >
                 {this.state.totalLength && this.state.totalLength >= 0 ? (
                   <>
-                    TOTAL
-                    <div className="text-4xl font-regular tracking-tighter">
-                      {this.state.totalLength.toFixed(1)}
-                    </div>
-                    km
+                    <span className="tracking-wides text-xs">TOTAL</span>
+                    <span className="font-regular">
+                      <span className="text-4xl tracking-tighter">
+                        {this.state.totalLength.toFixed(1)}
+                      </span>{' '}
+                      <span className="text-sm">km</span>
+                    </span>
+                    {this.state.cityMetadata &&
+                      this.state.cityMetadata.alianca_2025 !== undefined &&
+                      this.state.cityMetadata.alianca_2025 !== null && (
+                        <>
+                          {/* <span className="tracking-widest mt-2">OFICIAL</span> */}
+                          <Popover
+                            placement="left"
+                            arrowPointAtCenter={true}
+                            content={
+                              <div style={{ width: 320 }}>
+                                <h3 className="text-lg flex items-center gap-1">
+                                  <IconVerified className="inline-block text-green-300 text-xl" />{' '}
+                                  Dado Oficial da Prefeitura
+                                </h3>
+                                <p>
+                                  Quilometragem total de ciclovias e ciclofaixas divulgada como dado
+                                  oficial da Prefeitura com base no levantamento anual da Aliança
+                                  Bike (atualização julho de 2025).
+                                </p>
+                                <OfficialDisclaimer />
+                                <Button
+                                  type="primary"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  href="https://aliancabike.org.br/dados-do-setor/ciclovias-e-ciclofaixas/"
+                                >
+                                  Saiba mais
+                                </Button>
+                              </div>
+                            }
+                          >
+                            <span className="flex items-center decoration-dotted tracking-tight gap-0.5">
+                              <IconVerified className="inline-block opacity-50" />
+                              <div className="flex items-center items-baseline gap-0.5 opacity-70">
+                                <span className="text-md">
+                                  {Number(this.state.cityMetadata.alianca_2025).toFixed(1)}
+                                </span>{' '}
+                                <span className="text-md">km</span>
+                              </div>
+                              {/* <IconInfo /> */}
+                            </span>
+                          </Popover>
+                        </>
+                      )}
                   </>
                 ) : (
                   <span className="opacity-50">Sem dados</span>
@@ -514,7 +565,7 @@ class AnalyticsSidebar extends Component {
               <p className="text-xs opacity-50">
                 Baixe os dados da infraestrutura cicloviária desta cidade em formato GeoJSON para
                 uso em seus próprios projetos e análises.
-                  </p>
+              </p>
               <Button ghost onClick={this.props.downloadData} block>
                 <IconDownload className="inline-block mr-1" />
                 <span className="font-mono text-xs">
@@ -586,7 +637,7 @@ const DataLine = (props) => (
     <span>{props.name}</span>
 
     <div className="flex items-center gap-2">
-      <span className="opacity-50">{props.percent !== undefined && props.percent + '%'}</span>
+      {/* <span className="opacity-50">{props.percent !== undefined && props.percent + '%'}</span> */}
       <span>
         {props.length !== undefined && Math.round(props.length)}
         {props.length !== undefined && props.unit}
