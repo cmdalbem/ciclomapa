@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client'; // Note the updated import
 import App from './App';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { getCssCustomProperties } from './config/design-tokens.js';
 
 // No-op console.debug in production to reduce noise
@@ -53,15 +53,26 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 const shouldExposeDebugHandles =
   new URLSearchParams(window.location.search).has('debug') && process.env.NODE_ENV !== 'production';
 
+function AppRoutes() {
+  const appRef = (app) => {
+    if (!shouldExposeDebugHandles) return;
+    window.ciclomapa = app;
+  };
+
+  return (
+    <Routes>
+      <Route path="/" element={<App ref={appRef} />} />
+      <Route path="/routes" element={<App ref={appRef} />} />
+      <Route path="/:city/routes" element={<App ref={appRef} />} />
+      <Route path="/:city" element={<App ref={appRef} />} />
+    </Routes>
+  );
+}
+
 // Render the app using the new root API
 root.render(
   <Router>
-    <App
-      ref={(app) => {
-        if (!shouldExposeDebugHandles) return;
-        window.ciclomapa = app;
-      }}
-    />
+    <AppRoutes />
   </Router>
 );
 

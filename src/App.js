@@ -42,6 +42,9 @@ class App extends Component {
   storage = new Storage();
   osmController = OSMController;
   currentOSMRequest = null;
+  pendingCityFitBounds = null;
+  lastResolvedCitySlug = null;
+  hasCanonicalizedCitySlugUrl = false;
 
   constructor(props) {
     super(props);
@@ -66,13 +69,19 @@ class App extends Component {
     this.setArea = this.setArea.bind(this);
     this.debouncedUpdateURL = debounce(this.updateURL, 300);
 
-    this.initState();
+    this.state = this.buildInitialState();
+    this.updateData();
   }
 
-  initState() {
+  buildInitialState() {
     const urlParams = this.getParamsFromURL();
     const prev = urlParams.embed ? {} : this.getStateFromLocalStorage();
     console.log('Previous saved state:', prev);
+
+    const citySlug = this.getCitySlugFromRoute();
+    const hasExplicitLatLng =
+      urlParams.lat !== undefined || urlParams.lng !== undefined || urlParams.z !== undefined;
+    const shouldStartFromGlobeView = Boolean(citySlug) && !hasExplicitLatLng;
 
     // On mobile, always use system theme preference since toggle isn't available
     // On desktop, use saved preference if available, otherwise fallback to system theme preference
@@ -119,16 +128,16 @@ class App extends Component {
       }
     }
 
-    this.state = {
+    return {
       area: prev.area || '',
       showSatellite: ENABLE_SATELLITE_TOGGLE
         ? prev.showSatellite !== undefined
           ? prev.showSatellite
           : false
         : false,
-      zoom: prev.zoom || urlParams.z || DEFAULT_ZOOM,
-      lat: parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
-      lng: parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
+      zoom: shouldStartFromGlobeView ? 1.8 : prev.zoom || urlParams.z || DEFAULT_ZOOM,
+      lat: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
+      lng: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
       geoJson: null,
       debugMode: urlParams.debug || false,
       loading: false,
@@ -150,8 +159,6 @@ class App extends Component {
       toPoint: toPoint,
       isDirectionsPanelOpen: false,
     };
-
-    this.updateData();
   }
 
   onChangeStrategy(event) {
@@ -286,6 +293,105 @@ class App extends Component {
     return paramsObj;
   }
 
+  getCitySlugFromRoute() {
+    const city = this.props?.router?.params?.city;
+    if (!city || city === 'routes') {
+      return null;
+    }
+    return city;
+  }
+
+  resolveCitySlugToAreaAndViewport = async (citySlug) => {
+    if (!citySlug) return;
+    if (this.lastResolvedCitySlug === citySlug) return;
+
+    this.lastResolvedCitySlug = citySlug;
+
+    try {
+      const query = decodeURIComponent(citySlug).replace(/-/g, ' ');
+      const data = await OSMController.searchNominatim(query, { limit: 1, addressdetails: 1 });
+      if (!Array.isArray(data) || data.length === 0) {
+        console.warn('City slug resolution: no results for', citySlug);
+        return;
+      }
+
+      const best = data[0];
+      const lat = parseFloat(best.lat);
+      const lng = parseFloat(best.lon);
+      const area = OSMController.normalizeAreaNameFromNominatimDisplayName(best.display_name);
+
+      let bounds = null;
+      if (Array.isArray(best.boundingbox) && best.boundingbox.length === 4) {
+        const south = parseFloat(best.boundingbox[0]);
+        const north = parseFloat(best.boundingbox[1]);
+        const west = parseFloat(best.boundingbox[2]);
+        const east = parseFloat(best.boundingbox[3]);
+        if ([south, north, west, east].every((v) => !Number.isNaN(v))) {
+          bounds = [
+            [west, south],
+            [east, north],
+          ];
+        }
+      }
+
+      this.pendingCityFitBounds = bounds;
+
+      this.setState(
+        (prevState) => ({
+          area: area || prevState.area,
+          lat: !Number.isNaN(lat) ? lat : prevState.lat,
+          lng: !Number.isNaN(lng) ? lng : prevState.lng,
+        }),
+        () => {
+          this.applyPendingCityFitBounds();
+          this.replaceCitySlugUrlWithLatLng();
+        }
+      );
+    } catch (e) {
+      console.error('City slug resolution error:', e);
+    }
+  };
+
+  replaceCitySlugUrlWithLatLng() {
+    const citySlug = this.getCitySlugFromRoute();
+    if (!citySlug) return;
+    if (this.hasCanonicalizedCitySlugUrl) return;
+
+    this.hasCanonicalizedCitySlugUrl = true;
+
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.set('lat', this.state.lat.toFixed(7));
+    currentParams.set('lng', this.state.lng.toFixed(7));
+    currentParams.set('z', this.state.zoom.toFixed(2));
+
+    const isRoutesPath = /\/routes\/?$/.test(window.location.pathname);
+    const basePath = isRoutesPath ? '/routes/' : '/';
+
+    const newSearch = currentParams.toString();
+    const newUrl = `${basePath}${newSearch ? `?${newSearch}` : ''}`;
+
+    const navigate = this.props.router?.navigate;
+    if (typeof navigate === 'function') {
+      navigate(newUrl, { replace: true });
+    } else {
+      window.history.replaceState(null, '', newUrl);
+    }
+  }
+
+  applyPendingCityFitBounds() {
+    if (!this.pendingCityFitBounds) return;
+    if (!this.state.map) return;
+    try {
+      this.state.map.fitBounds(this.pendingCityFitBounds, {
+        padding: { top: 150, bottom: 300, left: 100, right: 100 },
+        duration: 1200,
+      });
+      this.pendingCityFitBounds = null;
+    } catch (e) {
+      console.error('Failed to fit bounds from city slug:', e);
+    }
+  }
+
   async reverseGeocodeURLPoints() {
     // Reverse geocode URL-loaded points to get proper place names
     if (
@@ -341,9 +447,17 @@ class App extends Component {
   updateURL() {
     const currentParams = new URLSearchParams(window.location.search);
 
-    currentParams.set('lat', this.state.lat.toFixed(7));
-    currentParams.set('lng', this.state.lng.toFixed(7));
-    currentParams.set('z', this.state.zoom.toFixed(2));
+    const citySlug = this.getCitySlugFromRoute();
+
+    if (!citySlug) {
+      currentParams.set('lat', this.state.lat.toFixed(7));
+      currentParams.set('lng', this.state.lng.toFixed(7));
+      currentParams.set('z', this.state.zoom.toFixed(2));
+    } else {
+      currentParams.delete('lat');
+      currentParams.delete('lng');
+      currentParams.delete('z');
+    }
 
     if (this.state.debugMode) {
       currentParams.set('debug', 'true');
@@ -378,13 +492,15 @@ class App extends Component {
     const hasRouteParams = this.state.fromPoint && this.state.toPoint;
 
     if (hasRouteParams) {
-      // If we have route parameters, ensure we're on /routes/ path
       if (!basePath.endsWith('/routes/') && !basePath.endsWith('/routes')) {
-        basePath = basePath.endsWith('/') ? basePath + 'routes/' : basePath + '/routes/';
+        basePath = basePath.endsWith('/') ? `${basePath}routes/` : `${basePath}/routes/`;
       }
     } else {
-      // If no route parameters, remove /routes/ from path if it exists
       basePath = basePath.replace(/\/routes\/?$/, '') || '/';
+      // Avoid stripping /:city before slug resolution finishes (would lose the param route).
+      if (citySlug && basePath !== '/' && this.hasCanonicalizedCitySlugUrl) {
+        basePath = '/';
+      }
     }
 
     const newUrl = `${basePath}${newSearch ? '?' + newSearch : ''}`;
@@ -434,19 +550,15 @@ class App extends Component {
 
     let a_minus_b = new Set([...a].filter((x) => !b.has(x)));
     let b_minus_a = new Set([...b].filter((x) => !a.has(x)));
-    let a_intersect_b = new Set([...a].filter((x) => b.has(x)));
 
     // a_minus_b = [...a_minus_b].map(i => JSON.parse(i));
     // b_minus_a = [...b_minus_a].map(i => JSON.parse(i));
-    // a_intersect_b = [...a_intersect_b].map(i => JSON.parse(i));
 
     a_minus_b = [...a_minus_b];
     b_minus_a = [...b_minus_a];
-    a_intersect_b = [...a_intersect_b];
 
     // console.debug('Removed:', a_minus_b);
     // console.debug('Added:', b_minus_a);
-    // console.debug('Might\'ve changed:', a_intersect_b);
 
     notification.success({
       message: 'Dados atualizados com sucesso',
@@ -515,8 +627,8 @@ class App extends Component {
       this.setState({ loading: true });
     }
 
-    const parts = areaName.split(',');
-    const city = parts[0];
+    // const parts = areaName.split(',');
+    // const city = parts[0];
 
     // notification.info({
     //     message: 'OSM Request Started',
@@ -740,6 +852,22 @@ class App extends Component {
       this.onRouteChanged();
     }
 
+    const prevCityParam = prevProps.router?.params?.city;
+    const prevCitySlug =
+      prevCityParam && prevCityParam !== 'routes' ? prevCityParam : null;
+    const currCitySlug = this.getCitySlugFromRoute();
+    if (prevCitySlug !== currCitySlug) {
+      this.hasCanonicalizedCitySlugUrl = false;
+      this.lastResolvedCitySlug = null;
+      if (currCitySlug) {
+        this.resolveCitySlugToAreaAndViewport(currCitySlug);
+      }
+    }
+
+    if (this.state.map && this.state.map !== prevState.map) {
+      this.applyPendingCityFitBounds();
+    }
+
     if (this.state.area !== prevState.area) {
       console.debug(`Changed area from ${prevState.area} to ${this.state.area}`);
 
@@ -888,6 +1016,11 @@ class App extends Component {
 
     // Reverse geocode URL-loaded points to get proper place names
     this.reverseGeocodeURLPoints();
+
+    const citySlug = this.getCitySlugFromRoute();
+    if (citySlug) {
+      this.resolveCitySlugToAreaAndViewport(citySlug);
+    }
 
     // if (!this.state.debugMode) {
     //     const emptyFunc = () => {};
