@@ -123,7 +123,8 @@ export const SAVE_TO_FIREBASE = true;
 export const DISABLE_DATA_HEALTY_TEST = false;
 export const THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE = 0.1;
 export const DISABLE_LOCAL_STORAGE = true;
-export const FORCE_RECALCULATE_LENGTHS_ALWAYS = false;
+const URL_PARAMS = new URLSearchParams(window.location.search);
+export const FORCE_RECALCULATE_LENGTHS_ALWAYS = URL_PARAMS.get('debug') === 'true';
 
 export const USE_GEOJSON_SOURCE = true;
 export const USE_PMTILES_SOURCE = true;
