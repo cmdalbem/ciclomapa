@@ -79,11 +79,13 @@ The app now keeps slug URLs (`/:city` and `/:city/routes`) and appends `?lat=&ln
 
 1. **Governed slug list** — known cities (or allowed slugs) with optional Nominatim query / display name overrides. **Current behavior:** known slugs are canonicalized; unknown slugs still resolve as open slugs for UX/shareability.
 2. **One canonical policy** — either:
-   - **Slug-only canonical** per city (e.g. `https://ciclomapa.app/sao-paulo-sp`), and optionally drop or narrow post-load replacement with `?lat=`; **or**
-   - **Dedicated paths** e.g. `/cidade/:slug` with redirects from legacy `/:city`.
+
+- **Slug-only canonical** per city (e.g. `https://ciclomapa.app/sao-paulo-sp`), and optionally drop or narrow post-load replacement with `?lat=`; **or**
+- **Dedicated paths** e.g. `/cidade/:slug` with redirects from legacy `/:city`.
+
 3. **Visible (or prerendered) copy** for supported cities: heading + short paragraph + bullets + OSM/contribute links — not only `sr-only` text.
 4. **Dynamic `<link rel="canonical">`** in JS (e.g. extend `documentMeta.js`) when a governed city is active; default `https://ciclomapa.app/` when no city.
-5. **`sitemap.xml`** generated or maintained from the **same catalog** as slugs (keep in sync with code).
+5. `**sitemap.xml**` generated or maintained from the **same catalog** as slugs (keep in sync with code).
 6. **Parameter URL control** — keep `?lat=&lng=&z=` for shareability while preventing index bloat; internal links should prefer canonical slug URLs.
 7. **Internal linking** — city pages should link to related/popular nearby cities and hub entry points with descriptive anchors.
 8. **City page uniqueness standard** — avoid thin near-duplicate pages by requiring city-specific visible copy.
@@ -100,18 +102,18 @@ The app now keeps slug URLs (`/:city` and `/:city/routes`) and appends `?lat=&ln
 
 ### Indexing & canonical policy matrix
 
-| URL pattern                         | Status | Indexing         | Canonical target                       | In sitemap |
-| ----------------------------------- | ------ | ---------------- | -------------------------------------- | ---------- |
-| `/`                                 | `200`  | `index,follow`   | self                                   | Yes        |
-| `/:city` (known slug)               | `200`  | `index,follow`   | canonical known slug                   | Yes        |
-| `/:city/routes` (if intended index) | `200`  | `index,follow`   | canonical known slug or self           | Optional   |
-| `/:city?lat=&lng=&z=`               | `200`  | `index,follow`\* | canonical known slug (parameterless)   | No         |
-| Unknown city slug                   | `200`  | `TBD`\*\*        | homepage (current JS fallback) or none | No         |
-| Legacy city URL after migration     | `301`  | n/a              | destination URL                        | No         |
+| URL pattern                         | Status | Indexing       | Canonical target                       | In sitemap |
+| ----------------------------------- | ------ | -------------- | -------------------------------------- | ---------- |
+| `/`                                 | `200`  | `index,follow` | self                                   | Yes        |
+| `/:city` (known slug)               | `200`  | `index,follow` | canonical known slug                   | Yes        |
+| `/:city/routes` (if intended index) | `200`  | `index,follow` | canonical known slug or self           | Optional   |
+| `/:city?lat=&lng=&z=`               | `200`  | `index,follow` | canonical known slug (parameterless)   | No         |
+| Unknown city slug                   | `200`  | `TBD`          | homepage (current JS fallback) or none | No         |
+| Legacy city URL after migration     | `301`  | n/a            | destination URL                        | No         |
 
-\* Until explicit `noindex` is implemented for parameterized states, enforce canonical consistently and avoid linking to parameterized URLs internally.
+Until explicit `noindex` is implemented for parameterized states, enforce canonical consistently and avoid linking to parameterized URLs internally.
 
-\*\* Decide and implement one policy: real `404` route state, or `200` + explicit `noindex`.
+Decide and implement one policy: real `404` route state, or `200` + explicit `noindex`.
 
 ### Decision gate (required)
 
@@ -182,6 +184,54 @@ The app now keeps slug URLs (`/:city` and `/:city/routes`) and appends `?lat=&ln
 - Google Search Console + Bing Webmaster on canonical domain; submit sitemap.
 - `WebApplication` / `Organization` JSON-LD on home if copy matches visible content.
 - Backlinks: partners (e.g. UCB, NGOs), OSM community, municipalities, research.
+
+### SEO testing checklist (summary)
+
+#### During development
+
+- Validate on local city URLs (e.g. `http://localhost:3002/sao-paulo`) and after SPA navigation:
+  - `title`, `meta description`, `canonical`, `og:url/title/description`, `twitter:title/description`
+- Use Chrome tooling for fast checks:
+  - **SEO Meta in 1 Click** or **Meta SEO Inspector** for quick tag validation
+  - **Detailed SEO Extension** for broader audits
+  - **OpenLink Structured Data Sniffer** if JSON-LD/schema is present
+  - **Lighthouse** for baseline SEO/performance checks
+- Keep sitemap and catalog consistent whenever slugs change:
+  - canonical slugs in sitemap, aliases excluded as canonical entries
+  - validate XML with:
+
+```bash
+xmllint --noout public/sitemap.xml
+```
+
+#### Before release
+
+- Preview metadata/rich results with a public URL (production or tunnel):
+  - Google Rich Results Test
+  - Schema Markup Validator
+  - Facebook Sharing Debugger
+  - Twitter Card Validator
+- Confirm:
+  - home and key city pages have correct canonical + descriptions
+  - unknown slug policy is enforced (`404` or `200 + noindex`)
+  - internal links point to canonical slug URLs (not parameterized map states)
+  - `robots.txt` and `sitemap.xml` are reachable on production host
+
+#### After release (production truth)
+
+- Run Google Search Console URL Inspection on changed city pages:
+  - verify rendered page + selected canonical
+  - request indexing for important updates
+- Track weekly after URL changes, then monthly in steady state:
+  - coverage errors (soft 404 / canonical conflicts)
+  - indexed URL count vs sitemap
+  - impressions/clicks/CTR for city landing pages
+
+#### Common failure modes to watch
+
+- SPA updates tags in browser but Google chooses different canonical
+- sitemap and slug catalog drift out of sync
+- aliases/parameter URLs creating duplicate URL signals
 
 ### Monitoring cadence
 
