@@ -995,17 +995,16 @@ class App extends Component {
 
     if (!this.state.embedMode) {
       const WELCOME_STORAGE_KEY = 'ciclomapa_hasSeenWelcomeMsg';
-      if (window.localStorage.getItem(WELCOME_STORAGE_KEY)) {
-        return;
+      if (!window.localStorage.getItem(WELCOME_STORAGE_KEY)) {
+        get('hasSeenWelcomeMsg').then((data) => {
+          if (window.localStorage.getItem(WELCOME_STORAGE_KEY) || data) {
+            return;
+          }
+          window.localStorage.setItem(WELCOME_STORAGE_KEY, '1');
+          this.openAboutModal();
+          set('hasSeenWelcomeMsg', true);
+        });
       }
-      get('hasSeenWelcomeMsg').then((data) => {
-        if (window.localStorage.getItem(WELCOME_STORAGE_KEY) || data) {
-          return;
-        }
-        window.localStorage.setItem(WELCOME_STORAGE_KEY, '1');
-        this.openAboutModal();
-        set('hasSeenWelcomeMsg', true);
-      });
     }
 
     setTimeout(() => {
@@ -1018,21 +1017,12 @@ class App extends Component {
       this.saveStateToLocalStorage();
     });
 
-    // Reverse geocode URL-loaded points to get proper place names
     this.reverseGeocodeURLPoints();
 
     const citySlug = this.getCitySlugFromRoute();
     if (citySlug) {
       this.resolveCitySlugToAreaAndViewport(citySlug);
     }
-
-    // if (!this.state.debugMode) {
-    //     const emptyFunc = () => {};
-    //     console.log = emptyFunc;
-    //     console.debug = emptyFunc;
-    //     console.warn = emptyFunc;
-    //     console.error = emptyFunc;
-    // }
   }
 
   componentWillUnmount() {
