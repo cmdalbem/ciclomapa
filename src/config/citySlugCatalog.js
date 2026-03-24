@@ -58,7 +58,11 @@ const PREDEFINED_CITY_SLUGS = {
     canonicalSlug: 'ciudad-de-mexico',
   },
   'ciudad-de-mexico': { query: 'Ciudad de Mexico', countrycodes: ['mx'] },
-  'mexico-city': { query: 'Ciudad de Mexico', countrycodes: ['mx'], canonicalSlug: 'ciudad-de-mexico' },
+  'mexico-city': {
+    query: 'Ciudad de Mexico',
+    countrycodes: ['mx'],
+    canonicalSlug: 'ciudad-de-mexico',
+  },
   guadalajara: { query: 'Guadalajara', countrycodes: ['mx'] },
   monterrey: { query: 'Monterrey', countrycodes: ['mx'] },
   puebla: { query: 'Puebla', countrycodes: ['mx'] },
@@ -136,4 +140,3 @@ export function getSeoCitySlugs() {
     .filter(([, value]) => !value.canonicalSlug)
     .map(([slug]) => slug);
 }
-
