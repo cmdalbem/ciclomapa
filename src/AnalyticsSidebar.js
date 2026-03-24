@@ -491,38 +491,15 @@ class AnalyticsSidebar extends Component {
               >
                 {lengths && vias.rawTotal > 0 ? (
                   <>
-                    <Tooltip
-                      title={
-                        vias.rawTotal !== vias.effectiveTotal ? (
-                          <div className="text-xs max-w-xs">
-                            <p className="m-0 mb-1">
-                              Total completo (todas as estruturas):{' '}
-                              <strong>{vias.rawTotal.toFixed(1)} km</strong>
-                            </p>
-                            <p className="m-0 opacity-90">
-                              Passe o mouse em uma linha abaixo e use a opção no painel que abre
-                              para incluir ou excluir tipos do total e do gráfico.
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-xs">
-                            Soma de ciclovia, ciclofaixa, ciclorrota e calçada compartilhada (dados
-                            do OpenStreetMap).
-                          </span>
-                        )
-                      }
-                      placement="left"
-                    >
-                      <span className="inline-flex flex-col items-center cursor-default">
-                        <span className="tracking-wides text-xs">TOTAL</span>
-                        <span className="font-regular">
-                          <span className="text-4xl tracking-tighter">
-                            {vias.effectiveTotal.toFixed(1)}
-                          </span>{' '}
-                          <span className="text-sm">km</span>
-                        </span>
+                    <span className="inline-flex flex-col items-center cursor-default">
+                      <span className="tracking-wides text-xs">TOTAL</span>
+                      <span className="font-regular">
+                        <span className="text-4xl tracking-tighter">
+                          {vias.effectiveTotal.toFixed(1)}
+                        </span>{' '}
+                        <span className="text-sm">km</span>
                       </span>
-                    </Tooltip>
+                    </span>
                     {this.state.cityMetadata &&
                       this.state.cityMetadata.alianca_2025 !== undefined &&
                       this.state.cityMetadata.alianca_2025 !== null && (
@@ -542,13 +519,6 @@ class AnalyticsSidebar extends Component {
                                   oficial da Prefeitura com base no levantamento anual da Aliança
                                   Bike. Última atualização: julho de 2025.
                                 </p>
-                                {vias.rawTotal !== vias.effectiveTotal && (
-                                  <p className="text-xs opacity-80">
-                                    O valor dinâmico no mapa está filtrado; para comparar com o dado
-                                    oficial use o total completo ({vias.rawTotal.toFixed(1)} km) ou
-                                    reative todas as estruturas no painel de cada linha abaixo.
-                                  </p>
-                                )}
                                 <OfficialDisclaimer />
                                 <Button
                                   type="primary"
@@ -696,24 +666,43 @@ const ViaDataRow = ({ layer, length, rawTotal, effectiveTotal, included, onToggl
     length !== undefined && length !== null && !Number.isNaN(Number(length)) ? Number(length) : 0;
   const pctOfRaw = rawTotal > 0 ? (km / rawTotal) * 100 : 0;
   const pctOfEffective = included && effectiveTotal > 0 ? (km / effectiveTotal) * 100 : null;
+  const showPctOfEffective =
+    pctOfEffective !== null && (rawTotal <= 0 || Math.abs(pctOfRaw - pctOfEffective) >= 0.05);
 
   const popoverContent = (
-    <div className="text-xs" style={{ maxWidth: 240 }}>
-      <div className="font-semibold mb-1">{layer.displayName || layer.name}</div>
-      <div className="mb-1">{km.toFixed(1)} km</div>
-      {rawTotal > 0 && (
-        <div className="opacity-90 mb-0.5">
-          {pctOfRaw.toFixed(1)}% do mapeamento completo ({rawTotal.toFixed(1)} km no OSM)
-        </div>
-      )}
-      {pctOfEffective !== null && (
-        <div className="opacity-90 mb-0.5">
-          {pctOfEffective.toFixed(1)}% do total exibido ({effectiveTotal.toFixed(1)} km)
-        </div>
-      )}
-      {!included && (
-        <div className="opacity-90 mb-0.5">Excluído do total central e do gráfico.</div>
-      )}
+    <div>
+      {/* <div className="font-semibold mb-1"></div> */}
+      <h3 className="text-lg">{layer.displayName || layer.name}</h3>
+      <div>
+        <table className="w-full border-collapse text-xs">
+          <tbody>
+            <tr>
+              <td className="py-1.5 pr-3 opacity-70 align-top">Extensão</td>
+              <td className="py-1.5 text-right whitespace-nowrap font-semibold align-top">
+                {km.toFixed(1)} km
+              </td>
+            </tr>
+
+            {rawTotal > 0 && (
+              <tr>
+                <td className="py-1 pr-3 opacity-70 align-top">Pct. do mapeamento completo</td>
+                <td className="py-1 text-right whitespace-nowrap align-top">
+                  {pctOfRaw.toFixed(1)}%
+                </td>
+              </tr>
+            )}
+
+            {showPctOfEffective && (
+              <tr>
+                <td className="py-1 pr-3 opacity-70 align-top">Pct. do total exibido</td>
+                <td className="py-1 text-right whitespace-nowrap align-top">
+                  {pctOfEffective.toFixed(1)}%
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
       <div className="pt-2 mt-2 border-t border-black border-opacity-10 border-solid">
         <label className="flex items-center gap-2 cursor-pointer select-none m-0 font-normal">
           <input
