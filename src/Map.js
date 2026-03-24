@@ -2388,26 +2388,42 @@ class Map extends Component {
       cityPicker.on('result', (result) => {
         console.debug('geocoder result', result);
 
-        let flyToPos;
-        if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
-          flyToPos = [-40.3144, -20.2944];
-        } else {
-          flyToPos = result.result.center;
-        }
-        this.map.flyTo({
-          center: flyToPos,
-          zoom: DEFAULT_ZOOM,
-          speed: 2.2,
-          minZoom: 6,
-        });
+        const resultCenter = result?.result?.center;
+        const resultBbox = result?.result?.bbox;
+        const resultLabel = result?.result?.place_name;
+        const hasValidBbox =
+          Array.isArray(resultBbox) &&
+          resultBbox.length === 4 &&
+          resultBbox.every((value) => Number.isFinite(Number(value)));
 
-        this.reverseGeocode(result.result.center)
-          .then((geocodeResult) => {
-            this.syncMapState(geocodeResult.place_name);
-          })
-          .catch((err) => {
-            console.debug('Reverse geocoding failed:', err.message);
+        if (hasValidBbox) {
+          this.map.fitBounds(
+            [
+              [Number(resultBbox[0]), Number(resultBbox[1])],
+              [Number(resultBbox[2]), Number(resultBbox[3])],
+            ],
+            {
+              padding: { top: 150, bottom: 300, left: 100, right: 100 },
+              duration: 1200,
+            }
+          );
+        } else {
+          let flyToPos;
+          if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
+            flyToPos = [-40.3144, -20.2944];
+          } else {
+            flyToPos = resultCenter;
+          }
+          this.map.flyTo({
+            center: flyToPos,
+            zoom: DEFAULT_ZOOM,
+            speed: 2.2,
+            minZoom: 6,
           });
+        }
+
+        // Keep city source of truth from picker selection instead of a follow-up reverse geocode.
+        this.syncMapState(resultLabel || this.props.location);
 
         // Hide UI
         // @todo refactor this to use React state

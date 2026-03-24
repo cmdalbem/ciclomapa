@@ -16,7 +16,11 @@ import { downloadObjectAsJson } from './utils/utils.js';
 import { updateDocumentMeta } from './utils/documentMeta.js';
 import { getSystemThemePreference } from './utils/themeUtils';
 import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './utils/geojsonUtils.js';
-import { getCanonicalCitySlug, getPredefinedCitySlugDefinition } from './config/citySlugCatalog.js';
+import {
+  getCanonicalCitySlug,
+  getPredefinedCitySlugDefinition,
+  getPredefinedCityStaticLocation,
+} from './config/citySlugCatalog.js';
 import { DirectionsProvider } from './contexts/DirectionsContext';
 import {
   DEFAULT_LAT,
@@ -409,8 +413,44 @@ class App extends Component {
     try {
       const normalizedSlug = decodeURIComponent(citySlug).trim().toLowerCase();
       const predefined = getPredefinedCitySlugDefinition(normalizedSlug);
+      const staticLocation = getPredefinedCityStaticLocation(normalizedSlug);
+      console.debug('[slug-resolution] start', {
+        citySlug,
+        normalizedSlug,
+        hasPredefinedDefinition: Boolean(predefined),
+        hasStaticLocation: Boolean(staticLocation),
+      });
+
+      if (staticLocation) {
+        this.pendingCityFitBounds = staticLocation.bounds;
+        console.debug('[slug-resolution] using static location', {
+          citySlug: normalizedSlug,
+          areaLabel: staticLocation.areaLabel,
+          lat: staticLocation.lat,
+          lng: staticLocation.lng,
+          hasBounds: Boolean(staticLocation.bounds),
+        });
+        this.setState(
+          (prevState) => ({
+            area: staticLocation.areaLabel || prevState.area,
+            lat: staticLocation.lat,
+            lng: staticLocation.lng,
+          }),
+          () => {
+            this.lastNotifiedCitySlugError = null;
+            this.applyPendingCityFitBounds();
+          }
+        );
+        return;
+      }
+
       const query = predefined?.query || normalizedSlug.replace(/[-_]+/g, ' ').trim();
       const countrycodes = predefined?.countrycodes;
+      console.debug('[slug-resolution] falling back to Nominatim', {
+        citySlug: normalizedSlug,
+        query,
+        countrycodes,
+      });
       const baseOptions = {
         limit: 5,
         addressdetails: 1,
@@ -473,6 +513,14 @@ class App extends Component {
       }
 
       this.pendingCityFitBounds = bounds;
+      console.debug('[slug-resolution] Nominatim resolved', {
+        citySlug: normalizedSlug,
+        query,
+        area,
+        lat,
+        lng,
+        hasBounds: Boolean(bounds),
+      });
 
       this.setState(
         (prevState) => ({

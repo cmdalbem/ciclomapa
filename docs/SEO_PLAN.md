@@ -31,17 +31,17 @@
 
 ## Current implementation status (high level)
 
-| Area                                                                      | Status         | Notes                                                                                     |
-| ------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------- |
-| `/:city` and `/:city/routes` entry URLs + Nominatim resolution            | Shipped        | `src/index.js` routes, `src/App.js`                                                       |
-| Slug route normalization + map-state params (`lat,lng,z`) kept in URL     | Shipped        | `normalizeCitySlugRouteIfNeeded`, `syncRouteSlugWithArea`, `updateURL`                    |
-| Phase 1 — static head, `robots.txt`, minimal sitemap, manifest            | Shipped        | `public/index.html`, `public/robots.txt`, `public/sitemap.xml`                            |
-| Phase 2 — dynamic `document.title` + `meta name=description`              | Shipped        | `src/utils/documentMeta.js`, called from `App.js`                                         |
-| CI — `yarn format:check`, `CI=true` in workflow                           | Shipped        | `.github/workflows/ci.yml`                                                                |
-| Phase 3 — governed slugs, stable canonicals, crawlable copy, rich sitemap | In progress    | Catalog + sitemap + canonical updates shipped; crawlable city copy/internal links pending |
-| Phase 4 — prerender/SSR for key URLs                                      | Not started    |                                                                                           |
-| Phase 5 — Search Console, backlinks, JSON-LD                              | Mostly process |                                                                                           |
-| Phase 6 — perf (CWV): bundle Tailwind, fonts, etc.                        | Not started    |                                                                                           |
+| Area                                                                       | Status         | Notes                                                                                     |
+| -------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------- |
+| `/:city` and `/:city/routes` entry URLs + slug fast-path for mapped cities | Shipped        | Static catalog metadata skips runtime Nominatim for mapped slugs in `src/App.js`          |
+| Slug route normalization + map-state params (`lat,lng,z`) kept in URL      | Shipped        | `normalizeCitySlugRouteIfNeeded`, `syncRouteSlugWithArea`, `updateURL`                    |
+| Phase 1 — static head, `robots.txt`, minimal sitemap, manifest             | Shipped        | `public/index.html`, `public/robots.txt`, `public/sitemap.xml`                            |
+| Phase 2 — dynamic `document.title` + `meta name=description`               | Shipped        | `src/utils/documentMeta.js`, called from `App.js`                                         |
+| CI — `yarn format:check`, `CI=true` in workflow                            | Shipped        | `.github/workflows/ci.yml`                                                                |
+| Phase 3 — governed slugs, stable canonicals, crawlable copy, rich sitemap  | In progress    | Catalog + sitemap + canonical updates shipped; crawlable city copy/internal links pending |
+| Phase 4 — prerender/SSR for key URLs                                       | Not started    |                                                                                           |
+| Phase 5 — Search Console, backlinks, JSON-LD                               | Mostly process |                                                                                           |
+| Phase 6 — perf (CWV): bundle Tailwind, fonts, etc.                         | Not started    |                                                                                           |
 
 ---
 
