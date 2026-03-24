@@ -59,7 +59,10 @@ class OSMController {
 
   static normalizeAreaNameFromNominatimDisplayName(displayName) {
     if (!displayName) return '';
-    const parts = displayName.split(',').map((p) => p.trim()).filter(Boolean);
+    const parts = displayName
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
     if (parts.length <= 3) return parts.join(', ');
     return parts.slice(0, 3).join(', ');
   }
