@@ -61,6 +61,38 @@ The app currently **replaces** pretty `/:city` URLs with **`/?lat=&lng=&z=`** af
 3. **Visible (or prerendered) copy** for supported cities: heading + short paragraph + bullets + OSM/contribute links — not only `sr-only` text.
 4. **Dynamic `<link rel="canonical">`** in JS (e.g. extend `documentMeta.js`) when a governed city is active; default `https://ciclomapa.app/` when no city.
 5. **`sitemap.xml`** generated or maintained from the **same catalog** as slugs (keep in sync with code).
+6. **Parameter URL control** — prevent `?lat=&lng=&z=` states from becoming index bloat; internal links should prefer canonical slug URLs.
+7. **Internal linking** — city pages should link to related/popular nearby cities and hub entry points with descriptive anchors.
+8. **City page uniqueness standard** — avoid thin near-duplicate pages by requiring city-specific visible copy.
+
+### Indexing & canonical policy matrix
+
+| URL pattern                         | Status | Indexing           | Canonical target                     | In sitemap |
+| ----------------------------------- | ------ | ------------------ | ------------------------------------ | ---------- |
+| `/`                                 | `200`  | `index,follow`     | self                                 | Yes        |
+| `/:city` (known slug)               | `200`  | `index,follow`     | self (or chosen canonical city path) | Yes        |
+| `/:city/routes` (if intended index) | `200`  | `index,follow`     | self or mapped city canonical        | Optional   |
+| `/?lat=&lng=&z=` map state          | `200`  | `noindex,follow`\* | canonical city slug (when resolved)  | No         |
+| Unknown city slug                   | `404`  | `noindex,follow`   | none                                 | No         |
+| Legacy city URL after migration     | `301`  | n/a                | destination URL                      | No         |
+
+\* If `noindex` is not practical for parameter states, enforce canonical consistently and avoid linking to parameterized URLs internally.
+
+### City page content standard
+
+- Each indexable city page must have visible, crawlable text (not only `sr-only`).
+- Minimum baseline:
+  - H1 with city name
+  - One city-specific paragraph (not generic boilerplate)
+  - 3+ meaningful bullet points (network context, usage tips, known limits)
+  - Source/contribution links (e.g. OSM mapping and local contribution path)
+- Prefer including a "last updated" indicator to support freshness and editorial trust.
+
+### Unknown slug handling policy
+
+- Unknown slug should return a real `404` route state (not soft-404 content with `200`).
+- Do not set city canonical on unknown slug pages.
+- If there are renamed slugs, use `301` from old slug to new slug with one-hop redirects only.
 
 ### Implementation touchpoints
 
@@ -80,7 +112,15 @@ The app currently **replaces** pretty `/:city` URLs with **`/?lat=&lng=&z=`** af
 2. Decide canonical URL shape; adjust `replaceCitySlugUrlWithLatLng` and `updateURL` accordingly.
 3. Add visible SEO section + `documentMeta` canonical updates.
 4. Expand sitemap from catalog.
-5. Verify in Google Search Console (URL inspection on 2–3 city URLs).
+5. Add internal links (related/popular cities) from city pages and homepage/hub areas.
+6. Verify in Google Search Console (URL inspection on 2–3 city URLs).
+
+### Internal linking policy
+
+- Homepage should link to top-priority city pages with descriptive anchors.
+- City pages should include a small related-cities module.
+- Avoid repetitive exact-match anchor spam; vary naturally while staying descriptive.
+- All internal links should point to canonical URLs, not parameter map states.
 
 ---
 
@@ -97,6 +137,26 @@ The app currently **replaces** pretty `/:city` URLs with **`/?lat=&lng=&z=`** af
 - `WebApplication` / `Organization` JSON-LD on home if copy matches visible content.
 - Backlinks: partners (e.g. UCB, NGOs), OSM community, municipalities, research.
 
+### Monitoring cadence
+
+- **Weekly (first 4–6 weeks after major URL changes):**
+  - Coverage issues (soft 404, duplicate without user-selected canonical, blocked crawls)
+  - Indexing status for a sample of top city URLs
+  - Redirect and canonical validation for migrated slugs
+- **Monthly (steady state):**
+  - Clicks/impressions trend by city landing pages
+  - Index count vs sitemap count
+  - Query clusters for non-branded local intent
+  - Top losing pages/queries and remediation actions
+
+### KPI suggestions
+
+- Indexed supported city URLs / total supported city URLs
+- Non-branded organic clicks to city pages
+- CTR on city landing pages
+- Share of parameterized URLs receiving impressions (should trend toward zero)
+- Count of coverage warnings (soft 404 + duplicate canonical conflicts)
+
 ---
 
 ## Phase 6 — Performance (indirect SEO)
@@ -104,6 +164,7 @@ The app currently **replaces** pretty `/:city` URLs with **`/?lat=&lng=&z=`** af
 - Replace production Tailwind from CDN with bundled CSS where possible.
 - Font subsetting / self-host.
 - Lazy-load non-critical third parties.
+- Set measurable CWV targets for `/` and top city URLs (mobile-first).
 
 ---
 
@@ -132,3 +193,5 @@ CI=true yarn test --watchAll=false
 - **Coordinate URLs** vs **slug canonical**: without a single rule, duplicate URLs dilute signals.
 - **Client-only meta**: better than nothing; **prerender** still helps competitive city queries.
 - **Per-city OG**: easy to get wrong; defer until URLs and copy are stable.
+- **Strict 404 policy**: cleaner index but may reduce tolerance for typos unless UX provides clear recovery links.
+- **Uniqueness requirements**: improves quality signals but increases editorial/content operations workload.
