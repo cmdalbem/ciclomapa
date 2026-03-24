@@ -22,9 +22,7 @@ import {
   HiDownload as IconDownload,
 } from 'react-icons/hi';
 
-import {
-  HiMiniCheckBadge as IconVerified,
-} from 'react-icons/hi2';
+import { HiMiniCheckBadge as IconVerified } from 'react-icons/hi2';
 
 import AirtableDatabase from './AirtableDatabase.js';
 import { removeAccents } from './utils/utils.js';
