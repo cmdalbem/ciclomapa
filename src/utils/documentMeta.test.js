@@ -1,4 +1,8 @@
-import { updateDocumentMeta, DEFAULT_PAGE_TITLE, DEFAULT_META_DESCRIPTION } from './documentMeta.js';
+import {
+  updateDocumentMeta,
+  DEFAULT_PAGE_TITLE,
+  DEFAULT_META_DESCRIPTION,
+} from './documentMeta.js';
 
 describe('updateDocumentMeta', () => {
   beforeEach(() => {
