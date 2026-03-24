@@ -47,7 +47,6 @@ class App extends Component {
   pendingCityFitBounds = null;
   lastResolvedCitySlug = null;
   lastNotifiedCitySlugError = null;
-  hasCanonicalizedCitySlugUrl = false;
 
   constructor(props) {
     super(props);
@@ -82,8 +81,7 @@ class App extends Component {
     console.log('Previous saved state:', prev);
 
     const citySlug = this.getCitySlugFromRoute();
-    const hasExplicitLatLng =
-      urlParams.lat !== undefined || urlParams.lng !== undefined || urlParams.z !== undefined;
+    const hasExplicitLatLng = this.hasExplicitViewportInURL();
     const shouldStartFromGlobeView = Boolean(citySlug) && !hasExplicitLatLng;
 
     // On mobile, always use system theme preference since toggle isn't available
@@ -296,12 +294,110 @@ class App extends Component {
     return paramsObj;
   }
 
+  hasExplicitViewportInURL() {
+    const params = new URLSearchParams(this.props?.location?.search || window.location.search);
+    return params.has('lat') || params.has('lng') || params.has('z');
+  }
+
   getCitySlugFromRoute() {
     const city = this.props?.router?.params?.city;
     if (!city || city === 'routes') {
       return null;
     }
     return city;
+  }
+
+  getNormalizedRouteCitySlug() {
+    const citySlug = this.getCitySlugFromRoute();
+    if (!citySlug) return null;
+    return decodeURIComponent(citySlug).trim().toLowerCase();
+  }
+
+  getCanonicalRouteCitySlug() {
+    const normalizedSlug = this.getNormalizedRouteCitySlug();
+    if (!normalizedSlug) return null;
+    const definition = getPredefinedCitySlugDefinition(normalizedSlug);
+    if (!definition) return null;
+    return getCanonicalCitySlug(normalizedSlug);
+  }
+
+  getCitySlugFromArea(area) {
+    if (!area || typeof area !== 'string') return null;
+    const primaryLabel = area.split(',')[0]?.trim();
+    if (!primaryLabel) return null;
+    const normalizedSlug = this.slugifyCityLabel(primaryLabel);
+    if (!normalizedSlug) return null;
+
+    const definition = getPredefinedCitySlugDefinition(normalizedSlug);
+    if (!definition) return normalizedSlug;
+    return definition.canonicalSlug || normalizedSlug;
+  }
+
+  getKnownCanonicalSlugFromArea(area) {
+    if (!area || typeof area !== 'string') return null;
+    const primaryLabel = area.split(',')[0]?.trim();
+    if (!primaryLabel) return null;
+    const normalizedSlug = this.slugifyCityLabel(primaryLabel);
+    if (!normalizedSlug) return null;
+    const definition = getPredefinedCitySlugDefinition(normalizedSlug);
+    if (!definition) return null;
+    return definition.canonicalSlug || normalizedSlug;
+  }
+
+  getPreferredCanonicalSlugForMeta(area) {
+    return this.getKnownCanonicalSlugFromArea(area) || this.getCanonicalRouteCitySlug();
+  }
+
+  slugifyCityLabel(label) {
+    if (!label || typeof label !== 'string') return null;
+    return label
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  normalizeCitySlugRouteIfNeeded() {
+    const normalizedSlug = this.getNormalizedRouteCitySlug();
+    if (!normalizedSlug) return false;
+
+    const definition = getPredefinedCitySlugDefinition(normalizedSlug);
+    const navigate = this.props.router?.navigate;
+    if (!definition) return false;
+
+    const canonicalSlug = getCanonicalCitySlug(normalizedSlug);
+    if (canonicalSlug === normalizedSlug) return false;
+
+    const isRoutesPath = /\/routes\/?$/.test(window.location.pathname);
+    const canonicalPath = isRoutesPath ? `/${canonicalSlug}/routes` : `/${canonicalSlug}`;
+    const newUrl = `${canonicalPath}${window.location.search || ''}`;
+
+    if (typeof navigate === 'function') {
+      navigate(newUrl, { replace: true });
+    } else {
+      window.history.replaceState(null, '', newUrl);
+    }
+    return true;
+  }
+
+  syncRouteSlugWithArea(area) {
+    const areaSlug = this.getCitySlugFromArea(area);
+    if (!areaSlug) return;
+
+    const routeSlug = this.getCanonicalRouteCitySlug();
+    if (routeSlug === areaSlug) return;
+
+    const hasRouteParams = this.state.fromPoint && this.state.toPoint;
+    const nextPath = hasRouteParams ? `/${areaSlug}/routes` : `/${areaSlug}`;
+    const nextUrl = `${nextPath}${window.location.search || ''}`;
+
+    const navigate = this.props.router?.navigate;
+    if (typeof navigate === 'function') {
+      navigate(nextUrl);
+    } else {
+      window.history.pushState(null, '', nextUrl);
+    }
   }
 
   resolveCitySlugToAreaAndViewport = async (citySlug) => {
@@ -387,7 +483,6 @@ class App extends Component {
         () => {
           this.lastNotifiedCitySlugError = null;
           this.applyPendingCityFitBounds();
-          this.replaceCitySlugUrlWithLatLng();
         }
       );
     } catch (e) {
@@ -404,32 +499,6 @@ class App extends Component {
       this.lastResolvedCitySlug = null;
     }
   };
-
-  replaceCitySlugUrlWithLatLng() {
-    const citySlug = this.getCitySlugFromRoute();
-    if (!citySlug) return;
-    if (this.hasCanonicalizedCitySlugUrl) return;
-
-    this.hasCanonicalizedCitySlugUrl = true;
-
-    const currentParams = new URLSearchParams(window.location.search);
-    currentParams.set('lat', this.state.lat.toFixed(7));
-    currentParams.set('lng', this.state.lng.toFixed(7));
-    currentParams.set('z', this.state.zoom.toFixed(2));
-
-    const isRoutesPath = /\/routes\/?$/.test(window.location.pathname);
-    const basePath = isRoutesPath ? '/routes/' : '/';
-
-    const newSearch = currentParams.toString();
-    const newUrl = `${basePath}${newSearch ? `?${newSearch}` : ''}`;
-
-    const navigate = this.props.router?.navigate;
-    if (typeof navigate === 'function') {
-      navigate(newUrl, { replace: true });
-    } else {
-      window.history.replaceState(null, '', newUrl);
-    }
-  }
 
   applyPendingCityFitBounds() {
     if (!this.pendingCityFitBounds) return;
@@ -500,17 +569,9 @@ class App extends Component {
   updateURL() {
     const currentParams = new URLSearchParams(window.location.search);
 
-    const citySlug = this.getCitySlugFromRoute();
-
-    if (!citySlug) {
-      currentParams.set('lat', this.state.lat.toFixed(7));
-      currentParams.set('lng', this.state.lng.toFixed(7));
-      currentParams.set('z', this.state.zoom.toFixed(2));
-    } else {
-      currentParams.delete('lat');
-      currentParams.delete('lng');
-      currentParams.delete('z');
-    }
+    currentParams.set('lat', this.state.lat.toFixed(7));
+    currentParams.set('lng', this.state.lng.toFixed(7));
+    currentParams.set('z', this.state.zoom.toFixed(2));
 
     if (this.state.debugMode) {
       currentParams.set('debug', 'true');
@@ -550,10 +611,6 @@ class App extends Component {
       }
     } else {
       basePath = basePath.replace(/\/routes\/?$/, '') || '/';
-      // Avoid stripping /:city before slug resolution finishes (would lose the param route).
-      if (citySlug && basePath !== '/' && this.hasCanonicalizedCitySlugUrl) {
-        basePath = '/';
-      }
     }
 
     const newUrl = `${basePath}${newSearch ? '?' + newSearch : ''}`;
@@ -909,10 +966,14 @@ class App extends Component {
     const prevCitySlug = prevCityParam && prevCityParam !== 'routes' ? prevCityParam : null;
     const currCitySlug = this.getCitySlugFromRoute();
     if (prevCitySlug !== currCitySlug) {
-      this.hasCanonicalizedCitySlugUrl = false;
       this.lastResolvedCitySlug = null;
       if (currCitySlug) {
-        this.resolveCitySlugToAreaAndViewport(currCitySlug);
+        const routeWasNormalized = this.normalizeCitySlugRouteIfNeeded();
+        if (routeWasNormalized) return;
+        updateDocumentMeta(this.state.area, this.getPreferredCanonicalSlugForMeta(this.state.area));
+        if (!this.hasExplicitViewportInURL()) {
+          this.resolveCitySlugToAreaAndViewport(currCitySlug);
+        }
       }
     }
 
@@ -921,7 +982,8 @@ class App extends Component {
     }
 
     if (this.state.area !== prevState.area) {
-      updateDocumentMeta(this.state.area, getCanonicalCitySlug(this.getCitySlugFromRoute()));
+      updateDocumentMeta(this.state.area, this.getPreferredCanonicalSlugForMeta(this.state.area));
+      this.syncRouteSlugWithArea(this.state.area);
 
       console.debug(`Changed area from ${prevState.area} to ${this.state.area}`);
 
@@ -1027,7 +1089,7 @@ class App extends Component {
   };
 
   componentDidMount() {
-    updateDocumentMeta(this.state.area, getCanonicalCitySlug(this.getCitySlugFromRoute()));
+    updateDocumentMeta(this.state.area, this.getPreferredCanonicalSlugForMeta(this.state.area));
 
     // Initialize theme
     document.body.className = this.state.isDarkMode ? 'theme-dark' : 'theme-light';
@@ -1073,7 +1135,11 @@ class App extends Component {
 
     const citySlug = this.getCitySlugFromRoute();
     if (citySlug) {
-      this.resolveCitySlugToAreaAndViewport(citySlug);
+      const routeWasNormalized = this.normalizeCitySlugRouteIfNeeded();
+      if (routeWasNormalized) return;
+      if (!this.hasExplicitViewportInURL()) {
+        this.resolveCitySlugToAreaAndViewport(citySlug);
+      }
     }
   }
 

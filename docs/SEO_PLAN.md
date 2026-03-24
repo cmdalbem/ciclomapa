@@ -6,19 +6,42 @@
 
 ---
 
+## Visual snapshot
+
+**Legend:** `✅ done` · `🟡 in progress` · `⚪ not started` · `🧭 decision needed`
+
+| Phase                           | Progress          | Status |
+| ------------------------------- | ----------------- | ------ |
+| Phase 1 — Static baseline       | `██████████` 100% | ✅     |
+| Phase 2 — Dynamic meta          | `██████████` 100% | ✅     |
+| Phase 3 — URLs + crawlability   | `██████░░░░` ~60% | 🟡     |
+| Phase 4 — Prerender/SSR         | `░░░░░░░░░░` 0%   | ⚪     |
+| Phase 5 — Measurement/authority | `███░░░░░░░` ~30% | 🟡     |
+| Phase 6 — Perf/CWV              | `░░░░░░░░░░` 0%   | ⚪     |
+
+### Now / Next / Later
+
+| Now (active)                                                     | Next (queued)                                                   | Later                                           |
+| ---------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
+| Finalize unknown-slug indexing policy (`404` vs `200 + noindex`) | Add visible city SEO section (H1 + paragraph + bullets + links) | Prerender/SSR for `/` + top city pages          |
+| Keep canonical consistent for known slug routes                  | Generate sitemap from slug catalog as single source of truth    | CWV work (bundled CSS/fonts/third-party defers) |
+| Verify canonical behavior in GSC URL Inspection                  | Add internal related-city links                                 | JSON-LD + backlink campaign                     |
+
+---
+
 ## Current implementation status (high level)
 
-| Area                                                                      | Status            | Notes                                                                             |
-| ------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------- |
-| `/:city` and `/:city/routes` entry URLs + Nominatim resolution            | Shipped           | `src/index.js` routes, `src/App.js`                                               |
-| Post-load URL canonization (`/` or `/routes/` + `lat,lng,z`)              | Shipped           | `replaceCitySlugUrlWithLatLng`, `updateURL`                                       |
-| Phase 1 — static head, `robots.txt`, minimal sitemap, manifest            | Shipped           | `public/index.html`, `public/robots.txt`, `public/sitemap.xml`                    |
-| Phase 2 — dynamic `document.title` + `meta name=description`              | Shipped           | `src/utils/documentMeta.js`, called from `App.js`                                 |
-| CI — `yarn format:check`, `CI=true` in workflow                           | Shipped           | `.github/workflows/ci.yml`                                                        |
-| Phase 3 — governed slugs, stable canonicals, crawlable copy, rich sitemap | Planned / partial | May exist locally as `citySlugCatalog.js` + expanded sitemap; align with this doc |
-| Phase 4 — prerender/SSR for key URLs                                      | Not started       |                                                                                   |
-| Phase 5 — Search Console, backlinks, JSON-LD                              | Mostly process    |                                                                                   |
-| Phase 6 — perf (CWV): bundle Tailwind, fonts, etc.                        | Not started       |                                                                                   |
+| Area                                                                      | Status         | Notes                                                                                     |
+| ------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------- |
+| `/:city` and `/:city/routes` entry URLs + Nominatim resolution            | Shipped        | `src/index.js` routes, `src/App.js`                                                       |
+| Slug route normalization + map-state params (`lat,lng,z`) kept in URL     | Shipped        | `normalizeCitySlugRouteIfNeeded`, `syncRouteSlugWithArea`, `updateURL`                    |
+| Phase 1 — static head, `robots.txt`, minimal sitemap, manifest            | Shipped        | `public/index.html`, `public/robots.txt`, `public/sitemap.xml`                            |
+| Phase 2 — dynamic `document.title` + `meta name=description`              | Shipped        | `src/utils/documentMeta.js`, called from `App.js`                                         |
+| CI — `yarn format:check`, `CI=true` in workflow                           | Shipped        | `.github/workflows/ci.yml`                                                                |
+| Phase 3 — governed slugs, stable canonicals, crawlable copy, rich sitemap | In progress    | Catalog + sitemap + canonical updates shipped; crawlable city copy/internal links pending |
+| Phase 4 — prerender/SSR for key URLs                                      | Not started    |                                                                                           |
+| Phase 5 — Search Console, backlinks, JSON-LD                              | Mostly process |                                                                                           |
+| Phase 6 — perf (CWV): bundle Tailwind, fonts, etc.                        | Not started    |                                                                                           |
 
 ---
 
@@ -28,7 +51,7 @@
 - `meta name="description"` (lowercase), aligned with product copy.
 - `og:type`, `og:site_name`.
 - `public/robots.txt` with `Allow: /` and sitemap URL.
-- `public/sitemap.xml` — started with homepage only; **expand in Phase 3** when city URLs are stable.
+- `public/sitemap.xml` — expanded beyond homepage (city URLs now included).
 - `public/manifest.json` description aligned with meta.
 
 **If the live site uses a different host:** update hardcoded URLs or generate them at build time.
@@ -40,7 +63,7 @@
 - `updateDocumentMeta(area)` sets:
   - **Title:** `{first segment of area} — CicloMapa` or default.
   - **Meta description:** city-specific template, truncated ≤ ~160 chars.
-- **Open Graph / Twitter tags are not updated in JS** — they stay the homepage defaults from `index.html` so arbitrary `?lat=` shares do not show wrong city previews.
+- **Open Graph / Twitter tags are updated in JS** together with title/description/canonical URL via `updateDocumentMeta`.
 
 **Optional later:** per-city OG when canonical city URLs + prerender exist.
 
@@ -50,33 +73,55 @@
 
 ### Problem
 
-The app currently **replaces** pretty `/:city` URLs with **`/?lat=&lng=&z=`** after resolution, while `index.html` declares **canonical `/`**. That is fine for short tabs but **weak for SEO**: no stable per-city URL for indexing, and little HTML text for crawlers (map is canvas-heavy).
+The app now keeps slug URLs (`/:city` and `/:city/routes`) and appends `?lat=&lng=&z=` for shareable map state. Canonical is set dynamically to the slug URL when the route slug is in the governed catalog. Remaining SEO gap: limited crawlable city-specific HTML content (map is still canvas-heavy) and no explicit noindex/404 policy for unknown slugs.
 
 ### Goals
 
-1. **Governed slug list** — known cities (or allowed slugs) with optional Nominatim query / display name overrides; unknown slugs → 404 or safe fallback (avoid abuse and infinite thin pages).
+1. **Governed slug list** — known cities (or allowed slugs) with optional Nominatim query / display name overrides. **Current behavior:** known slugs are canonicalized; unknown slugs still resolve as open slugs for UX/shareability.
 2. **One canonical policy** — either:
    - **Slug-only canonical** per city (e.g. `https://ciclomapa.app/sao-paulo-sp`), and optionally drop or narrow post-load replacement with `?lat=`; **or**
    - **Dedicated paths** e.g. `/cidade/:slug` with redirects from legacy `/:city`.
 3. **Visible (or prerendered) copy** for supported cities: heading + short paragraph + bullets + OSM/contribute links — not only `sr-only` text.
 4. **Dynamic `<link rel="canonical">`** in JS (e.g. extend `documentMeta.js`) when a governed city is active; default `https://ciclomapa.app/` when no city.
 5. **`sitemap.xml`** generated or maintained from the **same catalog** as slugs (keep in sync with code).
-6. **Parameter URL control** — prevent `?lat=&lng=&z=` states from becoming index bloat; internal links should prefer canonical slug URLs.
+6. **Parameter URL control** — keep `?lat=&lng=&z=` for shareability while preventing index bloat; internal links should prefer canonical slug URLs.
 7. **Internal linking** — city pages should link to related/popular nearby cities and hub entry points with descriptive anchors.
 8. **City page uniqueness standard** — avoid thin near-duplicate pages by requiring city-specific visible copy.
 
+### Phase 3 checklist
+
+- ✅ Known/alias slug normalization in routes
+- ✅ Shareable map-state params preserved (`lat/lng/z`)
+- ✅ Dynamic canonical for known catalog slugs
+- ✅ Expanded city sitemap present
+- 🟡 Unknown-slug indexing policy is still open (`404` vs `200 + noindex`)
+- ⚪ Visible, crawlable city-specific copy block
+- ⚪ Internal related-city linking module
+
 ### Indexing & canonical policy matrix
 
-| URL pattern                         | Status | Indexing           | Canonical target                     | In sitemap |
-| ----------------------------------- | ------ | ------------------ | ------------------------------------ | ---------- |
-| `/`                                 | `200`  | `index,follow`     | self                                 | Yes        |
-| `/:city` (known slug)               | `200`  | `index,follow`     | self (or chosen canonical city path) | Yes        |
-| `/:city/routes` (if intended index) | `200`  | `index,follow`     | self or mapped city canonical        | Optional   |
-| `/?lat=&lng=&z=` map state          | `200`  | `noindex,follow`\* | canonical city slug (when resolved)  | No         |
-| Unknown city slug                   | `404`  | `noindex,follow`   | none                                 | No         |
-| Legacy city URL after migration     | `301`  | n/a                | destination URL                      | No         |
+| URL pattern                         | Status | Indexing         | Canonical target                       | In sitemap |
+| ----------------------------------- | ------ | ---------------- | -------------------------------------- | ---------- |
+| `/`                                 | `200`  | `index,follow`   | self                                   | Yes        |
+| `/:city` (known slug)               | `200`  | `index,follow`   | canonical known slug                   | Yes        |
+| `/:city/routes` (if intended index) | `200`  | `index,follow`   | canonical known slug or self           | Optional   |
+| `/:city?lat=&lng=&z=`               | `200`  | `index,follow`\* | canonical known slug (parameterless)   | No         |
+| Unknown city slug                   | `200`  | `TBD`\*\*        | homepage (current JS fallback) or none | No         |
+| Legacy city URL after migration     | `301`  | n/a              | destination URL                        | No         |
 
-\* If `noindex` is not practical for parameter states, enforce canonical consistently and avoid linking to parameterized URLs internally.
+\* Until explicit `noindex` is implemented for parameterized states, enforce canonical consistently and avoid linking to parameterized URLs internally.
+
+\*\* Decide and implement one policy: real `404` route state, or `200` + explicit `noindex`.
+
+### Decision gate (required)
+
+> **Choose one and enforce everywhere (router + head tags + sitemap + internal links):**
+>
+> - **Option A — strict SEO:** unknown slug -> real `404` route state
+> - **Option B — UX-first:** unknown slug -> `200` with explicit `noindex`
+
+**Current behavior:** open unknown slugs for UX/shareability.  
+**Risk if left unresolved:** mixed crawl signals and soft-404 ambiguity.
 
 ### City page content standard
 
@@ -90,26 +135,27 @@ The app currently **replaces** pretty `/:city` URLs with **`/?lat=&lng=&z=`** af
 
 ### Unknown slug handling policy
 
-- Unknown slug should return a real `404` route state (not soft-404 content with `200`).
-- Do not set city canonical on unknown slug pages.
+- **Status today:** unknown slugs may still resolve via Nominatim/open-slug behavior for UX and sharing.
+- Target state: unknown slug should return a real `404` route state (not soft-404 content with `200`) **or** `200` with explicit `noindex` (choose one and enforce consistently).
+- Do not set known-city canonical on unknown slug pages.
 - If there are renamed slugs, use `301` from old slug to new slug with one-hop redirects only.
 
 ### Implementation touchpoints
 
-| Concern                         | Likely files                                                                                                           |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Routes                          | `src/index.js`                                                                                                         |
-| Slug validation / catalog       | `src/config/citySlugCatalog.js` (or equivalent)                                                                        |
-| Resolution / URL writes         | `src/App.js` (`getCitySlugFromRoute`, `resolveCitySlugToAreaAndViewport`, `replaceCitySlugUrlWithLatLng`, `updateURL`) |
-| Title / description / canonical | `src/utils/documentMeta.js`                                                                                            |
-| On-page SEO block               | `src/AppLayout.js` or new `CitySeoSection`                                                                             |
-| Sitemap                         | `public/sitemap.xml` or build script                                                                                   |
-| Server                          | SPA fallback for all app routes; optional HTTP redirects                                                               |
+| Concern                         | Likely files                                                                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Routes                          | `src/index.js`                                                                                                                                    |
+| Slug validation / catalog       | `src/config/citySlugCatalog.js` (or equivalent)                                                                                                   |
+| Resolution / URL writes         | `src/App.js` (`getCitySlugFromRoute`, `normalizeCitySlugRouteIfNeeded`, `syncRouteSlugWithArea`, `resolveCitySlugToAreaAndViewport`, `updateURL`) |
+| Title / description / canonical | `src/utils/documentMeta.js`                                                                                                                       |
+| On-page SEO block               | `src/AppLayout.js` or new `CitySeoSection`                                                                                                        |
+| Sitemap                         | `public/sitemap.xml` or build script                                                                                                              |
+| Server                          | SPA fallback for all app routes; optional HTTP redirects                                                                                          |
 
 ### Suggested order of work
 
 1. Introduce catalog + validate `:city` param.
-2. Decide canonical URL shape; adjust `replaceCitySlugUrlWithLatLng` and `updateURL` accordingly.
+2. Decide unknown-slug indexing policy (`404` vs `200 + noindex`) and implement consistently.
 3. Add visible SEO section + `documentMeta` canonical updates.
 4. Expand sitemap from catalog.
 5. Add internal links (related/popular cities) from city pages and homepage/hub areas.
@@ -181,9 +227,9 @@ CI=true yarn test --watchAll=false
 
 ## Changelog
 
-| Date                             | Change |
-| -------------------------------- | ------ |
-| (add rows when merging SEO work) |        |
+| Date       | Change                                                                                                                                                                                                                                          |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-03-24 | Updated plan to match shipped slug/canonical behavior (slug paths retained with shareable `lat/lng/z`, dynamic OG/Twitter updates, canonical normalization of known aliases, and open unknown-slug behavior marked as pending policy decision). |
 
 ---
 
