@@ -2,7 +2,7 @@
   "short_name": "CicloMapa",
   "name": "CicloMapa",
   "lang": "pt-br",
-  "description": "Plataforma colaborativa para facilitar acesso a dados georreferenciados da infraestrutura cicloviária nas cidades brasileiras.",
+  "description": "Mapa colaborativo gratuito da infraestrutura cicloviária no Brasil: ciclovias, ciclofaixas e ciclorrotas com dados do OpenStreetMap.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
