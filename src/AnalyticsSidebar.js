@@ -182,7 +182,10 @@ class AnalyticsSidebar extends Component {
     const { lengthsInclude } = this.state;
     const infraLayers = this.getInfraLayersSorted();
 
-    const rawTotal = INFRA_LAYER_IDS.reduce((sum, id) => sum + (lengths && lengths[id] ? lengths[id] : 0), 0);
+    const rawTotal = INFRA_LAYER_IDS.reduce(
+      (sum, id) => sum + (lengths && lengths[id] ? lengths[id] : 0),
+      0
+    );
 
     const effectiveTotal = INFRA_LAYER_IDS.reduce((sum, id) => {
       if (!lengthsInclude[id]) return sum;
@@ -497,8 +500,8 @@ class AnalyticsSidebar extends Component {
                               <strong>{vias.rawTotal.toFixed(1)} km</strong>
                             </p>
                             <p className="m-0 opacity-90">
-                              Passe o mouse nas linhas abaixo para incluir ou excluir tipos do total
-                              e do gráfico.
+                              Passe o mouse em uma linha abaixo e use a opção no painel que abre
+                              para incluir ou excluir tipos do total e do gráfico.
                             </p>
                           </div>
                         ) : (
@@ -543,7 +546,7 @@ class AnalyticsSidebar extends Component {
                                   <p className="text-xs opacity-80">
                                     O valor dinâmico no mapa está filtrado; para comparar com o dado
                                     oficial use o total completo ({vias.rawTotal.toFixed(1)} km) ou
-                                    reative todas as estruturas nas linhas abaixo.
+                                    reative todas as estruturas no painel de cada linha abaixo.
                                   </p>
                                 )}
                                 <OfficialDisclaimer />
@@ -688,22 +691,14 @@ DataLineWithBarChart.defaultProps = {
   hideBar: false,
 };
 
-const ViaDataRow = ({
-  layer,
-  length,
-  rawTotal,
-  effectiveTotal,
-  included,
-  onToggleInclude,
-}) => {
+const ViaDataRow = ({ layer, length, rawTotal, effectiveTotal, included, onToggleInclude }) => {
   const km =
     length !== undefined && length !== null && !Number.isNaN(Number(length)) ? Number(length) : 0;
   const pctOfRaw = rawTotal > 0 ? (km / rawTotal) * 100 : 0;
-  const pctOfEffective =
-    included && effectiveTotal > 0 ? (km / effectiveTotal) * 100 : null;
+  const pctOfEffective = included && effectiveTotal > 0 ? (km / effectiveTotal) * 100 : null;
 
-  const tooltipTitle = (
-    <div className="text-xs max-w-[220px]">
+  const popoverContent = (
+    <div className="text-xs" style={{ maxWidth: 240 }}>
       <div className="font-semibold mb-1">{layer.displayName || layer.name}</div>
       <div className="mb-1">{km.toFixed(1)} km</div>
       {rawTotal > 0 && (
@@ -719,23 +714,37 @@ const ViaDataRow = ({
       {!included && (
         <div className="opacity-90 mb-0.5">Excluído do total central e do gráfico.</div>
       )}
-      <div className="opacity-75 pt-1 mt-1 border-t border-white border-opacity-20 border-solid">
-        Ao passar o mouse: use a caixa à direita para incluir ou excluir este tipo do total.
+      <div className="pt-2 mt-2 border-t border-black border-opacity-10 border-solid">
+        <label className="flex items-center gap-2 cursor-pointer select-none m-0 font-normal">
+          <input
+            type="checkbox"
+            className="m-0 flex-shrink-0 cursor-pointer"
+            checked={included}
+            onChange={onToggleInclude}
+            aria-label={`Incluir ${layer.displayName || layer.name} no total de vias`}
+          />
+          <span>Incluir no total e no gráfico</span>
+        </label>
       </div>
     </div>
   );
 
-  const barPercent =
-    included && effectiveTotal > 0 ? Math.floor((km * 100) / effectiveTotal) : 0;
+  const barPercent = included && effectiveTotal > 0 ? Math.floor((km * 100) / effectiveTotal) : 0;
 
   return (
-    <div
-      className={`analytics-via-row group relative rounded -mx-1 px-1 -mr-1 ${
-        included ? '' : 'opacity-50'
-      }`}
-    >
-      <Tooltip title={tooltipTitle} placement="left">
-        <div className="relative pr-7">
+    <div className={`analytics-via-row rounded -mx-1 px-1 ${included ? '' : 'opacity-50'}`}>
+      <Popover
+        content={popoverContent}
+        placement="left"
+        trigger={['hover', 'focus']}
+        mouseEnterDelay={0.12}
+        mouseLeaveDelay={0.4}
+        overlayClassName="analytics-via-detail-popover"
+      >
+        <div
+          className="cursor-default rounded outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-current focus-visible:outline-opacity-40"
+          tabIndex={0}
+        >
           <DataLineWithBarChart
             name={layer.shortName || layer.displayName}
             length={length}
@@ -745,17 +754,8 @@ const ViaDataRow = ({
             unit="km"
             hideBar={!included}
           />
-          <label className="analytics-via-row__toggle absolute right-0 top-1/2 -translate-y-1/2 flex items-center cursor-pointer p-1 rounded hover:bg-white hover:bg-opacity-10">
-            <input
-              type="checkbox"
-              className="analytics-via-row__checkbox m-0 cursor-pointer"
-              checked={included}
-              onChange={onToggleInclude}
-              aria-label={`Incluir ${layer.displayName || layer.name} no total de vias`}
-            />
-          </label>
         </div>
-      </Tooltip>
+      </Popover>
     </div>
   );
 };
