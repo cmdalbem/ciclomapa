@@ -42,32 +42,6 @@ function parseAreaName(areaName) {
 }
 
 class OSMController {
-    static async searchNominatim(query, options = {}) {
-        const {
-            limit = 10,
-            addressdetails = 1,
-            format = 'json'
-        } = options;
-
-        const url = new URL('https://nominatim.openstreetmap.org/search');
-        url.searchParams.set('format', format);
-        url.searchParams.set('q', query);
-        url.searchParams.set('limit', String(limit));
-        url.searchParams.set('addressdetails', String(addressdetails));
-
-        const response = await fetch(url.toString(), {
-            headers: { 'Accept': 'application/json' }
-        });
-        return response.json();
-    }
-
-    static normalizeAreaNameFromNominatimDisplayName(displayName) {
-        if (!displayName) return '';
-        const parts = displayName.split(',').map(p => p.trim()).filter(Boolean);
-        if (parts.length <= 3) return parts.join(', ');
-        return parts.slice(0, 3).join(', ');
-    }
-
     // getQuery() converts our CicloMapa layers filter syntax to the OSM Overpass query syntax
     // Example:
     //      "filters": [
@@ -182,7 +156,7 @@ class OSMController {
         });
 
         if (!isDebugMode) {
-            layers = layers.filter(l => !l.onlyDebug || (l.onlyDebug && l.onlyDebug === false));
+            layers = layers.filter(l => !l.onlyDebug || l.onlyDebug && l.onlyDebug === false);
         }
 
         return layers;
@@ -194,7 +168,8 @@ class OSMController {
             if (overriden) {
                 resolve(overriden);
             } else {
-                OSMController.searchNominatim(areaName, { limit: 10, addressdetails: 0 })
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURI(areaName)}`)
+                    .then( response => response.json() )
                     .then( nominatimData => {
                         console.debug('nominatimData', nominatimData);
 
