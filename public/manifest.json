@@ -2,7 +2,7 @@
   "short_name": "CicloMapa",
   "name": "CicloMapa",
   "lang": "pt-br",
-  "description": "Mapa colaborativo gratuito da infraestrutura cicloviária no Brasil: ciclovias, ciclofaixas e ciclorrotas com dados do OpenStreetMap.",
+  "description": "O mapa do ciclista urbano: encontre ciclovias, escolha rotas mais seguras no dia a dia e veja bicicletários e oficinas por perto.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

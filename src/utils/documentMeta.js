@@ -3,7 +3,7 @@ export const DEFAULT_PAGE_TITLE = 'CicloMapa';
 const SITE_URL = 'https://ciclomapa.app';
 
 export const DEFAULT_META_DESCRIPTION =
-  'Mapa colaborativo gratuito da infraestrutura cicloviária no Brasil: ciclovias, ciclofaixas e ciclorrotas com dados do OpenStreetMap. Visualize, baixe dados e colabore.';
+  'O mapa do ciclista urbano: encontre ciclovias, escolha rotas mais seguras no dia a dia e veja bicicletários e oficinas por perto.';
 
 const MAX_DESCRIPTION_LENGTH = 160;
 
@@ -28,7 +28,7 @@ export function updateDocumentMeta(area, citySlug = null) {
 
   const description = label
     ? truncateDescription(
-        `Mapa cicloviário de ${label} no CicloMapa: ciclovias, ciclofaixas e ciclorrotas com dados do OpenStreetMap. Visualize e baixe dados gratuitamente.`
+        `${label} no CicloMapa: o mapa do ciclista urbano para encontrar ciclovias, escolher rotas mais seguras no dia a dia e ver bicicletários e oficinas por perto.`
       )
     : DEFAULT_META_DESCRIPTION;
 
