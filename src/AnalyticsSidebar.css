@@ -6,25 +6,7 @@ body.theme-light #analyticsSidebar {
   background: #ffffff;
 }
 
-/* Hover-only include toggle for Vias breakdown (power users) */
-#analyticsSidebar .analytics-via-row__checkbox {
-  opacity: 0;
-  width: 0.85rem;
-  height: 0.85rem;
-  transition: opacity 120ms ease;
-}
-
-#analyticsSidebar .analytics-via-row:hover .analytics-via-row__checkbox,
-#analyticsSidebar .analytics-via-row:focus-within .analytics-via-row__checkbox {
-  opacity: 0.55;
-}
-
-#analyticsSidebar .analytics-via-row:hover .analytics-via-row__toggle,
-#analyticsSidebar .analytics-via-row:focus-within .analytics-via-row__toggle {
-  opacity: 1;
-}
-
-#analyticsSidebar .analytics-via-row__toggle {
-  opacity: 0;
-  transition: opacity 120ms ease;
+/* Vias row detail popover: slightly higher z-index over sidebar scroll/stacking */
+#analyticsSidebar .analytics-via-detail-popover {
+  z-index: 1080;
 }
