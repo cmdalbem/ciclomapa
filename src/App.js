@@ -13,6 +13,7 @@ import OSMController from './OSMController.js';
 import AppLayout from './AppLayout.js';
 import Storage from './Storage.js';
 import { downloadObjectAsJson } from './utils/utils.js';
+import { updateDocumentMeta } from './utils/documentMeta.js';
 import { getSystemThemePreference } from './utils/themeUtils';
 import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './utils/geojsonUtils.js';
 import { DirectionsProvider } from './contexts/DirectionsContext';
@@ -853,8 +854,7 @@ class App extends Component {
     }
 
     const prevCityParam = prevProps.router?.params?.city;
-    const prevCitySlug =
-      prevCityParam && prevCityParam !== 'routes' ? prevCityParam : null;
+    const prevCitySlug = prevCityParam && prevCityParam !== 'routes' ? prevCityParam : null;
     const currCitySlug = this.getCitySlugFromRoute();
     if (prevCitySlug !== currCitySlug) {
       this.hasCanonicalizedCitySlugUrl = false;
@@ -869,6 +869,8 @@ class App extends Component {
     }
 
     if (this.state.area !== prevState.area) {
+      updateDocumentMeta(this.state.area);
+
       console.debug(`Changed area from ${prevState.area} to ${this.state.area}`);
 
       Analytics.event('switch_city', {
@@ -973,6 +975,8 @@ class App extends Component {
   };
 
   componentDidMount() {
+    updateDocumentMeta(this.state.area);
+
     // Initialize theme
     document.body.className = this.state.isDarkMode ? 'theme-dark' : 'theme-light';
 
