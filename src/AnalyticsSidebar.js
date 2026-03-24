@@ -30,12 +30,12 @@ import {
 import AirtableDatabase from './AirtableDatabase.js';
 import { removeAccents } from './utils/utils.js';
 
-import { LENGTH_CALCULATE_STRATEGIES } from './config/constants.js';
+import { LENGTH_CALCULATE_STRATEGIES, LENGTH_COUNTED_LAYER_IDS } from './config/constants.js';
 
 const PIE_CHART_WIDTH_PX = 207;
 const nullableNumber = PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]);
 
-const INFRA_LAYER_IDS = ['ciclovia', 'ciclofaixa', 'ciclorrota', 'calcada-compartilhada'];
+const INFRA_LAYER_IDS = LENGTH_COUNTED_LAYER_IDS;
 
 const DEFAULT_LENGTHS_INCLUDE = () =>
   INFRA_LAYER_IDS.reduce((acc, id) => {
@@ -166,15 +166,14 @@ class AnalyticsSidebar extends Component {
   }
 
   getInfraLayersSorted() {
-    const { lengths, layers } = this.props;
+    const { layers } = this.props;
     if (!layers) return [];
-    return layers
-      .filter((l) => INFRA_LAYER_IDS.includes(l.id))
-      .sort((a, b) => {
-        const lenA = lengths && lengths[a.id] ? lengths[a.id] : 0;
-        const lenB = lengths && lengths[b.id] ? lengths[b.id] : 0;
-        return lenB - lenA;
-      });
+    const layersById = layers.reduce((acc, layer) => {
+      acc[layer.id] = layer;
+      return acc;
+    }, {});
+
+    return INFRA_LAYER_IDS.map((id) => layersById[id]).filter(Boolean);
   }
 
   getViasMetrics() {

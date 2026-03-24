@@ -6,6 +6,7 @@ import skmeans from 'skmeans';
 import turfLength from '@turf/length';
 import turfDistance from '@turf/distance';
 import turfLineOverlap from '@turf/line-overlap';
+import { LENGTH_COUNTED_LAYER_IDS } from '../config/constants.js';
 
 // 0 = all segments have exactly the same angle
 const MIN_AVG_ANGLE_TRESHOLD = 20;
@@ -361,12 +362,7 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
         seg.properties['ciclomapa:segment_length_m'] = (thisLength * 1000).toFixed(2);
       });
 
-      if (
-        l.id === 'ciclovia' ||
-        l.id === 'ciclofaixa' ||
-        l.id === 'ciclorrota' ||
-        l.id === 'calcada-compartilhada'
-      ) {
+      if (LENGTH_COUNTED_LAYER_IDS.includes(l.id)) {
         let streetsByName;
         [segments, streetsByName] = detectDoubleWayBikePaths(l, segments);
 
@@ -482,13 +478,7 @@ export function calculateCyclepathCoverage(route, geoJson, layers) {
   // Get cyclepath layer names from layers.json
   // Only consider layers that are ACTUAL cycling infrastructure!
   const cyclepathLayerNames = layers
-    .filter(
-      (layer) =>
-        layer.name === 'Ciclovia' ||
-        layer.name === 'Ciclofaixa' ||
-        layer.name === 'Ciclorrota' ||
-        layer.name === 'Calçada compartilhada'
-    )
+    .filter((layer) => LENGTH_COUNTED_LAYER_IDS.includes(layer.id))
     .map((layer) => layer.name);
 
   if (cyclepathLayerNames.length === 0) {
