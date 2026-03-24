@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { Popover, Button, Tooltip } from 'antd';
+import { Popover, Button } from 'antd';
 
 import './AnalyticsSidebar.css';
 
@@ -24,7 +24,6 @@ import {
 
 import {
   HiMiniCheckBadge as IconVerified,
-  HiOutlineCheckBadge as IconVerifiedOutline,
 } from 'react-icons/hi2';
 
 import AirtableDatabase from './AirtableDatabase.js';
@@ -177,7 +176,7 @@ class AnalyticsSidebar extends Component {
   }
 
   getViasMetrics() {
-    const { lengths, layers, isDarkMode } = this.props;
+    const { lengths, isDarkMode } = this.props;
     const { lengthsInclude } = this.state;
     const infraLayers = this.getInfraLayersSorted();
 
@@ -562,14 +561,7 @@ class AnalyticsSidebar extends Component {
             </div>
           </Section>
 
-          <Section
-            title="Pontos de interesse"
-            description={
-              <>
-                <OpenStreetMapDisclaimer />
-              </>
-            }
-          >
+          <Section title="Pontos de interesse">
             {layers
               .filter((l) => l.type === 'poi' && l.name !== 'Comentários')
               .map(
@@ -703,11 +695,15 @@ const ViaDataRow = ({ layer, length, rawTotal, effectiveTotal, included, onToggl
         </table>
       </div>
       <div className="pt-2 mt-2 border-t border-black border-opacity-10 border-solid">
-        <label className="flex items-center gap-2 cursor-pointer select-none m-0 font-normal">
+        <label
+          className="flex items-center gap-2 cursor-pointer select-none m-0 font-normal"
+          onClick={(event) => event.stopPropagation()}
+        >
           <input
             type="checkbox"
             className="m-0 flex-shrink-0 cursor-pointer"
             checked={included}
+            onClick={(event) => event.stopPropagation()}
             onChange={onToggleInclude}
             aria-label={`Incluir ${layer.displayName || layer.name} no total de vias`}
           />
@@ -718,6 +714,13 @@ const ViaDataRow = ({ layer, length, rawTotal, effectiveTotal, included, onToggl
   );
 
   const barPercent = included && effectiveTotal > 0 ? Math.floor((km * 100) / effectiveTotal) : 0;
+  const handleRowToggle = () => onToggleInclude();
+  const handleRowKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onToggleInclude();
+    }
+  };
 
   return (
     <div className={`analytics-via-row rounded -mx-1 px-1 ${included ? '' : 'opacity-50'}`}>
@@ -730,8 +733,13 @@ const ViaDataRow = ({ layer, length, rawTotal, effectiveTotal, included, onToggl
         overlayClassName="analytics-via-detail-popover"
       >
         <div
-          className="cursor-default rounded outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-current focus-visible:outline-opacity-40"
+          className="analytics-via-row__content cursor-pointer rounded outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-current focus-visible:outline-opacity-40"
           tabIndex={0}
+          role="button"
+          aria-pressed={included}
+          aria-label={`Alternar inclusão de ${layer.displayName || layer.name} no total de vias`}
+          onClick={handleRowToggle}
+          onKeyDown={handleRowKeyDown}
         >
           <DataLineWithBarChart
             name={layer.shortName || layer.displayName}
@@ -797,28 +805,30 @@ const Section = (props) => (
       <div className="flex items-center">
         {props.year && <span className="opacity-50 text-xs">{props.year}</span>}
 
-        <Popover
-          placement="left"
-          arrowPointAtCenter={true}
-          key={props.title}
-          content={
-            <div style={{ width: 320 }}>
-              <h3 className="text-lg">{props.title}</h3>
+        {props.description && (
+          <Popover
+            placement="left"
+            arrowPointAtCenter={true}
+            key={props.title}
+            content={
+              <div style={{ width: 320 }}>
+                <h3 className="text-lg">{props.title}</h3>
 
-              {props.description}
+                {props.description}
 
-              {props.link && (
-                <Button type="primary" target="_blank" href={props.link}>
-                  Saiba mais
-                </Button>
-              )}
+                {props.link && (
+                  <Button type="primary" target="_blank" href={props.link}>
+                    Saiba mais
+                  </Button>
+                )}
+              </div>
+            }
+          >
+            <div className="opacity-50 hover:opacity-100 p-2 -mr-2 hover:bg-white hover:bg-opacity-10 rounded">
+              <IconInfo />
             </div>
-          }
-        >
-          <div className="opacity-50 hover:opacity-100 p-2 -mr-2 hover:bg-white hover:bg-opacity-10 rounded">
-            <IconInfo />
-          </div>
-        </Popover>
+          </Popover>
+        )}
       </div>
     </div>
 

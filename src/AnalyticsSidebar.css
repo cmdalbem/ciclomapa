@@ -10,3 +10,13 @@ body.theme-light #analyticsSidebar {
 #analyticsSidebar .analytics-via-detail-popover {
   z-index: 1080;
 }
+
+#analyticsSidebar .analytics-via-row__content {
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+#analyticsSidebar .analytics-via-row__content:hover {
+  background-color: rgba(127, 127, 127, 0.12);
+}
