@@ -16,6 +16,7 @@ import { downloadObjectAsJson } from './utils/utils.js';
 import { updateDocumentMeta } from './utils/documentMeta.js';
 import { getSystemThemePreference } from './utils/themeUtils';
 import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './utils/geojsonUtils.js';
+import { getCanonicalCitySlug, getPredefinedCitySlugDefinition } from './config/citySlugCatalog.js';
 import { DirectionsProvider } from './contexts/DirectionsContext';
 import {
   DEFAULT_LAT,
@@ -45,6 +46,7 @@ class App extends Component {
   currentOSMRequest = null;
   pendingCityFitBounds = null;
   lastResolvedCitySlug = null;
+  lastNotifiedCitySlugError = null;
   hasCanonicalizedCitySlugUrl = false;
 
   constructor(props) {
@@ -309,17 +311,56 @@ class App extends Component {
     this.lastResolvedCitySlug = citySlug;
 
     try {
-      const query = decodeURIComponent(citySlug).replace(/-/g, ' ');
-      const data = await OSMController.searchNominatim(query, { limit: 1, addressdetails: 1 });
+      const normalizedSlug = decodeURIComponent(citySlug).trim().toLowerCase();
+      const predefined = getPredefinedCitySlugDefinition(normalizedSlug);
+      const query = predefined?.query || normalizedSlug.replace(/[-_]+/g, ' ').trim();
+      const countrycodes = predefined?.countrycodes;
+      const baseOptions = {
+        limit: 5,
+        addressdetails: 1,
+        layer: 'address',
+        acceptLanguage: 'pt-BR,pt,en',
+        countrycodes,
+      };
+      const strictOptions = {
+        ...baseOptions,
+        featureType: 'city',
+      };
+      const compatibilityOptions = {
+        ...baseOptions,
+        featureType: 'settlement',
+      };
+
+      let data = await OSMController.searchNominatim(query, strictOptions);
       if (!Array.isArray(data) || data.length === 0) {
-        console.warn('City slug resolution: no results for', citySlug);
+        data = await OSMController.searchNominatim(query, compatibilityOptions);
+      }
+
+      if (!Array.isArray(data) || data.length === 0) {
+        console.error('City slug resolution failed: empty Nominatim response after retries', {
+          citySlug,
+          query,
+          strictOptions,
+          compatibilityOptions,
+          predefinedSlug: predefined,
+        });
+        if (this.lastNotifiedCitySlugError !== citySlug) {
+          this.lastNotifiedCitySlugError = citySlug;
+          notification.error({
+            message: 'Nao foi possivel localizar a cidade',
+            description:
+              'Nao encontramos a cidade informada na URL. Verifique o nome e tente novamente.',
+            duration: 5,
+          });
+        }
+        this.lastResolvedCitySlug = null;
         return;
       }
 
       const best = data[0];
       const lat = parseFloat(best.lat);
       const lng = parseFloat(best.lon);
-      const area = OSMController.normalizeAreaNameFromNominatimDisplayName(best.display_name);
+      const area = OSMController.normalizeAreaNameFromNominatimResult(best);
 
       let bounds = null;
       if (Array.isArray(best.boundingbox) && best.boundingbox.length === 4) {
@@ -344,12 +385,23 @@ class App extends Component {
           lng: !Number.isNaN(lng) ? lng : prevState.lng,
         }),
         () => {
+          this.lastNotifiedCitySlugError = null;
           this.applyPendingCityFitBounds();
           this.replaceCitySlugUrlWithLatLng();
         }
       );
     } catch (e) {
       console.error('City slug resolution error:', e);
+      if (this.lastNotifiedCitySlugError !== citySlug) {
+        this.lastNotifiedCitySlugError = citySlug;
+        notification.error({
+          message: 'Erro ao buscar a cidade',
+          description:
+            'Houve um problema ao consultar o servico de localizacao. Tente novamente em instantes.',
+          duration: 5,
+        });
+      }
+      this.lastResolvedCitySlug = null;
     }
   };
 
@@ -869,7 +921,7 @@ class App extends Component {
     }
 
     if (this.state.area !== prevState.area) {
-      updateDocumentMeta(this.state.area);
+      updateDocumentMeta(this.state.area, getCanonicalCitySlug(this.getCitySlugFromRoute()));
 
       console.debug(`Changed area from ${prevState.area} to ${this.state.area}`);
 
@@ -975,7 +1027,7 @@ class App extends Component {
   };
 
   componentDidMount() {
-    updateDocumentMeta(this.state.area);
+    updateDocumentMeta(this.state.area, getCanonicalCitySlug(this.getCitySlugFromRoute()));
 
     // Initialize theme
     document.body.className = this.state.isDarkMode ? 'theme-dark' : 'theme-light';

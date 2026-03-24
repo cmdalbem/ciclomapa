@@ -1,5 +1,6 @@
 /** Default SEO copy (aligned with in-app "Sobre" messaging). Keep in sync with public/index.html defaults. */
 export const DEFAULT_PAGE_TITLE = 'CicloMapa';
+const SITE_URL = 'https://ciclomapa.app';
 
 export const DEFAULT_META_DESCRIPTION =
   'Mapa colaborativo gratuito da infraestrutura cicloviária no Brasil: ciclovias, ciclofaixas e ciclorrotas com dados do OpenStreetMap. Visualize, baixe dados e colabore.';
@@ -20,7 +21,7 @@ function primaryPlaceLabel(area) {
  * Updates document title and meta description when the map city (area) changes.
  * Open Graph / Twitter tags stay on the default homepage values from index.html.
  */
-export function updateDocumentMeta(area) {
+export function updateDocumentMeta(area, citySlug = null) {
   const label = primaryPlaceLabel(area);
 
   document.title = label ? `${label} — ${DEFAULT_PAGE_TITLE}` : DEFAULT_PAGE_TITLE;
@@ -37,4 +38,25 @@ export function updateDocumentMeta(area) {
   if (meta) {
     meta.setAttribute('content', description);
   }
+
+  const canonicalHref = citySlug ? `${SITE_URL}/${encodeURIComponent(citySlug)}` : `${SITE_URL}/`;
+  const canonicalTag = document.querySelector('link[rel="canonical"]');
+  if (canonicalTag) {
+    canonicalTag.setAttribute('href', canonicalHref);
+  }
+
+  const ogUrl = document.querySelector('meta[property="og:url"]');
+  if (ogUrl) ogUrl.setAttribute('content', canonicalHref);
+
+  const ogTitle = document.querySelector('meta[property="og:title"]');
+  if (ogTitle) ogTitle.setAttribute('content', document.title);
+
+  const ogDescription = document.querySelector('meta[property="og:description"]');
+  if (ogDescription) ogDescription.setAttribute('content', description);
+
+  const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+  if (twitterTitle) twitterTitle.setAttribute('content', document.title);
+
+  const twitterDescription = document.querySelector('meta[name="twitter:description"]');
+  if (twitterDescription) twitterDescription.setAttribute('content', description);
 }
