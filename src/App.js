@@ -816,6 +816,18 @@ class App extends Component {
         ),
       });
     }
+
+    // Persist UI state as soon as user-visible filters/preferences change.
+    if (
+      this.state.area !== prevState.area ||
+      this.state.showSatellite !== prevState.showSatellite ||
+      this.state.isSidebarOpen !== prevState.isSidebarOpen ||
+      this.state.isDarkMode !== prevState.isDarkMode ||
+      this.state.isTrackingUserLocation !== prevState.isTrackingUserLocation ||
+      this.state.layers !== prevState.layers
+    ) {
+      this.saveStateToLocalStorage();
+    }
   }
 
   calculateLengths() {
