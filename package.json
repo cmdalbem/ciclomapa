@@ -102,6 +102,13 @@
       "eslint --fix",
       "prettier --write"
     ],
+    "scripts/**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "docs/**/*.{md,json}": [
+      "prettier --write"
+    ],
     "src/**/*.{json,css,less,md}": [
       "prettier --write"
     ]

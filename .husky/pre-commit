@@ -1,3 +1,2 @@
 #!/usr/bin/env sh
-# Pre-commit checks intentionally disabled.
-exit 0
+npx lint-staged
