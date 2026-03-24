@@ -43,17 +43,57 @@ function parseAreaName(areaName) {
 
 class OSMController {
   static async searchNominatim(query, options = {}) {
-    const { limit = 10, addressdetails = 1, format = 'json' } = options;
+    const {
+      limit = 10,
+      addressdetails = 1,
+      format = 'json',
+      featureType,
+      acceptLanguage,
+      countrycodes,
+      layer,
+      bounded,
+      viewbox,
+      ...extraParams
+    } = options;
 
     const url = new URL('https://nominatim.openstreetmap.org/search');
     url.searchParams.set('format', format);
     url.searchParams.set('q', query);
     url.searchParams.set('limit', String(limit));
     url.searchParams.set('addressdetails', String(addressdetails));
+    if (featureType) {
+      url.searchParams.set('featureType', String(featureType));
+    }
+    if (acceptLanguage) {
+      url.searchParams.set('accept-language', String(acceptLanguage));
+    }
+    if (countrycodes) {
+      const value = Array.isArray(countrycodes) ? countrycodes.join(',') : String(countrycodes);
+      url.searchParams.set('countrycodes', value);
+    }
+    if (layer) {
+      const value = Array.isArray(layer) ? layer.join(',') : String(layer);
+      url.searchParams.set('layer', value);
+    }
+    if (bounded !== undefined) {
+      url.searchParams.set('bounded', String(bounded ? 1 : 0));
+    }
+    if (viewbox) {
+      const value = Array.isArray(viewbox) ? viewbox.join(',') : String(viewbox);
+      url.searchParams.set('viewbox', value);
+    }
+    Object.entries(extraParams).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.set(key, String(value));
+      }
+    });
 
     const response = await fetch(url.toString(), {
       headers: { Accept: 'application/json' },
     });
+    if (!response.ok) {
+      throw new Error(`Nominatim search failed (${response.status})`);
+    }
     return response.json();
   }
 
@@ -65,6 +105,27 @@ class OSMController {
       .filter(Boolean);
     if (parts.length <= 3) return parts.join(', ');
     return parts.slice(0, 3).join(', ');
+  }
+
+  static normalizeAreaNameFromNominatimResult(result) {
+    if (!result || typeof result !== 'object') return '';
+
+    const address = result.address || {};
+    const city =
+      address.city ||
+      address.municipality ||
+      address.town ||
+      address.village ||
+      address.county ||
+      result.name ||
+      '';
+    const state = address.state || address.state_district || '';
+    const country = address.country || '';
+
+    const parts = [city, state, country].map((p) => String(p).trim()).filter(Boolean);
+    if (parts.length > 0) return parts.join(', ');
+
+    return OSMController.normalizeAreaNameFromNominatimDisplayName(result.display_name);
   }
 
   // getQuery() converts our CicloMapa layers filter syntax to the OSM Overpass query syntax
