@@ -5,7 +5,7 @@
     "description": "Vias inclusas no cálculo de total de kilometros da cidade.",
     "filters": [["ciclomapa:considered", "true"]],
     "style": {
-      "lineColor": "lightgreen",
+      "lineColor": "#90EE90",
       "lineWidth": 12,
       "borderColor": "green",
       "borderStyle": "solid",
@@ -28,7 +28,7 @@
     "description": "Vias originalmente detectadas como sendo duplicadas pelo nosso algoritmo porém filtradas depois por uma heurística para detectar faltos positivos.",
     "filters": [["ciclomapa:ignored", "true"]],
     "style": {
-      "lineColor": "lightgreen",
+      "lineColor": "#90EE90",
       "lineWidth": 8,
       "lineStyle": "dashed"
     }
@@ -39,7 +39,7 @@
     "description": "Vias automaticamente detectadas como sendo duplicadas.",
     "filters": [["ciclomapa:side", "a"]],
     "style": {
-      "lineColor": "lightblue",
+      "lineColor": "#ADD8E6",
       "lineWidth": 8,
       "borderColor": "#0B54FE",
       "borderStyle": "solid",
@@ -52,7 +52,7 @@
     "description": "Vias automaticamente detectadas como sendo duplicadas.",
     "filters": [["ciclomapa:side", "b"]],
     "style": {
-      "lineColor": "pink",
+      "lineColor": "#FFC0CB",
       "lineWidth": 8,
       "borderColor": "#FC0FC0",
       "borderStyle": "solid",
