@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client'; // Note the updated import
 import App from './App';
 import * as serviceWorker from './serviceWorker';
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router } from "react-router-dom";
 
 // Function to set viewport height CSS custom property
 // This accounts for mobile browser UI (address bar, navigation bar) which 100vh doesn't
@@ -38,20 +38,10 @@ if (window.visualViewport) {
 // Create a root using ReactDOM.createRoot
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-function AppRoutes() {
-  return (
-    <Routes>
-      <Route path="/" element={<App ref={(app) => { window.ciclomapa = app }} />} />
-      <Route path="/routes" element={<App ref={(app) => { window.ciclomapa = app }} />} />
-      <Route path="/:city" element={<App ref={(app) => { window.ciclomapa = app }} />} />
-    </Routes>
-  );
-}
-
 // Render the app using the new root API
 root.render(
   <Router>
-    <AppRoutes />
+    <App ref={(app) => { window.ciclomapa = app }} />
   </Router>
 );
 
