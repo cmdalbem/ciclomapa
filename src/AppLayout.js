@@ -127,10 +127,12 @@ export default function AppLayout({
                   location={state.area}
                   cityMetadata={state.airtableCityFields}
                   lengthCalculationStrategy={state.lengthCalculationStrategy}
+                  parallelDedupeEngine={state.parallelDedupeEngine}
                   debugMode={state.debugMode}
                   isDarkMode={state.isDarkMode}
                   toggle={handlers.toggleSidebar}
                   onChangeStrategy={handlers.onChangeStrategy}
+                  onChangeParallelDedupeEngine={handlers.onChangeParallelDedupeEngine}
                   downloadData={handlers.downloadData}
                   lastUpdate={state.dataUpdatedAt}
                   loading={state.loading}
