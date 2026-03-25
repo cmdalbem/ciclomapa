@@ -25,7 +25,7 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
     >
       <h1 className="sr-only">CicloMapa</h1>
       {!IS_PROD && (
-        <div className="fixed bottom-0 left-0 right-0 z-10 flex bg-yellow-300 text-black items-center justify-center text-center text-xs py-1">
+        <div className="fixed bottom-0 left-0 right-0 z-10 flex text-white opacity-20 items-center justify-center text-center text-xs py-1">
           Você está em um <b className="ml-1">ambiente de teste</b>, pode futricar à vontade! ;)
         </div>
       )}
