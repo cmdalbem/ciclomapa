@@ -500,6 +500,76 @@ const PREDEFINED_CITY_CATALOG = {
       bbox: [-51.3115485, -29.3571969, -50.7825689, -28.7944879],
     },
   },
+  'rio-branco': {
+    query: 'Rio Branco',
+    countrycodes: ['br'],
+    staticLocation: {
+      areaLabel: 'Rio Branco, Acre, Brasil',
+      lat: -9.9759918,
+      lng: -67.8244857,
+      bbox: [-68.0417264, -10.0911689, -67.7277785, -9.8761084],
+    },
+  },
+  macapa: {
+    query: 'Macapa',
+    countrycodes: ['br'],
+    staticLocation: {
+      areaLabel: 'Macapá, Amapá, Brasil',
+      lat: 0.0349338,
+      lng: -51.0693948,
+      bbox: [-51.1541933, -0.060172, -50.9920184, 0.1130319],
+    },
+  },
+  'porto-velho': {
+    query: 'Porto Velho',
+    countrycodes: ['br'],
+    staticLocation: {
+      areaLabel: 'Porto Velho, Rondônia, Brasil',
+      lat: -8.7607721,
+      lng: -63.8998835,
+      bbox: [-64.0051088, -8.8749222, -63.7763918, -8.6437384],
+    },
+  },
+  'boa-vista': {
+    query: 'Boa Vista',
+    countrycodes: ['br'],
+    staticLocation: {
+      areaLabel: 'Boa Vista, Roraima, Brasil',
+      lat: 2.8235098,
+      lng: -60.6758331,
+      bbox: [-60.7708331, 2.7285098, -60.5808331, 2.9185098],
+    },
+  },
+  palmas: {
+    query: 'Palmas',
+    countrycodes: ['br'],
+    staticLocation: {
+      areaLabel: 'Palmas, Tocantins, Brasil',
+      lat: -10.184,
+      lng: -48.3336,
+      bbox: [-48.4489554, -10.3155192, -48.2158989, -10.0571789],
+    },
+  },
+  vitoria: {
+    query: 'Vitoria, Espirito Santo',
+    countrycodes: ['br'],
+    staticLocation: {
+      areaLabel: 'Vitória, Espírito Santo, Brasil',
+      lat: -20.3155,
+      lng: -40.3128,
+      bbox: [-40.4098967, -20.4155936, -40.2490047, -20.2353642],
+    },
+  },
+  'campo-grande': {
+    query: 'Campo Grande',
+    countrycodes: ['br'],
+    staticLocation: {
+      areaLabel: 'Campo Grande, Mato Grosso do Sul, Brasil',
+      lat: -20.4697105,
+      lng: -54.6201211,
+      bbox: [-54.7138218, -20.5860132, -54.4864179, -20.354804],
+    },
+  },
 
   // Argentina
   'buenos-aires': {

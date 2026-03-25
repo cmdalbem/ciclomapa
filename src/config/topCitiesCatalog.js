@@ -52,6 +52,13 @@ const TOP_CITY_SLUGS_CANDIDATES = [
   'aracaju',
   'joao-pessoa',
   'florianopolis',
+  'rio-branco',
+  'macapa',
+  'porto-velho',
+  'boa-vista',
+  'palmas',
+  'vitoria',
+  'campo-grande',
 
   // Argentina (province capitals present in our catalog)
   'buenos-aires',
