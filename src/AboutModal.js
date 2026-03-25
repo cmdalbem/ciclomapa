@@ -33,7 +33,7 @@ function AboutModal({ visible, onClose, openLayersLegendModal }) {
       aria-modal="true"
       aria-label="Sobre o CicloMapa"
       className={`
-                fixed top-0 bottom-0 left-0 right-0 z-10 flex justify-center items-center
+                app-modal-root fixed top-0 bottom-0 left-0 right-0 flex justify-center items-center
                 ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-500
             `}
       style={{

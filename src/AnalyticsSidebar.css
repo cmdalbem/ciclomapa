@@ -1,3 +1,23 @@
+@keyframes analytics-sidebar-enter {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+#analyticsSidebar.analytics-sidebar {
+  animation: analytics-sidebar-enter 620ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #analyticsSidebar.analytics-sidebar {
+    animation: none;
+    transform: none;
+  }
+}
+
 body.theme-dark #analyticsSidebar {
   background: #1a1a1a;
 }

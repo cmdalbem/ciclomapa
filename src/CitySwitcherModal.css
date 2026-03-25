@@ -1,0 +1,512 @@
+.city-switcher-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--motion-duration-normal, 300ms) ease,
+    background-color 0.3s ease;
+
+  backdrop-filter: blur(10px);
+}
+
+.theme-light .city-switcher-modal__backdrop {
+  background: rgba(30, 41, 59, 0.24);
+  backdrop-filter: blur(12px);
+}
+
+.theme-dark .city-switcher-modal__backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+body.show-city-picker .city-switcher-modal__backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.city-switcher-modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-app-modal);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding-top: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: 10px;
+
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+
+  /* Closing: fade opacity first, then hide visibility (avoids tab/focus traps). */
+  transition:
+    opacity var(--motion-duration-normal, 300ms) ease,
+    visibility 0ms linear var(--motion-duration-normal, 300ms);
+}
+
+body.show-city-picker .city-switcher-modal {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: none; /* children (backdrop + panel) use pointer-events: auto */
+
+  /* Opening: visibility must apply immediately or focus() on the geocoder cannot succeed. */
+  transition:
+    opacity var(--motion-duration-normal, 300ms) ease,
+    visibility 0ms;
+}
+
+@keyframes city-switcher-modal-enter-down {
+  from {
+    opacity: 0;
+    transform: translateY(-32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes city-switcher-modal-city-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.city-switcher-modal__panel {
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(860px, 100%);
+  height: clamp(420px, calc(100vh - 200px), 760px);
+  max-height: none;
+  overflow: visible;
+  border-radius: 32px;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.city-switcher-modal__panel.glass-bg {
+  background: transparent !important;
+  border: none !important;
+  backdrop-filter: none !important;
+}
+
+.city-switcher-modal__title {
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.15;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.theme-light .city-switcher-modal__title {
+  color: rgba(15, 23, 42, 0.9);
+}
+
+.city-switcher-modal__subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.72);
+  opacity: 0.85;
+}
+
+.theme-light .city-switcher-modal__subtitle {
+  color: rgba(71, 85, 105, 0.85);
+}
+
+.city-switcher-modal__closeBtn {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(255, 255, 255, 0.82);
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+  flex-shrink: 0;
+}
+
+.city-switcher-modal__closeBtn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(148, 175, 162, 0.4);
+  background: rgba(148, 175, 162, 0.08);
+}
+
+.theme-light .city-switcher-modal__closeBtn {
+  background: #ffffff;
+  color: rgba(30, 41, 59, 0.82);
+  border-color: rgba(30, 41, 59, 0.14);
+  box-shadow: 0 1px 2px rgba(30, 41, 59, 0.06);
+}
+
+.city-switcher-modal__geocoderMount {
+  position: relative;
+  z-index: 3;
+  padding: 0 20px 10px;
+  opacity: 0;
+  transform: translateY(-12px);
+}
+
+body.show-city-picker .city-switcher-modal__geocoderMount {
+  animation: city-switcher-modal-enter-down 600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Override Mapbox Geocoder visuals so it matches our modal */
+.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  z-index: 10;
+  background: transparent !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+}
+
+.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder input {
+  width: 100%;
+  border: none !important;
+  outline: none;
+  border-radius: 999px !important;
+  padding: 0 44px 0 46px;
+  height: 44px;
+  min-height: 44px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 16px;
+  box-shadow: none !important;
+  line-height: 44px;
+}
+
+.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder input::placeholder {
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder input {
+  background: #ffffff;
+  color: rgba(30, 41, 59, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(30, 41, 59, 0.12),
+    0 2px 10px rgba(30, 41, 59, 0.07) !important;
+}
+
+.theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder input::placeholder {
+  color: rgba(71, 85, 105, 0.55);
+}
+
+.theme-dark .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder input {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder--icon-search {
+  top: 50%;
+  left: 18px;
+  transform: translateY(-50%);
+  opacity: 1;
+  fill: rgba(255, 255, 255, 0.26) !important;
+}
+
+.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder--icon-loading {
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+}
+
+.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder--icon-close {
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  margin: 0;
+}
+
+.theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder--icon-search {
+  fill: rgba(71, 85, 105, 0.5) !important;
+}
+
+.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions {
+  z-index: 20 !important;
+  border-radius: var(--radius-md, 8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  background: rgba(20, 20, 20, 0.94) !important;
+  box-shadow: none !important;
+}
+
+.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > li > a {
+  color: rgba(255, 255, 255, 0.82) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > .active > a,
+.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > li > a:hover {
+  background: rgba(148, 175, 162, 0.1) !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions {
+  background: #ffffff !important;
+  border-color: rgba(30, 41, 59, 0.12) !important;
+  box-shadow:
+    0 0 0 1px rgba(30, 41, 59, 0.06),
+    0 12px 28px rgba(30, 41, 59, 0.14) !important;
+}
+
+.theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > li > a {
+  color: rgba(30, 41, 59, 0.88) !important;
+}
+
+.theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > .active > a,
+.theme-light
+  .city-switcher-modal__geocoderMount
+  .mapboxgl-ctrl-geocoder
+  .suggestions
+  > li
+  > a:hover {
+  background: rgba(30, 41, 59, 0.06) !important;
+}
+
+.city-switcher-modal__content {
+  position: relative;
+  z-index: 0;
+  padding: 0 18px 10px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* Hide scrollbars but keep scrolling */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.city-switcher-modal__content::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.city-switcher-modal__section {
+  margin-top: 20px;
+  padding: 0;
+}
+
+.city-switcher-modal__section--countryGroup {
+  margin-top: 20px;
+}
+
+.city-switcher-modal__sectionTitle {
+  /* padding: 14px 16px 10px; */
+  padding: 16px 8px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.15px;
+  opacity: 0.72;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-light .city-switcher-modal__sectionTitle {
+  color: rgba(71, 85, 105, 0.95);
+  opacity: 1;
+}
+
+.theme-light .city-switcher-modal__clockIcon {
+  opacity: 0.65;
+  color: rgba(71, 85, 105, 0.9);
+}
+
+.city-switcher-modal__flag {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.city-switcher-modal__clockIcon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
+.city-switcher-modal__citiesGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  /* padding: 0 16px 12px; */
+}
+
+@media (min-width: 1024px) {
+  .city-switcher-modal__citiesGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .city-switcher-modal__citiesGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1600px) {
+  .city-switcher-modal__panel {
+    width: min(900px, 100%);
+  }
+
+  .city-switcher-modal__citiesGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.city-switcher-modal__staggerEnter {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.city-switcher-modal__cityCardWrap {
+  min-width: 0;
+}
+
+body.show-city-picker .city-switcher-modal__staggerEnter {
+  animation: city-switcher-modal-city-card-enter 600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(200ms + (var(--city-content-stagger, 0) * 20ms));
+}
+
+.city-switcher-modal__cityBtn {
+  width: 100%;
+  border-radius: 16px;
+  /* border: 1px solid rgba(255, 255, 255, 0.1); */
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.86);
+  text-align: left;
+
+  /* opacity: 0.8; */
+
+  padding: 14px 14px;
+  cursor: pointer;
+
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.theme-light .city-switcher-modal__cityBtn {
+  background: #ffffff;
+  color: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(30, 41, 59, 0.12);
+  box-shadow: 0 1px 2px rgba(30, 41, 59, 0.05);
+  opacity: 1;
+}
+
+.city-switcher-modal__cityBtn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(148, 175, 162, 0.28);
+  background: rgba(148, 175, 162, 0.06);
+  opacity: 1;
+}
+
+.theme-light .city-switcher-modal__cityBtn:hover {
+  border-color: rgba(30, 41, 59, 0.18);
+  background: rgba(248, 250, 252, 1);
+  box-shadow: 0 2px 8px rgba(30, 41, 59, 0.08);
+}
+
+.theme-light .city-switcher-modal__cityMeta {
+  color: rgba(71, 85, 105, 0.88);
+  opacity: 1;
+}
+
+.theme-light .city-switcher-modal__cityTotal {
+  color: rgba(100, 116, 139, 0.95);
+  opacity: 1;
+}
+
+.city-switcher-modal__cityTopRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.city-switcher-modal__cityName {
+  font-size: 12px;
+  line-height: 1.2;
+  flex: 1;
+  min-width: 0; /* allows ellipsis on small cards */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.city-switcher-modal__cityMeta {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.2;
+  opacity: 0.68;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.city-switcher-modal__cityTotal {
+  font-size: 12px;
+  line-height: 1.2;
+  opacity: 0.55;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: right;
+  flex-shrink: 0; /* do not truncate the number */
+  margin-left: auto; /* push to the right */
+}
+
+.city-switcher-modal__hint {
+  padding: 0 20px 20px;
+  font-size: 12px;
+  opacity: 0.58;
+}
+
+@media (max-width: 640px) {
+  .city-switcher-modal {
+    align-items: flex-end;
+    padding-top: 0;
+    padding-bottom: 10px;
+  }
+
+  .city-switcher-modal__geocoderMount {
+    padding-bottom: 10px;
+  }
+
+  .city-switcher-modal__citiesGrid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .city-switcher-modal__geocoderMount,
+  body.show-city-picker .city-switcher-modal__geocoderMount {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .city-switcher-modal__staggerEnter,
+  body.show-city-picker .city-switcher-modal__staggerEnter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

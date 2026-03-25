@@ -19,6 +19,8 @@ import {
   ENABLE_COMMENTS,
   IS_MOBILE,
   IS_PROD,
+  MAPBOX_GEOCODER_COUNTRIES,
+  getCityGeocoderPlaceholderSuffixPtProd,
   DEFAULT_LINE_WIDTH_MULTIPLIER,
   COMMENTS_ZOOM_THRESHOLD,
   MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
@@ -2377,9 +2379,10 @@ class Map extends Component {
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl,
         language: 'pt-br',
-        // placeholder: `Buscar cidades ${IS_PROD ? 'no Brasil, Espanha e Portugal' : 'no mundo'}`,
-        placeholder: `Buscar cidades ${IS_PROD ? 'no Brasil' : 'no mundo'}`,
-        countries: IS_PROD ? 'br,es,pt' : '',
+        placeholder: `Buscar cidades ${
+          IS_PROD ? getCityGeocoderPlaceholderSuffixPtProd() : 'no mundo'
+        }`,
+        countries: IS_PROD ? MAPBOX_GEOCODER_COUNTRIES : '',
         types: 'place',
         marker: false,
         clearOnBlur: true,
@@ -2433,6 +2436,46 @@ class Map extends Component {
 
       // Doesn't matter where we add this, it's customized via CSS
       this.map.addControl(cityPicker, 'top-left');
+
+      // Move the Geocoder DOM into the React modal, so the input feels native.
+      // (We keep Mapbox's JS integration for searching, results, and bbox/fitBounds.)
+      const relocateCityPickerToModal = (attempt = 0) => {
+        if (attempt > 20) return;
+
+        const modalMount = document.querySelector('.city-switcher-modal__geocoderMount');
+        const geocoderEl =
+          cityPicker?._container ||
+          document.querySelector('.mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder');
+
+        if (!modalMount || !geocoderEl) {
+          setTimeout(() => relocateCityPickerToModal(attempt + 1), 100);
+          return;
+        }
+
+        if (geocoderEl.parentElement !== modalMount) {
+          modalMount.appendChild(geocoderEl);
+        }
+
+        // Ensure the moved element isn't affected by any map-based positioning rules.
+        geocoderEl.style.position = 'relative';
+
+        const focusCityPickerIfOpen = () => {
+          if (!document.body.classList.contains('show-city-picker')) return;
+          const input = modalMount.querySelector('input');
+          if (!input || typeof input.focus !== 'function') return;
+          try {
+            input.focus({ preventScroll: true });
+          } catch {
+            input.focus();
+          }
+        };
+
+        focusCityPickerIfOpen();
+        requestAnimationFrame(focusCityPickerIfOpen);
+        window.setTimeout(focusCityPickerIfOpen, 0);
+      };
+
+      relocateCityPickerToModal();
 
       const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: {

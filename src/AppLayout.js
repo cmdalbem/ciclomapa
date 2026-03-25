@@ -6,7 +6,7 @@ import React from 'react';
 import AboutModal from './AboutModal.js';
 import LayersLegendModal from './LayersLegendModal.js';
 import Map from './Map.js';
-import CitySwitcherBackdrop from './CitySwitcherBackdrop.js';
+import CitySwitcherModal from './CitySwitcherModal.js';
 import TopBar from './TopBar.js';
 import MapStyleSwitcher from './MapStyleSwitcher.js';
 import LayersPanel from './LayersPanel.js';
@@ -88,7 +88,7 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
               isDarkMode={state.isDarkMode}
             />
           )}
-          {!state.embedMode && !IS_MOBILE && <div id="gradient-backdrop" />}
+          {/* {!state.embedMode && !IS_MOBILE && <div id="gradient-backdrop" />} */}
         </main>
 
         {!IS_MOBILE && !state.embedMode && state.isSidebarOpen && (
@@ -109,7 +109,7 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
         )}
       </div>
 
-      <CitySwitcherBackdrop />
+      <CitySwitcherModal />
 
       {!(IS_MOBILE && state.isDirectionsPanelOpen) && (
         <nav aria-label="Camadas do mapa">
