@@ -15,5 +15,6 @@ yarn-error.log*
 .env.production
 
 # CicloMapa-specific
-*.geojson
+# *.geojson
 *.pmtiles
+# public/history/

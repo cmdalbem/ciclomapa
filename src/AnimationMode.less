@@ -1,0 +1,289 @@
+// ─── Animation mode ──────────────────────────────────────────────────────
+
+body.animation-mode {
+  #topbar,
+  #layersPanel,
+  #layersPanelMobileButton,
+  #directionsPanel,
+  #directionsPanelMobileButton,
+  #analyticsSidebar,
+  #gradient-backdrop,
+  #mapSwitcher,
+  .mapboxgl-ctrl-top-left,
+  .mapboxgl-ctrl-top-right,
+  .mapboxgl-ctrl-right,
+  .mapboxgl-ctrl-bottom-right,
+  .mapboxgl-ctrl-bottom-left,
+  .fixed.bottom-0 {
+    display: none !important;
+  }
+}
+
+.animation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.animation-hud {
+  position: absolute;
+  bottom: 20px;
+  right: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  overflow: visible;
+  pointer-events: auto;
+  transition: opacity 0.3s ease;
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: #1a1a1a;
+  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.6), 0 0 4px rgba(255, 255, 255, 0.4);
+}
+
+body.theme-dark .animation-hud {
+  color: white;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5), 0 0 4px rgba(0, 0, 0, 0.3);
+}
+
+.animation-hud-year {
+  font-size: 96px;
+  font-weight: 400;
+  letter-spacing: -6%;
+  font-family: 'IBM Plex Sans', sans-serif;
+  line-height: 1;
+}
+
+.animation-hud-chart {
+  margin-top: 8px;
+  display: block;
+  overflow: visible;
+  color: #1a1a1a;
+  filter: drop-shadow(0 1px 4px rgba(255, 255, 255, 0.3));
+}
+
+.animation-hud-chart-count {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.65;
+  letter-spacing: 0.2px;
+  font-variant-numeric: tabular-nums;
+}
+
+body.theme-dark .animation-hud-chart {
+  color: white;
+  filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.4));
+}
+
+.animation-loading,
+.animation-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 18px;
+  color: white;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 20px 32px;
+  border-radius: 12px;
+  pointer-events: auto;
+}
+
+.animation-error {
+  color: #ff6b6b;
+}
+
+.animation-controls {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  margin-bottom: 20px;
+  border-radius: 99px;
+  font-size: 13px;
+  user-select: none;
+
+  .ant-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.animation-settings-divider {
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+body.theme-dark .animation-settings-divider {
+  border-right-color: rgba(255, 255, 255, 0.12);
+}
+
+.animation-city-picker {
+  position: relative;
+  pointer-events: auto;
+  margin-bottom: 2px;
+}
+
+.animation-city-picker-trigger {
+  all: unset;
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color1);
+  text-shadow: none;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+  letter-spacing: 0.3px;
+  margin-right: -9px;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.animation-city-picker-chevron {
+  font-size: 10px;
+  transition: transform 0.2s ease;
+
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+.animation-city-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+.animation-city-picker-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border-radius: 10px;
+  min-width: 160px;
+  z-index: 2;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+body.theme-dark .animation-city-picker-menu {
+  background: rgba(30, 30, 30, 0.85);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.animation-city-picker-item {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.75);
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  &.active {
+    font-weight: 600;
+    color: var(--color1);
+  }
+}
+
+body.theme-dark .animation-city-picker-item {
+  color: rgba(255, 255, 255, 0.85);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &.active {
+    color: var(--color1);
+  }
+}
+
+.animation-timeline {
+  position: relative;
+  flex: 3;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 0 12px;
+}
+
+.animation-scrubber {
+  width: 100%;
+  accent-color: #059669;
+  margin: 0;
+  display: block;
+}
+
+.animation-tick-marks {
+  position: relative;
+  left: 0;
+  right: 0;
+  height: 14px;
+  pointer-events: none;
+}
+
+.animation-tick {
+  position: absolute;
+  transform: translateX(-50%);
+  cursor: pointer;
+  pointer-events: auto;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 1px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.animation-tick--labeled {
+  font-size: 8px;
+  opacity: 0.6;
+  white-space: nowrap;
+  padding-top: 5px;
+
+  &::before {
+    height: 5px;
+    background: rgba(0, 0, 0, 0.35);
+  }
+}
+
+body.theme-dark .animation-tick::before {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+body.theme-dark .animation-tick--labeled::before {
+  background: rgba(255, 255, 255, 0.5);
+}

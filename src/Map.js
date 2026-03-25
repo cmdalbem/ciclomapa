@@ -32,11 +32,13 @@ import {
     ROUTE_LINE_PADDING_WIDTH,
     NEAR_DESTINATION_POI_RADIUS_KM,
     PMTILES_FILENAME,
+    ANIMATION_MODE,
     LOW_ZOOM_WIDTH_DIVISOR,
     ROUTES_ACTIVE_LOW_ZOOM_WIDTH_DIVISOR,
     ROUTES_ACTIVE_HIGH_ZOOM_WIDTH_MULTIPLIER,
 } from './constants.js'
 
+import { BIRTH_COLOR_DARK, BIRTH_COLOR_LIGHT } from './AnimationMode.js'
 import Analytics from './Analytics.js'
 import AirtableDatabase from './AirtableDatabase.js'
 import CommentModal from './CommentModal.js'
@@ -396,17 +398,40 @@ class Map extends Component {
             "filter": filters,
             "description": l.description,
             type: 'circle',
-            minzoom: MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
-            maxzoom: l.zoomThreshold,
+            minzoom: ANIMATION_MODE ? 10 : MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
+            maxzoom: ANIMATION_MODE ? 22 : l.zoomThreshold,
             'paint': {
-                'circle-radius': [
-                    'interpolate',
-                    ["exponential", 1.5],
-                    ['zoom'],
-                    12, 1,
-                    15, 4
-                ],
-                'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? 0.2 : 0.2),
+                ...(ANIMATION_MODE ? {
+                    'circle-radius-transition': { duration: 0, delay: 0 },
+                    'circle-radius': [
+                        'interpolate',
+                        ["exponential", 1.5],
+                        ['zoom'],
+                        10, ['*', ['coalesce', ['get', '_width'], 1], 2],
+                        14, ['*', ['coalesce', ['get', '_width'], 1], 4],
+                    ],
+                } : {
+                    'circle-radius': [
+                        'interpolate',
+                        ["exponential", 1.5],
+                        ['zoom'],
+                        12, 1,
+                        15, 4
+                    ],
+                }),
+                ...(ANIMATION_MODE ? {
+                    'circle-color-transition': { duration: 0, delay: 0 },
+                    'circle-color': [
+                        'interpolate', ['linear'],
+                        ['coalesce', ['get', '_opacity'], 1],
+                        0, this.props.isDarkMode ? BIRTH_COLOR_DARK : BIRTH_COLOR_LIGHT,
+                        1, adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? 0.2 : 0.2),
+                    ],
+                    'circle-stroke-color': this.props.isDarkMode ? '#000000' : '#ffffff',
+                } : {
+                    'circle-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? 0.2 : 0.2),
+                    'circle-stroke-color': this.props.isDarkMode ? '#000000' : '#ffffff',
+                }),
                 'circle-stroke-width': [
                     'interpolate',
                     ["exponential", 1.5],
@@ -419,7 +444,6 @@ class Map extends Component {
                     0.7,
                     1.0
                 ],
-                'circle-stroke-color': this.props.isDarkMode ? '#000000' : '#ffffff',
             }
         }, layerUnderneathName);
 
@@ -454,14 +478,9 @@ class Map extends Component {
                 'text-font': ['IBM Plex Sans Medium'],
                 'text-letter-spacing': 0.05,
                 "text-max-width": 8,
-                'icon-size': 0.5,
-                // 'icon-size': [
-                //     "interpolate",
-                //         ["exponential", 1.5],
-                //         ["zoom"], 
-                //         10, 0.2,
-                //         15, 0.5 
-                // ],
+                'icon-size': ANIMATION_MODE
+                    ? ['*', ['coalesce', ['get', '_width'], 1], 0.5]
+                    : 0.5,
                 'text-size': [
                     "interpolate",
                         ["exponential", 1.5],
@@ -809,17 +828,27 @@ class Map extends Component {
             "filter": filters,
             "paint": {
                 "line-occlusion-opacity": 1,
-                "line-color": [
-                    "case",
-                    ["boolean", ["feature-state", "selected"], false],
-                    adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.1 : -0.1, 'hsl'), // Selected
-                    [
-                        "case",
-                        ["boolean", ["feature-state", "hover"], false],
-                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3),       // Hover
-                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.0 : -0.1, 'hsl') // Default
+                ...(ANIMATION_MODE ? {
+                    "line-color-transition": { duration: 0, delay: 0 },
+                    "line-color": [
+                        "interpolate", ["linear"],
+                        ["coalesce", ["get", "_opacity"], 1],
+                        0, this.props.isDarkMode ? BIRTH_COLOR_DARK : BIRTH_COLOR_LIGHT,
+                        1, adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.0 : -0.1, 'hsl'),
                     ],
-                ],
+                } : {
+                    "line-color": [
+                        "case",
+                        ["boolean", ["feature-state", "selected"], false],
+                        adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.1 : -0.1, 'hsl'),
+                        [
+                            "case",
+                            ["boolean", ["feature-state", "hover"], false],
+                            adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? -0.3 : 0.3),
+                            adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.0 : -0.1, 'hsl'),
+                        ],
+                    ],
+                }),
                 "line-offset": [
                     "interpolate",
                         ["exponential", 1.5],
@@ -837,13 +866,24 @@ class Map extends Component {
                                 0
                         ]
                     ],
-                "line-width": [
-                    "interpolate",
+                ...(ANIMATION_MODE ? {
+                    "line-width-transition": { duration: 0, delay: 0 },
+                    "line-width": [
+                        "interpolate",
+                        ["exponential", 1.5],
+                        ["zoom"],
+                        10, ["*", ["coalesce", ["get", "_width"], 1], Math.max(1, l.style.lineWidth/5)],
+                        18, ["*", ["coalesce", ["get", "_width"], 1], l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER],
+                    ],
+                } : {
+                    "line-width": [
+                        "interpolate",
                         ["exponential", 1.5],
                         ["zoom"],
                         10, Math.max(1, l.style.lineWidth / LOW_ZOOM_WIDTH_DIVISOR),
                         18, l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER
                     ],
+                }),
                     ...(l.style.lineStyle === 'dashed' && dashedLineStyle)
                 },
                 "layout": {
@@ -1172,7 +1212,7 @@ class Map extends Component {
             });
         }
 
-        if (USE_PMTILES_SOURCE) {
+        if (USE_PMTILES_SOURCE && !ANIMATION_MODE) {
             try {
                 const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + PMTILES_FILENAME;
                 console.log('Loading PMTiles from S3:', PMTILES_URL);
@@ -2418,77 +2458,79 @@ class Map extends Component {
             this.map.addControl(cityPicker, 'top-left');
     
 
-            const geolocate = new mapboxgl.GeolocateControl({
-                positionOptions: {
-                    enableHighAccuracy: true
-                },
-                trackUserLocation: IS_MOBILE ? true : false,
-                showUserHeading: IS_MOBILE ? true : false,
-                followUserLocation: IS_MOBILE ? true : false
-            });
-            
-            // Store reference to geolocate control
-            this.geolocateControl = geolocate;
-            
-            geolocate.on('geolocate', result => {
-                console.debug('geolocate', result);
-                this.reverseGeocode([result.coords.longitude, result.coords.latitude])
-                    .then(geocodeResult => {
-                        // this.syncMapState(geocodeResult.place_name);
-                        this.syncMapState();
-                        // Update lighting based on user's actual location
-                        this.setRealisticLighting();
-                    })
-                    .catch(err => {
-                        console.debug('Reverse geocoding failed:', err.message);
+            if (!ANIMATION_MODE) {
+                const geolocate = new mapboxgl.GeolocateControl({
+                    positionOptions: {
+                        enableHighAccuracy: true
+                    },
+                    trackUserLocation: IS_MOBILE ? true : false,
+                    showUserHeading: IS_MOBILE ? true : false,
+                    followUserLocation: IS_MOBILE ? true : false
+                });
+                
+                // Store reference to geolocate control
+                this.geolocateControl = geolocate;
+                
+                geolocate.on('geolocate', result => {
+                    console.debug('geolocate', result);
+                    this.reverseGeocode([result.coords.longitude, result.coords.latitude])
+                        .then(geocodeResult => {
+                            // this.syncMapState(geocodeResult.place_name);
+                            this.syncMapState();
+                            // Update lighting based on user's actual location
+                            this.setRealisticLighting();
+                        })
+                        .catch(err => {
+                            console.debug('Reverse geocoding failed:', err.message);
+                        });
+                });
+                
+                // Listen to tracking events to sync state for persistence
+                // The control handles all button clicks and tracking logic internally
+                // We just sync the state to React for localStorage persistence
+                if (IS_MOBILE && this.props.onTrackingUserLocationChange) {
+                    geolocate.on('trackuserlocationstart', () => {
+                        console.debug('Geolocation tracking started');
+                        this.props.onTrackingUserLocationChange(true);
                     });
-            });
-            
-            // Listen to tracking events to sync state for persistence
-            // The control handles all button clicks and tracking logic internally
-            // We just sync the state to React for localStorage persistence
-            if (IS_MOBILE && this.props.onTrackingUserLocationChange) {
-                geolocate.on('trackuserlocationstart', () => {
-                    console.debug('Geolocation tracking started');
-                    this.props.onTrackingUserLocationChange(true);
-                });
-                
-                geolocate.on('trackuserlocationend', () => {
-                    console.debug('Geolocation tracking ended (user moved map or stopped tracking)');
-                    this.props.onTrackingUserLocationChange(false);
-                });
-                
-                // Handle errors (e.g., permission denied) - stop tracking state
-                geolocate.on('error', (error) => {
-                    console.debug('Geolocation error:', error);
-                    if (this.props.isTrackingUserLocation) {
+                    
+                    geolocate.on('trackuserlocationend', () => {
+                        console.debug('Geolocation tracking ended (user moved map or stopped tracking)');
                         this.props.onTrackingUserLocationChange(false);
-                    }
-                });
-            }
-            
-            this.map.addControl(geolocate, 'bottom-right');
-            
-            // Restore tracking state if it was active before
-            // Note: trigger() will start tracking if trackUserLocation is true
-            // It may prompt for permission if not already granted
-            if (IS_MOBILE && this.props.isTrackingUserLocation && this.props.onTrackingUserLocationChange) {
-                // Wait for the control to be fully initialized and added to the map
-                // Use a longer timeout to ensure the control is ready
-                setTimeout(() => {
-                    try {
-                        if (geolocate && typeof geolocate.trigger === 'function') {
-                            geolocate.trigger();
-                            console.debug('Restored geolocation tracking from localStorage');
-                        } else {
-                            console.debug('Geolocate control not ready for restoration');
+                    });
+                    
+                    // Handle errors (e.g., permission denied) - stop tracking state
+                    geolocate.on('error', (error) => {
+                        console.debug('Geolocation error:', error);
+                        if (this.props.isTrackingUserLocation) {
+                            this.props.onTrackingUserLocationChange(false);
                         }
-                    } catch (error) {
-                        console.debug('Could not restore geolocation tracking:', error);
-                        // If restoration fails, update state to false to avoid stuck state
-                        this.props.onTrackingUserLocationChange(false);
-                    }
-                }, 1000);
+                    });
+                }
+                
+                this.map.addControl(geolocate, 'bottom-right');
+                
+                // Restore tracking state if it was active before
+                // Note: trigger() will start tracking if trackUserLocation is true
+                // It may prompt for permission if not already granted
+                if (IS_MOBILE && this.props.isTrackingUserLocation && this.props.onTrackingUserLocationChange) {
+                    // Wait for the control to be fully initialized and added to the map
+                    // Use a longer timeout to ensure the control is ready
+                    setTimeout(() => {
+                        try {
+                            if (geolocate && typeof geolocate.trigger === 'function') {
+                                geolocate.trigger();
+                                console.debug('Restored geolocation tracking from localStorage');
+                            } else {
+                                console.debug('Geolocate control not ready for restoration');
+                            }
+                        } catch (error) {
+                            console.debug('Could not restore geolocation tracking:', error);
+                            // If restoration fails, update state to false to avoid stuck state
+                            this.props.onTrackingUserLocationChange(false);
+                        }
+                    }, 1000);
+                }
             }
 
             this.initCompassControl();
@@ -2579,6 +2621,20 @@ class Map extends Component {
         this.initMapControls();
         this.setRealisticLighting();
         this.updateBoundaryMask();
+
+        if (ANIMATION_MODE) {
+            this.hideBaseMapLabels();
+        }
+    }
+
+    hideBaseMapLabels() {
+        const style = this.map.getStyle();
+        if (!style || !style.layers) return;
+        style.layers.forEach(layer => {
+            if (layer.type === 'symbol') {
+                this.map.setLayoutProperty(layer.id, 'visibility', 'none');
+            }
+        });
     }
 
     loadImages() {
@@ -2632,7 +2688,7 @@ class Map extends Component {
         
         this.initRoutesLayers();
             
-        if (ENABLE_COMMENTS) {
+        if (ENABLE_COMMENTS && !ANIMATION_MODE) {
             this.initCommentsLayer();
         }
 
@@ -2680,23 +2736,26 @@ class Map extends Component {
             // Remove all event listeners to prevent memory leaks
             this.map.off();
             
-            // Remove all layers
-            const style = this.map.getStyle();
-            if (style && style.layers) {
-                style.layers.forEach(layer => {
-                    if (this.map.getLayer(layer.id)) {
-                        this.map.removeLayer(layer.id);
-                    }
-                });
-            }
-            
-            // Remove all sources
-            if (style && style.sources) {
-                Object.keys(style.sources).forEach(sourceId => {
-                    if (this.map.getSource(sourceId)) {
-                        this.map.removeSource(sourceId);
-                    }
-                });
+            // Style may not be loaded yet if the component unmounts early
+            try {
+                const style = this.map.getStyle();
+                if (style && style.layers) {
+                    style.layers.forEach(layer => {
+                        if (this.map.getLayer(layer.id)) {
+                            this.map.removeLayer(layer.id);
+                        }
+                    });
+                }
+                
+                if (style && style.sources) {
+                    Object.keys(style.sources).forEach(sourceId => {
+                        if (this.map.getSource(sourceId)) {
+                            this.map.removeSource(sourceId);
+                        }
+                    });
+                }
+            } catch (e) {
+                // getStyle() throws if the style hasn't finished loading
             }
             
             // Remove the map instance
@@ -2721,13 +2780,13 @@ class Map extends Component {
                 <div ref={el => this.mapContainer = el}></div>
 
                 {
-                    ENABLE_COMMENTS &&
+                    ENABLE_COMMENTS && !ANIMATION_MODE &&
                     this.state.showCommentCursor &&
                     <NewCommentCursor isDarkMode={this.props.isDarkMode}/>
                 }
 
                 {
-                    ENABLE_COMMENTS &&
+                    ENABLE_COMMENTS && !ANIMATION_MODE &&
                     <CommentModal
                         location={this.props.location}
                         open={this.state.showCommentModal}

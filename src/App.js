@@ -46,8 +46,11 @@ import {
     MAP_STYLES,
     MAPBOX_ACCESS_TOKEN,
     DEFAULT_SIDEBAR_OPEN,
-    ENABLE_SATELLITE_TOGGLE
+    ENABLE_SATELLITE_TOGGLE,
+    ANIMATION_MODE
 } from './constants.js'
+
+import AnimationMode from './AnimationMode.js'
 
 import './App.less';
 import './antd.light.css';
@@ -618,6 +621,10 @@ class App extends Component {
     }
 
     updateData(forceUpdate) {
+        if (ANIMATION_MODE) {
+            this.setState({ loading: false });
+            return;
+        }
         if (this.state.area) {
             if (forceUpdate) {
                 this.getDataFromOSM({forceUpdate: true});
@@ -740,11 +747,16 @@ class App extends Component {
                 city_name: this.state.area
             });
 
-            this.directionsPanel.clearDirections();
+            if (this.directionsPanel) {
+                this.directionsPanel.clearDirections();
+            }
 
             this.updateData();
 
-            document.querySelector('.city-picker span').setAttribute('style','opacity: 1');
+            const cityPickerSpan = document.querySelector('.city-picker span');
+            if (cityPickerSpan) {
+                cityPickerSpan.setAttribute('style','opacity: 1');
+            }
 
             // Only redo the query if we need new data
             // if (!doesAContainsB(largestBoundsYet, newBounds)) {
@@ -938,6 +950,10 @@ class App extends Component {
         }));
     }
 
+    onAnimationDataChange = (geoJson) => {
+        this.setState({ geoJson });
+    }
+
     render() {
         return (
             <DirectionsProvider>
@@ -949,7 +965,7 @@ class App extends Component {
                     ].filter(Boolean).join(' ')}
                 >
                 {
-                    !IS_PROD &&
+                    !IS_PROD && !ANIMATION_MODE &&
                     <div className="fixed bottom-0 left-0 right-0 z-10 flex bg-yellow-300 text-black items-center justify-center text-center text-xs py-1">
                         Você está em um <b className="ml-1">ambiente de teste</b>, pode futricar à vontade! ;)
                     </div>
@@ -958,7 +974,8 @@ class App extends Component {
                 <div className="flex">
                     <div className="relative w-full">
                         { 
-                            IS_MOBILE && this.state.isDirectionsPanelOpen ? '' :
+                            !ANIMATION_MODE &&
+                            !(IS_MOBILE && this.state.isDirectionsPanelOpen) &&
                             <TopBar
                                 title={this.state.area}
                                 lastUpdate={this.state.dataUpdatedAt}
@@ -1006,6 +1023,16 @@ class App extends Component {
                         />
                         
                         {
+                            ANIMATION_MODE &&
+                            <AnimationMode
+                                onDataChange={this.onAnimationDataChange}
+                                isDarkMode={this.state.isDarkMode}
+                                toggleTheme={this.toggleTheme}
+                            />
+                        }
+
+                        {
+                            !ANIMATION_MODE &&
                             !this.state.embedMode &&
                             ENABLE_SATELLITE_TOGGLE &&
                             <MapStyleSwitcher 
@@ -1017,12 +1044,14 @@ class App extends Component {
                         }
 
                         {
+                            !ANIMATION_MODE &&
                             !this.state.embedMode && !IS_MOBILE &&
                             <div id="gradient-backdrop"/>
                         }
                     </div>
 
                     {
+                        !ANIMATION_MODE &&
                         !IS_MOBILE &&
                         !this.state.embedMode &&
                         this.state.isSidebarOpen &&
@@ -1041,10 +1070,11 @@ class App extends Component {
                     }
                 </div>
 
-                <CitySwitcherBackdrop/>
+                { !ANIMATION_MODE && <CitySwitcherBackdrop/> }
 
                 {
-                    IS_MOBILE && this.state.isDirectionsPanelOpen ? '' :
+                    !ANIMATION_MODE &&
+                    !(IS_MOBILE && this.state.isDirectionsPanelOpen) &&
                     <LayersBar
                         layers={this.state.layers}
                         onLayersChange={this.onLayersChange}
@@ -1054,32 +1084,38 @@ class App extends Component {
                     />
                 }
                 
-                <LayersPanel
-                    layers={this.state.layers}
-                    lengths={this.state.lengths}
-                    onLayersChange={this.onLayersChange}
-                    embedMode={this.state.embedMode}
-                    isDarkMode={this.state.isDarkMode}
-                />
+                {
+                    !ANIMATION_MODE &&
+                    <LayersPanel
+                        layers={this.state.layers}
+                        lengths={this.state.lengths}
+                        onLayersChange={this.onLayersChange}
+                        embedMode={this.state.embedMode}
+                        isDarkMode={this.state.isDarkMode}
+                    />
+                }
 
-                <DirectionsPanel
-                    ref={this.setDirectionsPanelRef}
-                    embedMode={this.state.embedMode}
-                    map={this.state.map}
-                    geoJson={this.state.geoJson}
-                    layers={this.state.layers}
-                    area={this.state.area}
-                    fromPoint={this.state.fromPoint}
-                    toPoint={this.state.toPoint}
-                    onFromPointChange={this.setFromPoint}
-                    onToPointChange={this.setToPoint}
-                    onClearRoutePoints={this.clearRoutePoints}
-                    onDirectionsPanelToggle={this.onDirectionsPanelToggle}
-                    isDarkMode={this.state.isDarkMode}
-                    debugMode={this.state.debugMode}
-                    onAreaChange={this.setArea}
-                    openLayersLegendModal={this.openLayersLegendModal}
-                />
+                {
+                    !ANIMATION_MODE &&
+                    <DirectionsPanel
+                        ref={this.setDirectionsPanelRef}
+                        embedMode={this.state.embedMode}
+                        map={this.state.map}
+                        geoJson={this.state.geoJson}
+                        layers={this.state.layers}
+                        area={this.state.area}
+                        fromPoint={this.state.fromPoint}
+                        toPoint={this.state.toPoint}
+                        onFromPointChange={this.setFromPoint}
+                        onToPointChange={this.setToPoint}
+                        onClearRoutePoints={this.clearRoutePoints}
+                        onDirectionsPanelToggle={this.onDirectionsPanelToggle}
+                        isDarkMode={this.state.isDarkMode}
+                        debugMode={this.state.debugMode}
+                        onAreaChange={this.setArea}
+                        openLayersLegendModal={this.openLayersLegendModal}
+                    />
+                }
 
                 <AboutModal
                     visible={this.state.aboutModal}

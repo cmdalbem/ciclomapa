@@ -1,0 +1,419 @@
+{
+  "generatedAt": "2026-03-07T15:26:50.914Z",
+  "cities": {
+    "sao-paulo": {
+      "area": "São Paulo",
+      "snapshots": [
+        {
+          "date": "2011-01-01T00:00:00Z",
+          "file": "sao-paulo-2011-01.geojson"
+        },
+        {
+          "date": "2012-01-01T00:00:00Z",
+          "file": "sao-paulo-2012-01.geojson"
+        },
+        {
+          "date": "2013-01-01T00:00:00Z",
+          "file": "sao-paulo-2013-01.geojson"
+        },
+        {
+          "date": "2014-01-01T00:00:00Z",
+          "file": "sao-paulo-2014-01.geojson"
+        },
+        {
+          "date": "2015-01-01T00:00:00Z",
+          "file": "sao-paulo-2015-01.geojson"
+        },
+        {
+          "date": "2016-01-01T00:00:00Z",
+          "file": "sao-paulo-2016-01.geojson"
+        },
+        {
+          "date": "2017-01-01T00:00:00Z",
+          "file": "sao-paulo-2017-01.geojson"
+        },
+        {
+          "date": "2018-01-01T00:00:00Z",
+          "file": "sao-paulo-2018-01.geojson"
+        },
+        {
+          "date": "2019-01-01T00:00:00Z",
+          "file": "sao-paulo-2019-01.geojson"
+        },
+        {
+          "date": "2020-01-01T00:00:00Z",
+          "file": "sao-paulo-2020-01.geojson"
+        },
+        {
+          "date": "2021-01-01T00:00:00Z",
+          "file": "sao-paulo-2021-01.geojson"
+        },
+        {
+          "date": "2022-01-01T00:00:00Z",
+          "file": "sao-paulo-2022-01.geojson"
+        },
+        {
+          "date": "2023-01-01T00:00:00Z",
+          "file": "sao-paulo-2023-01.geojson"
+        },
+        {
+          "date": "2024-01-01T00:00:00Z",
+          "file": "sao-paulo-2024-01.geojson"
+        },
+        {
+          "date": "2025-01-01T00:00:00Z",
+          "file": "sao-paulo-2025-01.geojson"
+        },
+        {
+          "date": "2026-01-01T00:00:00Z",
+          "file": "sao-paulo-2026-01.geojson"
+        }
+      ]
+    },
+    "fortaleza": {
+      "area": "Fortaleza",
+      "snapshots": [
+        {
+          "date": "2011-01-01T00:00:00Z",
+          "file": "fortaleza-2011-01.geojson"
+        },
+        {
+          "date": "2012-01-01T00:00:00Z",
+          "file": "fortaleza-2012-01.geojson"
+        },
+        {
+          "date": "2013-01-01T00:00:00Z",
+          "file": "fortaleza-2013-01.geojson"
+        },
+        {
+          "date": "2014-01-01T00:00:00Z",
+          "file": "fortaleza-2014-01.geojson"
+        },
+        {
+          "date": "2015-01-01T00:00:00Z",
+          "file": "fortaleza-2015-01.geojson"
+        },
+        {
+          "date": "2016-01-01T00:00:00Z",
+          "file": "fortaleza-2016-01.geojson"
+        },
+        {
+          "date": "2017-01-01T00:00:00Z",
+          "file": "fortaleza-2017-01.geojson"
+        },
+        {
+          "date": "2018-01-01T00:00:00Z",
+          "file": "fortaleza-2018-01.geojson"
+        },
+        {
+          "date": "2019-01-01T00:00:00Z",
+          "file": "fortaleza-2019-01.geojson"
+        },
+        {
+          "date": "2020-01-01T00:00:00Z",
+          "file": "fortaleza-2020-01.geojson"
+        },
+        {
+          "date": "2021-01-01T00:00:00Z",
+          "file": "fortaleza-2021-01.geojson"
+        },
+        {
+          "date": "2022-01-01T00:00:00Z",
+          "file": "fortaleza-2022-01.geojson"
+        },
+        {
+          "date": "2023-01-01T00:00:00Z",
+          "file": "fortaleza-2023-01.geojson"
+        },
+        {
+          "date": "2024-01-01T00:00:00Z",
+          "file": "fortaleza-2024-01.geojson"
+        },
+        {
+          "date": "2025-01-01T00:00:00Z",
+          "file": "fortaleza-2025-01.geojson"
+        },
+        {
+          "date": "2026-01-01T00:00:00Z",
+          "file": "fortaleza-2026-01.geojson"
+        }
+      ]
+    },
+    "rio-de-janeiro": {
+      "area": "Rio de Janeiro",
+      "snapshots": [
+        {
+          "date": "2011-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2011-01.geojson"
+        },
+        {
+          "date": "2012-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2012-01.geojson"
+        },
+        {
+          "date": "2013-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2013-01.geojson"
+        },
+        {
+          "date": "2014-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2014-01.geojson"
+        },
+        {
+          "date": "2015-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2015-01.geojson"
+        },
+        {
+          "date": "2016-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2016-01.geojson"
+        },
+        {
+          "date": "2017-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2017-01.geojson"
+        },
+        {
+          "date": "2018-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2018-01.geojson"
+        },
+        {
+          "date": "2019-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2019-01.geojson"
+        },
+        {
+          "date": "2020-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2020-01.geojson"
+        },
+        {
+          "date": "2021-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2021-01.geojson"
+        },
+        {
+          "date": "2022-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2022-01.geojson"
+        },
+        {
+          "date": "2023-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2023-01.geojson"
+        },
+        {
+          "date": "2024-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2024-01.geojson"
+        },
+        {
+          "date": "2025-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2025-01.geojson"
+        },
+        {
+          "date": "2026-01-01T00:00:00Z",
+          "file": "rio-de-janeiro-2026-01.geojson"
+        }
+      ]
+    },
+    "brasilia": {
+      "area": "Brasília",
+      "snapshots": [
+        {
+          "date": "2011-01-01T00:00:00Z",
+          "file": "brasilia-2011-01.geojson"
+        },
+        {
+          "date": "2012-01-01T00:00:00Z",
+          "file": "brasilia-2012-01.geojson"
+        },
+        {
+          "date": "2013-01-01T00:00:00Z",
+          "file": "brasilia-2013-01.geojson"
+        },
+        {
+          "date": "2014-01-01T00:00:00Z",
+          "file": "brasilia-2014-01.geojson"
+        },
+        {
+          "date": "2015-01-01T00:00:00Z",
+          "file": "brasilia-2015-01.geojson"
+        },
+        {
+          "date": "2016-01-01T00:00:00Z",
+          "file": "brasilia-2016-01.geojson"
+        },
+        {
+          "date": "2017-01-01T00:00:00Z",
+          "file": "brasilia-2017-01.geojson"
+        },
+        {
+          "date": "2018-01-01T00:00:00Z",
+          "file": "brasilia-2018-01.geojson"
+        },
+        {
+          "date": "2019-01-01T00:00:00Z",
+          "file": "brasilia-2019-01.geojson"
+        },
+        {
+          "date": "2020-01-01T00:00:00Z",
+          "file": "brasilia-2020-01.geojson"
+        },
+        {
+          "date": "2021-01-01T00:00:00Z",
+          "file": "brasilia-2021-01.geojson"
+        },
+        {
+          "date": "2022-01-01T00:00:00Z",
+          "file": "brasilia-2022-01.geojson"
+        },
+        {
+          "date": "2023-01-01T00:00:00Z",
+          "file": "brasilia-2023-01.geojson"
+        },
+        {
+          "date": "2024-01-01T00:00:00Z",
+          "file": "brasilia-2024-01.geojson"
+        },
+        {
+          "date": "2025-01-01T00:00:00Z",
+          "file": "brasilia-2025-01.geojson"
+        },
+        {
+          "date": "2026-01-01T00:00:00Z",
+          "file": "brasilia-2026-01.geojson"
+        }
+      ]
+    },
+    "porto-alegre": {
+      "area": "Porto Alegre",
+      "snapshots": [
+        {
+          "date": "2011-01-01T00:00:00Z",
+          "file": "porto-alegre-2011-01.geojson"
+        },
+        {
+          "date": "2012-01-01T00:00:00Z",
+          "file": "porto-alegre-2012-01.geojson"
+        },
+        {
+          "date": "2013-01-01T00:00:00Z",
+          "file": "porto-alegre-2013-01.geojson"
+        },
+        {
+          "date": "2014-01-01T00:00:00Z",
+          "file": "porto-alegre-2014-01.geojson"
+        },
+        {
+          "date": "2015-01-01T00:00:00Z",
+          "file": "porto-alegre-2015-01.geojson"
+        },
+        {
+          "date": "2016-01-01T00:00:00Z",
+          "file": "porto-alegre-2016-01.geojson"
+        },
+        {
+          "date": "2017-01-01T00:00:00Z",
+          "file": "porto-alegre-2017-01.geojson"
+        },
+        {
+          "date": "2018-01-01T00:00:00Z",
+          "file": "porto-alegre-2018-01.geojson"
+        },
+        {
+          "date": "2019-01-01T00:00:00Z",
+          "file": "porto-alegre-2019-01.geojson"
+        },
+        {
+          "date": "2020-01-01T00:00:00Z",
+          "file": "porto-alegre-2020-01.geojson"
+        },
+        {
+          "date": "2021-01-01T00:00:00Z",
+          "file": "porto-alegre-2021-01.geojson"
+        },
+        {
+          "date": "2022-01-01T00:00:00Z",
+          "file": "porto-alegre-2022-01.geojson"
+        },
+        {
+          "date": "2023-01-01T00:00:00Z",
+          "file": "porto-alegre-2023-01.geojson"
+        },
+        {
+          "date": "2024-01-01T00:00:00Z",
+          "file": "porto-alegre-2024-01.geojson"
+        },
+        {
+          "date": "2025-01-01T00:00:00Z",
+          "file": "porto-alegre-2025-01.geojson"
+        },
+        {
+          "date": "2026-01-01T00:00:00Z",
+          "file": "porto-alegre-2026-01.geojson"
+        }
+      ]
+    },
+    "recife": {
+      "area": "Recife",
+      "snapshots": [
+        {
+          "date": "2011-01-01T00:00:00Z",
+          "file": "recife-2011-01.geojson"
+        },
+        {
+          "date": "2012-01-01T00:00:00Z",
+          "file": "recife-2012-01.geojson"
+        },
+        {
+          "date": "2013-01-01T00:00:00Z",
+          "file": "recife-2013-01.geojson"
+        },
+        {
+          "date": "2014-01-01T00:00:00Z",
+          "file": "recife-2014-01.geojson"
+        },
+        {
+          "date": "2015-01-01T00:00:00Z",
+          "file": "recife-2015-01.geojson"
+        },
+        {
+          "date": "2016-01-01T00:00:00Z",
+          "file": "recife-2016-01.geojson"
+        },
+        {
+          "date": "2017-01-01T00:00:00Z",
+          "file": "recife-2017-01.geojson"
+        },
+        {
+          "date": "2018-01-01T00:00:00Z",
+          "file": "recife-2018-01.geojson"
+        },
+        {
+          "date": "2019-01-01T00:00:00Z",
+          "file": "recife-2019-01.geojson"
+        },
+        {
+          "date": "2020-01-01T00:00:00Z",
+          "file": "recife-2020-01.geojson"
+        },
+        {
+          "date": "2021-01-01T00:00:00Z",
+          "file": "recife-2021-01.geojson"
+        },
+        {
+          "date": "2022-01-01T00:00:00Z",
+          "file": "recife-2022-01.geojson"
+        },
+        {
+          "date": "2023-01-01T00:00:00Z",
+          "file": "recife-2023-01.geojson"
+        },
+        {
+          "date": "2024-01-01T00:00:00Z",
+          "file": "recife-2024-01.geojson"
+        },
+        {
+          "date": "2025-01-01T00:00:00Z",
+          "file": "recife-2025-01.geojson"
+        },
+        {
+          "date": "2026-01-01T00:00:00Z",
+          "file": "recife-2026-01.geojson"
+        }
+      ]
+    }
+  }
+}
