@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { HiClock } from 'react-icons/hi';
+import { HiOutlineClock } from 'react-icons/hi2';
 import { getCanonicalCitySlug, getPredefinedCitySlugDefinition } from './config/citySlugCatalog.js';
 import { TOP_CITY_SLUGS } from './config/topCitiesCatalog.js';
 import {
@@ -259,7 +259,7 @@ function CitySwitcherModal() {
                 style={{ '--city-content-stagger': contentStaggerIndex++ }}
               >
                 <div className="city-switcher-modal__sectionTitle">
-                  <HiClock className="city-switcher-modal__clockIcon" aria-hidden="true" />
+                  <HiOutlineClock className="city-switcher-modal__clockIcon" aria-hidden="true" />
                   Recentes
                 </div>
               </div>
@@ -309,9 +309,9 @@ function CitySwitcherModal() {
                   style={{ '--city-content-stagger': contentStaggerIndex++ }}
                 >
                   <div className="city-switcher-modal__sectionTitle">
-                    <span className="city-switcher-modal__flag" aria-hidden="true">
+                    {/* <span className="city-switcher-modal__flag" aria-hidden="true">
                       {group.countryFlag}
-                    </span>
+                    </span> */}
                     {group.countryLabel}
                   </div>
                 </div>

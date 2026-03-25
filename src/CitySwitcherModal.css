@@ -103,7 +103,6 @@ body.show-city-picker .city-switcher-modal {
 }
 
 .city-switcher-modal__title {
-  font-weight: 600;
   font-size: 18px;
   line-height: 1.15;
   color: rgba(255, 255, 255, 0.88);
@@ -115,7 +114,7 @@ body.show-city-picker .city-switcher-modal {
 
 .city-switcher-modal__subtitle {
   margin-top: 4px;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.25;
   color: rgba(255, 255, 255, 0.72);
   opacity: 0.85;
@@ -131,7 +130,6 @@ body.show-city-picker .city-switcher-modal {
   background: rgba(0, 0, 0, 0.04);
   color: rgba(255, 255, 255, 0.82);
   padding: 8px 14px;
-  font-weight: 600;
   cursor: pointer;
   transition:
     transform 160ms ease,
@@ -222,17 +220,37 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   fill: rgba(255, 255, 255, 0.26) !important;
 }
 
-.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder--icon-loading {
-  top: 50%;
-  right: 16px;
+/* Mapbox clear is a white <button>; center in our 44px row and match icon to field. */
+.city-switcher-modal__geocoderMount
+  .mapboxgl-ctrl-geocoder--pin-right
+  > .mapboxgl-ctrl-geocoder--button {
+  top: 50% !important;
+  right: 8px !important;
+  margin: 0 !important;
   transform: translateY(-50%);
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
-.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder--icon-close {
-  top: 50%;
-  right: 16px;
-  transform: translateY(-50%);
+.city-switcher-modal__geocoderMount
+  .mapboxgl-ctrl-geocoder--pin-right
+  .mapboxgl-ctrl-geocoder--icon-close {
   margin: 0;
+  fill: rgba(255, 255, 255, 0.48);
+}
+
+.theme-light
+  .city-switcher-modal__geocoderMount
+  .mapboxgl-ctrl-geocoder--pin-right
+  .mapboxgl-ctrl-geocoder--icon-close {
+  fill: rgba(71, 85, 105, 0.5);
+}
+
+/* No transform here — it would override the spinner’s rotate keyframes. */
+.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder--icon-loading {
+  top: 50% !important;
+  right: 8px !important;
+  margin: -13px 0 0 !important;
 }
 
 .theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder--icon-search {
@@ -310,9 +328,8 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
 
 .city-switcher-modal__sectionTitle {
   /* padding: 14px 16px 10px; */
-  padding: 16px 8px;
-  font-weight: 600;
-  font-size: 13px;
+  padding: 16px 14px;
+  font-size: 12px;
   letter-spacing: 0.15px;
   opacity: 0.72;
   display: flex;
@@ -466,7 +483,6 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
   font-size: 12px;
   line-height: 1.2;
   opacity: 0.55;
-  font-weight: 600;
   white-space: nowrap;
   text-align: right;
   flex-shrink: 0; /* do not truncate the number */
