@@ -32,6 +32,7 @@ import {
   LENGTH_CALCULATE_STRATEGIES,
   LENGTH_COUNTED_LAYER_IDS,
 } from './config/constants.js';
+import { PARALLEL_DEDUPE_ENGINES } from './utils/parallelDedupeEngines/engineTypes.js';
 import { THIN_SPACE, appendKmUnit } from './utils/routeUtils.js';
 import { timeSince } from './utils/utils.js';
 import { appModal } from './antdModal.js';
@@ -225,11 +226,18 @@ class AnalyticsSidebar extends Component {
       pessimistic: 'Pessimista',
       average: 'Média',
     };
+    const translateParallelDedupeEngine = {
+      legacy_name_angle: 'Legado',
+      hybrid_tag_geometry: 'Híbrido',
+      geometry_first: 'Geometria-first',
+      topology_first: 'Topologia-first',
+      corridor_merge: 'Corredor',
+    };
     const strategiesDropdown = (
-      <div className="w-full flex justify-center mb-2">
+      <div className="flex-1 flex justify-center">
         <Select
           size="small"
-          className="w-full max-w-[200px]"
+          className="w-full"
           value={this.props.lengthCalculationStrategy}
           onChange={this.props.onChangeStrategy}
           options={LENGTH_CALCULATE_STRATEGIES.map((s) => ({
@@ -237,6 +245,22 @@ class AnalyticsSidebar extends Component {
             label: translateStrategy[s],
           }))}
           aria-label="Estratégia de cálculo de extensão"
+        />
+      </div>
+    );
+
+    const parallelDedupeEnginesDropdown = (
+      <div className="flex-1 flex justify-center">
+        <Select
+          size="small"
+          className="w-full"
+          value={this.props.parallelDedupeEngine}
+          onChange={this.props.onChangeParallelDedupeEngine}
+          options={PARALLEL_DEDUPE_ENGINES.map((engineId) => ({
+            value: engineId,
+            label: translateParallelDedupeEngine[engineId] || engineId,
+          }))}
+          aria-label="Motor de detecção de vias paralelas"
         />
       </div>
     );
@@ -505,7 +529,12 @@ class AnalyticsSidebar extends Component {
               </>
             }
           >
-            {this.props.debugMode && strategiesDropdown}
+            {this.props.debugMode && (
+              <div className="w-full flex gap-1 justify-center mb-2">
+                {strategiesDropdown}
+                {parallelDedupeEnginesDropdown}
+              </div>
+            )}
 
             <div className="relative">
               <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
@@ -681,6 +710,8 @@ AnalyticsSidebar.propTypes = {
   debugMode: PropTypes.bool,
   onChangeStrategy: PropTypes.func,
   lengthCalculationStrategy: PropTypes.string,
+  parallelDedupeEngine: PropTypes.string,
+  onChangeParallelDedupeEngine: PropTypes.func,
   downloadData: PropTypes.func,
   lastUpdate: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.string]),
   loading: PropTypes.bool,
