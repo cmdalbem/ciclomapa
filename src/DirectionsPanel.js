@@ -18,6 +18,8 @@ import {
   HYBRID_MAX_RESULTS,
   ENABLE_MAP_CLICK_TO_SET_POINTS,
   ENABLE_AUTO_AREA_CHANGE_ON_POINT,
+  SUPPORTED_COUNTRY_CODES,
+  GOOGLE_PLACES_DEFAULT_REGION,
 } from './config/constants.js';
 import DirectionsManager from './DirectionsManager.js';
 
@@ -28,7 +30,7 @@ import RoutesList from './features/directions/components/RoutesList.js';
 const googlePlacesGeocoder = new GooglePlacesGeocoder({
   apiKey: GOOGLE_PLACES_API_KEY,
   language: 'pt-BR',
-  region: 'br',
+  region: GOOGLE_PLACES_DEFAULT_REGION,
 });
 
 // Initialize the geocoder when needed
@@ -295,7 +297,7 @@ class DirectionsPanel extends Component {
         proximity: this.props.map
           ? [this.props.map.getCenter().lng, this.props.map.getCenter().lat]
           : null,
-        countryCodes: ['br', 'es', 'pt'],
+        countryCodes: [...SUPPORTED_COUNTRY_CODES],
         limit: 5,
       });
 

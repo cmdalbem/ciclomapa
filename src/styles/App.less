@@ -55,6 +55,12 @@
 html {
   height: 100%;
   overflow: hidden;
+  --z-app-modal-backdrop: 1200;
+  --z-app-modal: 1210;
+}
+
+.app-modal-root {
+  z-index: var(--z-app-modal);
 }
 
 body {

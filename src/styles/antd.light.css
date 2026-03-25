@@ -205,8 +205,9 @@
   color: rgba(0, 0, 0, 0.65) !important;
 }
 
-.theme-light #backdrop {
-  background: #ffffff !important;
+/* Slate scrim so white cards / search read clearly; solid white looked flat */
+.theme-light .city-switcher-modal__backdrop {
+  background: rgba(30, 41, 59, 0.24) !important;
 }
 
 /* Tailwind CSS overrides for light mode */

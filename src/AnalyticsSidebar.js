@@ -249,11 +249,11 @@ class AnalyticsSidebar extends Component {
     return (
       <div
         id="analyticsSidebar"
-        className={`
-                    border-l border-opacity-10 border-white h-screen ${this.state.open ? 'w-60 overflow-y-auto flex-none' : ''}
-                    transform transition-transform duration-500 ${this.state.open ? '' : 'translate-x-full'}`}
+        className={`analytics-sidebar border-l border-opacity-10 border-white h-screen ${
+          this.state.open ? 'w-60 overflow-y-auto flex-none' : ''
+        } ${this.state.open ? '' : 'translate-x-full transform transition-transform duration-500'}`}
       >
-        <div className="px-4 pb-10">
+        <div className="px-5 pb-10">
           <div className="flex w-full justify-between items-center pt-2 mt-1">
             <div className="flex items-center">
               <h2 className="my-0">Métricas</h2>

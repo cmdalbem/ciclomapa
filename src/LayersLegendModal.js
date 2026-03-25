@@ -238,7 +238,7 @@ class LayersLegendModal extends Component {
         aria-modal="true"
         aria-label="Legenda do mapa"
         className={`
-                    fixed z-10 bg-gray-800 text-gray-100 antialiased overflow-hidden
+                    app-modal-root fixed bg-gray-800 text-gray-100 antialiased overflow-hidden
                     bottom-0 left-0 right-0 top-3 rounded-tl-2xl rounded-tr-2xl
                     transform will-change-transform
                     ${
