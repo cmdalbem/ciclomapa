@@ -63,10 +63,67 @@ export const HYBRID_MAX_RESULTS = IS_MOBILE
   ? HYBRID_MAX_RESULTS_MOBILE
   : HYBRID_MAX_RESULTS_DESKTOP;
 export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
+
+/*
+ * City picker
+ */
+export const MAX_RECENT_CITIES = 6;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
 export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = false;
 export const ENABLE_COMMENTS = true;
 export const ENABLE_SATELLITE_TOGGLE = false;
+
+/*
+ * Supported countries (geocoding, city search, UI labels — not PMTiles).
+ * Keep in sync with entries in `citySlugCatalog.js`. Order: primary market,
+ * Iberia, then Latin America by Portuguese name.
+ */
+export const SUPPORTED_COUNTRIES = Object.freeze([
+  { code: 'br', labelPt: 'Brasil', flag: '🇧🇷' },
+  { code: 'pt', labelPt: 'Portugal', flag: '🇵🇹' },
+  { code: 'es', labelPt: 'Espanha', flag: '🇪🇸' },
+  // { code: 'ar', labelPt: 'Argentina', flag: '🇦🇷' },
+  // { code: 'bo', labelPt: 'Bolívia', flag: '🇧🇴' },
+  // { code: 'cl', labelPt: 'Chile', flag: '🇨🇱' },
+  // { code: 'co', labelPt: 'Colômbia', flag: '🇨🇴' },
+  // { code: 'ec', labelPt: 'Equador', flag: '🇪🇨' },
+  // { code: 'py', labelPt: 'Paraguai', flag: '🇵🇾' },
+  // { code: 'pe', labelPt: 'Peru', flag: '🇵🇪' },
+  // { code: 'uy', labelPt: 'Uruguai', flag: '🇺🇾' },
+  // { code: 've', labelPt: 'Venezuela', flag: '🇻🇪' },
+]);
+
+export const SUPPORTED_COUNTRY_CODES = Object.freeze(SUPPORTED_COUNTRIES.map((c) => c.code));
+
+/** Mapbox Geocoder `countries`: comma-separated ISO 3166-1 alpha-2. */
+export const MAPBOX_GEOCODER_COUNTRIES = SUPPORTED_COUNTRY_CODES.join(',');
+
+/**
+ * Google Places script/Autocomplete region bias (one ccTLD). Searches still
+ * restrict to all `SUPPORTED_COUNTRY_CODES` via componentRestrictions.
+ */
+export const GOOGLE_PLACES_DEFAULT_REGION = 'br';
+
+export const SUPPORTED_COUNTRY_LABEL_PT_BY_CODE = Object.freeze(
+  SUPPORTED_COUNTRIES.reduce((acc, { code, labelPt }) => {
+    acc[code] = labelPt;
+    return acc;
+  }, /** @type {Record<string, string>} */ ({}))
+);
+
+export function getSupportedCountryFlagEmoji(countryCode) {
+  if (!countryCode) return '🏳️';
+  const row = SUPPORTED_COUNTRIES.find((c) => c.code === countryCode);
+  return row ? row.flag : '🏳️';
+}
+
+/** Suffix for Mapbox city picker placeholder when production (after "Buscar cidades "). */
+export function getCityGeocoderPlaceholderSuffixPtProd() {
+  const labels = SUPPORTED_COUNTRIES.map((c) => c.labelPt);
+  if (labels.length === 0) return 'no mundo';
+  if (labels.length === 1) return `em ${labels[0]}`;
+  return `em ${labels.slice(0, -1).join(', ')} e ${labels[labels.length - 1]}`;
+}
 
 /*
  * Map Layers

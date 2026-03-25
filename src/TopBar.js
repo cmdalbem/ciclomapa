@@ -52,7 +52,6 @@ function TopBar(props) {
   const showCityPicker = useCallback(() => {
     const body = document.querySelector('body');
     body.classList.add('show-city-picker');
-    body.querySelector('.mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder input').focus();
   }, []);
 
   const newComment = useCallback(() => {

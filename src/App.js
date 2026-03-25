@@ -38,10 +38,13 @@ import {
   MAPBOX_ACCESS_TOKEN,
   DEFAULT_SIDEBAR_OPEN,
   ENABLE_SATELLITE_TOGGLE,
+  MAX_RECENT_CITIES,
 } from './config/constants.js';
 
 import './styles/App.less';
 import './styles/antd.light.css';
+
+const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 
 class App extends Component {
   geoJson;
@@ -401,6 +404,28 @@ class App extends Component {
       navigate(nextUrl);
     } else {
       window.history.pushState(null, '', nextUrl);
+    }
+  }
+
+  recordRecentlyVisitedCity(area) {
+    if (!area) return;
+    try {
+      const slug = this.getKnownCanonicalSlugFromArea(area) || this.getCitySlugFromArea(area);
+      if (!slug) return;
+
+      const raw = window.localStorage.getItem(RECENT_CITIES_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(parsed) ? parsed : [];
+
+      const next = [
+        { slug, areaLabel: area, visitedAt: Date.now() },
+        ...list.filter((item) => item && item.slug && item.slug !== slug),
+      ].slice(0, MAX_RECENT_CITIES);
+
+      window.localStorage.setItem(RECENT_CITIES_STORAGE_KEY, JSON.stringify(next));
+    } catch (e) {
+      // Non-critical UX: don't break city switching if storage isn't available.
+      console.debug('[recent-cities] failed to record recently visited city:', e);
     }
   }
 
@@ -1040,6 +1065,8 @@ class App extends Component {
       });
 
       this.directionsPanel.clearDirections();
+
+      this.recordRecentlyVisitedCity(this.state.area);
 
       this.updateData();
 
