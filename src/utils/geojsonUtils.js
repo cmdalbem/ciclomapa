@@ -1,15 +1,13 @@
 import pako from 'pako';
 // import { gzip } from 'zlib';
 
-import skmeans from 'skmeans';
-
 import turfLength from '@turf/length';
-import turfDistance from '@turf/distance';
 import turfLineOverlap from '@turf/line-overlap';
 import { LENGTH_COUNTED_LAYER_IDS } from '../config/constants.js';
-
-// 0 = all segments have exactly the same angle
-const MIN_AVG_ANGLE_TRESHOLD = 20;
+import {
+  DEFAULT_PARALLEL_DEDUPE_ENGINE,
+  getParallelDedupeEngine,
+} from './parallelDedupeEngines/engineTypes.js';
 
 // 0.5 = a perfectly straight street that has two parallel sides with opposite hands
 // 1 = a perfectly straight street that change its hand in the middle
@@ -195,130 +193,12 @@ export function angleToEmojiDirection(angle) {
   return char;
 }
 
-function detectDoubleWayBikePaths(l, segments) {
-  // Detect duplicates
-  let streetsByName = {};
-  segments.forEach((seg) => {
-    if (
-      seg.properties.name &&
-      ((seg.properties['oneway:bicycle'] && seg.properties['oneway:bicycle'] === 'yes') ||
-        (!seg.properties['oneway:bicycle'] &&
-          seg.properties.oneway &&
-          seg.properties.oneway === 'yes'))
-    ) {
-      // if (seg.properties.name && seg.properties.oneway && seg.properties.oneway === 'yes') {
-      if (streetsByName[seg.properties.name]) {
-        streetsByName[seg.properties.name].push(seg);
-      } else {
-        streetsByName[seg.properties.name] = [seg];
-      }
-    } else if (!seg.properties.name) {
-      seg.properties['ciclomapa:unnamed'] = 'true';
-    }
-  });
-
-  // Remove streets with only 1 segment
-  for (let key in streetsByName) {
-    if (streetsByName[key].length < 2) {
-      delete streetsByName[key];
-    }
-  }
-
-  // Mark sides
-  for (let streetName in streetsByName) {
-    const street = streetsByName[streetName];
-
-    // Calculate angles
-    let angles = [];
-    street.forEach((seg) => {
-      let segmentAngles = seg.geometry.coordinates.map((g, i, a) => {
-        if (i < a.length - 1) return angleBetweenPoints(a[i], a[i + 1]);
-        else return undefined;
-      });
-      segmentAngles.pop(); // last item is undefined
-
-      const avgAngle = averageOfAngles(segmentAngles);
-      seg.properties['ciclomapa:angles'] = segmentAngles
-        .map((a) => angleToEmojiDirection(a))
-        .join(', ');
-      seg.properties['ciclomapa:avgAngle'] = avgAngle;
-      seg.properties['ciclomapa:avgAngle_direction'] = angleToEmojiDirection(avgAngle);
-
-      angles.push(avgAngle);
-    });
-
-    // Try to avoid streets with 1 side only that have minor differences
-    //  in their angles (average of differences is less than a threshold)
-    const accAngleDelta = angles.reduce((acc, cur, i, a) => {
-      if (i < a.length - 1) {
-        let diff = cur - a[i + 1];
-        // Compensate to get the smallest difference between angles
-        diff += diff > 180 ? -360 : diff < -180 ? 360 : 0;
-        acc += Math.abs(diff);
-      }
-      return acc;
-    }, 0);
-    const avgAngleDelta = accAngleDelta / angles.length;
-
-    street.forEach((seg, i) => {
-      seg.properties['ciclomapa:accAngleDelta'] = accAngleDelta;
-      seg.properties['ciclomapa:avgAngleDelta'] = avgAngleDelta;
-    });
-
-    // Clusterize angles to find sides A & B
-    if (avgAngleDelta > MIN_AVG_ANGLE_TRESHOLD) {
-      const vectors = angles.map((a) => Math.angleToVector(a));
-      const clusters = skmeans(vectors, 2);
-
-      let clustersAnglesList = { a: [], b: [] };
-
-      street.forEach((seg, i) => {
-        const side = clusters.idxs[i] ? 'a' : 'b';
-
-        seg.properties['ciclomapa:duplicate_candidate'] = 'true';
-        seg.properties['ciclomapa:side'] = side;
-
-        clustersAnglesList[side].push(
-          `${seg.properties['ciclomapa:avgAngle_direction']} ${seg.properties['ciclomapa:avgAngle']}`
-        );
-      });
-    } else {
-      // Since this street didn't meet basic criteria, we can stop
-      //   considering it on all next checks and calculations.
-      // @todo make absolute sure it's safe to delete an array element
-      //   in the middle of a "for in" loop.
-      delete streetsByName[streetName];
-    }
-  }
-
-  // Calculate max distance of points
-  for (let streetName in streetsByName) {
-    const street = streetsByName[streetName];
-
-    let allPoints = [];
-    street.forEach((seg) => {
-      seg.geometry.coordinates.forEach((p) => {
-        allPoints.push(p);
-      });
-    });
-
-    let maxDist = 0;
-    allPoints.forEach((p1) => {
-      allPoints.forEach((p2) => {
-        maxDist = Math.max(maxDist, turfDistance(p1, p2));
-      });
-    });
-
-    street.forEach((seg) => {
-      seg.properties['ciclomapa:max_dist'] = maxDist;
-      seg.properties['ciclomapa:max_dist_m'] = (maxDist * 1000).toFixed(2);
-    });
-  }
-
-  return [segments, streetsByName];
-}
-
-export function calculateLayersLengths(geoJson, layers, strategy) {
+export function calculateLayersLengths(
+  geoJson,
+  layers,
+  strategy,
+  parallelDedupeEngine = DEFAULT_PARALLEL_DEDUPE_ENGINE
+) {
   let lengths = {};
   const geoJsonWithTypes = computeTypologies(geoJson, layers);
 
@@ -360,11 +240,15 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
         const thisLength = turfLength(seg);
         seg.properties['ciclomapa:segment_length'] = thisLength;
         seg.properties['ciclomapa:segment_length_m'] = (thisLength * 1000).toFixed(2);
+        seg.properties['ciclomapa:paired'] = 'false';
+        seg.properties['ciclomapa:engine'] = parallelDedupeEngine;
       });
 
       if (LENGTH_COUNTED_LAYER_IDS.includes(l.id)) {
         let streetsByName;
-        [segments, streetsByName] = detectDoubleWayBikePaths(l, segments);
+
+        const engine = getParallelDedupeEngine(parallelDedupeEngine);
+        [segments, streetsByName] = engine({ layer: l, segments });
 
         // Sum total lengths for names streets
         for (let key in streetsByName) {
@@ -373,6 +257,11 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
           street.totalLength = 0;
           street.totalLengthSideA = 0;
           street.totalLengthSideB = 0;
+          street.forEach((seg) => {
+            seg.properties['ciclomapa:group_id'] = key;
+            seg.properties['ciclomapa:engine'] = parallelDedupeEngine;
+            seg.properties['ciclomapa:paired'] = 'true';
+          });
           street.forEach((seg) => {
             street.totalLength += seg.properties['ciclomapa:segment_length'];
             if (seg.properties['ciclomapa:side'] === 'a') {
@@ -403,12 +292,16 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
             //   as having 2 sides but actually it's a street that changes its
             //   "hand" along itself.
             if (
+              parallelDedupeEngine === 'legacy_name_angle' &&
               seg.properties['ciclomapa:duplicate_candidate'] &&
               seg.properties['ciclomapa:dist_by_length_ratio'] > DISTANCE_BY_LENGTH_RATIO_TRESHOLD
             ) {
               seg.properties['ciclomapa:ignored'] = 'true';
+              seg.properties['ciclomapa:paired'] = 'false';
               delete seg.properties['ciclomapa:duplicate_candidate'];
               delete seg.properties['ciclomapa:side'];
+              delete seg.properties['ciclomapa:match_confidence_bucket'];
+              delete seg.properties['ciclomapa:group_id'];
 
               street.falsePositive = true;
             }

@@ -946,6 +946,54 @@ class Map extends Component {
             } catch (err) {}
           }
           self.selectedCycleway = e.features[0].id;
+
+          // DO NOT SHIP THIS CODE! ONLY FOR DEVELOPMENT PURPOSES!
+          // Copy clicked lane OSM id to clipboard for quick debugging.
+          // Mapbox/osmtogeojson feature ids usually come as "way/<osm_id>" (or "relation/<osm_id>").
+          // Copy the full "way/<number>" string for quick debugging.
+          try {
+            const clickedFeature = e.features[0];
+            const featureId =
+              clickedFeature?.properties?.id ?? clickedFeature?.properties?.['@id'] ?? null;
+
+            let osmFullId = null;
+            if (typeof featureId === 'string' && /^(node|way|relation)\/\d+$/.test(featureId)) {
+              osmFullId = featureId;
+            } else if (typeof featureId === 'number') {
+              osmFullId = `way/${featureId}`;
+            } else if (typeof featureId === 'string' && /^\d+$/.test(featureId)) {
+              osmFullId = `way/${featureId}`;
+            }
+
+            if (osmFullId) {
+              const text = String(osmFullId);
+              const fallbackCopy = (value) => {
+                const ta = document.createElement('textarea');
+                ta.value = value;
+                ta.style.position = 'fixed';
+                ta.style.left = '-1000px';
+                ta.style.top = '-1000px';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                try {
+                  document.execCommand('copy');
+                } catch (err) {
+                  // ignore
+                }
+                document.body.removeChild(ta);
+              };
+
+              if (navigator?.clipboard?.writeText) {
+                navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+              } else {
+                fallbackCopy(text);
+              }
+            }
+          } catch (err) {
+            // Clipboard is a best-effort feature; don't break map interactions.
+          }
+
           try {
             self.map.setFeatureState(
               { source: 'osmdata', id: self.selectedCycleway },

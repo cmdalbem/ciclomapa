@@ -107,10 +107,12 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
                 open={state.isSidebarOpen}
                 location={state.area}
                 lengthCalculationStrategy={state.lengthCalculationStrategy}
+                parallelDedupeEngine={state.parallelDedupeEngine}
                 debugMode={state.debugMode}
                 isDarkMode={state.isDarkMode}
                 toggle={handlers.toggleSidebar}
                 onChangeStrategy={handlers.onChangeStrategy}
+                onChangeParallelDedupeEngine={handlers.onChangeParallelDedupeEngine}
                 downloadData={handlers.downloadData}
               />
             </aside>
