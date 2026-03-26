@@ -21,6 +21,7 @@ import {
   getPredefinedCitySlugDefinition,
   getPredefinedCityStaticLocation,
 } from './config/citySlugCatalog.js';
+import { flyMapToCityFocus } from './utils/utils.js';
 import { DirectionsProvider } from './contexts/DirectionsContext';
 import {
   DEFAULT_LAT,
@@ -51,7 +52,7 @@ class App extends Component {
   storage = new Storage();
   osmController = OSMController;
   currentOSMRequest = null;
-  pendingCityFitBounds = null;
+  pendingCityFocus = null;
   lastResolvedCitySlug = null;
   lastNotifiedCitySlugError = null;
 
@@ -447,23 +448,26 @@ class App extends Component {
       });
 
       if (staticLocation) {
-        this.pendingCityFitBounds = staticLocation.bounds;
         console.debug('[slug-resolution] using static location', {
           citySlug: normalizedSlug,
           areaLabel: staticLocation.areaLabel,
           lat: staticLocation.lat,
           lng: staticLocation.lng,
-          hasBounds: Boolean(staticLocation.bounds),
         });
         this.setState(
           (prevState) => ({
             area: staticLocation.areaLabel || prevState.area,
             lat: staticLocation.lat,
             lng: staticLocation.lng,
+            zoom: DEFAULT_ZOOM,
           }),
           () => {
             this.lastNotifiedCitySlugError = null;
-            this.applyPendingCityFitBounds();
+            this.queueOrApplyCityFocus({
+              lat: staticLocation.lat,
+              lng: staticLocation.lng,
+              placeName: staticLocation.areaLabel,
+            });
           }
         );
         return;
@@ -522,40 +526,29 @@ class App extends Component {
       const lat = parseFloat(best.lat);
       const lng = parseFloat(best.lon);
       const area = OSMController.normalizeAreaNameFromNominatimResult(best);
+      const resolvedLat = Number.isFinite(lat) ? lat : null;
+      const resolvedLng = Number.isFinite(lng) ? lng : null;
 
-      let bounds = null;
-      if (Array.isArray(best.boundingbox) && best.boundingbox.length === 4) {
-        const south = parseFloat(best.boundingbox[0]);
-        const north = parseFloat(best.boundingbox[1]);
-        const west = parseFloat(best.boundingbox[2]);
-        const east = parseFloat(best.boundingbox[3]);
-        if ([south, north, west, east].every((v) => !Number.isNaN(v))) {
-          bounds = [
-            [west, south],
-            [east, north],
-          ];
-        }
-      }
-
-      this.pendingCityFitBounds = bounds;
       console.debug('[slug-resolution] Nominatim resolved', {
         citySlug: normalizedSlug,
         query,
         area,
         lat,
         lng,
-        hasBounds: Boolean(bounds),
       });
 
       this.setState(
         (prevState) => ({
           area: area || prevState.area,
-          lat: !Number.isNaN(lat) ? lat : prevState.lat,
-          lng: !Number.isNaN(lng) ? lng : prevState.lng,
+          lat: resolvedLat !== null ? resolvedLat : prevState.lat,
+          lng: resolvedLng !== null ? resolvedLng : prevState.lng,
+          zoom: DEFAULT_ZOOM,
         }),
         () => {
           this.lastNotifiedCitySlugError = null;
-          this.applyPendingCityFitBounds();
+          const latUse = resolvedLat !== null ? resolvedLat : this.state.lat;
+          const lngUse = resolvedLng !== null ? resolvedLng : this.state.lng;
+          this.queueOrApplyCityFocus({ lat: latUse, lng: lngUse, placeName: area });
         }
       );
     } catch (e) {
@@ -573,18 +566,31 @@ class App extends Component {
     }
   };
 
-  applyPendingCityFitBounds() {
-    if (!this.pendingCityFitBounds) return;
-    if (!this.state.map) return;
-    try {
-      this.state.map.fitBounds(this.pendingCityFitBounds, {
-        padding: { top: 150, bottom: 300, left: 100, right: 100 },
-        duration: 1200,
-      });
-      this.pendingCityFitBounds = null;
-    } catch (e) {
-      console.error('Failed to fit bounds from city slug:', e);
+  queueOrApplyCityFocus({ lat, lng, placeName }) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    if (this.state.map) {
+      try {
+        flyMapToCityFocus(this.state.map, [lng, lat], placeName);
+      } catch (e) {
+        console.error('Failed to move map to city focus:', e);
+      }
+      this.pendingCityFocus = null;
+      return;
     }
+
+    this.pendingCityFocus = { lat, lng, placeName };
+  }
+
+  applyPendingCityFocus() {
+    if (!this.pendingCityFocus || !this.state.map) return;
+    const { lat, lng, placeName } = this.pendingCityFocus;
+    try {
+      flyMapToCityFocus(this.state.map, [lng, lat], placeName);
+    } catch (e) {
+      console.error('Failed to apply pending city focus:', e);
+    }
+    this.pendingCityFocus = null;
   }
 
   async reverseGeocodeURLPoints() {
@@ -1051,7 +1057,7 @@ class App extends Component {
     }
 
     if (this.state.map && this.state.map !== prevState.map) {
-      this.applyPendingCityFitBounds();
+      this.applyPendingCityFocus();
     }
 
     if (this.state.area !== prevState.area) {
