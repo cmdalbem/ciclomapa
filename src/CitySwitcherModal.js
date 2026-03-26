@@ -16,6 +16,35 @@ const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 
 const CITY_PICKER_INPUT_SELECTOR = '.city-switcher-modal__geocoderMount input';
 
+function getFocusableElements(container) {
+  if (!container) return [];
+  const nodes = Array.from(
+    container.querySelectorAll(
+      [
+        'a[href]',
+        'button:not([disabled])',
+        'input:not([disabled])',
+        'select:not([disabled])',
+        'textarea:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])',
+        '[contenteditable="true"]',
+      ].join(',')
+    )
+  );
+
+  return nodes.filter((el) => {
+    if (!el || typeof el.focus !== 'function') return false;
+    const style = window.getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    if (el.closest('[aria-hidden="true"]')) return false;
+    return true;
+  });
+}
+
+function isElementConnected(el) {
+  return !!(el && (el.isConnected || document.contains(el)));
+}
+
 /**
  * Mapbox geocoder mounts into the modal asynchronously; the modal root must also be
  * visibility:visible (see CitySwitcherModal.css) or focus will not stick.
@@ -209,6 +238,8 @@ function CitySwitcherModal() {
   }, [recentCities]);
 
   const contentScrollElRef = useRef(null);
+  const panelRef = useRef(null);
+  const lastFocusedBeforeOpenRef = useRef(null);
   const cityPickerWasOpenRef = useRef(false);
 
   useLayoutEffect(() => {
@@ -218,11 +249,23 @@ function CitySwitcherModal() {
     const onBodyClassChange = () => {
       const open = body.classList.contains('show-city-picker');
       if (open && !cityPickerWasOpenRef.current) {
+        lastFocusedBeforeOpenRef.current = document.activeElement;
         const el = contentScrollElRef.current;
         if (el) el.scrollTop = 0;
         window.requestAnimationFrame(() => {
           focusCityPickerSearchInput();
         });
+      }
+      if (!open && cityPickerWasOpenRef.current) {
+        const toFocus = lastFocusedBeforeOpenRef.current;
+        lastFocusedBeforeOpenRef.current = null;
+        if (isElementConnected(toFocus) && typeof toFocus.focus === 'function') {
+          try {
+            toFocus.focus({ preventScroll: true });
+          } catch {
+            toFocus.focus();
+          }
+        }
       }
       cityPickerWasOpenRef.current = open;
     };
@@ -234,6 +277,67 @@ function CitySwitcherModal() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const body = document.body;
+    if (!body) return undefined;
+
+    const onKeyDown = (e) => {
+      const open = body.classList.contains('show-city-picker');
+      if (!open) return;
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeCityPicker();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+
+      const panel = panelRef.current;
+      if (!panel) return;
+
+      const focusables = getFocusableElements(panel);
+
+      if (focusables.length === 0) {
+        e.preventDefault();
+        try {
+          panel.focus({ preventScroll: true });
+        } catch {
+          panel.focus();
+        }
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+
+      if (e.shiftKey) {
+        if (active === first || !panel.contains(active)) {
+          e.preventDefault();
+          try {
+            last.focus({ preventScroll: true });
+          } catch {
+            last.focus();
+          }
+        }
+      } else {
+        if (active === last) {
+          e.preventDefault();
+          try {
+            first.focus({ preventScroll: true });
+          } catch {
+            first.focus();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, [closeCityPicker]);
+
   let contentStaggerIndex = 0;
 
   return (
@@ -244,7 +348,7 @@ function CitySwitcherModal() {
       aria-label="Selecionar cidade"
     >
       <div className="city-switcher-modal__backdrop" onClick={closeCityPicker} aria-hidden="true" />
-      <div className="city-switcher-modal__panel glass-bg">
+      <div ref={panelRef} className="city-switcher-modal__panel glass-bg" tabIndex={-1}>
         <div className="city-switcher-modal__geocoderMount" aria-label="Buscar cidades" />
 
         <div
