@@ -100,6 +100,18 @@ body {
   }
 }
 
+/* When analytics drawer is open (desktop), avoid covering the topbar content */
+#ciclomapa.analyticsSidebarOpen #topbar {
+  padding-right: calc(0.5rem + 16rem); // existing px-2 + drawer width (w-60)
+  transition: padding-right 620ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #ciclomapa.analyticsSidebarOpen #topbar {
+    transition: none;
+  }
+}
+
 button.ant-btn,
 a.ant-btn {
   border-radius: 99px !important;
@@ -172,6 +184,7 @@ a {
 
 .loader-container {
   /* Colors and sizes come from design tokens (injected on :root) */
+  display: block;
 }
 
 #spinnersvg {
@@ -311,19 +324,20 @@ a {
 }
 
 .glass-bg {
+  --glass-bg-opacity: 0.5;
   backdrop-filter: blur(8px);
 }
 
 .theme-light {
   .glass-bg {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, var(--glass-bg-opacity));
     border: 1px solid rgba(255, 255, 255, 0.35);
   }
 }
 
 .theme-dark {
   .glass-bg {
-    background: rgba(23, 23, 23, 0.4);
+    background: rgba(23, 23, 23, var(--glass-bg-opacity));
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
 }

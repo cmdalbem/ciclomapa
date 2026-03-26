@@ -89,24 +89,34 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
             />
           )}
           {/* {!state.embedMode && !IS_MOBILE && <div id="gradient-backdrop" />} */}
-        </main>
 
-        {!IS_MOBILE && !state.embedMode && state.isSidebarOpen && (
-          <aside aria-label="Painel de análises">
-            <AnalyticsSidebar
-              layers={state.layers}
-              lengths={state.lengths}
-              open={state.isSidebarOpen}
-              location={state.area}
-              lengthCalculationStrategy={state.lengthCalculationStrategy}
-              debugMode={state.debugMode}
-              isDarkMode={state.isDarkMode}
-              toggle={handlers.toggleSidebar}
-              onChangeStrategy={handlers.onChangeStrategy}
-              downloadData={handlers.downloadData}
-            />
-          </aside>
-        )}
+          {!IS_MOBILE && !state.embedMode && (
+            <aside
+              aria-label="Painel de análises"
+              className={[
+                'analytics-sidebar-overlay',
+                state.isSidebarOpen
+                  ? 'analytics-sidebar-overlay--open'
+                  : 'analytics-sidebar-overlay--closed',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <AnalyticsSidebar
+                layers={state.layers}
+                lengths={state.lengths}
+                open={state.isSidebarOpen}
+                location={state.area}
+                lengthCalculationStrategy={state.lengthCalculationStrategy}
+                debugMode={state.debugMode}
+                isDarkMode={state.isDarkMode}
+                toggle={handlers.toggleSidebar}
+                onChangeStrategy={handlers.onChangeStrategy}
+                downloadData={handlers.downloadData}
+              />
+            </aside>
+          )}
+        </main>
       </div>
 
       <CitySwitcherModal />

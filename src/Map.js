@@ -112,17 +112,6 @@ class Map extends Component {
     }, 1000);
   }
 
-  componentWillUnmount() {
-    if (this.resizeObserver) {
-      try {
-        this.resizeObserver.disconnect();
-      } catch {
-        // ignore
-      }
-      this.resizeObserver = null;
-    }
-  }
-
   showCommentModal() {
     this.setState({
       showCommentModal: true,
@@ -2332,6 +2321,15 @@ class Map extends Component {
       return;
     }
 
+    // Keep the Mapbox canvas size in sync with its container during layout transitions
+    // (e.g. when the analytics sidebar animates its width).
+    if (typeof ResizeObserver !== 'undefined' && this.mapContainer) {
+      this.resizeObserver = new ResizeObserver(() => {
+        if (this.map) this.map.resize();
+      });
+      this.resizeObserver.observe(this.mapContainer);
+    }
+
     // Pass the map reference to the parent component
     if (this.props.setMapRef) {
       this.props.setMapRef(this.map);
@@ -2709,6 +2707,15 @@ class Map extends Component {
   }
 
   componentWillUnmount() {
+    if (this.resizeObserver) {
+      try {
+        this.resizeObserver.disconnect();
+      } catch {
+        // ignore
+      }
+      this.resizeObserver = null;
+    }
+
     if (this.popups) {
       this.popups.clearRouteTooltips();
     }

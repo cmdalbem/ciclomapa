@@ -325,7 +325,7 @@ body.theme-light {
 
 #ciclomapa.analyticsSidebarOpen .directions-panel-button {
   /* Analytics sidebar uses Tailwind `w-60` (= 15rem). Shift button left to avoid overlap. */
-  right: calc(12px + 15rem);
+  /* right: calc(12px + 15rem); */
 }
 
 #layersPanelMobileButton.collapsed,
