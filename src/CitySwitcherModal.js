@@ -20,7 +20,41 @@ import './CitySwitcherModal.css';
 const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 
 const CITY_PICKER_INPUT_SELECTOR = '.city-switcher-modal__geocoderMount input';
-let cityStatsTotalsPromise = null;
+const statsTotalsByDocIdCache = new Map();
+let statsTotalsLoadPromise = null;
+const STATS_TOTALS_MISS_TTL_MS = 5 * 60 * 1000;
+
+function readRecentCitiesFromStorage() {
+  try {
+    const raw = window.localStorage.getItem(RECENT_CITIES_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    const items = Array.isArray(parsed) ? parsed : [];
+
+    const uniqueBySlug = new Map();
+    items.forEach((item) => {
+      if (!item || !item.slug) return;
+      const canonicalSlug = getCanonicalCitySlug(item.slug) || item.slug;
+      if (uniqueBySlug.has(canonicalSlug)) return;
+      uniqueBySlug.set(canonicalSlug, {
+        canonicalSlug,
+        areaLabel: item.areaLabel || canonicalSlug,
+        visitedAt: item.visitedAt || 0,
+      });
+    });
+
+    return Array.from(uniqueBySlug.values()).slice(0, MAX_RECENT_CITIES);
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentCitiesToStorage(items) {
+  try {
+    window.localStorage.setItem(RECENT_CITIES_STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    // Ignore
+  }
+}
 
 function getFocusableElements(container) {
   if (!container) return [];
@@ -93,36 +127,55 @@ function getPrimaryAreaMeta(restParts) {
   return parts[0];
 }
 
-function getStatsTotalsMap() {
-  if (!cityStatsTotalsPromise) {
-    cityStatsTotalsPromise = new Storage()
-      .getAllCitiesStats()
-      .then((querySnapshot) => {
-        const statsTotalsBySlug = new Map();
-        querySnapshot.forEach((doc) => {
-          const lengths = doc?.data()?.lengths || {};
-          const total = LENGTH_COUNTED_LAYER_IDS.reduce((sum, layerId) => {
-            const value = Number(lengths[layerId]);
-            return Number.isFinite(value) ? sum + value : sum;
-          }, 0);
+function sumLengthsToKm(lengths) {
+  const obj = lengths && typeof lengths === 'object' ? lengths : {};
+  const total = LENGTH_COUNTED_LAYER_IDS.reduce((sum, layerId) => {
+    const value = Number(obj[layerId]);
+    return Number.isFinite(value) ? sum + value : sum;
+  }, 0);
+  return Number.isFinite(total) && total > 0 ? total : null;
+}
 
-          if (Number.isFinite(total) && total > 0) {
-            statsTotalsBySlug.set(
-              String(doc.id || '')
-                .trim()
-                .toLowerCase(),
-              total
-            );
-          }
-        });
-        return statsTotalsBySlug;
-      })
-      .catch((e) => {
-        console.debug('[city-switcher] failed to load city stats totals:', e);
-        return new Map();
-      });
+function buildStatsDocIdCandidates(cityObj) {
+  const candidates = new Set();
+  if (!cityObj) return candidates;
+
+  const canonicalSlug = getCanonicalCitySlug(cityObj.canonicalSlug || cityObj.slug || '');
+  const def = getPredefinedCitySlugDefinition(canonicalSlug);
+
+  addCandidateSlug(candidates, canonicalSlug);
+  addCandidateSlug(candidates, cityObj.areaLabel);
+  addCandidateSlug(candidates, cityObj.name);
+  addCandidateSlug(candidates, cityObj.meta ? `${cityObj.name}, ${cityObj.meta}` : '');
+  addCandidateSlug(candidates, def?.query);
+  addCandidateSlug(candidates, def?.staticLocation?.areaLabel);
+
+  return candidates;
+}
+
+async function preloadStatsTotalsForCities(cityObjs) {
+  const now = Date.now();
+  const toFetch = new Set();
+  (Array.isArray(cityObjs) ? cityObjs : []).forEach((c) => {
+    for (const docId of buildStatsDocIdCandidates(c)) {
+      const cached = statsTotalsByDocIdCache.get(docId);
+      if (!cached) {
+        toFetch.add(docId);
+        continue;
+      }
+      if (cached.value === null && now - cached.fetchedAt > STATS_TOTALS_MISS_TTL_MS) {
+        toFetch.add(docId);
+      }
+    }
+  });
+
+  if (toFetch.size === 0) return;
+
+  const storage = new Storage();
+  const docsById = await storage.getCityStatsDocs(Array.from(toFetch));
+  for (const [id, docData] of docsById.entries()) {
+    statsTotalsByDocIdCache.set(id, { value: sumLengthsToKm(docData?.lengths), fetchedAt: now });
   }
-  return cityStatsTotalsPromise;
 }
 
 function addCandidateSlug(next, value) {
@@ -132,192 +185,59 @@ function addCandidateSlug(next, value) {
   next.add(slug);
 }
 
-function getRealCityTotalLength(cityObj, statsTotalsBySlug) {
-  if (!statsTotalsBySlug || statsTotalsBySlug.size === 0 || !cityObj) return null;
-
-  const canonicalSlug = getCanonicalCitySlug(cityObj.canonicalSlug || cityObj.slug || '');
-  const def = getPredefinedCitySlugDefinition(canonicalSlug);
-  const candidates = new Set();
-
-  addCandidateSlug(candidates, canonicalSlug);
-  addCandidateSlug(candidates, cityObj.areaLabel);
-  addCandidateSlug(candidates, cityObj.name);
-  addCandidateSlug(candidates, cityObj.meta ? `${cityObj.name}, ${cityObj.meta}` : '');
-  addCandidateSlug(candidates, def?.query);
-  addCandidateSlug(candidates, def?.staticLocation?.areaLabel);
-
-  for (const candidate of candidates) {
-    if (statsTotalsBySlug.has(candidate)) {
-      return statsTotalsBySlug.get(candidate);
-    }
+function getRealCityTotalLength(cityObj, totalsByDocId) {
+  if (!totalsByDocId || totalsByDocId.size === 0 || !cityObj) return null;
+  for (const docId of buildStatsDocIdCandidates(cityObj)) {
+    const entry = totalsByDocId.get(docId);
+    if (entry && typeof entry.value === 'number') return entry.value;
   }
-
   return null;
 }
 
-function CitySwitcherModal() {
-  const navigate = useNavigate();
-  const { city } = useParams();
-  const [statsTotalsBySlug, setStatsTotalsBySlug] = useState(() => new Map());
+function shouldShowTotalSkeleton(cityObj, totalsByDocId, isLoadingTotals) {
+  if (!isLoadingTotals) return false;
+  const candidates = buildStatsDocIdCandidates(cityObj);
+  if (candidates.size === 0) return false;
+  for (const docId of candidates) {
+    if (!totalsByDocId.has(docId)) return true;
+  }
+  return false;
+}
+
+function usePreloadedStatsTotalsByDocId(cityObjs) {
+  const [statsTotalsByDocId, setStatsTotalsByDocId] = useState(
+    () => new Map(statsTotalsByDocIdCache)
+  );
+  const [isLoadingTotals, setIsLoadingTotals] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    getStatsTotalsMap().then((totalsMap) => {
-      if (!cancelled) setStatsTotalsBySlug(totalsMap);
+    const list = Array.isArray(cityObjs) ? cityObjs : [];
+
+    setIsLoadingTotals(true);
+    if (!statsTotalsLoadPromise) {
+      statsTotalsLoadPromise = preloadStatsTotalsForCities(list).finally(() => {
+        statsTotalsLoadPromise = null;
+      });
+    } else {
+      statsTotalsLoadPromise = statsTotalsLoadPromise.then(() => preloadStatsTotalsForCities(list));
+    }
+
+    Promise.resolve(statsTotalsLoadPromise).then(() => {
+      if (cancelled) return;
+      setStatsTotalsByDocId(new Map(statsTotalsByDocIdCache));
+      setIsLoadingTotals(false);
     });
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cityObjs]);
 
-  const topCities = useMemo(() => {
-    return TOP_CITY_SLUGS.map((slug) => {
-      const canonicalSlug = getCanonicalCitySlug(slug);
-      const def =
-        getPredefinedCitySlugDefinition(slug) || getPredefinedCitySlugDefinition(canonicalSlug);
+  return { statsTotalsByDocId, isLoadingTotals };
+}
 
-      const areaLabel = def?.staticLocation?.areaLabel || def?.query || canonicalSlug;
-      const [name, ...rest] = String(areaLabel)
-        .split(',')
-        .map((s) => s.trim());
-      const meta = getPrimaryAreaMeta(rest);
-      const countryCode = Array.isArray(def?.countrycodes) ? def.countrycodes[0] : null;
-      const totalLength = getRealCityTotalLength(
-        { canonicalSlug, areaLabel, name, meta },
-        statsTotalsBySlug
-      );
-
-      return { canonicalSlug, name, meta, areaLabel, countryCode, totalLength };
-    });
-  }, [statsTotalsBySlug]);
-
-  const countryOrder = useMemo(() => {
-    const seen = new Set();
-    const order = [];
-    topCities.forEach((c) => {
-      if (!c.countryCode) return;
-      if (seen.has(c.countryCode)) return;
-      seen.add(c.countryCode);
-      order.push(c.countryCode);
-    });
-    const priority = new Map(SUPPORTED_COUNTRY_CODES.map((code, i) => [code, i]));
-    order.sort((a, b) => (priority.get(a) ?? 999) - (priority.get(b) ?? 999));
-    return order;
-  }, [topCities]);
-
-  const topCitiesByCountry = useMemo(() => {
-    const map = new Map();
-    topCities.forEach((city) => {
-      const code = city.countryCode || 'other';
-      if (!map.has(code)) {
-        map.set(code, {
-          countryCode: code,
-          countryLabel: getCountryLabelPt(code === 'other' ? null : code),
-          cities: [],
-        });
-      }
-      map.get(code).cities.push(city);
-    });
-
-    return countryOrder
-      .map((code) => map.get(code))
-      .filter(Boolean)
-      .concat(map.has('other') ? [map.get('other')] : []);
-  }, [topCities, countryOrder]);
-
-  const [recentCities, setRecentCities] = useState([]);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(RECENT_CITIES_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      const items = Array.isArray(parsed) ? parsed : [];
-
-      const uniqueBySlug = new Map();
-      items.forEach((item) => {
-        if (!item || !item.slug) return;
-        const canonicalSlug = getCanonicalCitySlug(item.slug) || item.slug;
-        if (uniqueBySlug.has(canonicalSlug)) return;
-        uniqueBySlug.set(canonicalSlug, {
-          canonicalSlug,
-          areaLabel: item.areaLabel || canonicalSlug,
-          visitedAt: item.visitedAt || 0,
-        });
-      });
-
-      const ordered = Array.from(uniqueBySlug.values()).slice(0, MAX_RECENT_CITIES);
-      const next = ordered
-        .map((it) => {
-          const def = getPredefinedCitySlugDefinition(it.canonicalSlug);
-          if (!def) return null;
-          const areaLabel = def?.staticLocation?.areaLabel || it.areaLabel;
-          const [name, ...rest] = String(areaLabel)
-            .split(',')
-            .map((s) => s.trim());
-          const meta = getPrimaryAreaMeta(rest);
-          const totalLength = getRealCityTotalLength(
-            { canonicalSlug: it.canonicalSlug, areaLabel, name, meta },
-            statsTotalsBySlug
-          );
-          return { ...it, name, meta, countryCode: def?.countrycodes?.[0] || null, totalLength };
-        })
-        .filter(Boolean);
-
-      setRecentCities(next);
-    } catch {
-      setRecentCities([]);
-    }
-  }, [city, statsTotalsBySlug]);
-
-  const closeCityPicker = useCallback(() => {
-    const body = document.querySelector('body');
-    if (body) body.classList.remove('show-city-picker');
-  }, []);
-
-  const recordRecentlyVisitedCity = useCallback((nextSlug, areaLabel) => {
-    try {
-      const raw = window.localStorage.getItem(RECENT_CITIES_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      const list = Array.isArray(parsed) ? parsed : [];
-
-      const next = [
-        { slug: nextSlug, areaLabel: areaLabel || nextSlug, visitedAt: Date.now() },
-        ...list.filter((item) => item?.slug && item.slug !== nextSlug),
-      ].slice(0, MAX_RECENT_CITIES);
-
-      window.localStorage.setItem(RECENT_CITIES_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Ignore
-    }
-  }, []);
-
-  const onPickCity = useCallback(
-    (cityObj) => {
-      const nextSlug = cityObj?.canonicalSlug;
-      if (!nextSlug) return;
-
-      recordRecentlyVisitedCity(nextSlug, cityObj?.areaLabel);
-
-      closeCityPicker();
-
-      // Best-effort reset: hide Mapbox's input + suggestions after picking.
-      const input = document.querySelector(CITY_PICKER_INPUT_SELECTOR);
-      if (input) {
-        input.value = '';
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-
-      navigate(`/${encodeURIComponent(nextSlug)}`);
-    },
-    [navigate, recordRecentlyVisitedCity, closeCityPicker]
-  );
-
-  const recentCanonicalSlugs = useMemo(() => {
-    return new Set(recentCities.map((c) => c.canonicalSlug));
-  }, [recentCities]);
-
-  const contentScrollElRef = useRef(null);
-  const panelRef = useRef(null);
+function useCityPickerFocusAndRestore({ contentScrollElRef }) {
   const lastFocusedBeforeOpenRef = useRef(null);
   const cityPickerWasOpenRef = useRef(false);
 
@@ -354,8 +274,10 @@ function CitySwitcherModal() {
     onBodyClassChange();
 
     return () => observer.disconnect();
-  }, []);
+  }, [contentScrollElRef]);
+}
 
+function useCityPickerKeyboardTrap({ panelRef, closeCityPicker }) {
   useEffect(() => {
     const body = document.body;
     if (!body) return undefined;
@@ -415,7 +337,171 @@ function CitySwitcherModal() {
 
     document.addEventListener('keydown', onKeyDown, true);
     return () => document.removeEventListener('keydown', onKeyDown, true);
-  }, [closeCityPicker]);
+  }, [panelRef, closeCityPicker]);
+}
+
+function CitySwitcherModal() {
+  const navigate = useNavigate();
+  const { city } = useParams();
+
+  const topCityBase = useMemo(() => {
+    return TOP_CITY_SLUGS.map((slug) => {
+      const canonicalSlug = getCanonicalCitySlug(slug);
+      const def =
+        getPredefinedCitySlugDefinition(slug) || getPredefinedCitySlugDefinition(canonicalSlug);
+
+      const areaLabel = def?.staticLocation?.areaLabel || def?.query || canonicalSlug;
+      const [name, ...rest] = String(areaLabel)
+        .split(',')
+        .map((s) => s.trim());
+      const meta = getPrimaryAreaMeta(rest);
+      const countryCode = Array.isArray(def?.countrycodes) ? def.countrycodes[0] : null;
+
+      return { canonicalSlug, name, meta, areaLabel, countryCode };
+    });
+  }, []);
+
+  const countryOrder = useMemo(() => {
+    const seen = new Set();
+    const order = [];
+    topCityBase.forEach((c) => {
+      if (!c.countryCode) return;
+      if (seen.has(c.countryCode)) return;
+      seen.add(c.countryCode);
+      order.push(c.countryCode);
+    });
+    const priority = new Map(SUPPORTED_COUNTRY_CODES.map((code, i) => [code, i]));
+    order.sort((a, b) => (priority.get(a) ?? 999) - (priority.get(b) ?? 999));
+    return order;
+  }, [topCityBase]);
+
+  const [recentCityEntries, setRecentCityEntries] = useState(() => readRecentCitiesFromStorage());
+
+  useEffect(() => {
+    setRecentCityEntries(readRecentCitiesFromStorage());
+  }, [city]);
+
+  const statsCityCandidates = useMemo(() => {
+    return topCityBase.concat(recentCityEntries);
+  }, [topCityBase, recentCityEntries]);
+
+  const { statsTotalsByDocId, isLoadingTotals } =
+    usePreloadedStatsTotalsByDocId(statsCityCandidates);
+
+  const topCities = useMemo(() => {
+    return topCityBase.map((c) => {
+      const cityObj = {
+        canonicalSlug: c.canonicalSlug,
+        areaLabel: c.areaLabel,
+        name: c.name,
+        meta: c.meta,
+      };
+      const totalLength = getRealCityTotalLength(cityObj, statsTotalsByDocId);
+      const isLoadingTotal =
+        typeof totalLength !== 'number' &&
+        shouldShowTotalSkeleton(cityObj, statsTotalsByDocId, isLoadingTotals);
+      return { ...c, totalLength, isLoadingTotal };
+    });
+  }, [topCityBase, statsTotalsByDocId, isLoadingTotals]);
+
+  const recentCities = useMemo(() => {
+    return recentCityEntries
+      .map((it) => {
+        const def = getPredefinedCitySlugDefinition(it.canonicalSlug);
+        if (!def) return null;
+        const areaLabel = def?.staticLocation?.areaLabel || it.areaLabel;
+        const [name, ...rest] = String(areaLabel)
+          .split(',')
+          .map((s) => s.trim());
+        const meta = getPrimaryAreaMeta(rest);
+        const cityObj = { canonicalSlug: it.canonicalSlug, areaLabel, name, meta };
+        const totalLength = getRealCityTotalLength(cityObj, statsTotalsByDocId);
+        const isLoadingTotal =
+          typeof totalLength !== 'number' &&
+          shouldShowTotalSkeleton(cityObj, statsTotalsByDocId, isLoadingTotals);
+        return {
+          ...it,
+          areaLabel,
+          name,
+          meta,
+          countryCode: def?.countrycodes?.[0] || null,
+          totalLength,
+          isLoadingTotal,
+        };
+      })
+      .filter(Boolean);
+  }, [recentCityEntries, statsTotalsByDocId, isLoadingTotals]);
+
+  const topCitiesByCountry = useMemo(() => {
+    const map = new Map();
+    topCities.forEach((city) => {
+      const code = city.countryCode || 'other';
+      if (!map.has(code)) {
+        map.set(code, {
+          countryCode: code,
+          countryLabel: getCountryLabelPt(code === 'other' ? null : code),
+          cities: [],
+        });
+      }
+      map.get(code).cities.push(city);
+    });
+
+    return countryOrder
+      .map((code) => map.get(code))
+      .filter(Boolean)
+      .concat(map.has('other') ? [map.get('other')] : []);
+  }, [topCities, countryOrder]);
+
+  const closeCityPicker = useCallback(() => {
+    const body = document.querySelector('body');
+    if (body) body.classList.remove('show-city-picker');
+  }, []);
+
+  const recordRecentlyVisitedCity = useCallback((nextSlug, areaLabel) => {
+    setRecentCityEntries((prev) => {
+      const now = Date.now();
+      const nextItems = [
+        { slug: nextSlug, areaLabel: areaLabel || nextSlug, visitedAt: now },
+        ...prev
+          .filter((item) => item?.canonicalSlug && item.canonicalSlug !== nextSlug)
+          .map((item) => ({
+            slug: item.canonicalSlug,
+            areaLabel: item.areaLabel,
+            visitedAt: item.visitedAt,
+          })),
+      ].slice(0, MAX_RECENT_CITIES);
+
+      writeRecentCitiesToStorage(nextItems);
+      return readRecentCitiesFromStorage();
+    });
+  }, []);
+
+  const onPickCity = useCallback(
+    (cityObj) => {
+      const nextSlug = cityObj?.canonicalSlug;
+      if (!nextSlug) return;
+
+      recordRecentlyVisitedCity(nextSlug, cityObj?.areaLabel);
+
+      closeCityPicker();
+
+      // Best-effort reset: hide Mapbox's input + suggestions after picking.
+      const input = document.querySelector(CITY_PICKER_INPUT_SELECTOR);
+      if (input) {
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      navigate(`/${encodeURIComponent(nextSlug)}`);
+    },
+    [navigate, recordRecentlyVisitedCity, closeCityPicker]
+  );
+
+  const contentScrollElRef = useRef(null);
+  const panelRef = useRef(null);
+
+  useCityPickerFocusAndRestore({ contentScrollElRef });
+  useCityPickerKeyboardTrap({ panelRef, closeCityPicker });
 
   let contentStaggerIndex = 0;
 
@@ -480,6 +566,10 @@ function CitySwitcherModal() {
                             <div className="city-switcher-modal__cityTotal">
                               {c.totalLength.toFixed(0) + ' km'}
                             </div>
+                          ) : c.isLoadingTotal ? (
+                            <div className="city-switcher-modal__cityTotal" aria-hidden="true">
+                              <span className="city-switcher-modal__cityTotalSkeleton" />
+                            </div>
                           ) : null}
                         </div>
                         {c.meta ? (
@@ -494,7 +584,7 @@ function CitySwitcherModal() {
           )}
 
           {topCitiesByCountry.map((group) => {
-            const cities = group.cities.filter((c) => !recentCanonicalSlugs.has(c.canonicalSlug));
+            const cities = group.cities;
             if (cities.length === 0) return null;
             return (
               <section
@@ -528,6 +618,10 @@ function CitySwitcherModal() {
                             {typeof c.totalLength === 'number' ? (
                               <div className="city-switcher-modal__cityTotal">
                                 {c.totalLength.toFixed(0) + ' km'}
+                              </div>
+                            ) : c.isLoadingTotal ? (
+                              <div className="city-switcher-modal__cityTotal" aria-hidden="true">
+                                <span className="city-switcher-modal__cityTotalSkeleton" />
                               </div>
                             ) : null}
                           </div>

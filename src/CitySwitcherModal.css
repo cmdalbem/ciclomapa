@@ -87,7 +87,7 @@ body.show-city-picker .city-switcher-modal {
   display: flex;
   flex-direction: column;
   width: min(860px, 100%);
-  height: clamp(420px, calc(100vh - 200px), 760px);
+  height: clamp(420px, calc(100vh - 200px), 960px);
   max-height: none;
   overflow: visible;
   border-radius: 32px;
@@ -443,6 +443,46 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
   text-align: right;
   flex-shrink: 0; /* do not truncate the number */
   margin-left: auto; /* push to the right */
+}
+
+.city-switcher-modal__cityTotalSkeleton {
+  display: inline-block;
+  width: 40px;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  position: relative;
+  vertical-align: baseline;
+  opacity: 0.85;
+}
+
+.theme-light .city-switcher-modal__cityTotalSkeleton {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.city-switcher-modal__cityTotalSkeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.22) 45%,
+    transparent 100%
+  );
+  animation: city-switcher-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.theme-light .city-switcher-modal__cityTotalSkeleton::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(15, 23, 42, 0.12) 45%, transparent 100%);
+}
+
+@keyframes city-switcher-skeleton-shimmer {
+  to {
+    transform: translateX(120%);
+  }
 }
 
 .city-switcher-modal__hint {

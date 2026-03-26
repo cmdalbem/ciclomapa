@@ -43,6 +43,11 @@ class Storage {
     this.db = firebase.firestore();
   }
 
+  normalizeStorageKey(storageKeyOrName) {
+    if (!storageKeyOrName) return '';
+    return slugify(String(storageKeyOrName));
+  }
+
   getAllCitiesDocs() {
     return new Promise((resolve) => {
       this.db
@@ -61,6 +66,16 @@ class Storage {
   }
 
   getAllCitiesStats() {
+    /**
+     * WARNING: EXPENSIVE / INTERNAL-ONLY.
+     *
+     * This performs a collection-wide query over Firestore `stats` and can return hundreds+
+     * of documents. It should ONLY be used for internal testing/debugging (e.g. console
+     * inspection), never for user-facing UI flows.
+     *
+     * Prefer fetching specific city stats docs by id (slug) via `getCityStatsDoc()` /
+     * `getCityStatsDocs()` instead.
+     */
     return new Promise((resolve) => {
       this.db
         .collection('stats')
@@ -88,6 +103,45 @@ class Storage {
           resolve(querySnapshot);
         });
     });
+  }
+
+  /**
+   * Fetch one city stats doc from Firestore `stats`.
+   *
+   * @param {string} statsDocId Firestore document id (usually `slugify(areaLabel)`).
+   * @returns {Promise<object|null>} doc data (`{ lengths: ... }`) or null if missing.
+   */
+  async getCityStatsDoc(statsDocId) {
+    const id = String(statsDocId || '').trim();
+    if (!id) return null;
+    try {
+      const doc = await this.db.collection('stats').doc(id).get();
+      if (!doc.exists) return null;
+      return doc.data() || null;
+    } catch (e) {
+      console.debug('[Storage] getCityStatsDoc failed:', id, e);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch multiple city stats docs from Firestore `stats` by id.
+   *
+   * @param {string[]} statsDocIds list of Firestore document ids.
+   * @returns {Promise<Map<string, object|null>>} map from id -> doc data or null.
+   */
+  async getCityStatsDocs(statsDocIds) {
+    const ids = Array.isArray(statsDocIds) ? statsDocIds : [];
+    const unique = Array.from(new Set(ids.map((s) => String(s || '').trim()).filter(Boolean)));
+    const results = new Map();
+    // Avoid a large fan-out of parallel reads (can get rate-limited).
+    const CONCURRENCY = 10;
+    for (let i = 0; i < unique.length; i += CONCURRENCY) {
+      const chunk = unique.slice(i, i + CONCURRENCY);
+      const chunkResults = await Promise.all(chunk.map((id) => this.getCityStatsDoc(id)));
+      chunk.forEach((id, idx) => results.set(id, chunkResults[idx]));
+    }
+    return results;
   }
 
   compressJson(_data) {
@@ -142,12 +196,13 @@ class Storage {
     });
   }
 
-  save(name, geoJson, lengths) {
+  save(name, geoJson, lengths, options = {}) {
     return new Promise((resolve, reject) => {
       const now = new Date();
+      const storageKey = this.normalizeStorageKey(options.storageKey || name);
 
       // Save to Local Storage
-      set(name, {
+      set(storageKey, {
         geoJson: geoJson,
         updatedAt: now,
       });
@@ -157,7 +212,7 @@ class Storage {
         console.debug(`[Firebase] Saving GeoJSON ${name} using new chunked format...`);
 
         // Save calculated lengths first
-        this.saveStatsToFirestore(name, lengths)
+        this.saveStatsToFirestore(storageKey, lengths)
           .then(() => {
             console.debug(`[Firebase] Lengths for ${name} saved successfully.`);
           })
@@ -168,7 +223,7 @@ class Storage {
           });
 
         // Save GeoJSON data using new chunking strategy
-        this.saveWithChunking(name, geoJson, lengths)
+        this.saveWithChunking(name, geoJson, lengths, storageKey)
           .then(() => {
             console.debug(`[Firebase] GeoJSON ${name} saved successfully using new format.`);
             resolve();
@@ -233,9 +288,9 @@ class Storage {
   }
 
   // New chunking strategy methods
-  async saveWithChunking(name, geoJson, lengths) {
+  async saveWithChunking(name, geoJson, lengths, storageKeyOverride = null) {
     const compressed = this.compressJson(geoJson);
-    const slug = slugify(name);
+    const slug = this.normalizeStorageKey(storageKeyOverride || name);
 
     // Calculate optimal chunk size
     const chunkSize = this.calculateOptimalChunkSize(compressed);
@@ -270,7 +325,7 @@ class Storage {
     await Promise.all(chunkPromises);
 
     // Clean up old format data if it exists
-    await this.cleanupOldFormat(name);
+    await this.cleanupOldFormat(slug);
 
     console.debug(
       `[Storage] Successfully saved ${name} using new chunked format (${chunks.length} chunks)`
@@ -291,8 +346,8 @@ class Storage {
     return chunks;
   }
 
-  async cleanupOldFormat(name) {
-    const slug = slugify(name);
+  async cleanupOldFormat(slugOrName) {
+    const slug = this.normalizeStorageKey(slugOrName);
 
     // Delete old format documents
     const oldDocs = [
@@ -314,7 +369,7 @@ class Storage {
     );
 
     await Promise.all(deletePromises);
-    console.debug(`[Storage] Cleaned up old format documents for ${name}`);
+    console.debug(`[Storage] Cleaned up old format documents for ${slug}`);
   }
 
   async tryLoadNewFormat(slug) {
@@ -435,12 +490,13 @@ class Storage {
       });
   }
 
-  load(name) {
-    const slug = slugify(name);
+  load(name, options = {}) {
+    const storageKey = this.normalizeStorageKey(options.storageKey || name);
+    const slug = storageKey;
 
     return new Promise((resolve, reject) => {
       if (!DISABLE_LOCAL_STORAGE) {
-        get(name).then((local) => {
+        get(storageKey).then((local) => {
           if (local) {
             resolve(local);
           } else {
