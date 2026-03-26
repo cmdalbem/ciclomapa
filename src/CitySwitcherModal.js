@@ -85,6 +85,14 @@ function getCountryLabelPt(countryCode) {
   return SUPPORTED_COUNTRY_LABEL_PT_BY_CODE[countryCode] || 'Outros';
 }
 
+function getPrimaryAreaMeta(restParts) {
+  const parts = Array.isArray(restParts)
+    ? restParts.map((s) => String(s || '').trim()).filter(Boolean)
+    : [];
+  if (parts.length === 0) return '';
+  return parts[0];
+}
+
 function getStatsTotalsMap() {
   if (!cityStatsTotalsPromise) {
     cityStatsTotalsPromise = new Storage()
@@ -172,7 +180,7 @@ function CitySwitcherModal() {
       const [name, ...rest] = String(areaLabel)
         .split(',')
         .map((s) => s.trim());
-      const meta = rest.join(', ');
+      const meta = getPrimaryAreaMeta(rest);
       const countryCode = Array.isArray(def?.countrycodes) ? def.countrycodes[0] : null;
       const totalLength = getRealCityTotalLength(
         { canonicalSlug, areaLabel, name, meta },
@@ -246,7 +254,7 @@ function CitySwitcherModal() {
           const [name, ...rest] = String(areaLabel)
             .split(',')
             .map((s) => s.trim());
-          const meta = rest.join(', ');
+          const meta = getPrimaryAreaMeta(rest);
           const totalLength = getRealCityTotalLength(
             { canonicalSlug: it.canonicalSlug, areaLabel, name, meta },
             statsTotalsBySlug
