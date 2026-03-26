@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { HiOutlineClock } from 'react-icons/hi2';
+import { Button } from 'antd';
 import { getCanonicalCitySlug, getPredefinedCitySlugDefinition } from './config/citySlugCatalog.js';
 import { TOP_CITY_SLUGS } from './config/topCitiesCatalog.js';
 import {
@@ -8,6 +9,8 @@ import {
   SUPPORTED_COUNTRY_CODES,
   SUPPORTED_COUNTRY_LABEL_PT_BY_CODE,
 } from './config/constants.js';
+
+import { HiOutlineXMark } from 'react-icons/hi2';
 
 import './CitySwitcherModal.css';
 
@@ -347,6 +350,19 @@ function CitySwitcherModal() {
     >
       <div className="city-switcher-modal__backdrop" onClick={closeCityPicker} aria-hidden="true" />
       <div ref={panelRef} className="city-switcher-modal__panel glass-bg" tabIndex={-1}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            paddingRight: 12,
+            marginBottom: 12,
+          }}
+        >
+          <div />
+          <Button onClick={closeCityPicker} type="text" aria-label="Fechar">
+            <HiOutlineXMark className="text-2xl" style={{ color: 'white' }} aria-hidden />
+          </Button>
+        </div>
         <div className="city-switcher-modal__geocoderMount" aria-label="Buscar cidades" />
 
         <div
