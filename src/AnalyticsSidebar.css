@@ -1,29 +1,35 @@
-@keyframes analytics-sidebar-enter {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+#analyticsSidebar.analytics-sidebar {
+  will-change: transform;
+  transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  --glass-bg-opacity: 0.9;
 }
 
-#analyticsSidebar.analytics-sidebar {
-  animation: analytics-sidebar-enter 620ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+#analyticsSidebar.analytics-sidebar.analytics-sidebar--open {
+  transform: translateX(0);
+}
+
+#analyticsSidebar.analytics-sidebar.analytics-sidebar--closed {
+  transform: translateX(100%);
 }
 
 @media (prefers-reduced-motion: reduce) {
   #analyticsSidebar.analytics-sidebar {
-    animation: none;
+    transition: none;
     transform: none;
   }
 }
 
-body.theme-dark #analyticsSidebar {
-  background: #1a1a1a;
+.analytics-sidebar-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 900; /* below modals, above the map */
+  pointer-events: none; /* becomes interactive when open */
 }
 
-body.theme-light #analyticsSidebar {
-  background: #ffffff;
+.analytics-sidebar-overlay--open {
+  pointer-events: auto;
 }
 
 /* Vias row detail popover: slightly higher z-index over sidebar scroll/stacking */

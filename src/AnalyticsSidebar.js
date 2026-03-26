@@ -90,7 +90,6 @@ class AnalyticsSidebar extends Component {
     this.airtableDatabase = new AirtableDatabase();
 
     this.state = {
-      open: this.props.open,
       lengthsInclude: readLengthsIncludeFromStorage() || DEFAULT_LENGTHS_INCLUDE(),
     };
   }
@@ -249,9 +248,9 @@ class AnalyticsSidebar extends Component {
     return (
       <div
         id="analyticsSidebar"
-        className={`analytics-sidebar border-l border-opacity-10 border-white h-screen ${
-          this.state.open ? 'w-60 overflow-y-auto flex-none' : ''
-        } ${this.state.open ? '' : 'translate-x-full transform transition-transform duration-500'}`}
+        className={`analytics-sidebar w-64 border-l border-opacity-10 border-white h-screen overflow-y-auto glass-bg ${
+          this.props.open ? 'analytics-sidebar--open' : 'analytics-sidebar--closed'
+        }`}
       >
         <div className="px-5 pb-10">
           <div className="flex w-full justify-between items-center pt-2 mt-1">
@@ -478,6 +477,7 @@ class AnalyticsSidebar extends Component {
                   strokeWidth={0}
                   startAngle={90}
                   endAngle={-2700}
+                  cornerRadius="50%"
                 />
               </PieChart>
 
