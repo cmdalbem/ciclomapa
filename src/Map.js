@@ -15,7 +15,6 @@ import {
   USE_GEOJSON_SOURCE,
   USE_PMTILES_SOURCE,
   INTERACTIVE_LAYERS_ZOOM_THRESHOLD,
-  DEFAULT_ZOOM,
   ENABLE_COMMENTS,
   IS_MOBILE,
   IS_PROD,
@@ -53,6 +52,7 @@ import {
 } from './sunPositionUtils';
 import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/map/icons';
 import { reverseGeocodePlace } from './features/map/geocoding.js';
+import { flyMapToCityFocus } from './utils/utils.js';
 
 import './Map.css';
 
@@ -75,6 +75,7 @@ class Map extends Component {
   lastGeocodedPlaceName;
   originalPOIFilters; // Store original POI filters to restore when routes are cleared
   geolocateControl; // Reference to Mapbox GeolocateControl
+  resizeObserver;
 
   constructor(props) {
     super(props);
@@ -109,6 +110,17 @@ class Map extends Component {
       this.syncMapState(placeName);
       document.querySelector('.city-picker span').setAttribute('style', 'opacity: 1');
     }, 1000);
+  }
+
+  componentWillUnmount() {
+    if (this.resizeObserver) {
+      try {
+        this.resizeObserver.disconnect();
+      } catch {
+        // ignore
+      }
+      this.resizeObserver = null;
+    }
   }
 
   showCommentModal() {
@@ -2392,37 +2404,11 @@ class Map extends Component {
         console.debug('geocoder result', result);
 
         const resultCenter = result?.result?.center;
-        const resultBbox = result?.result?.bbox;
         const resultLabel = result?.result?.place_name;
-        const hasValidBbox =
-          Array.isArray(resultBbox) &&
-          resultBbox.length === 4 &&
-          resultBbox.every((value) => Number.isFinite(Number(value)));
+        const placeNameForFocus = resultLabel ?? result?.place_name;
 
-        if (hasValidBbox) {
-          this.map.fitBounds(
-            [
-              [Number(resultBbox[0]), Number(resultBbox[1])],
-              [Number(resultBbox[2]), Number(resultBbox[3])],
-            ],
-            {
-              padding: { top: 150, bottom: 300, left: 100, right: 100 },
-              duration: 1200,
-            }
-          );
-        } else {
-          let flyToPos;
-          if (result.place_name === 'Vitória, Espírito Santo, Brasil') {
-            flyToPos = [-40.3144, -20.2944];
-          } else {
-            flyToPos = resultCenter;
-          }
-          this.map.flyTo({
-            center: flyToPos,
-            zoom: DEFAULT_ZOOM,
-            speed: 2.2,
-            minZoom: 6,
-          });
+        if (Array.isArray(resultCenter) && resultCenter.length === 2) {
+          flyMapToCityFocus(this.map, resultCenter, placeNameForFocus);
         }
 
         // Keep city source of truth from picker selection instead of a follow-up reverse geocode.
@@ -2438,7 +2424,7 @@ class Map extends Component {
       this.map.addControl(cityPicker, 'top-left');
 
       // Move the Geocoder DOM into the React modal, so the input feels native.
-      // (We keep Mapbox's JS integration for searching, results, and bbox/fitBounds.)
+      // (We keep Mapbox's JS integration for search + results; camera uses flyMapToCityFocus.)
       const relocateCityPickerToModal = (attempt = 0) => {
         if (attempt > 20) return;
 
