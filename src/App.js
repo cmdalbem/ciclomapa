@@ -356,6 +356,34 @@ class App extends Component {
     return this.getKnownCanonicalSlugFromArea(area) || this.getCanonicalRouteCitySlug();
   }
 
+  getCanonicalCityIdentity(area) {
+    const canonicalSlug = this.getKnownCanonicalSlugFromArea(area);
+    if (!canonicalSlug) return null;
+
+    const staticLocation = getPredefinedCityStaticLocation(canonicalSlug);
+    const canonicalAreaLabel = staticLocation?.areaLabel || null;
+    return { canonicalSlug, canonicalAreaLabel };
+  }
+
+  getStorageKeyForArea(area) {
+    const identity = this.getCanonicalCityIdentity(area);
+    // Prefer a stable “full name” key when we have it, so storage keys stay consistent
+    // with the old format (city + region + country) while remaining locale-independent
+    // within our app (it always comes from the catalog, not from geocoder language).
+    if (identity?.canonicalAreaLabel) return identity.canonicalAreaLabel;
+    if (identity?.canonicalSlug) return identity.canonicalSlug;
+
+    // Fallback to the full `area` string (which should already be normalized
+    // from coords for catalog-supported cities).
+    return area;
+  }
+
+  normalizeAreaLabelForDisplay(area) {
+    if (!area || typeof area !== 'string') return area;
+    const identity = this.getCanonicalCityIdentity(area);
+    return identity?.canonicalAreaLabel || area;
+  }
+
   slugifyCityLabel(label) {
     if (!label || typeof label !== 'string') return null;
     return label
@@ -456,7 +484,7 @@ class App extends Component {
         });
         this.setState(
           (prevState) => ({
-            area: staticLocation.areaLabel || prevState.area,
+            area: this.normalizeAreaLabelForDisplay(staticLocation.areaLabel || prevState.area),
             lat: staticLocation.lat,
             lng: staticLocation.lng,
             zoom: DEFAULT_ZOOM,
@@ -539,7 +567,7 @@ class App extends Component {
 
       this.setState(
         (prevState) => ({
-          area: area || prevState.area,
+          area: this.normalizeAreaLabelForDisplay(area || prevState.area),
           lat: resolvedLat !== null ? resolvedLat : prevState.lat,
           lng: resolvedLng !== null ? resolvedLng : prevState.lng,
           zoom: DEFAULT_ZOOM,
@@ -847,8 +875,9 @@ class App extends Component {
           );
 
           if (SAVE_TO_FIREBASE) {
+            const storageKey = this.getStorageKeyForArea(areaName);
             this.storage
-              .save(areaName, newData.geoJson, lengths)
+              .save(areaName, newData.geoJson, lengths, { storageKey })
               .then(() => {
                 if (this.state.debugMode) {
                   notification.success({
@@ -922,8 +951,9 @@ class App extends Component {
         this.getDataFromOSM({ forceUpdate: true });
       } else {
         // Try to retrieve this area's geojson data from the database
+        const storageKey = this.getStorageKeyForArea(this.state.area);
         this.storage
-          .load(this.state.area)
+          .load(this.state.area, { storageKey })
           .then((data) => {
             if (data) {
               if (!this.isDataFresh(data.updatedAt)) {
@@ -1258,7 +1288,11 @@ class App extends Component {
     // Update App state to reflect map position for URL updates
     // This does NOT control the map - the map manages its own position
     requestAnimationFrame(() => {
-      this.setState(newState);
+      const nextState = { ...newState };
+      if (typeof nextState.area === 'string' && nextState.area.trim()) {
+        nextState.area = this.normalizeAreaLabelForDisplay(nextState.area);
+      }
+      this.setState(nextState);
     });
   }
 
@@ -1287,8 +1321,9 @@ class App extends Component {
   };
 
   setArea(newArea) {
-    if (newArea && newArea !== this.state.area) {
-      this.setState({ area: newArea });
+    const normalizedArea = this.normalizeAreaLabelForDisplay(newArea);
+    if (normalizedArea && normalizedArea !== this.state.area) {
+      this.setState({ area: normalizedArea });
     }
   }
 
