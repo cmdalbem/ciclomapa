@@ -116,6 +116,13 @@ button.ant-btn,
 a.ant-btn {
   border-radius: 99px !important;
 }
+// Disable all button transitions while we don't migrate to Ant Design v5
+.ant-btn,
+.ant-btn:hover,
+.ant-btn:focus,
+.ant-btn:active {
+  transition: none !important;
+}
 
 .theme-dark body {
   background: var(--color-bg-dark);
