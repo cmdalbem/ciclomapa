@@ -2,9 +2,12 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { useNavigate, useParams } from 'react-router-dom';
 import { HiOutlineClock } from 'react-icons/hi2';
 import { Button } from 'antd';
+import Storage from './Storage.js';
+import { slugify } from './utils/utils.js';
 import { getCanonicalCitySlug, getPredefinedCitySlugDefinition } from './config/citySlugCatalog.js';
 import { TOP_CITY_SLUGS } from './config/topCitiesCatalog.js';
 import {
+  LENGTH_COUNTED_LAYER_IDS,
   MAX_RECENT_CITIES,
   SUPPORTED_COUNTRY_CODES,
   SUPPORTED_COUNTRY_LABEL_PT_BY_CODE,
@@ -17,6 +20,7 @@ import './CitySwitcherModal.css';
 const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 
 const CITY_PICKER_INPUT_SELECTOR = '.city-switcher-modal__geocoderMount input';
+let cityStatsTotalsPromise = null;
 
 function getFocusableElements(container) {
   if (!container) return [];
@@ -81,22 +85,82 @@ function getCountryLabelPt(countryCode) {
   return SUPPORTED_COUNTRY_LABEL_PT_BY_CODE[countryCode] || 'Outros';
 }
 
-function getFakeCityTotalLength(canonicalSlug) {
-  // Stable placeholder numbers for prototyping.
-  // Replace this with real data later.
-  const s = String(canonicalSlug || '');
-  let hash = 2166136261; // FNV-1a seed-ish
-  for (let i = 0; i < s.length; i += 1) {
-    hash ^= s.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
+function getStatsTotalsMap() {
+  if (!cityStatsTotalsPromise) {
+    cityStatsTotalsPromise = new Storage()
+      .getAllCitiesStats()
+      .then((querySnapshot) => {
+        const statsTotalsBySlug = new Map();
+        querySnapshot.forEach((doc) => {
+          const lengths = doc?.data()?.lengths || {};
+          const total = LENGTH_COUNTED_LAYER_IDS.reduce((sum, layerId) => {
+            const value = Number(lengths[layerId]);
+            return Number.isFinite(value) ? sum + value : sum;
+          }, 0);
+
+          if (Number.isFinite(total) && total > 0) {
+            statsTotalsBySlug.set(
+              String(doc.id || '')
+                .trim()
+                .toLowerCase(),
+              total
+            );
+          }
+        });
+        return statsTotalsBySlug;
+      })
+      .catch((e) => {
+        console.debug('[city-switcher] failed to load city stats totals:', e);
+        return new Map();
+      });
   }
-  const normalized = Math.abs(hash >>> 0);
-  return 100 + (normalized % 900); // 100..9999
+  return cityStatsTotalsPromise;
+}
+
+function addCandidateSlug(next, value) {
+  if (!value) return;
+  const slug = slugify(String(value));
+  if (!slug) return;
+  next.add(slug);
+}
+
+function getRealCityTotalLength(cityObj, statsTotalsBySlug) {
+  if (!statsTotalsBySlug || statsTotalsBySlug.size === 0 || !cityObj) return null;
+
+  const canonicalSlug = getCanonicalCitySlug(cityObj.canonicalSlug || cityObj.slug || '');
+  const def = getPredefinedCitySlugDefinition(canonicalSlug);
+  const candidates = new Set();
+
+  addCandidateSlug(candidates, canonicalSlug);
+  addCandidateSlug(candidates, cityObj.areaLabel);
+  addCandidateSlug(candidates, cityObj.name);
+  addCandidateSlug(candidates, cityObj.meta ? `${cityObj.name}, ${cityObj.meta}` : '');
+  addCandidateSlug(candidates, def?.query);
+  addCandidateSlug(candidates, def?.staticLocation?.areaLabel);
+
+  for (const candidate of candidates) {
+    if (statsTotalsBySlug.has(candidate)) {
+      return statsTotalsBySlug.get(candidate);
+    }
+  }
+
+  return null;
 }
 
 function CitySwitcherModal() {
   const navigate = useNavigate();
   const { city } = useParams();
+  const [statsTotalsBySlug, setStatsTotalsBySlug] = useState(() => new Map());
+
+  useEffect(() => {
+    let cancelled = false;
+    getStatsTotalsMap().then((totalsMap) => {
+      if (!cancelled) setStatsTotalsBySlug(totalsMap);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const topCities = useMemo(() => {
     return TOP_CITY_SLUGS.map((slug) => {
@@ -110,11 +174,14 @@ function CitySwitcherModal() {
         .map((s) => s.trim());
       const meta = rest.join(', ');
       const countryCode = Array.isArray(def?.countrycodes) ? def.countrycodes[0] : null;
-      const totalLength = getFakeCityTotalLength(canonicalSlug);
+      const totalLength = getRealCityTotalLength(
+        { canonicalSlug, areaLabel, name, meta },
+        statsTotalsBySlug
+      );
 
       return { canonicalSlug, name, meta, areaLabel, countryCode, totalLength };
     });
-  }, []);
+  }, [statsTotalsBySlug]);
 
   const countryOrder = useMemo(() => {
     const seen = new Set();
@@ -180,7 +247,10 @@ function CitySwitcherModal() {
             .split(',')
             .map((s) => s.trim());
           const meta = rest.join(', ');
-          const totalLength = getFakeCityTotalLength(it.canonicalSlug);
+          const totalLength = getRealCityTotalLength(
+            { canonicalSlug: it.canonicalSlug, areaLabel, name, meta },
+            statsTotalsBySlug
+          );
           return { ...it, name, meta, countryCode: def?.countrycodes?.[0] || null, totalLength };
         })
         .filter(Boolean);
@@ -189,7 +259,7 @@ function CitySwitcherModal() {
     } catch {
       setRecentCities([]);
     }
-  }, [city]);
+  }, [city, statsTotalsBySlug]);
 
   const closeCityPicker = useCallback(() => {
     const body = document.querySelector('body');
@@ -398,9 +468,11 @@ function CitySwitcherModal() {
                       >
                         <div className="city-switcher-modal__cityTopRow">
                           <div className="city-switcher-modal__cityName">{c.name}</div>
-                          <div className="city-switcher-modal__cityTotal">
-                            {(typeof c.totalLength === 'number' ? c.totalLength : 0) + ' km'}
-                          </div>
+                          {typeof c.totalLength === 'number' ? (
+                            <div className="city-switcher-modal__cityTotal">
+                              {c.totalLength.toFixed(0) + ' km'}
+                            </div>
+                          ) : null}
                         </div>
                         {c.meta ? (
                           <div className="city-switcher-modal__cityMeta">{c.meta}</div>
@@ -445,9 +517,11 @@ function CitySwitcherModal() {
                         >
                           <div className="city-switcher-modal__cityTopRow">
                             <div className="city-switcher-modal__cityName">{c.name}</div>
-                            <div className="city-switcher-modal__cityTotal">
-                              {(typeof c.totalLength === 'number' ? c.totalLength : 0) + ' km'}
-                            </div>
+                            {typeof c.totalLength === 'number' ? (
+                              <div className="city-switcher-modal__cityTotal">
+                                {c.totalLength.toFixed(0) + ' km'}
+                              </div>
+                            ) : null}
                           </div>
                           {c.meta ? (
                             <div className="city-switcher-modal__cityMeta">{c.meta}</div>
