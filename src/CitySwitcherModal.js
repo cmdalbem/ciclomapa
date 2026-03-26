@@ -7,7 +7,6 @@ import {
   MAX_RECENT_CITIES,
   SUPPORTED_COUNTRY_CODES,
   SUPPORTED_COUNTRY_LABEL_PT_BY_CODE,
-  getSupportedCountryFlagEmoji,
 } from './config/constants.js';
 
 import './CitySwitcherModal.css';
@@ -136,7 +135,6 @@ function CitySwitcherModal() {
         map.set(code, {
           countryCode: code,
           countryLabel: getCountryLabelPt(code === 'other' ? null : code),
-          countryFlag: getSupportedCountryFlagEmoji(code === 'other' ? null : code),
           cities: [],
         });
       }
@@ -412,12 +410,7 @@ function CitySwitcherModal() {
                   className="city-switcher-modal__sectionTitleWrap city-switcher-modal__staggerEnter"
                   style={{ '--city-content-stagger': contentStaggerIndex++ }}
                 >
-                  <div className="city-switcher-modal__sectionTitle">
-                    {/* <span className="city-switcher-modal__flag" aria-hidden="true">
-                      {group.countryFlag}
-                    </span> */}
-                    {group.countryLabel}
-                  </div>
+                  <div className="city-switcher-modal__sectionTitle">{group.countryLabel}</div>
                 </div>
                 <div className="city-switcher-modal__citiesGrid" role="list">
                   {cities.map((c) => {
