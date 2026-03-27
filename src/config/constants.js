@@ -45,7 +45,7 @@ export const AREA_ID_OVERRIDES = {
  * Layout
  */
 
-export const MOBILE_MAX_WIDTH = '430px';
+export const MOBILE_MAX_WIDTH = '480px';
 export const IS_MOBILE =
   window.matchMedia && window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH})`).matches;
 
