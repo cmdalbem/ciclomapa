@@ -8,12 +8,11 @@
     opacity var(--motion-duration-normal, 300ms) ease,
     background-color 0.3s ease;
 
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(4px);
 }
 
 .theme-light .city-switcher-modal__backdrop {
-  background: rgba(15, 23, 42, 0.14);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .theme-dark .city-switcher-modal__backdrop {
@@ -146,6 +145,7 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   background: transparent !important;
   border-radius: 999px !important;
   box-shadow: none !important;
+  backdrop-filter: blur(14px) saturate(1.08);
 }
 
 .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder input {
@@ -168,7 +168,7 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
 }
 
 .theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder input {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(0, 0, 0, 0.05);
   color: rgba(30, 41, 59, 0.9);
 }
 
@@ -247,8 +247,8 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
 }
 
 .theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions {
-  background: rgba(255, 255, 255, 0.78) !important;
-  border-color: rgba(15, 23, 42, 0.12) !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+  border-color: rgba(15, 23, 42, 0.22) !important;
   backdrop-filter: blur(16px) saturate(1.1) !important;
 }
 
@@ -263,7 +263,8 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   .suggestions
   > li
   > a:hover {
-  background: rgba(15, 23, 42, 0.06) !important;
+  background: rgba(15, 23, 42, 0.2) !important;
+  color: rgba(30, 41, 59, 0.92) !important;
 }
 
 .city-switcher-modal__content {
@@ -306,7 +307,7 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
 
 .theme-light .city-switcher-modal__sectionTitle,
 .theme-light .city-switcher-modal__clockIcon {
-  color: white;
+  color: rgba(15, 23, 42, 0.92);
   opacity: 1;
 }
 
@@ -315,6 +316,15 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   height: 16px;
   opacity: 0.75;
   flex-shrink: 0;
+}
+
+.city-switcher-modal__closeIcon {
+  color: rgba(255, 255, 255, 0.88);
+  opacity: 0.9;
+}
+
+.theme-light .city-switcher-modal__closeIcon {
+  color: rgba(15, 23, 42, 0.92);
 }
 
 .city-switcher-modal__citiesGrid {
@@ -380,7 +390,7 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
 }
 
 .theme-light .city-switcher-modal__cityBtn {
-  background: rgba(255, 255, 255, 0.42);
+  background: rgba(0, 0, 0, 0.02);
   color: rgba(30, 41, 59, 0.9);
   border: none;
   backdrop-filter: blur(14px) saturate(1.08);
@@ -395,7 +405,7 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
 }
 
 .theme-light .city-switcher-modal__cityBtn:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .theme-light .city-switcher-modal__cityMeta {
