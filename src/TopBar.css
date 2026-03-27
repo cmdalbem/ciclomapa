@@ -44,3 +44,14 @@
     left: auto;
   }
 }
+
+/* Keep city picker full width on mobile/small tablets even if JS mobile flag differs. */
+@media (max-width: 639px) {
+  .city-picker {
+    width: 100%;
+  }
+
+  .city-picker .ant-btn {
+    width: 100%;
+  }
+}

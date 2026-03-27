@@ -491,7 +491,7 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
   opacity: 0.58;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .city-switcher-modal {
     align-items: flex-end;
     padding-top: 0;
