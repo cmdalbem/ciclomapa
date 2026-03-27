@@ -8,7 +8,7 @@
     opacity var(--motion-duration-normal, 300ms) ease,
     background-color 0.3s ease;
 
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(12px);
 }
 
 .theme-light .city-switcher-modal__backdrop {
@@ -100,6 +100,13 @@ body.show-city-picker .city-switcher-modal {
   backdrop-filter: none !important;
 }
 
+.city-switcher-modal__headerRow {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 12px;
+  margin-bottom: 12px;
+}
+
 .city-switcher-modal__title {
   font-size: 18px;
   line-height: 1.15;
@@ -107,7 +114,7 @@ body.show-city-picker .city-switcher-modal {
 }
 
 .theme-light .city-switcher-modal__title {
-  color: rgba(15, 23, 42, 0.9);
+  color: rgba(0, 0, 0, 0.9);
 }
 
 .city-switcher-modal__subtitle {
@@ -119,7 +126,7 @@ body.show-city-picker .city-switcher-modal {
 }
 
 .theme-light .city-switcher-modal__subtitle {
-  color: rgba(71, 85, 105, 0.85);
+  color: rgba(87, 87, 87, 0.85);
 }
 
 .city-switcher-modal__geocoderMount {
@@ -169,11 +176,11 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
 
 .theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder input {
   background: rgba(0, 0, 0, 0.05);
-  color: rgba(30, 41, 59, 0.9);
+  color: rgba(0, 0, 0, 0.9);
 }
 
 .theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder input::placeholder {
-  color: rgba(71, 85, 105, 0.55);
+  color: rgba(87, 87, 87, 0.55);
 }
 
 .theme-dark .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder input {
@@ -212,7 +219,7 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   .city-switcher-modal__geocoderMount
   .mapboxgl-ctrl-geocoder--pin-right
   .mapboxgl-ctrl-geocoder--icon-close {
-  fill: rgba(71, 85, 105, 0.5);
+  fill: rgba(87, 87, 87, 0.5);
 }
 
 /* No transform here — it would override the spinner’s rotate keyframes. */
@@ -223,7 +230,7 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
 }
 
 .theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder--icon-search {
-  fill: rgba(71, 85, 105, 0.5) !important;
+  fill: rgba(87, 87, 87, 0.5) !important;
 }
 
 .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions {
@@ -242,18 +249,18 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
 
 .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > .active > a,
 .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > li > a:hover {
-  background: rgba(148, 175, 162, 0.1) !important;
+  background: rgba(162, 162, 162, 0.1) !important;
   color: rgba(255, 255, 255, 0.88) !important;
 }
 
 .theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions {
   background: rgba(0, 0, 0, 0.1) !important;
-  border-color: rgba(15, 23, 42, 0.22) !important;
+  border-color: rgba(0, 0, 0, 0.22) !important;
   backdrop-filter: blur(16px) saturate(1.1) !important;
 }
 
 .theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > li > a {
-  color: rgba(30, 41, 59, 0.88) !important;
+  color: rgba(0, 0, 0, 0.88) !important;
 }
 
 .theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > .active > a,
@@ -263,8 +270,8 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   .suggestions
   > li
   > a:hover {
-  background: rgba(15, 23, 42, 0.2) !important;
-  color: rgba(30, 41, 59, 0.92) !important;
+  background: rgba(0, 0, 0, 0.2) !important;
+  color: rgba(0, 0, 0, 0.92) !important;
 }
 
 .city-switcher-modal__content {
@@ -295,20 +302,18 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
 }
 
 .city-switcher-modal__sectionTitle {
-  /* padding: 14px 16px 10px; */
   padding: 16px 14px;
   font-size: 12px;
   letter-spacing: 0.15px;
   opacity: 0.72;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .theme-light .city-switcher-modal__sectionTitle,
 .theme-light .city-switcher-modal__clockIcon {
-  color: rgba(15, 23, 42, 0.92);
-  opacity: 1;
+  color: rgba(0, 0, 0, 0.92);
 }
 
 .city-switcher-modal__clockIcon {
@@ -324,7 +329,7 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
 }
 
 .theme-light .city-switcher-modal__closeIcon {
-  color: rgba(15, 23, 42, 0.92);
+  color: rgba(0, 0, 0, 0.92);
 }
 
 .city-switcher-modal__citiesGrid {
@@ -391,7 +396,7 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
 
 .theme-light .city-switcher-modal__cityBtn {
   background: rgba(0, 0, 0, 0.02);
-  color: rgba(30, 41, 59, 0.9);
+  color: rgba(0, 0, 0, 0.9);
   border: none;
   backdrop-filter: blur(14px) saturate(1.08);
   opacity: 1;
@@ -399,8 +404,8 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
 
 .city-switcher-modal__cityBtn:hover {
   transform: translateY(-1px);
-  border-color: rgba(148, 175, 162, 0.28);
-  background: rgba(148, 175, 162, 0.06);
+  border-color: rgba(162, 162, 162, 0.28);
+  background: rgba(162, 162, 162, 0.06);
   opacity: 1;
 }
 
@@ -409,12 +414,12 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
 }
 
 .theme-light .city-switcher-modal__cityMeta {
-  color: rgba(71, 85, 105, 0.88);
+  color: rgba(87, 87, 87, 0.88);
   opacity: 1;
 }
 
 .theme-light .city-switcher-modal__cityTotal {
-  color: rgba(100, 116, 139, 0.95);
+  color: rgba(118, 118, 118, 0.95);
   opacity: 1;
 }
 
@@ -425,21 +430,44 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
   gap: 10px;
 }
 
+.city-switcher-modal__cityNameWrap {
+  flex: 1;
+  min-width: 0; /* allows ellipsis within */
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
 .city-switcher-modal__cityName {
   font-size: 12px;
   line-height: 1.2;
-  flex: 1;
   min-width: 0; /* allows ellipsis on small cards */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.city-switcher-modal__cityMetaInline {
+  display: none;
+  font-size: 12px;
+  line-height: 1.2;
+  opacity: 0.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.theme-light .city-switcher-modal__cityMetaInline {
+  color: rgba(87, 87, 87, 0.72);
+  opacity: 0.95;
+}
+
 .city-switcher-modal__cityMeta {
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.2;
-  opacity: 0.68;
+  opacity: 0.55;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -468,7 +496,7 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
 }
 
 .theme-light .city-switcher-modal__cityTotalSkeleton {
-  background: rgba(15, 23, 42, 0.08);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .city-switcher-modal__cityTotalSkeleton::after {
@@ -486,7 +514,7 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
 }
 
 .theme-light .city-switcher-modal__cityTotalSkeleton::after {
-  background: linear-gradient(90deg, transparent 0%, rgba(15, 23, 42, 0.12) 45%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.12) 45%, transparent 100%);
 }
 
 @keyframes city-switcher-skeleton-shimmer {
@@ -505,18 +533,35 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
   .city-switcher-modal {
     align-items: flex-end;
     padding-top: 0;
-    padding-left: max(6px, env(safe-area-inset-left));
-    padding-right: max(6px, env(safe-area-inset-right));
-    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    padding-left: max(4px, env(safe-area-inset-left));
+    padding-right: max(4px, env(safe-area-inset-right));
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
   }
 
   .city-switcher-modal__panel {
-    height: clamp(420px, calc(100vh - 72px), 860px);
-    border-radius: 22px;
+    height: clamp(420px, calc(100vh - 22px), 860px);
+    border-radius: 18px;
   }
 
   .city-switcher-modal__geocoderMount {
-    padding-bottom: 10px;
+    padding: 0 14px 8px;
+  }
+
+  .city-switcher-modal__headerRow {
+    padding-right: 8px;
+    margin-bottom: 6px;
+  }
+
+  .city-switcher-modal__content {
+    padding: 0 14px 10px;
+  }
+
+  .city-switcher-modal__section {
+    margin-top: 14px;
+  }
+
+  .city-switcher-modal__sectionTitle {
+    padding: 12px 10px;
   }
 
   /* Keep Mapbox suggestions usable when viewport is narrow / keyboard is open. */
@@ -528,6 +573,20 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
 
   .city-switcher-modal__citiesGrid {
     grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .city-switcher-modal__cityBtn {
+    padding: 12px 12px;
+  }
+
+  /* Mobile density: show "state" inline with city name. */
+  .city-switcher-modal__cityMetaInline {
+    display: block;
+  }
+
+  .city-switcher-modal__cityMeta {
+    display: none;
   }
 }
 

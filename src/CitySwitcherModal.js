@@ -514,14 +514,7 @@ function CitySwitcherModal() {
     >
       <div className="city-switcher-modal__backdrop" onClick={closeCityPicker} aria-hidden="true" />
       <div ref={panelRef} className="city-switcher-modal__panel glass-bg" tabIndex={-1}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            paddingRight: 12,
-            marginBottom: 12,
-          }}
-        >
+        <div className="city-switcher-modal__headerRow">
           <div />
           <Button onClick={closeCityPicker} type="text" aria-label="Fechar">
             <HiOutlineXMark className="text-2xl city-switcher-modal__closeIcon" aria-hidden />
@@ -561,7 +554,12 @@ function CitySwitcherModal() {
                         onClick={() => onPickCity(c)}
                       >
                         <div className="city-switcher-modal__cityTopRow">
-                          <div className="city-switcher-modal__cityName">{c.name}</div>
+                          <div className="city-switcher-modal__cityNameWrap">
+                            <div className="city-switcher-modal__cityName">{c.name}</div>
+                            {c.meta ? (
+                              <div className="city-switcher-modal__cityMetaInline">{c.meta}</div>
+                            ) : null}
+                          </div>
                           {typeof c.totalLength === 'number' ? (
                             <div className="city-switcher-modal__cityTotal">
                               {c.totalLength.toFixed(0) + ' km'}
@@ -614,7 +612,12 @@ function CitySwitcherModal() {
                           onClick={() => onPickCity(c)}
                         >
                           <div className="city-switcher-modal__cityTopRow">
-                            <div className="city-switcher-modal__cityName">{c.name}</div>
+                            <div className="city-switcher-modal__cityNameWrap">
+                              <div className="city-switcher-modal__cityName">{c.name}</div>
+                              {c.meta ? (
+                                <div className="city-switcher-modal__cityMetaInline">{c.meta}</div>
+                              ) : null}
+                            </div>
                             {typeof c.totalLength === 'number' ? (
                               <div className="city-switcher-modal__cityTotal">
                                 {c.totalLength.toFixed(0) + ' km'}
