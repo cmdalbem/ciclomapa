@@ -207,7 +207,8 @@
 
 /* Slate scrim so white cards / search read clearly; solid white looked flat */
 .theme-light .city-switcher-modal__backdrop {
-  background: rgba(0, 0, 0, 0.3) !important;
+  /* Light backdrop to keep the map readable while the modal takes focus */
+  background: rgba(255, 255, 255, 0.7) !important;
 }
 
 /* Tailwind CSS overrides for light mode */

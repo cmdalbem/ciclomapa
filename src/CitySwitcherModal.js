@@ -524,7 +524,7 @@ function CitySwitcherModal() {
         >
           <div />
           <Button onClick={closeCityPicker} type="text" aria-label="Fechar">
-            <HiOutlineXMark className="text-2xl" style={{ color: 'white' }} aria-hidden />
+            <HiOutlineXMark className="text-2xl city-switcher-modal__closeIcon" aria-hidden />
           </Button>
         </div>
         <div className="city-switcher-modal__geocoderMount" aria-label="Buscar cidades" />
