@@ -76,5 +76,47 @@ root.render(
   </Router>
 );
 
-// Register service worker for PWA/TWA (production only; uses ciclomapa.org.br origin)
-serviceWorkerRegistration.register();
+// If a deploy happens while the PWA is "sleeping" on mobile, it's common to end up with
+// an old HTML shell referencing new/removed chunk files, resulting in a black screen.
+// This forces a clean reload once the updated service worker takes control.
+let hasReloadedForSwUpdate = false;
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hasReloadedForSwUpdate) return;
+    hasReloadedForSwUpdate = true;
+    window.location.reload();
+  });
+}
+
+// Last-resort guard: if a JS chunk fails to load (typically after an update), reload.
+window.addEventListener('error', (event) => {
+  const message = event?.message || '';
+  if (
+    typeof message === 'string' &&
+    message.includes('Loading chunk') &&
+    message.includes('failed')
+  ) {
+    window.location.reload();
+  }
+});
+window.addEventListener('unhandledrejection', (event) => {
+  const message = event?.reason?.message || '';
+  if (
+    typeof message === 'string' &&
+    message.includes('Loading chunk') &&
+    message.includes('failed')
+  ) {
+    window.location.reload();
+  }
+});
+
+// Register service worker for PWA/TWA (production only).
+// On update, activate the new SW immediately; controllerchange handler above reloads once.
+serviceWorkerRegistration.register({
+  onUpdate: (registration) => {
+    const waiting = registration?.waiting;
+    if (waiting) {
+      waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+  },
+});
