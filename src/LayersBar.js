@@ -306,7 +306,6 @@ class LayersBar extends Component {
             if (!shouldShowIndividual) return null;
 
             return categories.pontos.map((layer, index) => {
-              const displayName = layer.displayName || layer.name;
               const shouldMergeWithNext = index < categories.pontos.length - 1;
 
               return this.renderLayerButton({
@@ -315,7 +314,7 @@ class LayersBar extends Component {
                 isActive: layer.isActive,
                 icon: this.getPOIIcon(layer.icon, isDarkMode),
                 lineStyle: layer.style,
-                label: layer.shortName || displayName,
+                label: layer.shortName || layer.displayName || layer.name,
                 shouldMergeWithNext,
                 isAnimated: this.state.pontosAnimating,
               });
@@ -351,7 +350,6 @@ class LayersBar extends Component {
             if (!shouldShowIndividual) return null;
 
             return categories.cicloways.map((layer, index) => {
-              const displayName = layer.displayName || layer.name;
               const shouldMergeWithNext = index < categories.cicloways.length - 1;
 
               return this.renderLayerButton({
@@ -359,7 +357,7 @@ class LayersBar extends Component {
                 onClick: () => this.toggleCategoryLayer('cicloways', layer.id),
                 isActive: layer.isActive,
                 lineStyle: layer.style,
-                label: displayName,
+                label: layer.shortName || layer.displayName || layer.name,
                 shouldMergeWithNext,
                 isAnimated: this.state.ciclowaysAnimating,
               });
