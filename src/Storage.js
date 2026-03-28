@@ -43,12 +43,29 @@ class Storage {
     this.db = firebase.firestore();
   }
 
+  /**
+   * Answers "which city is this in storage?": one stable id for a given place so offline and cloud
+   * reads/writes stay aligned when the geocoder label varies (accents, casing, punctuation).
+   *
+   * Pass a custom key only when the stored id must not be derived from the visible city name
+   * (`options.storageKey` on `save`/`load`, chunking helpers, etc.). Falsy input returns `''`.
+   *
+   * @param {*} storageKeyOrName
+   * @returns {string}
+   */
   normalizeStorageKey(storageKeyOrName) {
     if (!storageKeyOrName) return '';
     return slugify(String(storageKeyOrName));
   }
 
   getAllCitiesDocs() {
+    /**
+     * WARNING: EXPENSIVE / INTERNAL-ONLY.
+     *
+     * Collection query over `cities` (root parts only: `part == ''`). Can return many documents.
+     * For debugging/tooling only, not user-facing hot paths. Prefer `.doc(slug).get()` when you
+     * already know the city slug.
+     */
     return new Promise((resolve) => {
       this.db
         .collection(DEFAULT_CITIES_COLLECTION)
@@ -125,10 +142,11 @@ class Storage {
   }
 
   /**
-   * Fetch multiple city stats docs from Firestore `stats` by id.
+   * Batch fetch stats docs: dedupes ids, caps parallel reads (vs unbounded `Promise.all` on
+   * {@link getCityStatsDoc}). Single id → use {@link getCityStatsDoc}.
    *
-   * @param {string[]} statsDocIds list of Firestore document ids.
-   * @returns {Promise<Map<string, object|null>>} map from id -> doc data or null.
+   * @param {string[]} statsDocIds Firestore document ids (usually `slugify(areaLabel)`).
+   * @returns {Promise<Map<string, object|null>>} id → data or `null`.
    */
   async getCityStatsDocs(statsDocIds) {
     const ids = Array.isArray(statsDocIds) ? statsDocIds : [];
@@ -170,7 +188,7 @@ class Storage {
 
   saveGeoJSONToFirestore(name, jsonStr, lengths, part) {
     const now = new Date();
-    let slug = slugify(name);
+    let slug = this.normalizeStorageKey(name);
 
     if (!!part && part > 1) {
       slug += part;
@@ -189,7 +207,7 @@ class Storage {
   }
 
   saveStatsToFirestore(name, lengths) {
-    let slug = slugify(name);
+    let slug = this.normalizeStorageKey(name);
 
     return this.db.collection('stats').doc(slug).set({
       lengths: lengths,
@@ -287,7 +305,6 @@ class Storage {
     // console.table(valuesTable);
   }
 
-  // New chunking strategy methods
   async saveWithChunking(name, geoJson, lengths, storageKeyOverride = null) {
     const compressed = this.compressJson(geoJson);
     const slug = this.normalizeStorageKey(storageKeyOverride || name);
