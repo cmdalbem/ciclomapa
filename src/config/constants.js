@@ -111,20 +111,6 @@ export const SUPPORTED_COUNTRY_LABEL_PT_BY_CODE = Object.freeze(
   }, /** @type {Record<string, string>} */ ({}))
 );
 
-export function getSupportedCountryFlagEmoji(countryCode) {
-  if (!countryCode) return '🏳️';
-  const row = SUPPORTED_COUNTRIES.find((c) => c.code === countryCode);
-  return row ? row.flag : '🏳️';
-}
-
-/** Suffix for Mapbox city picker placeholder when production (after "Buscar cidades "). */
-export function getCityGeocoderPlaceholderSuffixPtProd() {
-  const labels = SUPPORTED_COUNTRIES.map((c) => c.labelPt);
-  if (labels.length === 0) return 'no mundo';
-  if (labels.length === 1) return `em ${labels[0]}`;
-  return `em ${labels.slice(0, -1).join(', ')} e ${labels[labels.length - 1]}`;
-}
-
 /*
  * Map Layers
  */
