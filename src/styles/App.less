@@ -100,13 +100,20 @@ body {
   }
 }
 
-/* When analytics drawer is open (desktop), avoid covering the topbar content */
-#ciclomapa.analyticsSidebarOpen #topbar {
-  padding-right: calc(0.5rem + 16rem); // existing px-2 + drawer width (w-60)
-  transition: padding-right 620ms cubic-bezier(0.22, 1, 0.36, 1);
+/*
+ * When analytics drawer is open (desktop layout), avoid covering the topbar content.
+ * Only from `sm` up: `IS_MOBILE` is fixed at module load, so after a desktop→narrow
+ * resize the sidebar can stay mounted while the viewport is narrow — padding would
+ * crush the city picker. Narrow/mobile viewports rely on overlay; no reserved strip.
+ */
+@media (min-width: 640px) {
+  #ciclomapa.analyticsSidebarOpen #topbar {
+    padding-right: calc(0.5rem + 16rem); // existing px-2 + drawer width (w-64)
+    transition: padding-right 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (min-width: 640px) and (prefers-reduced-motion: reduce) {
   #ciclomapa.analyticsSidebarOpen #topbar {
     transition: none;
   }

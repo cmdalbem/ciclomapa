@@ -268,10 +268,10 @@ class AnalyticsSidebar extends Component {
 
           {this.props.location && (
             <>
-              <div className="mt-3 text-3xl tracking-tighter leading-none">
+              <div className="mt-3 text-3xl tracking-tighter leading-tight">
                 {this.props.location.split(',')[0]}
               </div>
-              <div className="mb-2 mt-0 text-xl tracking-tight opacity-50">
+              <div className="mb-2 mt-0 text-xl tracking-tight opacity-50 leading-tight">
                 {this.props.location.split(',')[1] && `${this.props.location.split(',')[1]}`}
               </div>
             </>
