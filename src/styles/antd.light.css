@@ -205,10 +205,6 @@
   color: rgba(0, 0, 0, 0.65) !important;
 }
 
-.theme-light .city-switcher-modal__backdrop {
-  background: rgba(255, 255, 255, 0.5) !important;
-}
-
 /* Tailwind CSS overrides for light mode */
 .theme-light .text-white {
   color: rgba(0, 0, 0, var(--tw-text-opacity)) !important;
