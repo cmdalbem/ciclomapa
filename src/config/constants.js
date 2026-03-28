@@ -67,7 +67,7 @@ export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
 /*
  * City picker
  */
-export const MAX_RECENT_CITIES = 6;
+export const MAX_RECENT_CITIES = IS_MOBILE ? 3 : 6;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
 export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = false;
 export const ENABLE_COMMENTS = true;
