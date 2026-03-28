@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 
-import { notification } from 'antd';
+import { appNotification } from './antdNotification';
 
 import { Input, Modal, Typography, Space, Checkbox, Row, Col } from 'antd';
 import { HiOutlineExternalLink } from 'react-icons/hi';
@@ -46,7 +46,7 @@ class CommentModal extends Component {
         email: this.state.email,
       })
       .then(() => {
-        notification.success({
+        appNotification.success({
           message: 'Novo comentário criado.',
         });
 
@@ -85,7 +85,7 @@ class CommentModal extends Component {
         open={this.props.open}
         onOk={this.handleOk}
         onCancel={this.props.onCancel}
-        destroyOnClose={true}
+        destroyOnHidden
         // width={360}
         centered={true}
         okButtonProps={{
@@ -94,7 +94,7 @@ class CommentModal extends Component {
         okText="Adicionar comentário"
         cancelText="Cancelar"
       >
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
           <Text type="secondary" className="text-white" style={{ opacity: 0.7 }}>
             Deixe um comentário para ajudar a melhorar o mapeamento da infraestrutura cicloviária da
             sua cidade. Se preferir, você também pode fazer a edição diretamente no{' '}
