@@ -723,4 +723,24 @@ function CitySwitcherModal() {
   );
 }
 
+/** Clears module-level stats cache and in-flight preload promise (Jest only; no-op in production). */
+export function resetCitySwitcherStatsCacheForTest(): void {
+  if (process.env.NODE_ENV !== 'test') return;
+  statsTotalsByDocIdCache.clear();
+  statsTotalsLoadPromise = null;
+}
+
+/**
+ * Replaces module-level stats cache (Jest only). Use to simulate prior loads, TTL, or cold state.
+ * Always clears the in-flight preload promise so the next mount runs a fresh preload pass.
+ */
+export function replaceCitySwitcherStatsCacheForTest(
+  entries: Map<string, StatsTotalsCacheEntry>
+): void {
+  if (process.env.NODE_ENV !== 'test') return;
+  statsTotalsByDocIdCache.clear();
+  statsTotalsLoadPromise = null;
+  entries.forEach((entry, id) => statsTotalsByDocIdCache.set(id, entry));
+}
+
 export default CitySwitcherModal;
