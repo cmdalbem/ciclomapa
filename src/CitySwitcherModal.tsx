@@ -7,6 +7,7 @@ import { slugify } from './utils/utils.js';
 import { getCanonicalCitySlug, getPredefinedCitySlugDefinition } from './config/citySlugCatalog.js';
 import { TOP_CITY_SLUGS } from './config/topCitiesCatalog.js';
 import {
+  ENABLE_CITY_SWITCHER_STATS_CACHE,
   LENGTH_COUNTED_LAYER_IDS,
   MAX_RECENT_CITIES,
   SUPPORTED_COUNTRY_CODES,
@@ -15,7 +16,12 @@ import {
 
 import './CitySwitcherModal.css';
 
+const CITY_SWITCHER_LOG_PREFIX = '[city-switcher]';
+
 const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
+
+/** Persisted map: canonical city slug → summed km for that city only (layers in LENGTH_COUNTED_LAYER_IDS). */
+const CITY_SWITCHER_STATS_KM_CACHE_KEY = 'ciclomapa_city_switcher_stats_km_v2';
 
 const CITY_PICKER_INPUT_SELECTOR = '.city-switcher-modal__geocoderMount input';
 
@@ -24,9 +30,78 @@ type StatsTotalsCacheEntry = {
   fetchedAt: number;
 };
 
-const statsTotalsByDocIdCache = new Map<string, StatsTotalsCacheEntry>();
+const statsTotalsByCanonicalSlugCache = new Map<string, StatsTotalsCacheEntry>();
+
+if (typeof window !== 'undefined' && ENABLE_CITY_SWITCHER_STATS_CACHE) {
+  try {
+    const raw = window.localStorage.getItem(CITY_SWITCHER_STATS_KM_CACHE_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      Object.entries(parsed as Record<string, unknown>).forEach(([slug, row]) => {
+        if (!slug || !row || typeof row !== 'object' || Array.isArray(row)) return;
+        const r = row as { value?: unknown; fetchedAt?: unknown };
+        const fetchedAt = typeof r.fetchedAt === 'number' ? r.fetchedAt : 0;
+        const value =
+          typeof r.value === 'number' && Number.isFinite(r.value)
+            ? r.value
+            : r.value === null
+              ? null
+              : null;
+        statsTotalsByCanonicalSlugCache.set(slug, { value, fetchedAt });
+      });
+    }
+  } catch {
+    // Ignore corrupt cache
+  }
+}
+
 let statsTotalsLoadPromise: Promise<void> | null = null;
+
+/** Browser timer id; avoid `ReturnType<typeof setTimeout>` (conflicts with Node typings in some setups). */
+let persistStatsKmCacheDebounceTimer: number | null = null;
+const PERSIST_STATS_KM_CACHE_DEBOUNCE_MS = 300;
+
+/** How long we trust a cached “no stats” result before retrying (5 minutes). */
 const STATS_TOTALS_MISS_TTL_MS = 5 * 60 * 1000;
+/**
+ * After this age, a cached non-null km total is refreshed in the background (stale-while-revalidate:
+ * UI keeps showing the old number until the new fetch finishes). 1 week.
+ */
+export const STATS_TOTALS_SUCCESS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** Max cities resolved in parallel; each city tries Firestore doc ids in order until one hits. */
+const STATS_FETCH_CONCURRENCY = 10;
+
+function persistStatsKmCache(): void {
+  if (typeof window === 'undefined' || !ENABLE_CITY_SWITCHER_STATS_CACHE) return;
+  try {
+    const out: Record<string, { value: number | null; fetchedAt: number }> = {};
+    statsTotalsByCanonicalSlugCache.forEach((entry, slug) => {
+      out[slug] = { value: entry.value, fetchedAt: entry.fetchedAt };
+    });
+    window.localStorage.setItem(CITY_SWITCHER_STATS_KM_CACHE_KEY, JSON.stringify(out));
+  } catch {
+    // Quota or private mode
+  }
+}
+
+function flushPersistStatsKmCache(): void {
+  if (persistStatsKmCacheDebounceTimer !== null) {
+    clearTimeout(persistStatsKmCacheDebounceTimer);
+    persistStatsKmCacheDebounceTimer = null;
+  }
+  persistStatsKmCache();
+}
+
+function schedulePersistStatsKmCache(): void {
+  if (typeof window === 'undefined' || !ENABLE_CITY_SWITCHER_STATS_CACHE) return;
+  if (persistStatsKmCacheDebounceTimer !== null) {
+    clearTimeout(persistStatsKmCacheDebounceTimer);
+  }
+  persistStatsKmCacheDebounceTimer = window.setTimeout(() => {
+    persistStatsKmCacheDebounceTimer = null;
+    persistStatsKmCache();
+  }, PERSIST_STATS_KM_CACHE_DEBOUNCE_MS);
+}
 
 type RecentCityEntry = {
   canonicalSlug: string;
@@ -96,6 +171,22 @@ function readRecentCitiesFromStorage(): RecentCityEntry[] {
   }
 }
 
+function recentCityEntriesEqual(a: RecentCityEntry[], b: RecentCityEntry[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (
+      x.canonicalSlug !== y.canonicalSlug ||
+      x.visitedAt !== y.visitedAt ||
+      x.areaLabel !== y.areaLabel
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function writeRecentCitiesToStorage(
   items: Array<{ slug: string; areaLabel: string; visitedAt: number }>
 ) {
@@ -104,6 +195,24 @@ function writeRecentCitiesToStorage(
   } catch {
     // Ignore
   }
+}
+
+/** Same canonical dedupe rules as `readRecentCitiesFromStorage`, for rows we just wrote to storage. */
+function recentCityEntriesFromStorageWriteShape(
+  items: Array<{ slug: string; areaLabel: string; visitedAt: number }>
+): RecentCityEntry[] {
+  const uniqueBySlug = new Map<string, RecentCityEntry>();
+  for (const item of items) {
+    if (!item.slug) continue;
+    const canonicalSlug = getCanonicalCitySlug(item.slug) || item.slug;
+    if (uniqueBySlug.has(canonicalSlug)) continue;
+    uniqueBySlug.set(canonicalSlug, {
+      canonicalSlug,
+      areaLabel: item.areaLabel || canonicalSlug,
+      visitedAt: item.visitedAt || 0,
+    });
+  }
+  return Array.from(uniqueBySlug.values()).slice(0, MAX_RECENT_CITIES);
 }
 
 function getFocusableElements(container: Element | null): HTMLElement[] {
@@ -186,116 +295,227 @@ function sumLengthsToKm(lengths: unknown): number | null {
   return Number.isFinite(total) && total > 0 ? total : null;
 }
 
-function buildStatsDocIdCandidates(cityObj: StatsCityLike | null | undefined): Set<string> {
-  const candidates = new Set<string>();
-  if (!cityObj) return candidates;
+/**
+ * Firestore `stats` doc ids to try for this city, in order. Canonical slug first (matches `saveStatsToFirestore`).
+ */
+function getStatsDocIdTryOrder(cityObj: StatsCityLike | null | undefined): string[] {
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+
+  const push = (value: string | undefined) => {
+    if (!value) return;
+    const s = slugify(String(value));
+    if (!s || seen.has(s)) return;
+    seen.add(s);
+    ordered.push(s);
+  };
+
+  if (!cityObj) return ordered;
 
   const canonicalSlug = getCanonicalCitySlug(cityObj.canonicalSlug || cityObj.slug || '');
-  const def = getPredefinedCitySlugDefinition(canonicalSlug);
+  const def = canonicalSlug ? getPredefinedCitySlugDefinition(canonicalSlug) : null;
 
-  addCandidateSlug(candidates, canonicalSlug);
-  addCandidateSlug(candidates, cityObj.areaLabel);
-  addCandidateSlug(candidates, cityObj.name);
-  addCandidateSlug(candidates, cityObj.meta ? `${cityObj.name}, ${cityObj.meta}` : '');
-  addCandidateSlug(candidates, def?.query);
-  addCandidateSlug(candidates, def?.staticLocation?.areaLabel);
+  push(canonicalSlug);
+  push(cityObj.areaLabel);
+  push(cityObj.name);
+  push(cityObj.meta ? `${cityObj.name}, ${cityObj.meta}` : '');
+  push(def?.query);
+  push(def?.staticLocation?.areaLabel);
 
-  return candidates;
+  return ordered;
 }
 
-async function preloadStatsTotalsForCities(cityObjs: StatsCityLike[]): Promise<void> {
-  const now = Date.now();
-  const toFetch = new Set<string>();
-  (Array.isArray(cityObjs) ? cityObjs : []).forEach((c) => {
-    for (const docId of buildStatsDocIdCandidates(c)) {
-      const cached = statsTotalsByDocIdCache.get(docId);
-      if (!cached) {
-        toFetch.add(docId);
-        continue;
-      }
-      if (cached.value === null && now - cached.fetchedAt > STATS_TOTALS_MISS_TTL_MS) {
-        toFetch.add(docId);
-      }
-    }
-  });
+function statsCacheEntryFromDoc(docData: unknown, fetchedAt: number): StatsTotalsCacheEntry {
+  const lengths =
+    docData && typeof docData === 'object' && 'lengths' in docData
+      ? (docData as { lengths?: unknown }).lengths
+      : undefined;
+  return { value: sumLengthsToKm(lengths), fetchedAt };
+}
 
-  if (toFetch.size === 0) return;
+type CityStatsPreloadTask = {
+  canonicalSlug: string;
+  cityObj: StatsCityLike;
+  tryOrder: string[];
+};
+
+function buildUniqueCityStatsPreloadTasks(cityObjs: StatsCityLike[]): CityStatsPreloadTask[] {
+  const seen = new Set<string>();
+  const tasks: CityStatsPreloadTask[] = [];
+  for (const c of Array.isArray(cityObjs) ? cityObjs : []) {
+    const canonicalSlug = getCanonicalCitySlug(c.canonicalSlug || c.slug || '') || '';
+    if (!canonicalSlug || seen.has(canonicalSlug)) continue;
+    const tryOrder = getStatsDocIdTryOrder(c);
+    if (tryOrder.length === 0) continue;
+    seen.add(canonicalSlug);
+    tasks.push({ canonicalSlug, cityObj: c, tryOrder });
+  }
+  return tasks;
+}
+
+function cityStatsCacheNeedsFetch(canonicalSlug: string, tryOrder: string[], now: number): boolean {
+  if (tryOrder.length === 0) return false;
+  const cached = statsTotalsByCanonicalSlugCache.get(canonicalSlug);
+  if (!cached) return true;
+  const age = now - cached.fetchedAt;
+  if (cached.value !== null) {
+    return age > STATS_TOTALS_SUCCESS_TTL_MS;
+  }
+  return age > STATS_TOTALS_MISS_TTL_MS;
+}
+
+async function resolveCityStatsKmForSlug(
+  storage: Storage,
+  canonicalSlug: string,
+  tryOrder: string[],
+  now: number
+): Promise<void> {
+  if (tryOrder.length === 0) return;
+
+  const previous = statsTotalsByCanonicalSlugCache.get(canonicalSlug);
+
+  for (const docId of tryOrder) {
+    const docData = await storage.getCityStatsDoc(docId);
+    const entry = statsCacheEntryFromDoc(docData, now);
+    if (typeof entry.value === 'number') {
+      statsTotalsByCanonicalSlugCache.set(canonicalSlug, entry);
+      schedulePersistStatsKmCache();
+      return;
+    }
+  }
+
+  if (typeof previous?.value === 'number') {
+    // Revalidation found no usable doc (offline / doc removed). Keep the last km; bump fetchedAt so we
+    // do not hammer Firestore on every picker open while still older than SUCCESS_TTL.
+    statsTotalsByCanonicalSlugCache.set(canonicalSlug, {
+      value: previous.value,
+      fetchedAt: now,
+    });
+    schedulePersistStatsKmCache();
+    return;
+  }
+
+  statsTotalsByCanonicalSlugCache.set(canonicalSlug, { value: null, fetchedAt: now });
+  schedulePersistStatsKmCache();
+}
+
+async function preloadStatsTotalsForCities(
+  cityObjs: StatsCityLike[],
+  options?: { onCacheUpdate?: () => void }
+): Promise<void> {
+  const now = Date.now();
+  const tasks = buildUniqueCityStatsPreloadTasks(cityObjs).filter((t) =>
+    cityStatsCacheNeedsFetch(t.canonicalSlug, t.tryOrder, now)
+  );
+
+  if (tasks.length === 0) return;
 
   const storage = new Storage();
-  const docsById = await storage.getCityStatsDocs(Array.from(toFetch));
-  for (const [id, docData] of docsById.entries()) {
-    const lengths =
-      docData && typeof docData === 'object' && 'lengths' in docData
-        ? (docData as { lengths?: unknown }).lengths
-        : undefined;
-    statsTotalsByDocIdCache.set(id, { value: sumLengthsToKm(lengths), fetchedAt: now });
-  }
-}
+  const concurrency = Math.min(STATS_FETCH_CONCURRENCY, tasks.length);
+  let nextIndex = 0;
 
-function addCandidateSlug(next: Set<string>, value: string | undefined): void {
-  if (!value) return;
-  const s = slugify(String(value));
-  if (!s) return;
-  next.add(s);
+  async function worker(): Promise<void> {
+    for (;;) {
+      const i = nextIndex++;
+      if (i >= tasks.length) return;
+      const { canonicalSlug, tryOrder } = tasks[i];
+      await resolveCityStatsKmForSlug(storage, canonicalSlug, tryOrder, now);
+      options?.onCacheUpdate?.();
+    }
+  }
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  flushPersistStatsKmCache();
 }
 
 function getRealCityTotalLength(
   cityObj: StatsCityLike | null | undefined,
-  totalsByDocId: Map<string, StatsTotalsCacheEntry>
+  totalsByCanonicalSlug: Map<string, StatsTotalsCacheEntry>
 ): number | null {
-  if (!totalsByDocId || totalsByDocId.size === 0 || !cityObj) return null;
-  for (const docId of buildStatsDocIdCandidates(cityObj)) {
-    const entry = totalsByDocId.get(docId);
-    if (entry && typeof entry.value === 'number') return entry.value;
-  }
-  return null;
+  if (!cityObj || !totalsByCanonicalSlug) return null;
+  const canonicalSlug = getCanonicalCitySlug(cityObj.canonicalSlug || cityObj.slug || '');
+  if (!canonicalSlug) return null;
+  const entry = totalsByCanonicalSlug.get(canonicalSlug);
+  return entry && typeof entry.value === 'number' ? entry.value : null;
 }
 
 function shouldShowTotalSkeleton(
   cityObj: StatsCityLike | null | undefined,
-  totalsByDocId: Map<string, StatsTotalsCacheEntry>,
+  totalsByCanonicalSlug: Map<string, StatsTotalsCacheEntry>,
   isLoadingTotals: boolean
 ): boolean {
   if (!isLoadingTotals) return false;
-  const candidates = buildStatsDocIdCandidates(cityObj);
-  if (candidates.size === 0) return false;
-  for (const docId of candidates) {
-    if (!totalsByDocId.has(docId)) return true;
-  }
-  return false;
+  const canonicalSlug = getCanonicalCitySlug(cityObj?.canonicalSlug || cityObj?.slug || '');
+  if (!canonicalSlug) return false;
+  return !totalsByCanonicalSlug.has(canonicalSlug);
 }
 
-function usePreloadedStatsTotalsByDocId(cityObjs: StatsCityLike[]) {
-  const [statsTotalsByDocId, setStatsTotalsByDocId] = useState(
-    () => new Map(statsTotalsByDocIdCache)
+function attachCityStatsTotals(
+  cityObj: StatsCityLike,
+  totalsByCanonicalSlug: Map<string, StatsTotalsCacheEntry>,
+  isLoadingTotals: boolean
+): { totalLength: number | null; isLoadingTotal: boolean } {
+  const totalLength = getRealCityTotalLength(cityObj, totalsByCanonicalSlug);
+  const isLoadingTotal =
+    typeof totalLength !== 'number' &&
+    shouldShowTotalSkeleton(cityObj, totalsByCanonicalSlug, isLoadingTotals);
+  return { totalLength, isLoadingTotal };
+}
+
+function usePreloadedStatsTotalsByCanonicalSlug(cityObjs: StatsCityLike[], isPickerOpen: boolean) {
+  const [statsTotalsByCanonicalSlug, setStatsTotalsByCanonicalSlug] = useState(
+    () => new Map(statsTotalsByCanonicalSlugCache)
   );
   const [isLoadingTotals, setIsLoadingTotals] = useState(false);
+  const effectGenerationRef = useRef(0);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!isPickerOpen) {
+      setIsLoadingTotals(false);
+      return;
+    }
+
+    effectGenerationRef.current += 1;
+    const myGeneration = effectGenerationRef.current;
     const list = Array.isArray(cityObjs) ? cityObjs : [];
 
     setIsLoadingTotals(true);
+    const applyCacheToState = () => {
+      if (effectGenerationRef.current !== myGeneration) return;
+      setStatsTotalsByCanonicalSlug(new Map(statsTotalsByCanonicalSlugCache));
+    };
     if (!statsTotalsLoadPromise) {
-      statsTotalsLoadPromise = preloadStatsTotalsForCities(list).finally(() => {
+      statsTotalsLoadPromise = preloadStatsTotalsForCities(list, {
+        onCacheUpdate: applyCacheToState,
+      }).finally(() => {
         statsTotalsLoadPromise = null;
       });
     } else {
-      statsTotalsLoadPromise = statsTotalsLoadPromise.then(() => preloadStatsTotalsForCities(list));
+      statsTotalsLoadPromise = statsTotalsLoadPromise.then(() =>
+        preloadStatsTotalsForCities(list, { onCacheUpdate: applyCacheToState })
+      );
     }
 
-    void Promise.resolve(statsTotalsLoadPromise).then(() => {
-      if (cancelled) return;
-      setStatsTotalsByDocId(new Map(statsTotalsByDocIdCache));
-      setIsLoadingTotals(false);
-    });
+    void Promise.resolve(statsTotalsLoadPromise)
+      .then(() => {
+        if (effectGenerationRef.current !== myGeneration) return;
+        setStatsTotalsByCanonicalSlug(new Map(statsTotalsByCanonicalSlugCache));
+        setIsLoadingTotals(false);
+      })
+      .catch((err: unknown) => {
+        if (effectGenerationRef.current !== myGeneration) return;
+        console.warn(CITY_SWITCHER_LOG_PREFIX, 'stats preload failed', err);
+        setIsLoadingTotals(false);
+      });
 
     return () => {
-      cancelled = true;
+      if (effectGenerationRef.current === myGeneration) {
+        effectGenerationRef.current += 1;
+      }
     };
-  }, [cityObjs]);
+  }, [cityObjs, isPickerOpen]);
 
-  return { statsTotalsByDocId, isLoadingTotals };
+  return { statsTotalsByCanonicalSlug, isLoadingTotals };
 }
 
 function useCityPickerFocusAndRestore({
@@ -313,6 +533,7 @@ function useCityPickerFocusAndRestore({
     const onBodyClassChange = () => {
       const open = body.classList.contains('show-city-picker');
       if (open && !cityPickerWasOpenRef.current) {
+        console.debug(CITY_SWITCHER_LOG_PREFIX, 'opened');
         lastFocusedBeforeOpenRef.current = document.activeElement;
         const el = contentScrollElRef.current;
         if (el) el.scrollTop = 0;
@@ -321,6 +542,7 @@ function useCityPickerFocusAndRestore({
         });
       }
       if (!open && cityPickerWasOpenRef.current) {
+        console.debug(CITY_SWITCHER_LOG_PREFIX, 'closed');
         const toFocus = lastFocusedBeforeOpenRef.current;
         lastFocusedBeforeOpenRef.current = null;
         if (
@@ -415,6 +637,53 @@ function useCityPickerKeyboardTrap({
 
 type PickableCity = CityWithStats | RecentCityWithStats;
 
+type CityPickerRowModel = {
+  canonicalSlug: string;
+  name: string;
+  meta: string;
+  totalLength: number | null;
+  isLoadingTotal: boolean;
+};
+
+function CityPickerCityCard({
+  city,
+  stagger,
+  onPick,
+}: {
+  city: CityPickerRowModel;
+  stagger: number;
+  onPick: () => void;
+}) {
+  return (
+    <div
+      className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
+      style={{ '--city-content-stagger': stagger } as React.CSSProperties}
+      role="listitem"
+    >
+      <button type="button" className="city-switcher-modal__cityBtn" onClick={onPick}>
+        <div className="city-switcher-modal__cityTopRow">
+          <div className="city-switcher-modal__cityNameWrap">
+            <div className="city-switcher-modal__cityName">{city.name}</div>
+            {city.meta ? (
+              <div className="city-switcher-modal__cityMetaInline">{city.meta}</div>
+            ) : null}
+          </div>
+          {typeof city.totalLength === 'number' ? (
+            <div className="city-switcher-modal__cityTotal">
+              {city.totalLength.toFixed(0) + ' km'}
+            </div>
+          ) : city.isLoadingTotal ? (
+            <div className="city-switcher-modal__cityTotal" aria-hidden="true">
+              <span className="city-switcher-modal__cityTotalSkeleton" />
+            </div>
+          ) : null}
+        </div>
+        {city.meta ? <div className="city-switcher-modal__cityMeta">{city.meta}</div> : null}
+      </button>
+    </div>
+  );
+}
+
 function CitySwitcherModal() {
   const navigate = useNavigate();
   const { city } = useParams();
@@ -452,16 +721,38 @@ function CitySwitcherModal() {
 
   const [recentCityEntries, setRecentCityEntries] = useState(() => readRecentCitiesFromStorage());
 
+  const [isCityPickerOpen, setIsCityPickerOpen] = useState(
+    () => typeof document !== 'undefined' && document.body.classList.contains('show-city-picker')
+  );
+
+  useLayoutEffect(() => {
+    const body = document.body;
+    if (!body) return undefined;
+    const sync = () => {
+      setIsCityPickerOpen(body.classList.contains('show-city-picker'));
+    };
+    const observer = new MutationObserver(sync);
+    observer.observe(body, { attributes: true, attributeFilter: ['class'] });
+    sync();
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
-    setRecentCityEntries(readRecentCitiesFromStorage());
+    console.debug(CITY_SWITCHER_LOG_PREFIX, 'reload recent cities from storage', {
+      routeCity: city,
+    });
+    const next = readRecentCitiesFromStorage();
+    setRecentCityEntries((prev) => (recentCityEntriesEqual(prev, next) ? prev : next));
   }, [city]);
 
   const statsCityCandidates = useMemo((): StatsCityLike[] => {
     return [...topCityBase, ...recentCityEntries];
   }, [topCityBase, recentCityEntries]);
 
-  const { statsTotalsByDocId, isLoadingTotals } =
-    usePreloadedStatsTotalsByDocId(statsCityCandidates);
+  const { statsTotalsByCanonicalSlug, isLoadingTotals } = usePreloadedStatsTotalsByCanonicalSlug(
+    statsCityCandidates,
+    isCityPickerOpen
+  );
 
   const topCities = useMemo<CityWithStats[]>(() => {
     return topCityBase.map((c) => {
@@ -471,13 +762,14 @@ function CitySwitcherModal() {
         name: c.name,
         meta: c.meta,
       };
-      const totalLength = getRealCityTotalLength(cityObj, statsTotalsByDocId);
-      const isLoadingTotal =
-        typeof totalLength !== 'number' &&
-        shouldShowTotalSkeleton(cityObj, statsTotalsByDocId, isLoadingTotals);
+      const { totalLength, isLoadingTotal } = attachCityStatsTotals(
+        cityObj,
+        statsTotalsByCanonicalSlug,
+        isLoadingTotals
+      );
       return { ...c, totalLength, isLoadingTotal };
     });
-  }, [topCityBase, statsTotalsByDocId, isLoadingTotals]);
+  }, [topCityBase, statsTotalsByCanonicalSlug, isLoadingTotals]);
 
   const recentCities = useMemo<RecentCityWithStats[]>(() => {
     return recentCityEntries
@@ -490,10 +782,11 @@ function CitySwitcherModal() {
           .map((s) => s.trim());
         const meta = getPrimaryAreaMeta(rest);
         const cityObj: StatsCityLike = { canonicalSlug: it.canonicalSlug, areaLabel, name, meta };
-        const totalLength = getRealCityTotalLength(cityObj, statsTotalsByDocId);
-        const isLoadingTotal =
-          typeof totalLength !== 'number' &&
-          shouldShowTotalSkeleton(cityObj, statsTotalsByDocId, isLoadingTotals);
+        const { totalLength, isLoadingTotal } = attachCityStatsTotals(
+          cityObj,
+          statsTotalsByCanonicalSlug,
+          isLoadingTotals
+        );
         return {
           ...it,
           areaLabel,
@@ -505,7 +798,7 @@ function CitySwitcherModal() {
         };
       })
       .filter((row): row is RecentCityWithStats => row !== null);
-  }, [recentCityEntries, statsTotalsByDocId, isLoadingTotals]);
+  }, [recentCityEntries, statsTotalsByCanonicalSlug, isLoadingTotals]);
 
   const topCitiesByCountry = useMemo<CountryGroup[]>(() => {
     const map = new Map<string, CountryGroup>();
@@ -548,16 +841,28 @@ function CitySwitcherModal() {
         ].slice(0, MAX_RECENT_CITIES);
 
         writeRecentCitiesToStorage(nextItems);
-        return readRecentCitiesFromStorage();
+        return recentCityEntriesFromStorageWriteShape(nextItems);
       });
     },
     []
   );
 
   const onPickCity = useCallback(
-    (cityObj: PickableCity) => {
+    (cityObj: PickableCity, source: 'recent' | 'top') => {
       const nextSlug = cityObj?.canonicalSlug;
-      if (!nextSlug) return;
+      if (!nextSlug) {
+        console.debug(CITY_SWITCHER_LOG_PREFIX, 'pick ignored: missing canonicalSlug', {
+          source,
+          cityObj,
+        });
+        return;
+      }
+
+      console.debug(CITY_SWITCHER_LOG_PREFIX, 'pick city', {
+        source,
+        slug: nextSlug,
+        areaLabel: cityObj?.areaLabel,
+      });
 
       recordRecentlyVisitedCity(nextSlug, cityObj?.areaLabel);
 
@@ -617,44 +922,14 @@ function CitySwitcherModal() {
                 </div>
               </div>
               <div className="city-switcher-modal__citiesGrid" role="list">
-                {recentCities.map((c) => {
-                  const stagger = contentStaggerIndex++;
-                  return (
-                    <div
-                      key={c.canonicalSlug}
-                      className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
-                      style={{ '--city-content-stagger': stagger } as React.CSSProperties}
-                      role="listitem"
-                    >
-                      <button
-                        type="button"
-                        className="city-switcher-modal__cityBtn"
-                        onClick={() => onPickCity(c)}
-                      >
-                        <div className="city-switcher-modal__cityTopRow">
-                          <div className="city-switcher-modal__cityNameWrap">
-                            <div className="city-switcher-modal__cityName">{c.name}</div>
-                            {c.meta ? (
-                              <div className="city-switcher-modal__cityMetaInline">{c.meta}</div>
-                            ) : null}
-                          </div>
-                          {typeof c.totalLength === 'number' ? (
-                            <div className="city-switcher-modal__cityTotal">
-                              {c.totalLength.toFixed(0) + ' km'}
-                            </div>
-                          ) : c.isLoadingTotal ? (
-                            <div className="city-switcher-modal__cityTotal" aria-hidden="true">
-                              <span className="city-switcher-modal__cityTotalSkeleton" />
-                            </div>
-                          ) : null}
-                        </div>
-                        {c.meta ? (
-                          <div className="city-switcher-modal__cityMeta">{c.meta}</div>
-                        ) : null}
-                      </button>
-                    </div>
-                  );
-                })}
+                {recentCities.map((c) => (
+                  <CityPickerCityCard
+                    key={c.canonicalSlug}
+                    city={c}
+                    stagger={contentStaggerIndex++}
+                    onPick={() => onPickCity(c, 'recent')}
+                  />
+                ))}
               </div>
             </section>
           )}
@@ -675,44 +950,14 @@ function CitySwitcherModal() {
                   <div className="city-switcher-modal__sectionTitle">{group.countryLabel}</div>
                 </div>
                 <div className="city-switcher-modal__citiesGrid" role="list">
-                  {cities.map((c) => {
-                    const stagger = contentStaggerIndex++;
-                    return (
-                      <div
-                        key={c.canonicalSlug}
-                        className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
-                        style={{ '--city-content-stagger': stagger } as React.CSSProperties}
-                        role="listitem"
-                      >
-                        <button
-                          type="button"
-                          className="city-switcher-modal__cityBtn"
-                          onClick={() => onPickCity(c)}
-                        >
-                          <div className="city-switcher-modal__cityTopRow">
-                            <div className="city-switcher-modal__cityNameWrap">
-                              <div className="city-switcher-modal__cityName">{c.name}</div>
-                              {c.meta ? (
-                                <div className="city-switcher-modal__cityMetaInline">{c.meta}</div>
-                              ) : null}
-                            </div>
-                            {typeof c.totalLength === 'number' ? (
-                              <div className="city-switcher-modal__cityTotal">
-                                {c.totalLength.toFixed(0) + ' km'}
-                              </div>
-                            ) : c.isLoadingTotal ? (
-                              <div className="city-switcher-modal__cityTotal" aria-hidden="true">
-                                <span className="city-switcher-modal__cityTotalSkeleton" />
-                              </div>
-                            ) : null}
-                          </div>
-                          {c.meta ? (
-                            <div className="city-switcher-modal__cityMeta">{c.meta}</div>
-                          ) : null}
-                        </button>
-                      </div>
-                    );
-                  })}
+                  {cities.map((c) => (
+                    <CityPickerCityCard
+                      key={c.canonicalSlug}
+                      city={c}
+                      stagger={contentStaggerIndex++}
+                      onPick={() => onPickCity(c, 'top')}
+                    />
+                  ))}
                 </div>
               </section>
             );
@@ -726,8 +971,17 @@ function CitySwitcherModal() {
 /** Clears module-level stats cache and in-flight preload promise (Jest only; no-op in production). */
 export function resetCitySwitcherStatsCacheForTest(): void {
   if (process.env.NODE_ENV !== 'test') return;
-  statsTotalsByDocIdCache.clear();
+  statsTotalsByCanonicalSlugCache.clear();
   statsTotalsLoadPromise = null;
+  if (persistStatsKmCacheDebounceTimer !== null) {
+    clearTimeout(persistStatsKmCacheDebounceTimer);
+    persistStatsKmCacheDebounceTimer = null;
+  }
+  try {
+    window.localStorage.removeItem(CITY_SWITCHER_STATS_KM_CACHE_KEY);
+  } catch {
+    // Ignore
+  }
 }
 
 /**
@@ -738,9 +992,15 @@ export function replaceCitySwitcherStatsCacheForTest(
   entries: Map<string, StatsTotalsCacheEntry>
 ): void {
   if (process.env.NODE_ENV !== 'test') return;
-  statsTotalsByDocIdCache.clear();
+  statsTotalsByCanonicalSlugCache.clear();
   statsTotalsLoadPromise = null;
-  entries.forEach((entry, id) => statsTotalsByDocIdCache.set(id, entry));
+  if (persistStatsKmCacheDebounceTimer !== null) {
+    clearTimeout(persistStatsKmCacheDebounceTimer);
+    persistStatsKmCacheDebounceTimer = null;
+  }
+  entries.forEach((entry, canonicalSlug) =>
+    statsTotalsByCanonicalSlugCache.set(canonicalSlug, entry)
+  );
 }
 
 export default CitySwitcherModal;

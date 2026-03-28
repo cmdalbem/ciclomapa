@@ -4,16 +4,19 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import Storage from './Storage.js';
 import { slugify } from './utils/utils.js';
+import { getCanonicalCitySlug } from './config/citySlugCatalog.js';
+import { TOP_CITY_SLUGS } from './config/topCitiesCatalog.js';
 import CitySwitcherModal, {
   replaceCitySwitcherStatsCacheForTest,
   resetCitySwitcherStatsCacheForTest,
+  STATS_TOTALS_SUCCESS_TTL_MS,
 } from './CitySwitcherModal';
 
 const RECENT_KEY = 'ciclomapa_recent_cities_v1';
 
 beforeEach(() => {
   resetCitySwitcherStatsCacheForTest();
-  jest.spyOn(Storage.prototype, 'getCityStatsDocs').mockResolvedValue(new Map());
+  jest.spyOn(Storage.prototype, 'getCityStatsDoc').mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -127,20 +130,17 @@ it('shows Recentes when localStorage has recent cities with catalog entries', as
 
 describe('city stats totals from Storage', () => {
   it('sums LENGTH_COUNTED_LAYER_IDS from the stats doc into a single km label', async () => {
-    (Storage.prototype.getCityStatsDocs as jest.Mock).mockResolvedValue(
-      new Map([
-        [
-          'sao-paulo',
-          {
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) =>
+      id === 'sao-paulo'
+        ? Promise.resolve({
             lengths: {
               ciclovia: 10,
               ciclofaixa: 5,
               ciclorrota: 2,
               'calcada-compartilhada': 1,
             },
-          },
-        ],
-      ])
+          })
+        : Promise.resolve(null)
     );
 
     renderOpenPicker('/curitiba');
@@ -154,8 +154,8 @@ describe('city stats totals from Storage', () => {
     const areaDocId = slugify('São Paulo, São Paulo, Brasil');
     expect(areaDocId).not.toBe('sao-paulo');
 
-    (Storage.prototype.getCityStatsDocs as jest.Mock).mockResolvedValue(
-      new Map([[areaDocId, { lengths: { ciclovia: 33 } }]])
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) =>
+      id === areaDocId ? Promise.resolve({ lengths: { ciclovia: 33 } }) : Promise.resolve(null)
     );
 
     renderOpenPicker('/curitiba');
@@ -166,11 +166,15 @@ describe('city stats totals from Storage', () => {
   });
 
   it('shows skeleton while preload is pending, then replaces it with km once Storage resolves', async () => {
-    let resolveDocs!: (m: Map<string, unknown>) => void;
-    const deferred = new Promise<Map<string, unknown>>((res) => {
-      resolveDocs = res;
+    let finishSaoPaulo!: () => void;
+    const saoPauloReady = new Promise<void>((res) => {
+      finishSaoPaulo = res;
     });
-    (Storage.prototype.getCityStatsDocs as jest.Mock).mockImplementation(() => deferred);
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) =>
+      id === 'sao-paulo'
+        ? saoPauloReady.then(() => ({ lengths: { ciclovia: 44 } }))
+        : Promise.resolve(null)
+    );
 
     renderOpenPicker('/curitiba');
 
@@ -180,7 +184,7 @@ describe('city stats totals from Storage', () => {
       ).not.toBeNull();
     });
 
-    resolveDocs(new Map([['sao-paulo', { lengths: { ciclovia: 44 } }]]));
+    finishSaoPaulo();
 
     await waitFor(() => {
       expect(within(saoPauloButton()).getByText('44 km')).toBeInTheDocument();
@@ -189,16 +193,10 @@ describe('city stats totals from Storage', () => {
   });
 
   it('after Storage returns null docs for all requested ids, shows no km and no perpetual skeleton', async () => {
-    (Storage.prototype.getCityStatsDocs as jest.Mock).mockImplementation(async (ids: string[]) => {
-      const m = new Map();
-      ids.forEach((id: string) => m.set(id, null));
-      return m;
-    });
-
     renderOpenPicker('/curitiba');
 
     await waitFor(() => {
-      expect(Storage.prototype.getCityStatsDocs).toHaveBeenCalled();
+      expect(Storage.prototype.getCityStatsDoc).toHaveBeenCalled();
     });
 
     const btn = saoPauloButton();
@@ -208,16 +206,10 @@ describe('city stats totals from Storage', () => {
     expect(within(btn).queryByText(/^\d+ km$/)).toBeNull();
   });
 
-  it('does not call Storage on remount when the first preload wrote cache rows for every requested doc id', async () => {
-    // preloadStatsTotalsForCities only calls set() for ids present on the returned Map; omitting ids
-    // would leave holes and force refetch on the next mount for other cities' candidates.
-    (Storage.prototype.getCityStatsDocs as jest.Mock).mockImplementation(async (ids: string[]) => {
-      const m = new Map<string, unknown>();
-      ids.forEach((id: string) => {
-        m.set(id, id === 'sao-paulo' ? { lengths: { ciclovia: 60 } } : null);
-      });
-      return m;
-    });
+  it('does not call Storage on remount when the first preload cached km totals per canonical slug', async () => {
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) =>
+      id === 'sao-paulo' ? Promise.resolve({ lengths: { ciclovia: 60 } }) : Promise.resolve(null)
+    );
 
     const first = renderOpenPicker('/curitiba');
     await waitFor(() => {
@@ -227,7 +219,7 @@ describe('city stats totals from Storage', () => {
       expect(saoPauloButton().querySelector('.city-switcher-modal__cityTotalSkeleton')).toBeNull();
     });
 
-    (Storage.prototype.getCityStatsDocs as jest.Mock).mockClear();
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockClear();
 
     first.unmount();
     document.body.classList.add('show-city-picker');
@@ -242,7 +234,55 @@ describe('city stats totals from Storage', () => {
     await waitFor(() => {
       expect(within(saoPauloButton()).getByText('60 km')).toBeInTheDocument();
     });
-    expect(Storage.prototype.getCityStatsDocs).not.toHaveBeenCalled();
+    expect(Storage.prototype.getCityStatsDoc).not.toHaveBeenCalled();
+  });
+
+  it('keeps showing cached km while revalidating a stale success (no skeleton)', async () => {
+    let finishSp!: () => void;
+    const saoPauloReady = new Promise<void>((res) => {
+      finishSp = res;
+    });
+    const staleFetchedAt = Date.now() - STATS_TOTALS_SUCCESS_TTL_MS - 60 * 1000;
+    replaceCitySwitcherStatsCacheForTest(
+      new Map([['sao-paulo', { value: 41, fetchedAt: staleFetchedAt }]])
+    );
+
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) =>
+      id === 'sao-paulo'
+        ? saoPauloReady.then(() => ({ lengths: { ciclovia: 42 } }))
+        : Promise.resolve(null)
+    );
+
+    renderOpenPicker('/curitiba');
+
+    await waitFor(() => {
+      expect(within(saoPauloButton()).getByText('41 km')).toBeInTheDocument();
+    });
+    expect(saoPauloButton().querySelector('.city-switcher-modal__cityTotalSkeleton')).toBeNull();
+
+    finishSp();
+
+    await waitFor(() => {
+      expect(within(saoPauloButton()).getByText('42 km')).toBeInTheDocument();
+    });
+  });
+
+  it('refetches when cache has a stale success past STATS_TOTALS_SUCCESS_TTL_MS', async () => {
+    const staleFetchedAt = Date.now() - STATS_TOTALS_SUCCESS_TTL_MS - 60 * 1000;
+    replaceCitySwitcherStatsCacheForTest(
+      new Map([['sao-paulo', { value: 77, fetchedAt: staleFetchedAt }]])
+    );
+
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) =>
+      id === 'sao-paulo' ? Promise.resolve({ lengths: { ciclovia: 88 } }) : Promise.resolve(null)
+    );
+
+    renderOpenPicker('/curitiba');
+
+    await waitFor(() => {
+      expect(within(saoPauloButton()).getByText('88 km')).toBeInTheDocument();
+    });
+    expect(Storage.prototype.getCityStatsDoc).toHaveBeenCalled();
   });
 
   it('refetches when cache has a stale null miss past STATS_TOTALS_MISS_TTL_MS', async () => {
@@ -251,8 +291,8 @@ describe('city stats totals from Storage', () => {
       new Map([['sao-paulo', { value: null, fetchedAt: staleFetchedAt }]])
     );
 
-    (Storage.prototype.getCityStatsDocs as jest.Mock).mockResolvedValue(
-      new Map([['sao-paulo', { lengths: { ciclovia: 12 } }]])
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) =>
+      id === 'sao-paulo' ? Promise.resolve({ lengths: { ciclovia: 12 } }) : Promise.resolve(null)
     );
 
     renderOpenPicker('/curitiba');
@@ -260,29 +300,32 @@ describe('city stats totals from Storage', () => {
     await waitFor(() => {
       expect(within(saoPauloButton()).getByText('12 km')).toBeInTheDocument();
     });
-    expect(Storage.prototype.getCityStatsDocs).toHaveBeenCalled();
+    expect(Storage.prototype.getCityStatsDoc).toHaveBeenCalled();
   });
 
-  it('does not call Storage when replaceCitySwitcherStatsCacheForTest seeds every id the preload would request', async () => {
+  it('does not call Storage when replaceCitySwitcherStatsCacheForTest seeds every canonical slug', async () => {
     const requested = new Set<string>();
-    (Storage.prototype.getCityStatsDocs as jest.Mock).mockImplementation(async (ids: string[]) => {
-      ids.forEach((id: string) => requested.add(id));
-      const m = new Map();
-      ids.forEach((id: string) => m.set(id, null));
-      return m;
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) => {
+      requested.add(id);
+      return Promise.resolve(null);
     });
 
     const first = renderOpenPicker('/curitiba');
     await waitFor(() => {
-      expect(Storage.prototype.getCityStatsDocs).toHaveBeenCalled();
+      expect(Storage.prototype.getCityStatsDoc).toHaveBeenCalled();
     });
-    expect(requested.size).toBeGreaterThan(100);
+    const uniqueTopSlugs = new Set(
+      TOP_CITY_SLUGS.map((slug) => getCanonicalCitySlug(slug) || slug)
+    );
+    expect(requested.size).toBeLessThanOrEqual(uniqueTopSlugs.size * 8);
 
     const warmCache = new Map<string, { value: null; fetchedAt: number }>();
     const now = Date.now();
-    requested.forEach((id) => warmCache.set(id, { value: null, fetchedAt: now }));
+    uniqueTopSlugs.forEach((canonical) =>
+      warmCache.set(canonical, { value: null, fetchedAt: now })
+    );
     replaceCitySwitcherStatsCacheForTest(warmCache);
-    (Storage.prototype.getCityStatsDocs as jest.Mock).mockClear();
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockClear();
 
     first.unmount();
     renderOpenPicker('/porto-alegre');
@@ -290,6 +333,6 @@ describe('city stats totals from Storage', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /porto alegre/i })).toBeInTheDocument();
     });
-    expect(Storage.prototype.getCityStatsDocs).not.toHaveBeenCalled();
+    expect(Storage.prototype.getCityStatsDoc).not.toHaveBeenCalled();
   });
 });

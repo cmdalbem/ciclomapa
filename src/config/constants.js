@@ -161,6 +161,13 @@ export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAUL
  */
 
 export const IS_PROD = window.location.hostname === 'ciclomapa.app';
+
+/**
+ * City switcher: persist km totals in localStorage and reload them on startup.
+ * True only on production so dev / preview always hit Firestore after a full refresh (in-memory cache still applies for the current tab).
+ */
+export const ENABLE_CITY_SWITCHER_STATS_CACHE = IS_PROD;
+
 export const DEFAULT_SIDEBAR_OPEN = false;
 export const SAVE_TO_FIREBASE = true;
 export const DISABLE_DATA_HEALTY_TEST = false;
