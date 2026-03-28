@@ -1,32 +1,29 @@
 [
   {
-    "name": "DEBUG - Inclusas",
+    "name": "🛠️ Vias sem nome",
     "onlyDebug": true,
-    "description": "Vias inclusas no cálculo de total de kilometros da cidade.",
-    "filters": [["ciclomapa:considered", "true"]],
-    "style": {
-      "lineColor": "#90EE90",
-      "lineWidth": 12,
-      "borderColor": "green",
-      "borderStyle": "solid",
-      "lineStyle": "dashed"
-    }
-  },
-  {
-    "name": "DEBUG - Vias sem nome",
-    "onlyDebug": true,
-    "description": "Vias sem nome são problemáticas porque nosso algoritmo de detecção de vias duplicadas necessita que a via tenha nome para sabermos que os segmentos pertencem à mesma rua e portanto precisam ser comparados entre sim.",
-    "filters": [["ciclomapa:unnamed", "true"]],
+    "description": "No modo legacy, segmentos não pareados (vies sem correspondência) mostram o que o algoritmo não conseguiu emparelhar.",
+    "filters": [
+      [
+        ["ciclomapa:engine", "legacy_name_angle"],
+        ["ciclomapa:paired", "false"]
+      ]
+    ],
     "style": {
       "lineColor": "#e03e3d",
       "lineWidth": 8
     }
   },
   {
-    "name": "DEBUG - Falsos positivos",
+    "name": "🛠️ Falsos positivos",
     "onlyDebug": true,
-    "description": "Vias originalmente detectadas como sendo duplicadas pelo nosso algoritmo porém filtradas depois por uma heurística para detectar faltos positivos.",
-    "filters": [["ciclomapa:ignored", "true"]],
+    "description": "Segmentos que foram marcados como duplicados pelo motor e depois rejeitados como falso positivo.",
+    "filters": [
+      [
+        ["ciclomapa:paired", "false"],
+        ["ciclomapa:ignored", "true"]
+      ]
+    ],
     "style": {
       "lineColor": "#90EE90",
       "lineWidth": 8,
@@ -34,29 +31,104 @@
     }
   },
   {
-    "name": "DEBUG - Lado A (azul)",
+    "name": "🛠️ Lado A",
     "onlyDebug": true,
     "description": "Vias automaticamente detectadas como sendo duplicadas.",
-    "filters": [["ciclomapa:side", "a"]],
+    "filters": [
+      [
+        ["ciclomapa:paired", "true"],
+        ["ciclomapa:side", "a"]
+      ]
+    ],
     "style": {
-      "lineColor": "#ADD8E6",
-      "lineWidth": 8,
-      "borderColor": "#0B54FE",
-      "borderStyle": "solid",
+      "lineColor": "#0B54FE",
+      "lineWidth": 8
+    }
+  },
+  {
+    "name": "🛠️ Lado B",
+    "onlyDebug": true,
+    "description": "Vias automaticamente detectadas como sendo duplicadas.",
+    "filters": [
+      [
+        ["ciclomapa:paired", "true"],
+        ["ciclomapa:side", "b"]
+      ]
+    ],
+    "style": {
+      "lineColor": "#FC0FC0",
+      "lineWidth": 8
+    }
+  },
+  {
+    "name": "🛠️ Pareados",
+    "onlyDebug": true,
+    "description": "Segmentos marcados como pareados/duplicados pelo motor de detecção paralela.",
+    "filters": [["ciclomapa:paired", "true"]],
+    "style": {
+      "lineColor": "#2A9D8F",
+      "lineWidth": 7,
       "lineStyle": "dashed"
     }
   },
   {
-    "name": "DEBUG - Lado B (rosa)",
+    "name": "🛠️ Não pareados",
     "onlyDebug": true,
-    "description": "Vias automaticamente detectadas como sendo duplicadas.",
-    "filters": [["ciclomapa:side", "b"]],
+    "description": "Segmentos marcados como não pareados (ficam fora da dupla contagem controlada).",
+    "filters": [
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Ciclovia"]
+      ],
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Ciclofaixa"]
+      ],
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Ciclorrota"]
+      ],
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Calçada compartilhada"]
+      ]
+    ],
     "style": {
-      "lineColor": "#FFC0CB",
+      "lineColor": "#FEFEFE",
+      "lineWidth": 1
+    }
+  },
+  {
+    "name": "🛠️ Confiança alta",
+    "onlyDebug": true,
+    "description": "Segmentos com alta confiança do pareamento (quando disponíveis).",
+    "filters": [["ciclomapa:match_confidence_bucket", "high"]],
+    "style": {
+      "lineColor": "#00CED1",
+      "lineWidth": 9,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "🛠️ Confiança média",
+    "onlyDebug": true,
+    "description": "Segmentos com confiança média do pareamento (quando disponíveis).",
+    "filters": [["ciclomapa:match_confidence_bucket", "med"]],
+    "style": {
+      "lineColor": "#FFD700",
       "lineWidth": 8,
-      "borderColor": "#FC0FC0",
-      "borderStyle": "solid",
-      "lineStyle": "dashed"
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "🛠️ Confiança baixa",
+    "onlyDebug": true,
+    "description": "Segmentos com baixa confiança do pareamento (quando disponíveis).",
+    "filters": [["ciclomapa:match_confidence_bucket", "low"]],
+    "style": {
+      "lineColor": "#FF4500",
+      "lineWidth": 7,
+      "lineStyle": "solid"
     }
   },
   {

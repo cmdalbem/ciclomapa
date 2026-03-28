@@ -16,6 +16,7 @@ import { downloadObjectAsJson } from './utils/utils.js';
 import { updateDocumentMeta } from './utils/documentMeta.js';
 import { getSystemThemePreference } from './utils/themeUtils';
 import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './utils/geojsonUtils.js';
+import { DEFAULT_PARALLEL_DEDUPE_ENGINE } from './utils/parallelDedupeEngines/engineTypes.js';
 import {
   getCanonicalCitySlug,
   getPredefinedCitySlugDefinition,
@@ -55,6 +56,7 @@ class App extends Component {
   deferredCityFocus = null;
   lastResolvedCitySlug = null;
   lastNotifiedCitySlugError = null;
+  lastSelectedParallelDedupeEngine = null;
 
   constructor(props) {
     super(props);
@@ -71,6 +73,9 @@ class App extends Component {
     this.openLayersLegendModal = this.openLayersLegendModal.bind(this);
     this.closeLayersLegendModal = this.closeLayersLegendModal.bind(this);
     this.onChangeStrategy = this.onChangeStrategy.bind(this);
+    this.onChangeParallelDedupeEngine = this.onChangeParallelDedupeEngine.bind(this);
+    this.togglePreviousParallelDedupeEngine = this.togglePreviousParallelDedupeEngine.bind(this);
+    this.onGlobalKeyDown = this.onGlobalKeyDown.bind(this);
     this.setMapRef = this.setMapRef.bind(this);
     this.toggleTheme = this.toggleTheme.bind(this);
     this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
@@ -81,6 +86,39 @@ class App extends Component {
 
     this.state = this.buildInitialState();
     this.updateData();
+  }
+
+  isTypingInFormField(target) {
+    if (!target) return false;
+    const tag = (target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+    return Boolean(target.isContentEditable);
+  }
+
+  togglePreviousParallelDedupeEngine() {
+    const legacyId = 'legacy_name_angle';
+    const current = this.state.parallelDedupeEngine;
+    const previous = this.lastSelectedParallelDedupeEngine || legacyId;
+
+    // Swap: after toggling, "previous" becomes whatever we were on.
+    this.lastSelectedParallelDedupeEngine = current;
+    this.setState({ parallelDedupeEngine: previous });
+  }
+
+  onGlobalKeyDown(e) {
+    // Shortcut: press "m" to toggle current engine <-> previously selected engine.
+    // If no previous engine is available, fall back to legacy.
+    if (!e) return;
+    if (this.isTypingInFormField(e.target)) return;
+
+    const key = String(e.key || '').toLowerCase();
+    if (key !== 'm') return;
+
+    // Avoid repeat firing when user holds the key.
+    if (e.repeat) return;
+
+    e.preventDefault();
+    this.togglePreviousParallelDedupeEngine();
   }
 
   buildInitialState() {
@@ -137,6 +175,8 @@ class App extends Component {
       }
     }
 
+    const isDebugMode = urlParams.debug || false;
+
     return {
       area: prev.area || '',
       showSatellite: ENABLE_SATELLITE_TOGGLE
@@ -148,10 +188,10 @@ class App extends Component {
       lat: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
       lng: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
       geoJson: null,
-      debugMode: urlParams.debug || false,
+      debugMode: isDebugMode,
       loading: false,
       mapStyle: isDarkMode ? MAP_STYLES.DARK : MAP_STYLES.LIGHT,
-      layers: this.initLayers(prev.layersStates, isDarkMode, urlParams.debug || false),
+      layers: this.initLayers(prev.layersStates, isDarkMode, isDebugMode),
       lengths: {},
       isTrackingUserLocation: IS_MOBILE && prev.isTrackingUserLocation === true ? true : false,
       embedMode: urlParams.embed,
@@ -160,7 +200,8 @@ class App extends Component {
       aboutModal: false,
       layersLegendModal: false,
       layersLegendScrollToSection: null,
-      lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
+      lengthCalculationStrategy: isDebugMode ? DEFAULT_LENGTH_CALCULATE_STRATEGIES : 'pessimistic',
+      parallelDedupeEngine: isDebugMode ? DEFAULT_PARALLEL_DEDUPE_ENGINE : 'geometry_first',
       map: null,
       isDarkMode: isDarkMode,
       mapKey: 0,
@@ -172,6 +213,15 @@ class App extends Component {
 
   onChangeStrategy(event) {
     this.setState({ lengthCalculationStrategy: event.target.value });
+  }
+
+  onChangeParallelDedupeEngine(event) {
+    const next = event.target.value;
+    const current = this.state.parallelDedupeEngine;
+    if (next !== current) {
+      this.lastSelectedParallelDedupeEngine = current;
+    }
+    this.setState({ parallelDedupeEngine: next });
   }
 
   toggleTheme(newIsDark) {
@@ -872,10 +922,14 @@ class App extends Component {
           const lengths = calculateLayersLengths(
             newData.geoJson,
             this.state.layers,
-            this.state.lengthCalculationStrategy
+            this.state.lengthCalculationStrategy,
+            this.state.parallelDedupeEngine
           );
 
-          if (SAVE_TO_FIREBASE) {
+          const shouldPersistLengthsToFirebase =
+            SAVE_TO_FIREBASE && this.state.parallelDedupeEngine === DEFAULT_PARALLEL_DEDUPE_ENGINE;
+
+          if (shouldPersistLengthsToFirebase) {
             const storageKey = this.getStorageKeyForArea(areaName);
             this.storage
               .save(areaName, newData.geoJson, lengths, { storageKey })
@@ -964,12 +1018,18 @@ class App extends Component {
                 this.getDataFromOSM({ backgroundUpdate: true });
               }
 
-              if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
+              const shouldRecalculateLengths =
+                !data.lengths ||
+                FORCE_RECALCULATE_LENGTHS_ALWAYS ||
+                this.state.parallelDedupeEngine !== DEFAULT_PARALLEL_DEDUPE_ENGINE;
+
+              if (shouldRecalculateLengths) {
                 console.debug('Recalculating lengths...');
                 data.lengths = calculateLayersLengths(
                   data.geoJson,
                   this.state.layers,
-                  this.state.lengthCalculationStrategy
+                  this.state.lengthCalculationStrategy,
+                  this.state.parallelDedupeEngine
                 );
               }
 
@@ -1170,7 +1230,22 @@ class App extends Component {
         lengths: calculateLayersLengths(
           clone,
           this.state.layers,
-          this.state.lengthCalculationStrategy
+          this.state.lengthCalculationStrategy,
+          this.state.parallelDedupeEngine
+        ),
+      });
+    }
+
+    if (this.state.parallelDedupeEngine !== prevState.parallelDedupeEngine) {
+      // Deep clone geoJson data to force Mapbox to update the data layers
+      const clone = JSON.parse(JSON.stringify(this.state.geoJson));
+      this.setState({
+        geoJson: clone,
+        lengths: calculateLayersLengths(
+          clone,
+          this.state.layers,
+          this.state.lengthCalculationStrategy,
+          this.state.parallelDedupeEngine
         ),
       });
     }
@@ -1193,7 +1268,8 @@ class App extends Component {
       lengths: calculateLayersLengths(
         this.state.geoJson,
         this.state.layers,
-        this.state.lengthCalculationStrategy
+        this.state.lengthCalculationStrategy,
+        this.state.parallelDedupeEngine
       ),
     });
   }
@@ -1203,6 +1279,7 @@ class App extends Component {
   };
 
   componentDidMount() {
+    window.addEventListener('keydown', this.onGlobalKeyDown);
     updateDocumentMeta(this.state.area, this.getPreferredCanonicalSlugForMeta(this.state.area));
 
     // Initialize theme
@@ -1258,6 +1335,7 @@ class App extends Component {
   }
 
   componentWillUnmount() {
+    window.removeEventListener('keydown', this.onGlobalKeyDown);
     // Clean up theme change listener
     if (this.themeChangeListener && window.matchMedia) {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1354,6 +1432,7 @@ class App extends Component {
       onMapShowSatelliteChanged: this.onMapShowSatelliteChanged,
       onLayersChange: this.onLayersChange,
       onChangeStrategy: this.onChangeStrategy,
+      onChangeParallelDedupeEngine: this.onChangeParallelDedupeEngine,
       setDirectionsPanelRef: this.setDirectionsPanelRef,
       setFromPoint: this.setFromPoint,
       setToPoint: this.setToPoint,

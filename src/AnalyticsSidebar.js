@@ -28,6 +28,7 @@ import AirtableDatabase from './AirtableDatabase.js';
 import { removeAccents } from './utils/utils.js';
 
 import { LENGTH_CALCULATE_STRATEGIES, LENGTH_COUNTED_LAYER_IDS } from './config/constants.js';
+import { PARALLEL_DEDUPE_ENGINES } from './utils/parallelDedupeEngines/engineTypes.js';
 
 const PIE_CHART_WIDTH_PX = 207;
 const nullableNumber = PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]);
@@ -230,8 +231,15 @@ class AnalyticsSidebar extends Component {
       pessimistic: 'Pessimista',
       average: 'Média',
     };
+    const translateParallelDedupeEngine = {
+      legacy_name_angle: 'Legado',
+      hybrid_tag_geometry: 'Híbrido',
+      geometry_first: 'Geometria-first',
+      topology_first: 'Topologia-first',
+      corridor_merge: 'Corredor',
+    };
     const strategiesDropdown = (
-      <div className="w-full flex justify-center mb-2">
+      <div className="flex-1 flex justify-center">
         <select
           name="strategy"
           className="text-green-200 capitalize rounded px-1 bg-white bg-opacity-10"
@@ -240,6 +248,23 @@ class AnalyticsSidebar extends Component {
         >
           {LENGTH_CALCULATE_STRATEGIES.map((s) => (
             <option value={s}> {translateStrategy[s]} </option>
+          ))}
+        </select>
+      </div>
+    );
+
+    const parallelDedupeEnginesDropdown = (
+      <div className="flex-1 flex justify-center">
+        <select
+          name="parallelDedupeEngine"
+          className="text-green-200 capitalize rounded px-1 bg-white bg-opacity-10"
+          onChange={this.props.onChangeParallelDedupeEngine}
+          value={this.props.parallelDedupeEngine}
+        >
+          {PARALLEL_DEDUPE_ENGINES.map((engineId) => (
+            <option value={engineId} key={engineId}>
+              {translateParallelDedupeEngine[engineId] || engineId}
+            </option>
           ))}
         </select>
       </div>
@@ -461,7 +486,12 @@ class AnalyticsSidebar extends Component {
               </>
             }
           >
-            {this.props.debugMode && strategiesDropdown}
+            {this.props.debugMode && (
+              <div className="w-full flex gap-1 justify-center mb-2">
+                {strategiesDropdown}
+                {parallelDedupeEnginesDropdown}
+              </div>
+            )}
 
             <div className="relative">
               <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
@@ -601,6 +631,8 @@ AnalyticsSidebar.propTypes = {
   debugMode: PropTypes.bool,
   onChangeStrategy: PropTypes.func,
   lengthCalculationStrategy: PropTypes.string,
+  parallelDedupeEngine: PropTypes.string,
+  onChangeParallelDedupeEngine: PropTypes.func,
   downloadData: PropTypes.func,
 };
 
