@@ -70,7 +70,6 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
             location={state.area}
             onMapMoved={handlers.onMapMoved}
             updateLengths={handlers.updateLengths}
-            isSidebarOpen={state.isSidebarOpen}
             embedMode={state.embedMode}
             debugMode={state.debugMode}
             isDarkMode={state.isDarkMode}
