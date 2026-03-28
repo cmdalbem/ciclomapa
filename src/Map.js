@@ -1642,40 +1642,32 @@ class Map extends Component {
       return !prevLayer || layer.isActive !== prevLayer.isActive;
     });
 
-    if (layersChanged) {
-      console.debug('Layer visibility changed, updating...');
-      this.updateLayerVisibility();
-    }
-
-    // Update layer visibility when routes or destination changes
-    if (this.props.routes !== prevProps.routes || this.props.toPoint !== prevProps.toPoint) {
-      this.updateLayerVisibility();
-    }
-
-    if (this.props.isSidebarOpen !== prevProps.isSidebarOpen) {
-      map.resize();
-    }
-
-    // Handle routes-related changes
     const routesChanged = this.props.routes !== prevProps.routes;
+    const routesOrDestChanged = routesChanged || this.props.toPoint !== prevProps.toPoint;
+
+    // Single pass: layer toggles, route mode, and destination all affect visibility.
+    if (layersChanged || routesOrDestChanged) {
+      if (layersChanged) {
+        console.debug('Layer visibility changed, updating...');
+      }
+      this.updateLayerVisibility();
+    }
+
     const selectedRouteChanged = this.props.selectedRouteIndex !== prevProps.selectedRouteIndex;
     const hoveredRouteChanged = this.props.hoveredRouteIndex !== prevProps.hoveredRouteIndex;
 
     if (routesChanged) {
       this.updateRoutesLayer(this.props.routes);
-      this.updateCyclablePathsOpacity();
-    }
-
-    // Update tooltips when routes changes
-    if (routesChanged) {
       this.updateRouteTooltips();
     }
 
-    if (selectedRouteChanged) {
+    // updateRoutesLayer already redistributes by selectedRouteIndex; skip duplicate work.
+    if (selectedRouteChanged && !routesChanged) {
       this.updateSelectedRoute(this.props.selectedRouteIndex);
     }
 
-    if (hoveredRouteChanged) {
+    // Re-apply hover after route geometry refresh (new features) or index change.
+    if (hoveredRouteChanged || routesChanged) {
       this.updateHoveredRoute(this.props.hoveredRouteIndex);
     }
   }
@@ -2240,10 +2232,6 @@ class Map extends Component {
     }
   }
 
-  updateCyclablePathsOpacity() {
-    this.updateLayerVisibility();
-  }
-
   updateRouteTooltips() {
     if (this.popups) {
       this.popups.updateRouteTooltips(
@@ -2342,8 +2330,9 @@ class Map extends Component {
       return;
     }
 
-    // Keep the Mapbox canvas size in sync with its container during layout transitions
-    // (e.g. when the analytics sidebar animates its width).
+    // Mapbox tracks window resize, but the map container can change size without one
+    // (e.g. --viewport-height updates from visualViewport in index.js). ResizeObserver
+    // keeps the canvas in sync in those cases.
     if (typeof ResizeObserver !== 'undefined' && this.mapContainer) {
       this.resizeObserver = new ResizeObserver(() => {
         if (this.map) this.map.resize();
@@ -2712,25 +2701,15 @@ class Map extends Component {
     // Restore current routes if they exist
     if (this.props.routes) {
       this.updateRoutesLayer(this.props.routes);
-
-      // Restore selected and hovered route states
-      if (this.props.selectedRouteIndex !== null && this.props.selectedRouteIndex !== undefined) {
-        this.updateSelectedRoute(this.props.selectedRouteIndex);
-      }
       if (this.props.hoveredRouteIndex !== null && this.props.hoveredRouteIndex !== undefined) {
         this.updateHoveredRoute(this.props.hoveredRouteIndex);
       }
     }
 
-    // Restore overlapping cyclepaths if they exist
-    if (this.props.routes && this.props.routes.routes && this.props.routes.routes.length > 0) {
-      this.updateOverlappingCyclepathsFromUnifiedData(this.props.routes);
-    }
-
     this.syncMapState();
 
-    // Set initial cyclable paths opacity based on current routes state
-    this.updateCyclablePathsOpacity();
+    // Initial way/POI visibility for route mode (updateRoutesLayer already set sources).
+    this.updateLayerVisibility();
 
     this.map.on('moveend', this.debouncedOnMapMoveEnded);
   }
