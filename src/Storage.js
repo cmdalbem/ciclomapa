@@ -90,8 +90,7 @@ class Storage {
      * of documents. It should ONLY be used for internal testing/debugging (e.g. console
      * inspection), never for user-facing UI flows.
      *
-     * Prefer fetching specific city stats docs by id (slug) via `getCityStatsDoc()` /
-     * `getCityStatsDocs()` instead.
+     * Prefer fetching specific city stats docs by id (slug) via `getCityStatsDoc()`.
      */
     return new Promise((resolve) => {
       this.db
@@ -139,27 +138,6 @@ class Storage {
       console.debug('[Storage] getCityStatsDoc failed:', id, e);
       return null;
     }
-  }
-
-  /**
-   * Batch fetch stats docs: dedupes ids, caps parallel reads (vs unbounded `Promise.all` on
-   * {@link getCityStatsDoc}). Single id → use {@link getCityStatsDoc}.
-   *
-   * @param {string[]} statsDocIds Firestore document ids (usually `slugify(areaLabel)`).
-   * @returns {Promise<Map<string, object|null>>} id → data or `null`.
-   */
-  async getCityStatsDocs(statsDocIds) {
-    const ids = Array.isArray(statsDocIds) ? statsDocIds : [];
-    const unique = Array.from(new Set(ids.map((s) => String(s || '').trim()).filter(Boolean)));
-    const results = new Map();
-    // Avoid a large fan-out of parallel reads (can get rate-limited).
-    const CONCURRENCY = 10;
-    for (let i = 0; i < unique.length; i += CONCURRENCY) {
-      const chunk = unique.slice(i, i + CONCURRENCY);
-      const chunkResults = await Promise.all(chunk.map((id) => this.getCityStatsDoc(id)));
-      chunk.forEach((id, idx) => results.set(id, chunkResults[idx]));
-    }
-    return results;
   }
 
   compressJson(_data) {
