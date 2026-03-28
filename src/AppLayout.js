@@ -6,7 +6,7 @@ import React from 'react';
 import AboutModal from './AboutModal.js';
 import LayersLegendModal from './LayersLegendModal.js';
 import Map from './Map.js';
-import CitySwitcherModal from './CitySwitcherModal.js';
+import CitySwitcherModal from './CitySwitcherModal';
 import TopBar from './TopBar.js';
 import MapStyleSwitcher from './MapStyleSwitcher.js';
 import LayersPanel from './LayersPanel.js';
