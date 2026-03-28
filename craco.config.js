@@ -1,5 +1,4 @@
 const CracoLessPlugin = require('craco-less');
-const { getThemeVariables } = require('antd/dist/theme');
 
 module.exports = {
     plugins: [

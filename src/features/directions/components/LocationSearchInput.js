@@ -23,7 +23,6 @@ export default function LocationSearchInput({
       value={state[`${inputType}SearchValue`]}
       onChange={(value) => parentComponent.setState({ [`${inputType}SearchValue`]: value })}
       onSearch={(value) => handlers.handleSearch(value, inputType)}
-      loading={state[`${inputType}SearchLoading`]}
       options={state[`${inputType}Suggestions`].map((suggestion) => {
         const mainText =
           suggestion.properties?.structured_formatting?.main_text || suggestion.place_name;
@@ -50,11 +49,11 @@ export default function LocationSearchInput({
       })}
       onSelect={(value, option) => handlers.handleSelect(option.suggestion, inputType)}
       className={className}
-      size="large"
       allowClear={true}
       onClear={() => handlers.handleClearInput(inputType)}
     >
       <Input
+        // size="large"
         placeholder={
           state.focusedInput === inputType
             ? ENABLE_MAP_CLICK_TO_SET_POINTS

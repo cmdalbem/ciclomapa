@@ -15,7 +15,7 @@
     "@turf/distance": "^7.2.0",
     "@turf/length": "^7.2.0",
     "@turf/line-overlap": "^7.2.0",
-    "antd": "^4.14.0",
+    "antd": "^6.3.4",
     "aws-sdk": "^2.1692.0",
     "craco-less": "^3.0.1",
     "file-saver": "^2.0.5",
@@ -94,7 +94,9 @@
   },
   "jest": {
     "moduleNameMapper": {
-      "\\.(png|jpg|jpeg|gif|webp|svg)$": "<rootDir>/src/__mocks__/fileMock.js"
+      "\\.(png|jpg|jpeg|gif|webp|svg)$": "<rootDir>/src/__mocks__/fileMock.js",
+      "^@rc-component/picker/locale/(.*)$": "<rootDir>/node_modules/@rc-component/picker/lib/locale/$1.js",
+      "^@rc-component/picker/generate/(.*)$": "<rootDir>/node_modules/@rc-component/picker/lib/generate/$1.js"
     }
   },
   "lint-staged": {
