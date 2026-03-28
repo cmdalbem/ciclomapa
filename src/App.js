@@ -52,7 +52,7 @@ class App extends Component {
   storage = new Storage();
   osmController = OSMController;
   currentOSMRequest = null;
-  pendingCityFocus = null;
+  deferredCityFocus = null;
   lastResolvedCitySlug = null;
   lastNotifiedCitySlugError = null;
 
@@ -373,8 +373,7 @@ class App extends Component {
     if (identity?.canonicalAreaLabel) return identity.canonicalAreaLabel;
     if (identity?.canonicalSlug) return identity.canonicalSlug;
 
-    // Fallback to the full `area` string (which should already be normalized
-    // from coords for catalog-supported cities).
+    // Fallback to the full `area` string.
     return area;
   }
 
@@ -491,7 +490,7 @@ class App extends Component {
           }),
           () => {
             this.lastNotifiedCitySlugError = null;
-            this.queueOrApplyCityFocus({
+            this.deferOrApplyCityFocus({
               lat: staticLocation.lat,
               lng: staticLocation.lng,
               placeName: staticLocation.areaLabel,
@@ -576,7 +575,7 @@ class App extends Component {
           this.lastNotifiedCitySlugError = null;
           const latUse = resolvedLat !== null ? resolvedLat : this.state.lat;
           const lngUse = resolvedLng !== null ? resolvedLng : this.state.lng;
-          this.queueOrApplyCityFocus({ lat: latUse, lng: lngUse, placeName: area });
+          this.deferOrApplyCityFocus({ lat: latUse, lng: lngUse, placeName: area });
         }
       );
     } catch (e) {
@@ -594,7 +593,9 @@ class App extends Component {
     }
   };
 
-  queueOrApplyCityFocus({ lat, lng, placeName }) {
+  // Slug / URL resolution can run before the map exists (state.map is set after Map mounts).
+  // We stash one target and fly once applyDeferredCityFocus runs from componentDidUpdate.
+  deferOrApplyCityFocus({ lat, lng, placeName }) {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
     if (this.state.map) {
@@ -603,22 +604,22 @@ class App extends Component {
       } catch (e) {
         console.error('Failed to move map to city focus:', e);
       }
-      this.pendingCityFocus = null;
+      this.deferredCityFocus = null;
       return;
     }
 
-    this.pendingCityFocus = { lat, lng, placeName };
+    this.deferredCityFocus = { lat, lng, placeName };
   }
 
-  applyPendingCityFocus() {
-    if (!this.pendingCityFocus || !this.state.map) return;
-    const { lat, lng, placeName } = this.pendingCityFocus;
+  applyDeferredCityFocus() {
+    if (!this.deferredCityFocus || !this.state.map) return;
+    const { lat, lng, placeName } = this.deferredCityFocus;
     try {
       flyMapToCityFocus(this.state.map, [lng, lat], placeName);
     } catch (e) {
-      console.error('Failed to apply pending city focus:', e);
+      console.error('Failed to apply deferred city focus:', e);
     }
-    this.pendingCityFocus = null;
+    this.deferredCityFocus = null;
   }
 
   async reverseGeocodeURLPoints() {
@@ -1087,7 +1088,7 @@ class App extends Component {
     }
 
     if (this.state.map && this.state.map !== prevState.map) {
-      this.applyPendingCityFocus();
+      this.applyDeferredCityFocus();
     }
 
     if (this.state.area !== prevState.area) {
