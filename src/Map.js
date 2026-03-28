@@ -3,7 +3,6 @@ import { useDirections } from './contexts/DirectionsContext';
 
 import mapboxgl from 'mapbox-gl';
 import turfBbox from '@turf/bbox';
-import turfDistance from '@turf/distance';
 import turfCircle from '@turf/circle';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
@@ -19,7 +18,7 @@ import {
   IS_MOBILE,
   IS_PROD,
   MAPBOX_GEOCODER_COUNTRIES,
-  getCityGeocoderPlaceholderSuffixPtProd,
+  SUPPORTED_COUNTRIES,
   DEFAULT_LINE_WIDTH_MULTIPLIER,
   COMMENTS_ZOOM_THRESHOLD,
   MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
@@ -45,11 +44,7 @@ import NewCommentCursor from './NewCommentCursor.js';
 import MapPopups from './MapPopups.js';
 import { adjustColorBrightness } from './utils/utils.js';
 import debounce from 'lodash.debounce';
-import {
-  calculateSunPosition,
-  getCurrentSunPosition,
-  isCurrentlyDaytime,
-} from './sunPositionUtils';
+import { getCurrentSunPosition } from './sunPositionUtils';
 import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/map/icons';
 import { reverseGeocodePlace } from './features/map/geocoding.js';
 import { flyMapToCityFocus } from './utils/utils.js';
@@ -2385,13 +2380,21 @@ class Map extends Component {
       //     this.map.addControl(this.searchBar, 'bottom-right');
       // }
 
+      const cityPickerLabelsPt = SUPPORTED_COUNTRIES.map((c) => c.labelPt);
+      const cityPickerPlaceholderSuffixPtProd =
+        cityPickerLabelsPt.length === 0
+          ? 'no mundo'
+          : cityPickerLabelsPt.length === 1
+            ? `em ${cityPickerLabelsPt[0]}`
+            : `em ${cityPickerLabelsPt.slice(0, -1).join(', ')} e ${
+                cityPickerLabelsPt[cityPickerLabelsPt.length - 1]
+              }`;
+
       const cityPicker = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl,
         language: 'pt-br',
-        placeholder: `Buscar cidades ${
-          IS_PROD ? getCityGeocoderPlaceholderSuffixPtProd() : 'no mundo'
-        }`,
+        placeholder: `Buscar cidades ${IS_PROD ? cityPickerPlaceholderSuffixPtProd : 'no mundo'}`,
         countries: IS_PROD ? MAPBOX_GEOCODER_COUNTRIES : '',
         types: 'place',
         marker: false,
