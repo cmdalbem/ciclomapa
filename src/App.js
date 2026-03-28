@@ -21,7 +21,7 @@ import {
   getPredefinedCitySlugDefinition,
   getPredefinedCityStaticLocation,
 } from './config/citySlugCatalog.js';
-import { flyMapToCityFocus } from './utils/utils.js';
+import { flyMapToCityFocus } from './Map.js';
 import { DirectionsProvider } from './contexts/DirectionsContext';
 import {
   DEFAULT_LAT,

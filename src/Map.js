@@ -35,6 +35,7 @@ import {
   LOW_ZOOM_WIDTH_DIVISOR,
   ROUTES_ACTIVE_LOW_ZOOM_WIDTH_DIVISOR,
   ROUTES_ACTIVE_HIGH_ZOOM_WIDTH_MULTIPLIER,
+  DEFAULT_ZOOM,
 } from './config/constants.js';
 
 import Analytics from './Analytics.js';
@@ -47,9 +48,34 @@ import debounce from 'lodash.debounce';
 import { getCurrentSunPosition } from './sunPositionUtils';
 import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/map/icons';
 import { reverseGeocodePlace } from './features/map/geocoding.js';
-import { flyMapToCityFocus } from './utils/utils.js';
 
 import './Map.css';
+
+/**
+ * Single camera behavior for focusing the map on a city (slug navigation, city picker).
+ * @param {mapboxgl.Map} map
+ * @param {[number, number]} centerLngLat [lng, lat]
+ * @param {string | null | undefined} placeName Used for rare center overrides (e.g. Vitória).
+ */
+export function flyMapToCityFocus(map, centerLngLat, placeName) {
+  const VITORIA_GEOCODER_PLACE_NAME = 'Vitória, Espírito Santo, Brasil';
+  const VITORIA_FOCUS_CENTER_LNG_LAT = [-40.3144, -20.2944];
+
+  if (!map || !Array.isArray(centerLngLat) || centerLngLat.length !== 2) return;
+  const [lng, lat] = centerLngLat;
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+
+  const center =
+    placeName === VITORIA_GEOCODER_PLACE_NAME ? VITORIA_FOCUS_CENTER_LNG_LAT : [lng, lat];
+  if (!center || !Number.isFinite(center[0]) || !Number.isFinite(center[1])) return;
+
+  map.flyTo({
+    center,
+    zoom: DEFAULT_ZOOM,
+    speed: 2.2,
+    minZoom: 6,
+  });
+}
 
 const isE2E =
   typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('e2e');
