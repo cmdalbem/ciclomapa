@@ -1,9 +1,17 @@
 import { saveAs } from 'file-saver';
-import { DEFAULT_ZOOM } from '../config/constants.js';
+import { DEFAULT_ZOOM, SUPPORTED_COUNTRIES } from '../config/constants.js';
 
 /** Mapbox geocoder uses this exact label for Vitória; center is adjusted for nicer framing. */
 const VITORIA_GEOCODER_PLACE_NAME = 'Vitória, Espírito Santo, Brasil';
 const VITORIA_FOCUS_CENTER_LNG_LAT = [-40.3144, -20.2944];
+
+/** Suffix for Mapbox city picker placeholder when production (after "Buscar cidades "). */
+export function getCityGeocoderPlaceholderSuffixPtProd() {
+  const labels = SUPPORTED_COUNTRIES.map((c) => c.labelPt);
+  if (labels.length === 0) return 'no mundo';
+  if (labels.length === 1) return `em ${labels[0]}`;
+  return `em ${labels.slice(0, -1).join(', ')} e ${labels[labels.length - 1]}`;
+}
 
 export function resolveCityFlyToCenterLngLat(placeName, fallbackCenterLngLat) {
   if (placeName === VITORIA_GEOCODER_PLACE_NAME) {
