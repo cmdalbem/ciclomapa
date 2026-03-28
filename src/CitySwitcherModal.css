@@ -11,10 +11,6 @@
   backdrop-filter: blur(12px);
 }
 
-.theme-light .city-switcher-modal__backdrop {
-  background: rgba(255, 255, 255, 0.8);
-}
-
 .theme-dark .city-switcher-modal__backdrop {
   background: rgba(0, 0, 0, 0.55);
 }
@@ -233,7 +229,7 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   fill: rgba(87, 87, 87, 0.5) !important;
 }
 
-.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions {
+.theme-dark .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions {
   z-index: 20 !important;
   border-radius: var(--radius-md, 8px) !important;
   border: 1px solid rgba(255, 255, 255, 0.18) !important;
@@ -241,25 +237,30 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   box-shadow: none !important;
 }
 
-.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > li > a {
+.theme-dark .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > li > a {
   color: rgba(255, 255, 255, 0.82) !important;
   background: transparent !important;
   box-shadow: none !important;
 }
 
-.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > .active > a,
-.city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > li > a:hover {
+.theme-dark .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > .active > a,
+.theme-dark
+  .city-switcher-modal__geocoderMount
+  .mapboxgl-ctrl-geocoder
+  .suggestions
+  > li
+  > a:hover {
   background: rgba(162, 162, 162, 0.1) !important;
   color: rgba(255, 255, 255, 0.88) !important;
 }
 
-.theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions {
+/* .theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions {
   background: rgba(0, 0, 0, 0.1) !important;
   border-color: rgba(0, 0, 0, 0.22) !important;
   backdrop-filter: blur(16px) saturate(1.1) !important;
-}
+} */
 
-.theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > li > a {
+/* .theme-light .city-switcher-modal__geocoderMount .mapboxgl-ctrl-geocoder .suggestions > li > a {
   color: rgba(0, 0, 0, 0.88) !important;
 }
 
@@ -270,9 +271,9 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   .suggestions
   > li
   > a:hover {
-  background: rgba(0, 0, 0, 0.2) !important;
+  background: rgba(0, 0, 0, 0.1) !important;
   color: rgba(0, 0, 0, 0.92) !important;
-}
+} */
 
 .city-switcher-modal__content {
   position: relative;
