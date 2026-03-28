@@ -880,7 +880,7 @@ class App extends Component {
             this.storage
               .save(areaName, newData.geoJson, lengths, { storageKey })
               .then(() => {
-                if (this.state.debugMode) {
+                if (!IS_PROD) {
                   notification.success({
                     message: 'Banco de dados atualizado',
                     description:
@@ -890,11 +890,13 @@ class App extends Component {
               })
               .catch((e) => {
                 console.error('Error saving lengths to database:', e);
-                // notification['error']({
-                //     message: 'Erro ao atualizar banco de dados',
-                //     description:
-                //         'Por alguma razão não conseguimos atualizar o banco de dados com esta versão dos dados. Por favor tente novamente ou contate os desenvolvedores.',
-                // });
+                if (!IS_PROD) {
+                  notification.error({
+                    message: 'Erro ao atualizar banco de dados',
+                    description:
+                      'Por alguma razão não conseguimos atualizar o banco de dados com esta versão dos dados. Por favor tente novamente ou contate os desenvolvedores.',
+                  });
+                }
               });
           }
 
