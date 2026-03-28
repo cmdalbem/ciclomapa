@@ -15,7 +15,7 @@ class EditModal extends Component {
         onCancel={this.props.onClose}
         cancelText="Cancelar"
         footer={[
-          <Button key="1" type="secondary" onClick={this.props.onClose}>
+          <Button key="1" type="default" onClick={this.props.onClose}>
             Cancelar
           </Button>,
           <Button key="3" type="primary">

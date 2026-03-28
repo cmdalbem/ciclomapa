@@ -503,7 +503,7 @@ class AnalyticsSidebar extends Component {
                           {/* <span className="tracking-widest mt-2">OFICIAL</span> */}
                           <Popover
                             placement="left"
-                            arrowPointAtCenter={true}
+                            arrow={{ pointAtCenter: true }}
                             content={
                               <div style={{ width: 320 }}>
                                 <h3 className="text-lg flex items-center gap-1">
@@ -728,7 +728,7 @@ const ViaDataRow = ({ layer, length, rawTotal, effectiveTotal, included, onToggl
         trigger={['hover', 'focus']}
         mouseEnterDelay={0.12}
         mouseLeaveDelay={0.4}
-        overlayClassName="analytics-via-detail-popover"
+        classNames={{ root: 'analytics-via-detail-popover' }}
       >
         <div
           className="analytics-via-row__content cursor-pointer rounded outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-current focus-visible:outline-opacity-40"
@@ -806,7 +806,7 @@ const Section = (props) => (
         {props.description && (
           <Popover
             placement="left"
-            arrowPointAtCenter={true}
+            arrow={{ pointAtCenter: true }}
             key={props.title}
             content={
               <div style={{ width: 320 }}>

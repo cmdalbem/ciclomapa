@@ -1,5 +1,4 @@
-// Import dark theme by default (existing behavior)
-@import './antd.customize.less';
+// Ant Design v6: theme via ConfigProvider (see src/config/antdTheme.js).
 
 // Tailwind CDN extensions (unpkg build has no theme.extend — add utilities here)
 // Matches Tailwind v2 default breakpoints (docs/styling.md): text-xxs, sm:text-xxs, …
@@ -122,13 +121,6 @@ body {
 button.ant-btn,
 a.ant-btn {
   border-radius: 99px !important;
-}
-// Disable all button transitions while we don't migrate to Ant Design v5
-.ant-btn,
-.ant-btn:hover,
-.ant-btn:focus,
-.ant-btn:active {
-  transition: none !important;
 }
 
 .theme-dark body {

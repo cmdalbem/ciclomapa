@@ -129,7 +129,7 @@ function TopBar(props) {
                     size={IS_MOBILE ? 'large' : 'middle'}
                     onClick={showCityPicker}
                   >
-                    <h3 className="flex items-center justify-between gap-1">
+                    <h2 className="flex items-center justify-between gap-1 m-0">
                       <span>
                         <span className="font-bold">{city},</span>
 
@@ -137,7 +137,7 @@ function TopBar(props) {
                       </span>
 
                       <IconCaret className="text-green-300" style={{ marginRight: '-2px' }} />
-                    </h3>
+                    </h2>
                   </Button>
                   {loading && (
                     <div className="loader-container h-1 absolute bottom-0 left-0 right-0">
@@ -154,10 +154,10 @@ function TopBar(props) {
                       <Popover
                         trigger={IS_MOBILE ? 'click' : 'hover'}
                         placement="bottom"
-                        arrowPointAtCenter={true}
+                        arrow={{ pointAtCenter: true }}
                         content={
                           <div style={{ maxWidth: 250 }}>
-                            <Space size="small" direction="vertical">
+                            <Space size="small" orientation="vertical">
                               {lastUpdate && (
                                 <div>
                                   O mapa de {city} que você está vendo é uma cópia dos dados obtidos
@@ -196,7 +196,7 @@ function TopBar(props) {
           <div className="nav-links font-white">
             {!embedMode ? (
               <div className="hidden sm:flex gap-2 items-center">
-                <Button.Group className="glass-bg rounded-full overflow-hidden">
+                <Space.Compact className="glass-bg rounded-full overflow-hidden">
                   <Button
                     type={!isDarkMode ? 'default' : 'link'}
                     className={!isDarkMode ? 'border border-opacity-10 border-white' : 'opacity-50'}
@@ -215,7 +215,7 @@ function TopBar(props) {
                   >
                     <IconMoon />
                   </Button>
-                </Button.Group>
+                </Space.Compact>
 
                 <Button className="glass-bg" type="link" onClick={openAboutModal}>
                   Sobre

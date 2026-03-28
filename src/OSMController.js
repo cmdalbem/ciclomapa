@@ -3,7 +3,7 @@ import osmtogeojson from 'osmtogeojson';
 
 import $ from 'jquery';
 
-import { notification } from 'antd';
+import { appNotification } from './antdNotification';
 
 import {
   DEFAULT_BORDER_WIDTH,
@@ -286,7 +286,7 @@ class OSMController {
           })
           .catch((e) => {
             console.error('Deu erro! Saca só:', e);
-            notification['error']({
+            appNotification.error({
               message: 'Erro',
               description: 'Ops, erro na API do Nominatim. Abra o console para ver mais detalhes.',
             });

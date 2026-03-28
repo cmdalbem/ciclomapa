@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import debounce from 'lodash.debounce';
 
-import { notification } from 'antd';
+import { appNotification } from './antdNotification';
+import AntdAppShell from './components/AntdAppShell.jsx';
 
 import { get, set } from 'idb-keyval';
 
@@ -42,6 +43,9 @@ import {
   MAX_RECENT_CITIES,
 } from './config/constants.js';
 
+// v5+ no longer ships global type scale in the old Less bundle; this restores baseline
+// margins for raw h1–p etc. (and complements Tailwind preflight). See antd/dist/reset.css.
+import 'antd/dist/reset.css';
 import './styles/App.less';
 import './styles/antd.light.css';
 
@@ -538,7 +542,7 @@ class App extends Component {
         });
         if (this.lastNotifiedCitySlugError !== citySlug) {
           this.lastNotifiedCitySlugError = citySlug;
-          notification.error({
+          appNotification.error({
             message: 'Nao foi possivel localizar a cidade',
             description:
               'Nao encontramos a cidade informada na URL. Verifique o nome e tente novamente.',
@@ -582,7 +586,7 @@ class App extends Component {
       console.error('City slug resolution error:', e);
       if (this.lastNotifiedCitySlugError !== citySlug) {
         this.lastNotifiedCitySlugError = citySlug;
-        notification.error({
+        appNotification.error({
           message: 'Erro ao buscar a cidade',
           description:
             'Houve um problema ao consultar o servico de localizacao. Tente novamente em instantes.',
@@ -778,7 +782,7 @@ class App extends Component {
     // console.debug('Removed:', a_minus_b);
     // console.debug('Added:', b_minus_a);
 
-    notification.success({
+    appNotification.success({
       message: 'Dados atualizados com sucesso',
       description:
         a_minus_b.length === 0 && b_minus_a.length === 0 ? (
@@ -881,7 +885,7 @@ class App extends Component {
               .save(areaName, newData.geoJson, lengths, { storageKey })
               .then(() => {
                 if (!IS_PROD) {
-                  notification.success({
+                  appNotification.success({
                     message: 'Banco de dados atualizado',
                     description:
                       'O banco do CicloMapa foi atualizado com a versão mais recente dos dados desta cidade.',
@@ -891,7 +895,7 @@ class App extends Component {
               .catch((e) => {
                 console.error('Error saving lengths to database:', e);
                 if (!IS_PROD) {
-                  notification.error({
+                  appNotification.error({
                     message: 'Erro ao atualizar banco de dados',
                     description:
                       'Por alguma razão não conseguimos atualizar o banco de dados com esta versão dos dados. Por favor tente novamente ou contate os desenvolvedores.',
@@ -907,7 +911,7 @@ class App extends Component {
             lengths: lengths,
           });
 
-          notification.destroy();
+          appNotification.destroy();
 
           // notification.success({
           //     message: 'OSM Request Completed',
@@ -925,7 +929,7 @@ class App extends Component {
           loading: false,
         });
 
-        notification.destroy();
+        appNotification.destroy();
 
         // Check if the error is due to request abortion
         if (e.message === 'Request aborted') {
@@ -936,7 +940,7 @@ class App extends Component {
           //     duration: 2
           // });
         } else {
-          notification.error({
+          appNotification.error({
             message: 'Ops',
             description:
               'O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.',
@@ -1365,13 +1369,15 @@ class App extends Component {
       closeLayersLegendModal: this.closeLayersLegendModal,
     };
     return (
-      <DirectionsProvider>
-        <AppLayout
-          state={this.state}
-          handlers={handlers}
-          directionsPanelRef={this.directionsPanel}
-        />
-      </DirectionsProvider>
+      <AntdAppShell isDarkMode={this.state.isDarkMode}>
+        <DirectionsProvider>
+          <AppLayout
+            state={this.state}
+            handlers={handlers}
+            directionsPanelRef={this.directionsPanel}
+          />
+        </DirectionsProvider>
+      </AntdAppShell>
     );
   }
 }
