@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { Popover, Button } from 'antd';
+import { Popover, Button, Select, Checkbox } from 'antd';
 
 import './AnalyticsSidebar.css';
 
@@ -218,6 +218,19 @@ class AnalyticsSidebar extends Component {
       })
       .filter((item) => item !== null && !Number.isNaN(item.value));
 
+    /** Recharts Tooltip defaults are light-themed only; no native dark mode. */
+    const pnbLineChartTooltipProps = isDarkMode
+      ? {
+          contentStyle: {
+            backgroundColor: '#262626',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            borderRadius: 6,
+          },
+          labelStyle: { color: 'rgba(255, 255, 255, 0.65)' },
+          itemStyle: { color: 'rgba(255, 255, 255, 0.9)' },
+        }
+      : {};
+
     if (!layers) {
       return;
     }
@@ -232,16 +245,17 @@ class AnalyticsSidebar extends Component {
     };
     const strategiesDropdown = (
       <div className="w-full flex justify-center mb-2">
-        <select
-          name="strategy"
-          className="text-green-200 capitalize rounded px-1 bg-white bg-opacity-10"
+        <Select
+          size="small"
+          className="w-full max-w-[200px]"
+          value={this.props.lengthCalculationStrategy}
           onChange={this.props.onChangeStrategy}
-          defaultValue={this.props.lengthCalculationStrategy}
-        >
-          {LENGTH_CALCULATE_STRATEGIES.map((s) => (
-            <option value={s}> {translateStrategy[s]} </option>
-          ))}
-        </select>
+          options={LENGTH_CALCULATE_STRATEGIES.map((s) => ({
+            value: s,
+            label: translateStrategy[s],
+          }))}
+          aria-label="Estratégia de cálculo de extensão"
+        />
       </div>
     );
 
@@ -258,12 +272,14 @@ class AnalyticsSidebar extends Component {
               <h2 className="my-0">Métricas</h2>
             </div>
 
-            <div
-              className="text-xl cursor-pointer p-2 -mr-2 hover:bg-white hover:bg-opacity-10 rounded"
+            <Button
+              type="text"
+              shape="circle"
+              className="text-xl -mr-2 text-inherit"
+              icon={<IconClose />}
               onClick={() => this.props.toggle(false)}
-            >
-              <IconClose />
-            </div>
+              aria-label="Fechar painel de métricas"
+            />
           </div>
 
           {this.props.location && (
@@ -402,7 +418,7 @@ class AnalyticsSidebar extends Component {
                           strokeOpacity={0.2}
                           strokeWidth={0.5}
                         />
-                        <RechartsTooltip />
+                        <RechartsTooltip {...pnbLineChartTooltipProps} />
                         <Line
                           type="monotone"
                           dataKey="value"
@@ -577,7 +593,7 @@ class AnalyticsSidebar extends Component {
                 Baixe os dados da infraestrutura cicloviária desta cidade em formato GeoJSON para
                 uso em seus próprios projetos e análises.
               </p>
-              <Button ghost onClick={this.props.downloadData} block>
+              <Button onClick={this.props.downloadData} block>
                 <IconDownload className="inline-block mr-1" />
                 <span className="font-mono text-xs">
                   {this.props.location.split(',')[0]}.geojson
@@ -692,21 +708,19 @@ const ViaDataRow = ({ layer, length, rawTotal, effectiveTotal, included, onToggl
           </tbody>
         </table>
       </div>
-      <div className="pt-2 mt-2 border-t border-black border-opacity-10 border-solid">
-        <label
-          className="flex items-center gap-2 cursor-pointer select-none m-0 font-normal"
-          onClick={(event) => event.stopPropagation()}
+      <div
+        className="pt-2 mt-2 border-t border-black border-opacity-10 border-solid"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <Checkbox
+          checked={included}
+          onChange={() => onToggleInclude()}
+          className="select-none m-0 font-normal"
+          aria-label={`Incluir ${layer.displayName || layer.name} no total de vias`}
         >
-          <input
-            type="checkbox"
-            className="m-0 flex-shrink-0 cursor-pointer"
-            checked={included}
-            onClick={(event) => event.stopPropagation()}
-            onChange={onToggleInclude}
-            aria-label={`Incluir ${layer.displayName || layer.name} no total de vias`}
-          />
-          <span>Incluir no total e no gráfico</span>
-        </label>
+          Incluir no total e no gráfico
+        </Checkbox>
       </div>
     </div>
   );
@@ -726,8 +740,7 @@ const ViaDataRow = ({ layer, length, rawTotal, effectiveTotal, included, onToggl
         content={popoverContent}
         placement="left"
         trigger={['hover', 'focus']}
-        mouseEnterDelay={0.12}
-        mouseLeaveDelay={0.4}
+        mouseEnterDelay={0.2}
         classNames={{ root: 'analytics-via-detail-popover' }}
       >
         <div
@@ -822,9 +835,13 @@ const Section = (props) => (
               </div>
             }
           >
-            <div className="opacity-50 hover:opacity-100 p-2 -mr-2 hover:bg-white hover:bg-opacity-10 rounded">
-              <IconInfo />
-            </div>
+            <Button
+              type="text"
+              shape="circle"
+              className="opacity-50 hover:opacity-100 -mr-2 text-inherit"
+              icon={<IconInfo />}
+              aria-label={`Informações: ${props.title}`}
+            />
           </Popover>
         )}
       </div>
