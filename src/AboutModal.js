@@ -37,7 +37,8 @@ function AboutModal({ visible, onClose, openLayersLegendModal }) {
                 ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-500
             `}
       style={{
-        background: 'rgba(37,32,29,0.95)',
+        background: 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(20px)',
         color: 'white',
       }}
     >

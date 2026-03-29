@@ -20,7 +20,7 @@ export default function RouteSortDropdown({ currentKey, onChange, items }) {
       }}
       placement="bottomRight"
     >
-      <Button size="small" type="text" className="opacity-80 hover:opacity-100 -mr-3 md:my-1">
+      <Button type="text" className="opacity-80 hover:opacity-100 -mr-3 md:my-1">
         <div className="flex items-center gap-1 xl:text-xxs">
           <span className="opacity-75">Ordenar por:</span>
           <span className="font-medium">{current.label}</span>

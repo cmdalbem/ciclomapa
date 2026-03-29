@@ -1,30 +1,3 @@
-.city-switcher-modal__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity var(--motion-duration-normal, 300ms) ease-in-out,
-    backdrop-filter var(--motion-duration-normal, 300ms) ease-in-out;
-
-  backdrop-filter: blur(0px);
-}
-
-.city-switcher-modal__backdrop {
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.theme-light .city-switcher-modal__backdrop {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-body.show-city-picker .city-switcher-modal__backdrop {
-  opacity: 1;
-  pointer-events: auto;
-  backdrop-filter: blur(20px);
-}
-
 .city-switcher-modal {
   position: fixed;
   inset: 0;
@@ -41,20 +14,28 @@ body.show-city-picker .city-switcher-modal__backdrop {
   opacity: 0;
   pointer-events: none;
 
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+
   /* Closing: fade opacity first, then hide visibility (avoids tab/focus traps). */
   transition:
-    opacity var(--motion-duration-normal, 300ms) ease,
+    opacity var(--motion-duration-normal, 300ms) ease-out,
     visibility 0ms linear var(--motion-duration-normal, 300ms);
+}
+
+.theme-light .city-switcher-modal {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 body.show-city-picker .city-switcher-modal {
   visibility: visible;
   opacity: 1;
-  pointer-events: none; /* children (backdrop + panel) use pointer-events: auto */
+  pointer-events: auto;
 
   /* Opening: visibility must apply immediately or focus() on the geocoder cannot succeed. */
   transition:
-    opacity var(--motion-duration-normal, 300ms) ease,
+    opacity var(--motion-duration-normal, 300ms) ease-out,
     visibility 0ms;
 }
 

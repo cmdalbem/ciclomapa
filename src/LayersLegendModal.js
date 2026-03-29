@@ -256,7 +256,7 @@ class LayersLegendModal extends Component {
         >
           <div className="max-w-2xl mx-auto">
             {/* Sticky Header */}
-            <div className="sticky top-0 z-20 px-5 pt-4 pb-3 bg-gray-800">
+            <div className="sticky top-0 z-20 px-3 pt-4 pb-3 bg-gray-800">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold tracking-tight text-white my-0 md:text-2xl">
                   Legenda
@@ -273,10 +273,12 @@ class LayersLegendModal extends Component {
               </div>
 
               {/* Tab Navigation */}
-              <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1 -mb-1">
+              <div className="flex flex-nowrap gap-1 overflow-x-auto pb-1 -mb-1">
                 {viasCiclaveisLayers.length > 0 && (
                   <Button
                     type="text"
+                    size="small"
+                    shape="pill"
                     htmlType="button"
                     onClick={() => this.scrollToSection('vias-ciclaveis-section')}
                     className={legendNavTabClass('vias-ciclaveis-section')}
@@ -287,6 +289,8 @@ class LayersLegendModal extends Component {
                 {pontosLayers.length > 0 && (
                   <Button
                     type="text"
+                    size="small"
+                    shape="pill"
                     htmlType="button"
                     onClick={() => this.scrollToSection('pontos-section')}
                     className={legendNavTabClass('pontos-section')}
@@ -297,6 +301,8 @@ class LayersLegendModal extends Component {
                 {outrasViasLayers.length > 0 && (
                   <Button
                     type="text"
+                    size="small"
+                    shape="pill"
                     htmlType="button"
                     onClick={() => this.scrollToSection('outras-vias-section')}
                     className={legendNavTabClass('outras-vias-section')}
@@ -306,6 +312,8 @@ class LayersLegendModal extends Component {
                 )}
                 <Button
                   type="text"
+                  size="small"
+                  shape="pill"
                   htmlType="button"
                   onClick={() => this.scrollToSection('routes-section')}
                   className={legendNavTabClass('routes-section')}
@@ -316,7 +324,7 @@ class LayersLegendModal extends Component {
             </div>
 
             {/* Content */}
-            <div className="px-5 pt-6 pb-10">
+            <div className="px-3 pt-6 pb-10">
               <div className="space-y-10 mb-10">
                 {/* Vias cicláveis */}
                 {viasCiclaveisLayers.length > 0 && (
