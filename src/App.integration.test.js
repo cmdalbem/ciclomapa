@@ -19,6 +19,7 @@ function MinimalAppWithModal() {
         visible={modalOpen}
         onClose={() => setModalOpen(false)}
         openLayersLegendModal={() => {}}
+        openCityPicker={() => {}}
       />
     </div>
   );
@@ -40,9 +41,10 @@ it('user can open and close About modal', async () => {
   const dialog = screen.getByRole('dialog', { name: /sobre o ciclomapa/i });
   expect(dialog).toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: /começar/i }));
+  await user.click(screen.getByRole('button', { name: /explorar o mapa/i }));
   await waitFor(() => {
-    const closedDialog = screen.getByRole('dialog', { name: /sobre o ciclomapa/i });
-    expect(closedDialog).toHaveClass('opacity-0', 'pointer-events-none');
+    const root = document.querySelector('.about-modal-root');
+    expect(root).toBeTruthy();
+    expect(root).toHaveClass('about-modal-root--closed');
   });
 });

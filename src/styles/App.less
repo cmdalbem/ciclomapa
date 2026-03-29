@@ -1,3 +1,5 @@
+@import './fonts.less';
+
 // Ant Design v6: theme via ConfigProvider (see src/config/antdTheme.js).
 
 // Tailwind CDN extensions (unpkg build has no theme.extend — add utilities here)
@@ -160,6 +162,16 @@ a {
 
   &:hover {
     filter: saturate(1);
+  }
+}
+
+/** About modal footer partner marks: light UI — inverted + always grayscale (no color on hover). */
+.about-modal-partner-logo--light {
+  filter: invert(1) saturate(0);
+
+  &:hover,
+  &:focus-visible {
+    filter: invert(1) saturate(0);
   }
 }
 
@@ -330,12 +342,12 @@ a {
 }
 
 .glass-bg {
-  --glass-bg-opacity: 0.5;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(40px);
 }
 
 .theme-light {
   .glass-bg {
+    --glass-bg-opacity: 0.5;
     background: rgba(255, 255, 255, var(--glass-bg-opacity));
     border: 1px solid rgba(255, 255, 255, 0.35);
   }
@@ -343,6 +355,7 @@ a {
 
 .theme-dark {
   .glass-bg {
+    --glass-bg-opacity: 0.2;
     background: rgba(23, 23, 23, var(--glass-bg-opacity));
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
@@ -368,41 +381,52 @@ a {
   }
 }
 
-// Transition-in effect
-// #ciclomapa #analyticsSidebar,
-// #ciclomapa #mapSwitcher,
-// #ciclomapa .mapboxgl-ctrl-group,
-// #ciclomapa .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder,
-// #ciclomapa #layersPanel,
-// #ciclomapa #layersPanelMobileButton,
-// #ciclomapa #directionsPanel,
-// #ciclomapa #directionsPanelMobileButton,
-// #ciclomapa #topbar {
-//     transition: transform 1000ms, opacity 1000ms;
-//     transition-delay: 1s;
-//     opacity: 1;
-// }
+@media (min-width: 480px) {
+  // Chrome show/hide (hideUI). Delay the *first* reveal via App.js setTimeout — not transition-delay here,
+  // or toggling hideUI (e.g. About modal) waits an extra second before the UI moves.
+  #ciclomapa #mapSwitcher,
+  #ciclomapa .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate),
+  #ciclomapa #layersPanel,
+  #ciclomapa #layersPanelMobileButton,
+  #ciclomapa #directionsPanel,
+  #ciclomapa #directionsPanelMobileButton,
+  #ciclomapa #topbar {
+    transition:
+      transform 600ms ease-out,
+      opacity 600ms ease-out;
+    opacity: 1;
+    transition-delay: 600ms;
+  }
 
-// // From the top
-// #ciclomapa.hideUI #topbar,
-// #ciclomapa.hideUI #directionsPanel {
-//     transform: translateY(-100%);
-//     opacity: 0;
-// }
+  #ciclomapa.hideUI #mapSwitcher,
+  #ciclomapa.hideUI .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate),
+  #ciclomapa.hideUI #layersPanel,
+  #ciclomapa.hideUI #layersPanelMobileButton,
+  #ciclomapa.hideUI #directionsPanel,
+  #ciclomapa.hideUI #directionsPanelMobileButton,
+  #ciclomapa.hideUI #topbar {
+    transition-delay: 0s;
+  }
 
-// // From the left
-// #ciclomapa.hideUI #layersPanel,
-// #ciclomapa.hideUI #directionsPanelMobileButton,
-// #ciclomapa.hideUI #layersPanelMobileButton {
-//     transform: translateX(-100%);
-//     opacity: 0;
-// }
+  // From the top
+  #ciclomapa.hideUI #topbar,
+  #ciclomapa.hideUI #directionsPanel {
+    transform: translateY(-30%);
+    opacity: 0;
+  }
 
-// // From the right
-// #ciclomapa.hideUI #mapSwitcher,
-// #ciclomapa.hideUI #analyticsSidebar,
-// #ciclomapa.hideUI .mapboxgl-ctrl-group,
-// #ciclomapa.hideUI .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-geocoder {
-//     transform: translateX(100%);
-//     opacity: 0;
-// }
+  // From the left
+  #ciclomapa.hideUI #layersPanel,
+  #ciclomapa.hideUI #layersPanelMobileButton {
+    transform: translateX(-20%);
+    opacity: 0;
+  }
+
+  // From the right
+  // #ciclomapa.hideUI #analyticsSidebar,
+  #ciclomapa.hideUI #directionsPanelMobileButton,
+  #ciclomapa.hideUI .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate) {
+    transform: translateX(30%);
+    opacity: 0;
+  }
+}

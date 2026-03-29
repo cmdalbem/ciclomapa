@@ -5,14 +5,14 @@ import debounce from 'lodash.debounce';
 import { appNotification } from './antdNotification';
 import AntdAppShell from './components/AntdAppShell.jsx';
 
-import { get, set } from 'idb-keyval';
-
 import { MdRemove as IconRemove, MdAdd as IconAdd } from 'react-icons/md';
 
 import Analytics from './Analytics.js';
 import OSMController from './OSMController.js';
 import AppLayout from './AppLayout.js';
 import Storage from './Storage.js';
+import AirtableDatabase from './AirtableDatabase.js';
+import { matchCityAirtableFields } from './matchCityAirtableMetadata.js';
 import { downloadObjectAsJson } from './utils/utils.js';
 import { updateDocumentMeta } from './utils/documentMeta.js';
 import { getSystemThemePreference } from './utils/themeUtils';
@@ -32,6 +32,7 @@ import {
   SAVE_TO_FIREBASE,
   DISABLE_DATA_HEALTY_TEST,
   IS_PROD,
+  ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD,
   THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE,
   IS_MOBILE,
   FORCE_RECALCULATE_LENGTHS_ALWAYS,
@@ -42,6 +43,7 @@ import {
   ENABLE_SATELLITE_TOGGLE,
   MAX_RECENT_CITIES,
 } from './config/constants.js';
+import { runPerCityWelcomeModal } from './welcomeAboutModalPersistence.js';
 
 // v5+ no longer ships global type scale in the old Less bundle; this restores baseline
 // margins for raw h1–p etc. (and complements Tailwind preflight). See antd/dist/reset.css.
@@ -72,6 +74,7 @@ class App extends Component {
     this.toggleSidebar = this.toggleSidebar.bind(this);
     this.openAboutModal = this.openAboutModal.bind(this);
     this.closeAboutModal = this.closeAboutModal.bind(this);
+    this.openCityPicker = this.openCityPicker.bind(this);
     this.openLayersLegendModal = this.openLayersLegendModal.bind(this);
     this.closeLayersLegendModal = this.closeLayersLegendModal.bind(this);
     this.onChangeStrategy = this.onChangeStrategy.bind(this);
@@ -171,8 +174,29 @@ class App extends Component {
       fromPoint: fromPoint,
       toPoint: toPoint,
       isDirectionsPanelOpen: false,
+      airtableMetadataRecords: null,
+      airtableCityFields: null,
     };
   }
+
+  loadAirtableMetadata = async () => {
+    try {
+      const db = new AirtableDatabase();
+      const records = await db.getMetadata();
+      const list = Array.isArray(records) ? records : [];
+      this.setState({ airtableMetadataRecords: list }, () => this.syncAirtableCityFields());
+    } catch (e) {
+      console.warn('Failed to load Airtable city metadata', e);
+      this.setState({ airtableMetadataRecords: [] }, () => this.syncAirtableCityFields());
+    }
+  };
+
+  syncAirtableCityFields = () => {
+    const { airtableMetadataRecords, area } = this.state;
+    if (!Array.isArray(airtableMetadataRecords)) return;
+    const fields = matchCityAirtableFields(airtableMetadataRecords, area);
+    this.setState({ airtableCityFields: fields });
+  };
 
   onChangeStrategy(strategy) {
     this.setState({ lengthCalculationStrategy: strategy });
@@ -220,7 +244,7 @@ class App extends Component {
   }
 
   openAboutModal() {
-    this.setState({ aboutModal: true });
+    this.setState({ aboutModal: true, hideUI: true });
   }
 
   closeAboutModal() {
@@ -228,6 +252,12 @@ class App extends Component {
       aboutModal: false,
       hideUI: false,
     });
+  }
+
+  openCityPicker() {
+    this.setState({ aboutModal: false, hideUI: false });
+    const body = document.querySelector('body');
+    if (body) body.classList.add('show-city-picker');
   }
 
   openLayersLegendModal(scrollToSection = null) {
@@ -358,6 +388,15 @@ class App extends Component {
 
   getPreferredCanonicalSlugForMeta(area) {
     return this.getKnownCanonicalSlugFromArea(area) || this.getCanonicalRouteCitySlug();
+  }
+
+  /** Single document title for sr-only h1 (matches route, not only geocoder area). */
+  getSrOnlyDocumentTitle() {
+    const slug = this.getCanonicalRouteCitySlug();
+    if (!slug) return 'CicloMapa';
+    const loc = getPredefinedCityStaticLocation(slug);
+    const primary = loc?.areaLabel?.split(',')[0]?.trim();
+    return primary ? `${primary} — CicloMapa` : 'CicloMapa';
   }
 
   getCanonicalCityIdentity(area) {
@@ -1113,6 +1152,14 @@ class App extends Component {
 
       this.updateData();
 
+      if (Array.isArray(this.state.airtableMetadataRecords)) {
+        this.syncAirtableCityFields();
+      }
+
+      if (this.state.area && String(this.state.area).trim()) {
+        this.maybeAutoOpenWelcomeAboutModal({ fromMount: false });
+      }
+
       document.querySelector('.city-picker span').setAttribute('style', 'opacity: 1');
 
       // Only redo the query if we need new data
@@ -1206,6 +1253,28 @@ class App extends Component {
     this.calculateLengths();
   };
 
+  /**
+   * @param {object} [options]
+   * @param {boolean} [options.fromMount] When using ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD, only true opens the modal (once per load).
+   */
+  maybeAutoOpenWelcomeAboutModal = (options = {}) => {
+    const fromMount = options.fromMount === true;
+    if (this.state.embedMode) return;
+
+    if (!IS_PROD && ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD) {
+      if (fromMount) {
+        this.openAboutModal();
+      }
+      return;
+    }
+
+    const area = this.state.area;
+    if (!area || typeof area !== 'string' || !area.trim()) return;
+
+    const cityKey = this.getStorageKeyForArea(area);
+    runPerCityWelcomeModal(cityKey, () => this.openAboutModal());
+  };
+
   componentDidMount() {
     updateDocumentMeta(this.state.area, this.getPreferredCanonicalSlugForMeta(this.state.area));
 
@@ -1225,19 +1294,7 @@ class App extends Component {
       this.themeChangeListener = handleThemeChange;
     }
 
-    if (!this.state.embedMode) {
-      const WELCOME_STORAGE_KEY = 'ciclomapa_hasSeenWelcomeMsg';
-      if (!window.localStorage.getItem(WELCOME_STORAGE_KEY)) {
-        get('hasSeenWelcomeMsg').then((data) => {
-          if (window.localStorage.getItem(WELCOME_STORAGE_KEY) || data) {
-            return;
-          }
-          window.localStorage.setItem(WELCOME_STORAGE_KEY, '1');
-          this.openAboutModal();
-          set('hasSeenWelcomeMsg', true);
-        });
-      }
-    }
+    this.maybeAutoOpenWelcomeAboutModal({ fromMount: true });
 
     setTimeout(() => {
       if (!this.state.aboutModal) {
@@ -1259,6 +1316,8 @@ class App extends Component {
         this.resolveCitySlugToAreaAndViewport(citySlug);
       }
     }
+
+    this.loadAirtableMetadata();
   }
 
   componentWillUnmount() {
@@ -1366,6 +1425,7 @@ class App extends Component {
       setArea: this.setArea,
       openLayersLegendModal: this.openLayersLegendModal,
       closeAboutModal: this.closeAboutModal,
+      openCityPicker: this.openCityPicker,
       closeLayersLegendModal: this.closeLayersLegendModal,
     };
     return (
@@ -1375,6 +1435,8 @@ class App extends Component {
             state={this.state}
             handlers={handlers}
             directionsPanelRef={this.directionsPanel}
+            seoPageTitle={this.getSrOnlyDocumentTitle()}
+            cityCanonicalSlug={this.getCanonicalRouteCitySlug() ?? undefined}
           />
         </DirectionsProvider>
       </AntdAppShell>

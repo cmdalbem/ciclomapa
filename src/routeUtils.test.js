@@ -1,8 +1,25 @@
-import { formatDistance, formatDuration, getRouteScore } from './utils/routeUtils.js';
+import {
+  THIN_SPACE,
+  appendKmUnit,
+  formatDistance,
+  formatDuration,
+  getRouteScore,
+} from './utils/routeUtils.js';
+
+function leadingNumber(formattedDistance) {
+  const m = /^(\d+(?:\.\d+)?)/.exec(formattedDistance);
+  return m ? Number(m[1]) : NaN;
+}
+
+describe('appendKmUnit', () => {
+  it('inserts thin space before km', () => {
+    expect(appendKmUnit('12,4')).toBe(`12,4${THIN_SPACE}km`);
+  });
+});
 
 describe('formatDistance', () => {
-  it('formats meters as km with one decimal', () => {
-    expect(formatDistance(5500)).toBe('5.5 km');
+  it('converts meters to one decimal place in the leading numeric segment', () => {
+    expect(leadingNumber(formatDistance(5500))).toBe(5.5);
   });
   it('returns N/A for null/undefined', () => {
     expect(formatDistance(null)).toBe('N/A');

@@ -203,9 +203,10 @@ body.theme-light {
   color: rgba(0, 0, 0, 0.85);
 }
 
-.theme-light * {
+/* TODO: remove this once we have a proper light theme */
+/* .theme-light * {
   color: inherit;
-}
+} */
 
 /* Light theme clear button (variables set in .theme-light above) */
 .theme-light #directionsPanel.cm-panel .ant-select-clear {

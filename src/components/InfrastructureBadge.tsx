@@ -46,10 +46,13 @@ const InfrastructureBadge: React.FC<InfrastructureBadgeProps> = ({
   let textColor: string | undefined;
   let backgroundColor: string | undefined;
 
-  if (infrastructure === 'rua') {
+  if (infrastructure === 'neutral') {
+    textColor = isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgb(55, 65, 81)';
+    backgroundColor = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(17, 24, 39, 0.06)';
+  } else if (infrastructure === 'rua') {
     const routeColor = isDarkMode ? ROUTE_COLORS.DARK.SELECTED : ROUTE_COLORS.LIGHT.SELECTED;
     textColor = isDarkMode ? 'white' : adjustColorBrightness(routeColor, -0.3);
-    backgroundColor = hexToRgba(routeColor, isDarkMode ? 0.6 : 0.2);
+    backgroundColor = hexToRgba(routeColor, isDarkMode ? 0.9 : 0.2);
   } else if (infrastructure) {
     const badgeColor = layerColors[infrastructure];
     if (badgeColor) {
@@ -69,7 +72,7 @@ const InfrastructureBadge: React.FC<InfrastructureBadgeProps> = ({
 
   return (
     <span
-      className="rounded-full font-medium text-xs px-1 py-0.5 flex items-center gap-1 text-nowrap whitespace-nowrap shrink-0"
+      className="rounded-full font-medium text-xs px-1.5 py-0.5 flex items-center gap-1 text-nowrap whitespace-nowrap shrink-0"
       style={{ color: textColor, backgroundColor }}
     >
       {children}
