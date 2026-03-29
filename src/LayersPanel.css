@@ -2,6 +2,36 @@
   overflow: hidden;
 }
 
+/* Layer detail popover: keep image inside panel width (avoid legacy 352px overflow). */
+.layers-panel-popover-content-inner {
+  /* padding: 0 !important; */
+  max-width: min(320px, calc(100vw - 24px));
+}
+
+.layers-panel-popover-content {
+  max-width: 100%;
+  /* padding: 12px; */
+  box-sizing: border-box;
+}
+
+.layers-panel-popover__figure {
+  margin-bottom: 12px;
+  max-width: none;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.theme-dark .layers-panel-popover__figure {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.layers-panel-popover__img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .theme-dark #layersPanel,
 .theme-light #layersPanel {
   transition: backdrop-filter 0.3s ease-out;
@@ -48,6 +78,6 @@
   }
 
   #layersPanelMobileButton {
-    background: #1c1717;
+    background: var(--color-bg-dark);
   }
 }

@@ -105,15 +105,17 @@ class LayersPanel extends Component {
               <Popover
                 placement="left"
                 key={l.name}
+                classNames={{ content: 'layers-panel-popover-content-inner' }}
                 content={
-                  <div style={{ width: 320 }}>
+                  <div className="layers-panel-popover-content">
                     {l.type === 'way' && (
-                      <img
-                        className="mb-3 -m-4"
-                        alt=""
-                        style={{ width: '352px', maxWidth: 'none' }}
-                        src={'/' + slugify(l.name) + '.png'}
-                      />
+                      <div className="layers-panel-popover__figure">
+                        <img
+                          className="layers-panel-popover__img"
+                          alt=""
+                          src={'/' + slugify(l.name) + '.png'}
+                        />
+                      </div>
                     )}
 
                     <div className="flex items-center gap-2 mb-1">

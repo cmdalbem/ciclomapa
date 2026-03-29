@@ -48,7 +48,7 @@
 
 .popup-big .mapboxgl-popup-content {
   padding: 24px 16px;
-  min-width: 420px;
+  min-width: 460px;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
   /* box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3); */
   border-radius: 12px;
@@ -69,8 +69,12 @@
 
 .theme-dark .route-tooltip-popup.mapboxgl-popup,
 .theme-dark .popup-big.mapboxgl-popup {
-  --popup-bg-color: black;
+  --popup-bg-color: #171717;
   --popup-text-color: white;
+}
+
+.theme-dark .mapboxgl-popup-close-button:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .theme-light .route-tooltip-popup.mapboxgl-popup,

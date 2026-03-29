@@ -163,40 +163,6 @@
   justify-content: center;
 }
 
-#directionsPanel .swap-button.cm-route-points__swap {
-  /* Keep button visually "backgroundless" (cutout does the work). */
-  background: transparent;
-  border: none;
-}
-
-/* Prevent AntD "active/hover" backgrounds on the swap button */
-#directionsPanel .swap-button.cm-route-points__swap,
-#directionsPanel .swap-button.cm-route-points__swap:hover,
-#directionsPanel .swap-button.cm-route-points__swap:active,
-#directionsPanel .swap-button.cm-route-points__swap:focus,
-#directionsPanel .swap-button.cm-route-points__swap:focus-visible,
-#directionsPanel .swap-button.cm-route-points__swap.ant-btn-text:not(:disabled):hover,
-#directionsPanel .swap-button.cm-route-points__swap.ant-btn-text:not(:disabled):active {
-  background: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-#directionsPanel .swap-button.cm-route-points__swap::after {
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
-#directionsPanel .swap-button.cm-route-points__swap {
-  -webkit-tap-highlight-color: transparent;
-}
-
-.theme-light #directionsPanel .swap-button.cm-route-points__swap {
-  color: rgba(0, 0, 0, 0.85);
-}
-
 /* Custom marker styles */
 .origin-destination-marker {
   width: 32px;
@@ -326,7 +292,7 @@ body.theme-light {
 #layersPanelMobileButton.collapsed,
 .directions-panel-button.collapsed {
   color: #d1d5db;
-  background: #1c1717;
+  background: var(--color-bg-dark);
 }
 
 #layersPanelMobileButton.expanded,

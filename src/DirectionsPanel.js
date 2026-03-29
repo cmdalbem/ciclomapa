@@ -1067,7 +1067,7 @@ class DirectionsPanel extends Component {
                     {(directions || this.props.fromPoint || this.props.toPoint) && (
                       <Button
                         onClick={this.clearDirections}
-                        // type="text"
+                        type="text"
                         shape="circle"
                         icon={<IconTrash />}
                         aria-label="Limpar rotas"
@@ -1097,7 +1097,7 @@ class DirectionsPanel extends Component {
                     {/* { IS_MOBILE && ( */}
                     <Button
                       onClick={this.toggleCollapse}
-                      // type="text"
+                      type="text"
                       shape="circle"
                       icon={<IconClose />}
                       aria-label="Fechar painel de rotas"
@@ -1136,7 +1136,7 @@ class DirectionsPanel extends Component {
                     />
                   }
                   onClick={this.swapOriginDestination}
-                  className="swap-button cm-route-points__swap text-white"
+                  className="swap-button cm-route-points__swap"
                   title="Trocar origem e destino"
                   aria-label="Trocar origem e destino"
                 />
