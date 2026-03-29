@@ -47,7 +47,7 @@ import {
 // margins for raw h1–p etc. (and complements Tailwind preflight). See antd/dist/reset.css.
 import 'antd/dist/reset.css';
 import './styles/App.less';
-import './styles/antd.light.css';
+import './styles/theme-tailwind-overrides.css';
 
 const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 

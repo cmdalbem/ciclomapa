@@ -9,7 +9,7 @@ The `src/` directory is organized as follows:
 
 - **`utils/`** — Pure helpers and shared logic: `utils.js`, `routeUtils.js`, `geojsonUtils.js`.
 - **`config/`** — App configuration and design tokens: `constants.js`, `design-tokens.js`, `layers.json`. API keys, feature flags, and theme/layout constants.
-- **`styles/`** — Global styles: `App.less`, `antd.customize.less`, `antd.light.css`. Component-specific CSS/LESS stay next to the component (e.g. `DirectionsPanel.css` in `src/`).
+- **`styles/`** — Global styles: `App.less`, `theme-tailwind-overrides.css` (Tailwind CDN theme hacks for `body.theme-light` / `theme-dark`). Ant Design tokens: `src/config/antdTheme.js`. Component-specific CSS/LESS stay next to the component (e.g. `DirectionsPanel.css` in `src/`).
 
 Feature-level modules (Map, DirectionsPanel, TopBar, LayersPanel, modals, etc.) currently live in the root of `src/`. They can be moved later into **`features/`** (or **`screens/`**) in batches, each with its own folder (component + styles + tests). Run `yarn test --watchAll=false` and `yarn start` after each move.
 
