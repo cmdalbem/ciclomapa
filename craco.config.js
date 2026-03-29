@@ -1,6 +1,25 @@
 const CracoLessPlugin = require('craco-less');
 
+// Tree-shake antd in webpack only; applying this in Jest breaks TS/ESM transforms.
+const babelPlugins =
+    process.env.NODE_ENV === 'test'
+        ? []
+        : [
+              [
+                  'import',
+                  {
+                      libraryName: 'antd',
+                      libraryDirectory: 'es',
+                      style: false,
+                  },
+                  'antd',
+              ],
+          ];
+
 module.exports = {
+    babel: {
+        plugins: babelPlugins,
+    },
     plugins: [
         {
             plugin: CracoLessPlugin,

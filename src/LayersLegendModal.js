@@ -256,7 +256,7 @@ class LayersLegendModal extends Component {
         >
           <div className="max-w-2xl mx-auto">
             {/* Sticky Header */}
-            <div className="sticky top-0 z-20 px-5 pt-4 pb-3 bg-gray-800 border-b border-white border-opacity-10">
+            <div className="sticky top-0 z-20 px-5 pt-4 pb-3 bg-gray-800">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold tracking-tight text-white my-0 md:text-2xl">
                   Legenda
