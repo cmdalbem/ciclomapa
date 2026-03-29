@@ -356,12 +356,15 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
 }
 
 .city-switcher-modal__cityBtn {
+  display: block;
+  box-sizing: border-box;
   width: 100%;
   border-radius: 16px;
   /* border: 1px solid rgba(255, 255, 255, 0.1); */
   background: rgba(255, 255, 255, 0.02);
   color: rgba(255, 255, 255, 0.86);
   text-align: left;
+  text-decoration: none;
 
   /* opacity: 0.8; */
 
@@ -374,12 +377,20 @@ body.show-city-picker .city-switcher-modal__staggerEnter {
     border-color 160ms ease;
 }
 
+a.city-switcher-modal__cityBtn:visited {
+  color: rgba(255, 255, 255, 0.86);
+}
+
 .theme-light .city-switcher-modal__cityBtn {
   background: rgba(0, 0, 0, 0.02);
   color: rgba(0, 0, 0, 0.9);
   border: none;
   backdrop-filter: blur(14px) saturate(1.08);
   opacity: 1;
+}
+
+.theme-light a.city-switcher-modal__cityBtn:visited {
+  color: rgba(0, 0, 0, 0.9);
 }
 
 .city-switcher-modal__cityBtn:hover {

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { HiOutlineClock, HiOutlineXMark } from 'react-icons/hi2';
 import { Button } from 'antd';
 import Storage from './Storage.js';
@@ -648,11 +648,13 @@ type CityPickerRowModel = {
 function CityPickerCityCard({
   city,
   stagger,
-  onPick,
+  to,
+  onActivate,
 }: {
   city: CityPickerRowModel;
   stagger: number;
-  onPick: () => void;
+  to: string;
+  onActivate: () => void;
 }) {
   return (
     <div
@@ -660,7 +662,14 @@ function CityPickerCityCard({
       style={{ '--city-content-stagger': stagger } as React.CSSProperties}
       role="listitem"
     >
-      <button type="button" className="city-switcher-modal__cityBtn" onClick={onPick}>
+      <Link
+        to={to}
+        className="city-switcher-modal__cityBtn"
+        onClick={(e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          onActivate();
+        }}
+      >
         <div className="city-switcher-modal__cityTopRow">
           <div className="city-switcher-modal__cityNameWrap">
             <div className="city-switcher-modal__cityName">{city.name}</div>
@@ -679,13 +688,12 @@ function CityPickerCityCard({
           ) : null}
         </div>
         {city.meta ? <div className="city-switcher-modal__cityMeta">{city.meta}</div> : null}
-      </button>
+      </Link>
     </div>
   );
 }
 
 function CitySwitcherModal() {
-  const navigate = useNavigate();
   const { city } = useParams();
 
   const topCityBase = useMemo<TopCityBase[]>(() => {
@@ -847,7 +855,8 @@ function CitySwitcherModal() {
     []
   );
 
-  const onPickCity = useCallback(
+  /** Runs when the user follows a city link in this tab (navigation is handled by the link `to`). */
+  const onCityLinkActivate = useCallback(
     (cityObj: PickableCity, source: 'recent' | 'top') => {
       const nextSlug = cityObj?.canonicalSlug;
       if (!nextSlug) {
@@ -874,10 +883,8 @@ function CitySwitcherModal() {
         input.value = '';
         input.dispatchEvent(new Event('input', { bubbles: true }));
       }
-
-      navigate(`/${encodeURIComponent(nextSlug)}`);
     },
-    [navigate, recordRecentlyVisitedCity, closeCityPicker]
+    [recordRecentlyVisitedCity, closeCityPicker]
   );
 
   const contentScrollElRef = useRef<HTMLDivElement | null>(null);
@@ -929,7 +936,8 @@ function CitySwitcherModal() {
                     key={c.canonicalSlug}
                     city={c}
                     stagger={contentStaggerIndex++}
-                    onPick={() => onPickCity(c, 'recent')}
+                    to={`/${encodeURIComponent(c.canonicalSlug)}`}
+                    onActivate={() => onCityLinkActivate(c, 'recent')}
                   />
                 ))}
               </div>
@@ -957,7 +965,8 @@ function CitySwitcherModal() {
                       key={c.canonicalSlug}
                       city={c}
                       stagger={contentStaggerIndex++}
-                      onPick={() => onPickCity(c, 'top')}
+                      to={`/${encodeURIComponent(c.canonicalSlug)}`}
+                      onActivate={() => onCityLinkActivate(c, 'top')}
                     />
                   ))}
                 </div>
