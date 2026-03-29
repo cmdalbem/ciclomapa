@@ -174,8 +174,8 @@ class App extends Component {
     };
   }
 
-  onChangeStrategy(event) {
-    this.setState({ lengthCalculationStrategy: event.target.value });
+  onChangeStrategy(strategy) {
+    this.setState({ lengthCalculationStrategy: strategy });
   }
 
   toggleTheme(newIsDark) {
