@@ -27,7 +27,7 @@ The **DirectionsPanel** is the pilot: `#directionsPanel` uses BEM-style classes 
 ## Other styles
 
 - **Tailwind**: Used for layout and utilities only (e.g. `flex`, `rounded-full`, `px-1`). Loaded via **CDN** in `public/index.html` (Tailwind v2: `unpkg.com/tailwindcss@^2/dist/tailwind.min.css`). Prefer BEM for component-specific, semantic styles. Note: `package-lock.json` may list Tailwind v3 as a transitive dependency—the app’s styles come from the CDN build (v2). To switch to build-time Tailwind, add PostCSS + a Tailwind config and remove the CDN link.
-- **Ant Design**: Theme (`ConfigProvider`) in `src/config/antdTheme.js` via `AntdAppShell`; `antd/dist/reset.css` imported in `App.js` for baseline typography. Component-level CSS where needed.
+- **Ant Design**: Theme (`ConfigProvider`) in `src/config/antdTheme.js` via `AntdAppShell` with locale `antd/locale/pt_BR` and `dayjs` `pt-br`; `antd/dist/reset.css` imported in `App.js` for baseline typography. Production builds use `babel-plugin-import` for `antd/es/*` (disabled under Jest). Component-level CSS where needed.
 - **Global/base**: `App.less` (with design tokens for focus, loader, gradient).
 
 ## Accessibility
