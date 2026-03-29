@@ -8,7 +8,6 @@ import LayersLegendModal from './LayersLegendModal.js';
 import Map from './Map.js';
 import CitySwitcherModal from './CitySwitcherModal';
 import TopBar from './TopBar.js';
-import MapStyleSwitcher from './MapStyleSwitcher.js';
 import LayersPanel from './LayersPanel.js';
 import LayersBar from './LayersBar.js';
 import DirectionsPanel from './DirectionsPanel.js';
@@ -79,14 +78,6 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
             isTrackingUserLocation={state.isTrackingUserLocation}
             onTrackingUserLocationChange={handlers.onTrackingUserLocationChange}
           />
-          {!state.embedMode && ENABLE_SATELLITE_TOGGLE && (
-            <MapStyleSwitcher
-              showSatellite={state.showSatellite}
-              onMapStyleChange={handlers.onMapStyleChange}
-              onMapShowSatelliteChanged={handlers.onMapShowSatelliteChanged}
-              isDarkMode={state.isDarkMode}
-            />
-          )}
           {/* {!state.embedMode && !IS_MOBILE && <div id="gradient-backdrop" />} */}
 
           {!IS_MOBILE && !state.embedMode && (
