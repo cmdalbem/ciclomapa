@@ -497,13 +497,18 @@ class Map extends Component {
       return;
     }
 
-    const coords = feature?.geometry?.coordinates;
-    if (!coords) {
+    const geom = feature?.geometry;
+    if (geom?.type !== 'Point' || !Array.isArray(geom.coordinates)) {
+      return;
+    }
+
+    const [lng, lat] = geom.coordinates;
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
       return;
     }
 
     this.map.easeTo({
-      center: [coords[0], coords[1]],
+      center: [lng, lat],
       zoom: 17,
       padding: { bottom: 50 },
     });
