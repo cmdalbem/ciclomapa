@@ -2490,7 +2490,10 @@ class Map extends Component {
         },
         trackUserLocation: IS_MOBILE ? true : false,
         showUserHeading: IS_MOBILE ? true : false,
-        followUserLocation: IS_MOBILE ? true : false,
+        // Mapbox only runs _updateCamera when followUserLocation is true, including
+        // one-shot desktop mode (trackUserLocation: false). followUserLocation: false
+        // here made clicks succeed but the map never moved.
+        followUserLocation: true,
       });
 
       // Store reference to geolocate control
