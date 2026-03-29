@@ -1,6 +1,6 @@
 /*
- * Light / dark helpers for Tailwind (CDN) and non-Ant surfaces.
- * Ant Design v6 light/dark is handled by ConfigProvider; do not duplicate .ant-* overrides here.
+ * Theme helpers for Tailwind (CDN) and non-Ant surfaces.
+ * Ant Design v6 light/dark uses ConfigProvider (see src/config/antdTheme.js).
  */
 
 .theme-light body {
@@ -206,18 +206,4 @@
 
 .theme-light .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder--icon-search {
   opacity: 0.3 !important;
-}
-
-/* MapStyleSwitcher light mode overrides */
-.theme-light .switcher-bar > div {
-  background: #f3f4f6 !important;
-  border: 1px solid #d1d5db !important;
-}
-
-.theme-light .switcher-bar > div:hover {
-  box-shadow: 0px 2px 7px rgba(0, 0, 0, 0.1) !important;
-}
-
-.theme-light .switcher-bar > div.selected {
-  border: 2px solid #4ea76f !important;
 }
