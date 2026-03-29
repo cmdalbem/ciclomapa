@@ -1,5 +1,5 @@
 import React, { useLayoutEffect } from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import Storage from './Storage.js';
@@ -13,6 +13,20 @@ import CitySwitcherModal, {
 } from './CitySwitcherModal';
 
 const RECENT_KEY = 'ciclomapa_recent_cities_v1';
+
+function cityLink(slug: string): HTMLElement {
+  const el = document.querySelector(`a[data-city-slug="${slug}"]`);
+  if (!el || !(el instanceof HTMLElement)) {
+    throw new Error(`Expected link[data-city-slug="${slug}"]`);
+  }
+  return el;
+}
+
+function expectCityLinkTotalKm(link: HTMLElement, expectedKm: string) {
+  const total = link.querySelector('[data-city-total-km]');
+  expect(total).not.toBeNull();
+  expect(total).toHaveAttribute('data-city-total-km', expectedKm);
+}
 
 beforeEach(() => {
   resetCitySwitcherStatsCacheForTest();
@@ -56,21 +70,15 @@ function renderOpenPicker(initialPath = '/curitiba') {
   );
 }
 
-function brasilSection() {
-  return screen.getByRole('region', { name: /^brasil$/i });
-}
-
-function saoPauloCityLink() {
-  return within(brasilSection()).getByRole('link', { name: /são paulo/i });
-}
-
 it('renders city picker dialog with expected regions when open', async () => {
   renderOpenPicker('/curitiba');
 
-  expect(screen.getByRole('dialog', { name: /selecionar cidade/i })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /fechar/i })).toBeInTheDocument();
+  expect(screen.getByTestId('city-switcher-dialog')).toBeInTheDocument();
+  expect(screen.getByTestId('city-switcher-close')).toBeInTheDocument();
   await waitFor(() => {
-    expect(screen.getByRole('link', { name: /são paulo/i })).toBeInTheDocument();
+    expect(document.querySelector('a[data-city-slug="sao-paulo"]')).toBeInstanceOf(
+      HTMLAnchorElement
+    );
   });
 });
 
@@ -79,7 +87,7 @@ it('close button removes show-city-picker from body', async () => {
   renderOpenPicker();
 
   expect(document.body.classList.contains('show-city-picker')).toBe(true);
-  await user.click(screen.getByRole('button', { name: /fechar/i }));
+  await user.click(screen.getByTestId('city-switcher-close'));
   expect(document.body.classList.contains('show-city-picker')).toBe(false);
 });
 
@@ -97,10 +105,12 @@ it('clicking a top city navigates to that slug and closes the picker', async () 
   renderOpenPicker('/curitiba');
 
   await waitFor(() => {
-    expect(screen.getByRole('link', { name: /são paulo/i })).toBeInTheDocument();
+    expect(document.querySelector('a[data-city-slug="sao-paulo"]')).toBeInstanceOf(
+      HTMLAnchorElement
+    );
   });
 
-  await user.click(screen.getByRole('link', { name: /são paulo/i }));
+  await user.click(cityLink('sao-paulo'));
 
   await waitFor(() => {
     expect(screen.getByTestId('pathname')).toHaveTextContent('/sao-paulo');
@@ -122,8 +132,13 @@ it('shows Recentes when localStorage has recent cities with catalog entries', as
 
   renderOpenPicker('/curitiba');
 
-  const recentSection = await screen.findByRole('region', { name: /recentemente visitadas/i });
-  expect(within(recentSection).getByRole('link', { name: /rio de janeiro/i })).toBeInTheDocument();
+  const recentSection = await screen.findByTestId('city-switcher-recent');
+  await waitFor(() => {
+    expect(recentSection.querySelector('a[data-city-slug="rio-de-janeiro"]')).toBeInstanceOf(
+      HTMLAnchorElement
+    );
+  });
+  expect(recentSection.contains(cityLink('rio-de-janeiro'))).toBe(true);
 });
 
 describe('city stats totals from Storage', () => {
@@ -144,7 +159,7 @@ describe('city stats totals from Storage', () => {
     renderOpenPicker('/curitiba');
 
     await waitFor(() => {
-      expect(within(saoPauloCityLink()).getByText('18 km')).toBeInTheDocument();
+      expectCityLinkTotalKm(cityLink('sao-paulo'), '18');
     });
   });
 
@@ -159,7 +174,7 @@ describe('city stats totals from Storage', () => {
     renderOpenPicker('/curitiba');
 
     await waitFor(() => {
-      expect(within(saoPauloCityLink()).getByText('33 km')).toBeInTheDocument();
+      expectCityLinkTotalKm(cityLink('sao-paulo'), '33');
     });
   });
 
@@ -178,16 +193,18 @@ describe('city stats totals from Storage', () => {
 
     await waitFor(() => {
       expect(
-        saoPauloCityLink().querySelector('.city-switcher-modal__cityTotalSkeleton')
+        cityLink('sao-paulo').querySelector('.city-switcher-modal__cityTotalSkeleton')
       ).not.toBeNull();
     });
 
     finishSaoPaulo();
 
     await waitFor(() => {
-      expect(within(saoPauloCityLink()).getByText('44 km')).toBeInTheDocument();
+      expectCityLinkTotalKm(cityLink('sao-paulo'), '44');
     });
-    expect(saoPauloCityLink().querySelector('.city-switcher-modal__cityTotalSkeleton')).toBeNull();
+    expect(
+      cityLink('sao-paulo').querySelector('.city-switcher-modal__cityTotalSkeleton')
+    ).toBeNull();
   });
 
   it('after Storage returns null docs for all requested ids, shows no km and no perpetual skeleton', async () => {
@@ -197,11 +214,11 @@ describe('city stats totals from Storage', () => {
       expect(Storage.prototype.getCityStatsDoc).toHaveBeenCalled();
     });
 
-    const link = saoPauloCityLink();
+    const link = cityLink('sao-paulo');
     await waitFor(() => {
       expect(link.querySelector('.city-switcher-modal__cityTotalSkeleton')).toBeNull();
     });
-    expect(within(link).queryByText(/^\d+ km$/)).toBeNull();
+    expect(link.querySelector('.city-switcher-modal__cityTotal')).toBeNull();
   });
 
   it('does not call Storage on remount when the first preload cached km totals per canonical slug', async () => {
@@ -211,11 +228,11 @@ describe('city stats totals from Storage', () => {
 
     const first = renderOpenPicker('/curitiba');
     await waitFor(() => {
-      expect(within(saoPauloCityLink()).getByText('60 km')).toBeInTheDocument();
+      expectCityLinkTotalKm(cityLink('sao-paulo'), '60');
     });
     await waitFor(() => {
       expect(
-        saoPauloCityLink().querySelector('.city-switcher-modal__cityTotalSkeleton')
+        cityLink('sao-paulo').querySelector('.city-switcher-modal__cityTotalSkeleton')
       ).toBeNull();
     });
 
@@ -232,7 +249,7 @@ describe('city stats totals from Storage', () => {
     );
 
     await waitFor(() => {
-      expect(within(saoPauloCityLink()).getByText('60 km')).toBeInTheDocument();
+      expectCityLinkTotalKm(cityLink('sao-paulo'), '60');
     });
     expect(Storage.prototype.getCityStatsDoc).not.toHaveBeenCalled();
   });
@@ -256,14 +273,16 @@ describe('city stats totals from Storage', () => {
     renderOpenPicker('/curitiba');
 
     await waitFor(() => {
-      expect(within(saoPauloCityLink()).getByText('41 km')).toBeInTheDocument();
+      expectCityLinkTotalKm(cityLink('sao-paulo'), '41');
     });
-    expect(saoPauloCityLink().querySelector('.city-switcher-modal__cityTotalSkeleton')).toBeNull();
+    expect(
+      cityLink('sao-paulo').querySelector('.city-switcher-modal__cityTotalSkeleton')
+    ).toBeNull();
 
     finishSp();
 
     await waitFor(() => {
-      expect(within(saoPauloCityLink()).getByText('42 km')).toBeInTheDocument();
+      expectCityLinkTotalKm(cityLink('sao-paulo'), '42');
     });
   });
 
@@ -280,7 +299,7 @@ describe('city stats totals from Storage', () => {
     renderOpenPicker('/curitiba');
 
     await waitFor(() => {
-      expect(within(saoPauloCityLink()).getByText('88 km')).toBeInTheDocument();
+      expectCityLinkTotalKm(cityLink('sao-paulo'), '88');
     });
     expect(Storage.prototype.getCityStatsDoc).toHaveBeenCalled();
   });
@@ -298,7 +317,7 @@ describe('city stats totals from Storage', () => {
     renderOpenPicker('/curitiba');
 
     await waitFor(() => {
-      expect(within(saoPauloCityLink()).getByText('12 km')).toBeInTheDocument();
+      expectCityLinkTotalKm(cityLink('sao-paulo'), '12');
     });
     expect(Storage.prototype.getCityStatsDoc).toHaveBeenCalled();
   });
@@ -331,7 +350,9 @@ describe('city stats totals from Storage', () => {
     renderOpenPicker('/porto-alegre');
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /porto alegre/i })).toBeInTheDocument();
+      expect(document.querySelector('a[data-city-slug="porto-alegre"]')).toBeInstanceOf(
+        HTMLAnchorElement
+      );
     });
     expect(Storage.prototype.getCityStatsDoc).not.toHaveBeenCalled();
   });

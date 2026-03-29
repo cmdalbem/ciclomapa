@@ -152,7 +152,12 @@ export const INTERACTIVE_LAYERS_ZOOM_THRESHOLD = 15;
 export const COMMENTS_ZOOM_THRESHOLD = 13;
 export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 12;
 
-// const DEFAULT_PMTILES_FILENAME = 'europe.pmtiles';
+// DEFAULT_PMTILES_FILENAME
+//   br.pmtiles → PROD
+//   la_es_pt.pmtiles → PREVIEW
+//   br_es_pt.pmtiles
+//   la.pmtiles
+//   europe.pmtiles (???)
 const DEFAULT_PMTILES_FILENAME = 'la_es_pt.pmtiles';
 export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAULT_PMTILES_FILENAME;
 
@@ -161,6 +166,13 @@ export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAUL
  */
 
 export const IS_PROD = window.location.hostname === 'ciclomapa.app';
+
+/**
+ * When true and not in production: the About modal auto-opens once on each full page load,
+ * ignoring per-city welcome storage (useful to QA the modal in dev/staging).
+ * When false: auto-open uses per-city persistence (once per city per browser).
+ */
+export const ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD = true;
 
 /**
  * City switcher: persist km totals in localStorage and reload them on startup.

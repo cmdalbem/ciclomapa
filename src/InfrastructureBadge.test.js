@@ -22,6 +22,11 @@ it('renders with infrastructure ciclovia', () => {
   expect(screen.getByText('Ciclovia')).toBeInTheDocument();
 });
 
+it('renders with infrastructure neutral', () => {
+  render(<InfrastructureBadge infrastructure="neutral">POIs</InfrastructureBadge>);
+  expect(screen.getByText('POIs')).toBeInTheDocument();
+});
+
 it('renders with infrastructure rua', () => {
   render(<InfrastructureBadge infrastructure="rua">Rua</InfrastructureBadge>);
   expect(screen.getByText('Rua')).toBeInTheDocument();

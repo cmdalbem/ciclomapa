@@ -13,6 +13,7 @@ import {
   SUPPORTED_COUNTRY_CODES,
   SUPPORTED_COUNTRY_LABEL_PT_BY_CODE,
 } from './config/constants.js';
+import { appendKmUnit } from './utils/routeUtils.js';
 
 import './CitySwitcherModal.css';
 
@@ -665,6 +666,7 @@ function CityPickerCityCard({
       <Link
         to={to}
         className="city-switcher-modal__cityBtn"
+        data-city-slug={city.canonicalSlug}
         onClick={(e) => {
           if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
           onActivate();
@@ -678,8 +680,11 @@ function CityPickerCityCard({
             ) : null}
           </div>
           {typeof city.totalLength === 'number' ? (
-            <div className="city-switcher-modal__cityTotal">
-              {city.totalLength.toFixed(0) + ' km'}
+            <div
+              className="city-switcher-modal__cityTotal"
+              data-city-total-km={city.totalLength.toFixed(0)}
+            >
+              {appendKmUnit(city.totalLength.toFixed(0))}
             </div>
           ) : city.isLoadingTotal ? (
             <div className="city-switcher-modal__cityTotal" aria-hidden="true">
@@ -900,6 +905,7 @@ function CitySwitcherModal() {
       className="city-switcher-modal"
       role="dialog"
       aria-modal="true"
+      data-testid="city-switcher-dialog"
       aria-label="Selecionar cidade"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeCityPicker();
@@ -908,7 +914,13 @@ function CitySwitcherModal() {
       <div ref={panelRef} className="city-switcher-modal__panel" tabIndex={-1}>
         <div className="city-switcher-modal__headerRow">
           <div />
-          <Button onClick={closeCityPicker} type="text" shape="circle" aria-label="Fechar">
+          <Button
+            onClick={closeCityPicker}
+            type="text"
+            shape="circle"
+            aria-label="Fechar"
+            data-testid="city-switcher-close"
+          >
             <HiOutlineXMark className="text-2xl city-switcher-modal__closeIcon" aria-hidden />
           </Button>
         </div>
@@ -920,7 +932,11 @@ function CitySwitcherModal() {
           aria-label="Lista de cidades"
         >
           {recentCities.length > 0 && (
-            <section className="city-switcher-modal__section" aria-label="Recentemente visitadas">
+            <section
+              className="city-switcher-modal__section"
+              aria-label="Recentemente visitadas"
+              data-testid="city-switcher-recent"
+            >
               <div
                 className="city-switcher-modal__sectionTitleWrap city-switcher-modal__staggerEnter"
                 style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
@@ -952,6 +968,7 @@ function CitySwitcherModal() {
                 key={group.countryCode}
                 className="city-switcher-modal__section city-switcher-modal__section--countryGroup"
                 aria-label={group.countryLabel}
+                data-country-code={group.countryCode}
               >
                 <div
                   className="city-switcher-modal__sectionTitleWrap city-switcher-modal__staggerEnter"

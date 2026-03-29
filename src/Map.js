@@ -1617,6 +1617,10 @@ class Map extends Component {
       this.updateBoundaryMask();
     }
 
+    if (this.props.location !== prevProps.location && this.popups) {
+      this.popups.setSelectedAreaLabel(this.props.location);
+    }
+
     if (this.props.style !== prevProps.style) {
       console.debug('new style', this.props.style);
       map.setStyle(this.props.style);
@@ -2350,7 +2354,12 @@ class Map extends Component {
       this.props.setMapRef(this.map);
     }
 
-    this.popups = new MapPopups(this.map, this.props.debugMode, this.props.isDarkMode);
+    this.popups = new MapPopups(
+      this.map,
+      this.props.debugMode,
+      this.props.isDarkMode,
+      this.props.location
+    );
 
     // Set up global function for popup routing button
     window.setDestinationFromPopup = (coordinates) => {

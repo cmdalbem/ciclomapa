@@ -1,0 +1,22 @@
+// Aku & Kamu (Marsnev™) — bundled from author distribution (donationware); not on Google Fonts.
+// Optional: add ../fonts/aku-kamu.woff2 and list it before the otf line for smaller payloads.
+
+@font-face {
+  font-family: 'Aku Kamu';
+  src:
+    local('Aku & Kamu'),
+    local('Aku&Kamu'),
+    local('Aku Kamu'),
+    url('../fonts/aku-kamu.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+html {
+  --font-heading-display: 'Aku Kamu', 'IBM Plex Sans', sans-serif;
+}
+
+.font-heading-display {
+  font-family: var(--font-heading-display);
+}

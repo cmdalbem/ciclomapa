@@ -21,27 +21,27 @@
 
 ### Now / Next / Later
 
-| Now (active)                                                     | Next (queued)                                                   | Later                                           |
-| ---------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
-| Finalize unknown-slug indexing policy (`404` vs `200 + noindex`) | Add visible city SEO section (H1 + paragraph + bullets + links) | Prerender/SSR for `/` + top city pages          |
-| Keep canonical consistent for known slug routes                  | Generate sitemap from slug catalog as single source of truth    | CWV work (bundled CSS/fonts/third-party defers) |
-| Verify canonical behavior in GSC URL Inspection                  | Add internal related-city links                                 | JSON-LD + backlink campaign                     |
+| Now (active)                                                     | Next (queued)                                                      | Later                                           |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------- |
+| Finalize unknown-slug indexing policy (`404` vs `200 + noindex`) | Generate `sitemap.xml` from slug catalog (single source of truth)  | Prerender/SSR for `/` + top city pages          |
+| Keep canonical consistent for known slug routes                  | More internal links (e.g. homepage hub with `<a href>` top cities) | CWV work (bundled CSS/fonts/third-party defers) |
+| Verify canonical behavior in GSC URL Inspection                  | —                                                                  | JSON-LD + backlink campaign                     |
 
 ---
 
 ## Current implementation status (high level)
 
-| Area                                                                       | Status         | Notes                                                                                     |
-| -------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------- |
-| `/:city` and `/:city/routes` entry URLs + slug fast-path for mapped cities | Shipped        | Static catalog metadata skips runtime Nominatim for mapped slugs in `src/App.js`          |
-| Slug route normalization + map-state params (`lat,lng,z`) kept in URL      | Shipped        | `normalizeCitySlugRouteIfNeeded`, `syncRouteSlugWithArea`, `updateURL`                    |
-| Phase 1 — static head, `robots.txt`, minimal sitemap, manifest             | Shipped        | `public/index.html`, `public/robots.txt`, `public/sitemap.xml`                            |
-| Phase 2 — dynamic `document.title` + `meta name=description`               | Shipped        | `src/utils/documentMeta.js`, called from `App.js`                                         |
-| CI — `yarn format:check`, `CI=true` in workflow                            | Shipped        | `.github/workflows/ci.yml`                                                                |
-| Phase 3 — governed slugs, stable canonicals, crawlable copy, rich sitemap  | In progress    | Catalog + sitemap + canonical updates shipped; crawlable city copy/internal links pending |
-| Phase 4 — prerender/SSR for key URLs                                       | Not started    |                                                                                           |
-| Phase 5 — Search Console, backlinks, JSON-LD                               | Mostly process |                                                                                           |
-| Phase 6 — perf (CWV): bundle Tailwind, fonts, etc.                         | Not started    |                                                                                           |
+| Area                                                                       | Status         | Notes                                                                                                                        |
+| -------------------------------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `/:city` and `/:city/routes` entry URLs + slug fast-path for mapped cities | Shipped        | Static catalog metadata skips runtime Nominatim for mapped slugs in `src/App.js`                                             |
+| Slug route normalization + map-state params (`lat,lng,z`) kept in URL      | Shipped        | `normalizeCitySlugRouteIfNeeded`, `syncRouteSlugWithArea`, `updateURL`                                                       |
+| Phase 1 — static head, `robots.txt`, minimal sitemap, manifest             | Shipped        | `public/index.html`, `public/robots.txt`, `public/sitemap.xml`                                                               |
+| Phase 2 — dynamic `document.title` + `meta name=description`               | Shipped        | `src/utils/documentMeta.js`, called from `App.js`                                                                            |
+| CI — `yarn format:check`, `CI=true` in workflow                            | Shipped        | `.github/workflows/ci.yml`                                                                                                   |
+| Phase 3 — governed slugs, stable canonicals, crawlable copy, rich sitemap  | In progress    | City contextual copy + links live in `AboutModal` for catalog slugs; sitemap still hand-maintained; unknown-slug policy open |
+| Phase 4 — prerender/SSR for key URLs                                       | Not started    |                                                                                                                              |
+| Phase 5 — Search Console, backlinks, JSON-LD                               | Mostly process |                                                                                                                              |
+| Phase 6 — perf (CWV): bundle Tailwind, fonts, etc.                         | Not started    |                                                                                                                              |
 
 ---
 
@@ -97,8 +97,8 @@ The app now keeps slug URLs (`/:city` and `/:city/routes`) and appends `?lat=&ln
 - ✅ Dynamic canonical for known catalog slugs
 - ✅ Expanded city sitemap present
 - 🟡 Unknown-slug indexing policy is still open (`404` vs `200 + noindex`)
-- ⚪ Visible, crawlable city-specific copy block
-- ⚪ Internal related-city linking module
+- 🟡 Visible city-specific copy in **Sobre** drawer (`AboutModal` + `cityAboutContext.js`) for catalog slug URLs; panel is user-opened (less ideal for crawlers than always-on-page text; consider prerender)
+- 🟡 Internal related-city links (on-page `<Link>` strip + city picker; homepage hub links still optional)
 
 ### Indexing & canonical policy matrix
 
@@ -150,7 +150,7 @@ Decide and implement one policy: real `404` route state, or `200` + explicit `no
 | Slug validation / catalog       | `src/config/citySlugCatalog.js` (or equivalent)                                                                                                   |
 | Resolution / URL writes         | `src/App.js` (`getCitySlugFromRoute`, `normalizeCitySlugRouteIfNeeded`, `syncRouteSlugWithArea`, `resolveCitySlugToAreaAndViewport`, `updateURL`) |
 | Title / description / canonical | `src/utils/documentMeta.js`                                                                                                                       |
-| On-page SEO block               | `src/AppLayout.js` or new `CitySeoSection`                                                                                                        |
+| On-page SEO block               | `src/AboutModal.js` (city block) · `src/cityAboutContext.js`                                                                                      |
 | Sitemap                         | `public/sitemap.xml` or build script                                                                                                              |
 | Server                          | SPA fallback for all app routes; optional HTTP redirects                                                                                          |
 
@@ -279,6 +279,7 @@ CI=true yarn test --watchAll=false
 
 | Date       | Change                                                                                                                                                                                                                                          |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-03-29 | Merged city SEO into About drawer: on `/` the modal stays the classic intro; on catalog `/:city` it opens with a city hero, bullets, related-city chips, then the same global about + partners. Floating `CitySeoSection` removed.              |
 | 2026-03-24 | Updated plan to match shipped slug/canonical behavior (slug paths retained with shareable `lat/lng/z`, dynamic OG/Twitter updates, canonical normalization of known aliases, and open unknown-slug behavior marked as pending policy decision). |
 
 ---
