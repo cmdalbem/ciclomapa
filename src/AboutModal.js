@@ -73,8 +73,8 @@ function AboutModal({ visible, onClose, openLayersLegendModal }) {
             <Button type="primary" size="large" onClick={onClose}>
               Começar
             </Button>
-            <Button size="large" onClick={openLayersLegendModal}>
-              <span style={{ color: 'white' }}>Legenda do mapa</span>
+            <Button size="large" type="text" onClick={openLayersLegendModal}>
+              <span>Saiba mais</span>
             </Button>
           </div>
 

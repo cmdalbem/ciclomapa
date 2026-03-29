@@ -41,6 +41,7 @@ class NewCommentCursor extends Component {
           style={{
             left: -16,
             top: -20,
+            width: '42px',
             animation: 'bounceAndGlow 0.4s ease-out infinite alternate',
           }}
         />

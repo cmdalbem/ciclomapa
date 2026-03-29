@@ -899,7 +899,7 @@ function CitySwitcherModal() {
       <div ref={panelRef} className="city-switcher-modal__panel" tabIndex={-1}>
         <div className="city-switcher-modal__headerRow">
           <div />
-          <Button onClick={closeCityPicker} type="text" aria-label="Fechar">
+          <Button onClick={closeCityPicker} type="text" shape="circle" aria-label="Fechar">
             <HiOutlineXMark className="text-2xl city-switcher-modal__closeIcon" aria-hidden />
           </Button>
         </div>
