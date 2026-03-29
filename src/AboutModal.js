@@ -74,7 +74,7 @@ function AboutModal({ visible, onClose, openLayersLegendModal }) {
               Começar
             </Button>
             <Button size="large" type="text" onClick={openLayersLegendModal}>
-              <span>Saiba mais</span>
+              Saiba mais
             </Button>
           </div>
 

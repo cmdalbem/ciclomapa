@@ -10,7 +10,7 @@ export function bindAntdNotification(api) {
   impl = api;
 }
 
-/** Map legacy `message` arg to v6 `title` for notifications. */
+/** Prefer `title` (antd v6). Maps legacy `message` → `title` if needed. */
 function normalizeNotice(config) {
   if (!config || typeof config !== 'object') return config;
   if (config.message != null && config.title == null) {

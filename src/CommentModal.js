@@ -47,7 +47,7 @@ class CommentModal extends Component {
       })
       .then(() => {
         appNotification.success({
-          message: 'Novo comentário criado.',
+          title: 'Novo comentário criado.',
         });
 
         this.props.afterCreate();

@@ -287,7 +287,7 @@ class OSMController {
           .catch((e) => {
             console.error('Deu erro! Saca só:', e);
             appNotification.error({
-              message: 'Erro',
+              title: 'Erro',
               description: 'Ops, erro na API do Nominatim. Abra o console para ver mais detalhes.',
             });
 

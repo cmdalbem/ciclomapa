@@ -543,7 +543,7 @@ class App extends Component {
         if (this.lastNotifiedCitySlugError !== citySlug) {
           this.lastNotifiedCitySlugError = citySlug;
           appNotification.error({
-            message: 'Nao foi possivel localizar a cidade',
+            title: 'Nao foi possivel localizar a cidade',
             description:
               'Nao encontramos a cidade informada na URL. Verifique o nome e tente novamente.',
             duration: 5,
@@ -587,7 +587,7 @@ class App extends Component {
       if (this.lastNotifiedCitySlugError !== citySlug) {
         this.lastNotifiedCitySlugError = citySlug;
         appNotification.error({
-          message: 'Erro ao buscar a cidade',
+          title: 'Erro ao buscar a cidade',
           description:
             'Houve um problema ao consultar o servico de localizacao. Tente novamente em instantes.',
           duration: 5,
@@ -783,7 +783,7 @@ class App extends Component {
     // console.debug('Added:', b_minus_a);
 
     appNotification.success({
-      message: 'Dados atualizados com sucesso',
+      title: 'Dados atualizados com sucesso',
       description:
         a_minus_b.length === 0 && b_minus_a.length === 0 ? (
           <div>Não houve alterações no mapa cicloviários desde a última atualização.</div>
@@ -886,7 +886,7 @@ class App extends Component {
               .then(() => {
                 if (!IS_PROD) {
                   appNotification.success({
-                    message: 'Banco de dados atualizado',
+                    title: 'Banco de dados atualizado',
                     description:
                       'O banco do CicloMapa foi atualizado com a versão mais recente dos dados desta cidade.',
                   });
@@ -896,7 +896,7 @@ class App extends Component {
                 console.error('Error saving lengths to database:', e);
                 if (!IS_PROD) {
                   appNotification.error({
-                    message: 'Erro ao atualizar banco de dados',
+                    title: 'Erro ao atualizar banco de dados',
                     description:
                       'Por alguma razão não conseguimos atualizar o banco de dados com esta versão dos dados. Por favor tente novamente ou contate os desenvolvedores.',
                   });
@@ -941,7 +941,7 @@ class App extends Component {
           // });
         } else {
           appNotification.error({
-            message: 'Ops',
+            title: 'Ops',
             description:
               'O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.',
           });
