@@ -14,7 +14,13 @@ import DirectionsPanel from './DirectionsPanel.js';
 import AnalyticsSidebar from './AnalyticsSidebar.js';
 import { IS_MOBILE, IS_PROD, ENABLE_SATELLITE_TOGGLE } from './config/constants.js';
 
-export default function AppLayout({ state, handlers, directionsPanelRef }) {
+export default function AppLayout({
+  state,
+  handlers,
+  directionsPanelRef,
+  seoPageTitle,
+  cityCanonicalSlug,
+}) {
   return (
     <div
       id="ciclomapa"
@@ -22,7 +28,7 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
         .filter(Boolean)
         .join(' ')}
     >
-      <h1 className="sr-only">CicloMapa</h1>
+      <h1 className="sr-only">{seoPageTitle}</h1>
       {!IS_PROD && (
         <div className="fixed bottom-0 left-0 right-0 z-10 flex text-white opacity-20 items-center justify-center text-center text-xs py-1">
           Você está em um <b className="ml-1">ambiente de teste</b>, pode futricar à vontade! ;)
@@ -78,7 +84,6 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
             isTrackingUserLocation={state.isTrackingUserLocation}
             onTrackingUserLocationChange={handlers.onTrackingUserLocationChange}
           />
-          {/* {!state.embedMode && !IS_MOBILE && <div id="gradient-backdrop" />} */}
 
           {!IS_MOBILE && !state.embedMode && (
             <aside
@@ -97,6 +102,7 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
                 lengths={state.lengths}
                 open={state.isSidebarOpen}
                 location={state.area}
+                cityMetadata={state.airtableCityFields}
                 lengthCalculationStrategy={state.lengthCalculationStrategy}
                 debugMode={state.debugMode}
                 isDarkMode={state.isDarkMode}
@@ -158,6 +164,14 @@ export default function AppLayout({ state, handlers, directionsPanelRef }) {
         visible={state.aboutModal}
         onClose={handlers.closeAboutModal}
         openLayersLegendModal={handlers.openLayersLegendModal}
+        openCityPicker={handlers.openCityPicker}
+        embedMode={state.embedMode}
+        isDarkMode={state.isDarkMode}
+        cityCanonicalSlug={cityCanonicalSlug}
+        lengths={state.lengths}
+        layers={state.layers}
+        mapDataLoading={state.loading}
+        mapHasGeoJson={state.geoJson != null}
       />
 
       <LayersLegendModal

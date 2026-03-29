@@ -4,6 +4,17 @@ import React from 'react';
 import { MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY } from '../config/constants.js';
 import InfrastructureBadge from '../components/InfrastructureBadge';
 
+/** Unicode thin space (U+2009) between a numeric value and the km unit (typographic convention). */
+export const THIN_SPACE = '\u2009';
+
+/**
+ * @param {string} formattedNumber - Number string without unit (e.g. from toFixed), any decimal separator.
+ * @returns {string} e.g. "12,4\u2009km"
+ */
+export function appendKmUnit(formattedNumber) {
+  return `${formattedNumber}${THIN_SPACE}km`;
+}
+
 export const getRouteScore = (routeCoverageData, index) => {
   // Handle both old array format and new unified format
   let route;
@@ -184,7 +195,7 @@ export const getCoverageBreakdownSimple = (routeCoverageData, index) => {
 
 export const formatDistance = (distance) => {
   if (!distance) return 'N/A';
-  return `${(distance / 1000).toFixed(1)} km`;
+  return appendKmUnit((distance / 1000).toFixed(1));
 };
 
 export const formatDuration = (duration) => {

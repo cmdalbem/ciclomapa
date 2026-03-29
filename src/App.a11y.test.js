@@ -34,7 +34,14 @@ it('has no critical a11y violations on minimal layout tree', async () => {
 
 it('has no critical a11y violations when AboutModal is open', async () => {
   const { container } = render(
-    <AboutModal visible={true} onClose={noop} openLayersLegendModal={noop} />
+    <Router>
+      <AboutModal
+        visible={true}
+        onClose={noop}
+        openLayersLegendModal={noop}
+        openCityPicker={noop}
+      />
+    </Router>
   );
   const dialog = screen.getByRole('dialog', { name: /sobre o ciclomapa/i });
   expect(dialog).toBeInTheDocument();
@@ -45,9 +52,25 @@ it('has no critical a11y violations when AboutModal is open', async () => {
 it('AboutModal closes on Escape key', async () => {
   const onClose = jest.fn();
   const { rerender } = render(
-    <AboutModal visible={false} onClose={onClose} openLayersLegendModal={noop} />
+    <Router>
+      <AboutModal
+        visible={false}
+        onClose={onClose}
+        openLayersLegendModal={noop}
+        openCityPicker={noop}
+      />
+    </Router>
   );
-  rerender(<AboutModal visible={true} onClose={onClose} openLayersLegendModal={noop} />);
+  rerender(
+    <Router>
+      <AboutModal
+        visible={true}
+        onClose={onClose}
+        openLayersLegendModal={noop}
+        openCityPicker={noop}
+      />
+    </Router>
+  );
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   expect(onClose).toHaveBeenCalledTimes(1);
 });

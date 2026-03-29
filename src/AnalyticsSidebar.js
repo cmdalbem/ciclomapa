@@ -24,10 +24,8 @@ import {
 
 import { HiMiniCheckBadge as IconVerified } from 'react-icons/hi2';
 
-import AirtableDatabase from './AirtableDatabase.js';
-import { removeAccents } from './utils/utils.js';
-
 import { LENGTH_CALCULATE_STRATEGIES, LENGTH_COUNTED_LAYER_IDS } from './config/constants.js';
+import { THIN_SPACE, appendKmUnit } from './utils/routeUtils.js';
 
 const PIE_CHART_WIDTH_PX = 207;
 const nullableNumber = PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]);
@@ -87,41 +85,9 @@ class AnalyticsSidebar extends Component {
   constructor(props) {
     super(props);
 
-    this.airtableDatabase = new AirtableDatabase();
-
     this.state = {
       lengthsInclude: readLengthsIncludeFromStorage() || DEFAULT_LENGTHS_INCLUDE(),
     };
-  }
-
-  componentDidMount() {
-    this.loadMetadata();
-  }
-
-  async loadMetadata() {
-    const allMetadata = await this.airtableDatabase.getMetadata();
-    this.setState(
-      {
-        allMetadata: allMetadata,
-      },
-      () => {
-        this.updateLocation();
-      }
-    );
-  }
-
-  updateLocation() {
-    let search;
-    if (this.state.allMetadata && this.state.allMetadata.length > 0 && this.props.location) {
-      search = this.state.allMetadata.find((v) =>
-        removeAccents(this.props.location.toLowerCase()).includes(
-          removeAccents(v.fields.location.toLowerCase())
-        )
-      );
-      this.setState({
-        cityMetadata: search && search.fields,
-      });
-    }
   }
 
   generatePatterns(layers) {
@@ -153,12 +119,6 @@ class AnalyticsSidebar extends Component {
       }
       return { lengthsInclude: next };
     });
-  }
-
-  componentDidUpdate(prevProps) {
-    if (prevProps.location !== this.props.location) {
-      this.updateLocation();
-    }
   }
 
   getInfraLayersSorted() {
@@ -211,7 +171,7 @@ class AnalyticsSidebar extends Component {
     const { lengths, layers, isDarkMode } = this.props;
     const pnbEvolutionData = [2018, 2019, 2020, 2021, 2022, 2023, 2024]
       .map((year) => {
-        const value = this.state.cityMetadata && this.state.cityMetadata[`pnb_${year}`];
+        const value = this.props.cityMetadata && this.props.cityMetadata[`pnb_${year}`];
         return value !== undefined && value !== null
           ? { year: String(year), value: Number(value) }
           : null;
@@ -293,11 +253,11 @@ class AnalyticsSidebar extends Component {
             </>
           )}
 
-          {this.state.cityMetadata && this.state.cityMetadata.pnb_total !== undefined && (
+          {this.props.cityMetadata && this.props.cityMetadata.pnb_total !== undefined && (
             <Section
               title="PNB"
               link={'https://itdpbrasil.org/pnb/'}
-              year={this.state.cityMetadata.pnb_year}
+              year={this.props.cityMetadata.pnb_year}
               description={
                 <>
                   <p>
@@ -309,75 +269,75 @@ class AnalyticsSidebar extends Component {
                 </>
               }
             >
-              <BigNum>{this.state.cityMetadata.pnb_total + '%'}</BigNum>
+              <BigNum>{this.props.cityMetadata.pnb_total + '%'}</BigNum>
 
-              {this.state.cityMetadata.pnb_black_women !== undefined && (
+              {this.props.cityMetadata.pnb_black_women !== undefined && (
                 <DataLine
                   name="Mulheres negras"
-                  length={this.state.cityMetadata.pnb_black_women}
+                  length={this.props.cityMetadata.pnb_black_women}
                   unit="%"
                 />
               )}
-              {this.state.cityMetadata.pnb_women_less_one_salary !== undefined && (
+              {this.props.cityMetadata.pnb_women_less_one_salary !== undefined && (
                 <DataLine
                   name="Mulheres renda até 1 SM"
-                  length={this.state.cityMetadata.pnb_women_less_one_salary}
+                  length={this.props.cityMetadata.pnb_women_less_one_salary}
                   unit="%"
                 />
               )}
               {/* {
-                                this.state.cityMetadata.pnb_2024!==undefined &&
+                                this.props.cityMetadata.pnb_2024!==undefined &&
                                 <DataLine
                                     name="2024"
-                                    length={this.state.cityMetadata.pnb_2024}
+                                    length={this.props.cityMetadata.pnb_2024}
                                     unit="%"
                                 />
                             }
                             {
-                                this.state.cityMetadata.pnb_2023!==undefined &&
+                                this.props.cityMetadata.pnb_2023!==undefined &&
                                 <DataLine
                                     name="2023"
-                                    length={this.state.cityMetadata.pnb_2023}
+                                    length={this.props.cityMetadata.pnb_2023}
                                     unit="%"
                                 />
                             }
                             {
-                                this.state.cityMetadata.pnb_2022!==undefined &&
+                                this.props.cityMetadata.pnb_2022!==undefined &&
                                 <DataLine
                                     name="2022"
-                                    length={this.state.cityMetadata.pnb_2022}
+                                    length={this.props.cityMetadata.pnb_2022}
                                     unit="%"
                                 />
                             }
                             {
-                                this.state.cityMetadata.pnb_2021!==undefined &&
+                                this.props.cityMetadata.pnb_2021!==undefined &&
                                 <DataLine
                                     name="2021"
-                                    length={this.state.cityMetadata.pnb_2021}
+                                    length={this.props.cityMetadata.pnb_2021}
                                     unit="%"
                                 />
                             }
                             {
-                                this.state.cityMetadata.pnb_2020!==undefined &&
+                                this.props.cityMetadata.pnb_2020!==undefined &&
                                 <DataLine
                                     name="2020"
-                                    length={this.state.cityMetadata.pnb_2020}
+                                    length={this.props.cityMetadata.pnb_2020}
                                     unit="%"
                                 />
                             }
                             {
-                                this.state.cityMetadata.pnb_2019!==undefined &&
+                                this.props.cityMetadata.pnb_2019!==undefined &&
                                 <DataLine
                                     name="2019"
-                                    length={this.state.cityMetadata.pnb_2019}
+                                    length={this.props.cityMetadata.pnb_2019}
                                     unit="%"
                                 />
                             }
                             {
-                                this.state.cityMetadata.pnb_2018!==undefined &&
+                                this.props.cityMetadata.pnb_2018!==undefined &&
                                 <DataLine
                                     name="2018"
-                                    length={this.state.cityMetadata.pnb_2018}
+                                    length={this.props.cityMetadata.pnb_2018}
                                     unit="%"
                                 />
                             } */}
@@ -434,11 +394,11 @@ class AnalyticsSidebar extends Component {
             </Section>
           )}
 
-          {this.state.cityMetadata && this.state.cityMetadata.ideciclo !== undefined && (
+          {this.props.cityMetadata && this.props.cityMetadata.ideciclo !== undefined && (
             <Section
               title="IDECiclo"
               link="https://www.ideciclo.org/"
-              year={this.state.cityMetadata.ideciclo_year}
+              year={this.props.cityMetadata.ideciclo_year}
               description={
                 <>
                   <p>
@@ -457,7 +417,7 @@ class AnalyticsSidebar extends Component {
                 </>
               }
             >
-              <BigNum>{this.state.cityMetadata.ideciclo}</BigNum>
+              <BigNum>{this.props.cityMetadata.ideciclo}</BigNum>
             </Section>
           )}
 
@@ -508,13 +468,13 @@ class AnalyticsSidebar extends Component {
                       <span className="font-regular">
                         <span className="text-4xl tracking-tighter">
                           {vias.effectiveTotal.toFixed(1)}
-                        </span>{' '}
-                        <span className="text-sm">km</span>
+                        </span>
+                        <span className="text-sm">{`${THIN_SPACE}km`}</span>
                       </span>
                     </span>
-                    {this.state.cityMetadata &&
-                      this.state.cityMetadata.alianca_2025 !== undefined &&
-                      this.state.cityMetadata.alianca_2025 !== null && (
+                    {this.props.cityMetadata &&
+                      this.props.cityMetadata.alianca_2025 !== undefined &&
+                      this.props.cityMetadata.alianca_2025 !== null && (
                         <>
                           {/* <span className="tracking-widest mt-2">OFICIAL</span> */}
                           <Popover
@@ -546,7 +506,9 @@ class AnalyticsSidebar extends Component {
                             <span className="flex items-center decoration-dotted tracking-tight gap-0.5">
                               <IconVerified className="inline-block opacity-50" />
                               <div className="flex items-center items-baseline opacity-70">
-                                {Number(this.state.cityMetadata.alianca_2025).toFixed(1)}km
+                                {appendKmUnit(
+                                  Number(this.props.cityMetadata.alianca_2025).toFixed(1)
+                                )}
                               </div>
                               {/* <IconInfo /> */}
                             </span>
@@ -611,6 +573,7 @@ AnalyticsSidebar.propTypes = {
   open: PropTypes.bool,
   toggle: PropTypes.func.isRequired,
   location: PropTypes.string,
+  cityMetadata: PropTypes.object,
   lengths: PropTypes.objectOf(nullableNumber),
   layers: PropTypes.arrayOf(layerShape),
   isDarkMode: PropTypes.bool,
@@ -684,7 +647,7 @@ const ViaDataRow = ({ layer, length, rawTotal, effectiveTotal, included, onToggl
             <tr>
               <td className="py-1.5 pr-3 opacity-70 align-top">Extensão</td>
               <td className="py-1.5 text-right whitespace-nowrap font-semibold align-top">
-                {km.toFixed(1)} km
+                {appendKmUnit(km.toFixed(1))}
               </td>
             </tr>
 
@@ -783,8 +746,10 @@ const DataLine = (props) => (
     <div className="flex items-center gap-2">
       {/* <span className="opacity-50">{props.percent !== undefined && props.percent + '%'}</span> */}
       <span>
-        {props.length !== undefined && Math.round(props.length)}
-        {props.length !== undefined && props.unit}
+        {props.length !== undefined &&
+          (props.unit === 'km'
+            ? appendKmUnit(String(Math.round(props.length)))
+            : `${Math.round(props.length)}${props.unit || ''}`)}
       </span>
     </div>
   </div>

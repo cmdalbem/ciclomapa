@@ -81,6 +81,7 @@ We're using [GitHub Issues](https://github.com/cmdalbem/ciclomapa/issues) for ou
 
 Run `yarn test` before committing to ensure you don't introduce regressions.
 
+For how the repo is laid out and **how much to split code into files** (middle ground: avoid huge modules *and* avoid new tiny one-off util files—fold small helpers into existing `utils/*`), see [docs/structure.md](docs/structure.md).
 
 ## Design & UI
 
