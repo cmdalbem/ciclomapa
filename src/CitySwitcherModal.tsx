@@ -894,8 +894,10 @@ function CitySwitcherModal() {
       role="dialog"
       aria-modal="true"
       aria-label="Selecionar cidade"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) closeCityPicker();
+      }}
     >
-      <div className="city-switcher-modal__backdrop" onClick={closeCityPicker} aria-hidden="true" />
       <div ref={panelRef} className="city-switcher-modal__panel" tabIndex={-1}>
         <div className="city-switcher-modal__headerRow">
           <div />
