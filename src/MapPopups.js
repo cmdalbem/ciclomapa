@@ -7,12 +7,139 @@ import { formatDistance, formatDuration } from './utils/routeUtils.js';
 import { formatTimeAgo } from './utils/utils.js';
 
 import { IS_MOBILE } from './config/constants.js';
-import {
-  escapeHtml,
-  formatAddressLineFromOsmProperties,
-  omitAddressTagsForDetailGrid,
-} from './utils/poiAddress.js';
-import { reverseNominatimAddress } from './utils/nominatimReverse.js';
+
+/** POI address line from Overpass tags; Nominatim fallback (https://operations.osmfoundation.org/policies/nominatim/). */
+
+export function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+export function formatAddressLineFromOsmProperties(properties) {
+  if (!properties || typeof properties !== 'object') return null;
+
+  const full = properties['addr:full'];
+  if (full != null && String(full).trim()) {
+    return String(full).trim();
+  }
+
+  const contact = properties['contact:address'];
+  if (contact != null && String(contact).trim()) {
+    return String(contact).trim();
+  }
+
+  const street = properties['addr:street'];
+  const nbr = properties['addr:housenumber'];
+  const housename = properties['addr:housename'];
+
+  const streetParts = [];
+  if (housename) streetParts.push(String(housename));
+  const roadLine = [street, nbr].filter(Boolean).join(', ');
+  if (roadLine) streetParts.push(roadLine);
+
+  const suburb =
+    properties['addr:suburb'] ||
+    properties['addr:neighbourhood'] ||
+    properties['addr:quarter'] ||
+    properties['addr:district'];
+
+  const city =
+    properties['addr:city'] ||
+    properties['addr:town'] ||
+    properties['addr:village'] ||
+    properties['addr:municipality'];
+
+  const pc = properties['addr:postcode'];
+
+  const cityPart = [pc, city].filter(Boolean).join(' ').trim();
+  const regionPart = cityPart || null;
+
+  const segments = [];
+  const first = streetParts.join(' — ') || roadLine || null;
+  if (first) segments.push(first);
+  if (suburb) segments.push(String(suburb));
+  if (regionPart) segments.push(regionPart);
+
+  if (segments.length === 0) return null;
+  return segments.join(' · ');
+}
+
+export function omitAddressTagsForDetailGrid(properties) {
+  const out = { ...properties };
+  Object.keys(out).forEach((k) => {
+    if (k.startsWith('addr:') || k === 'contact:address') {
+      delete out[k];
+    }
+  });
+  return out;
+}
+
+const NOMINATIM_UA = 'CicloMapa/3.0 (https://ciclomapa.app)';
+
+/** First segment of the app area label (e.g. "Porto Alegre, RS, Brasil" → "Porto Alegre"). */
+export function primaryCityFromAreaLabel(areaLabel) {
+  if (!areaLabel || typeof areaLabel !== 'string') return '';
+  return areaLabel.split(',')[0].trim();
+}
+
+/**
+ * Short line from Nominatim reverse: street + neighbourhood + city only (no state/country).
+ * Omits city when it matches the map's selected area. Never uses display_name (too long).
+ */
+export function formatNominatimReverseLine(data, opts = {}) {
+  if (!data || typeof data !== 'object' || data.error) return null;
+
+  const a = data.address;
+  if (!a || typeof a !== 'object') return null;
+
+  const road = a.road || a.pedestrian || a.path || a.footway || a.cycleway;
+  const streetPart = [road, a.house_number].filter(Boolean).join(', ');
+
+  const neighbourhoodPart = a.suburb || a.neighbourhood || a.quarter;
+  const cityName = (a.city || a.town || a.village || a.municipality || a.hamlet || '').trim();
+
+  const selectedPrimary = primaryCityFromAreaLabel(opts.selectedAreaLabel || '').toLowerCase();
+  const cityMatches =
+    selectedPrimary.length > 0 && cityName.length > 0 && cityName.toLowerCase() === selectedPrimary;
+
+  const afterStreet = [];
+  if (neighbourhoodPart) afterStreet.push(String(neighbourhoodPart));
+  if (cityName && !cityMatches) afterStreet.push(cityName);
+
+  const tail = afterStreet.join(', ');
+  const line = [streetPart, tail].filter(Boolean).join(' · ');
+  return line || null;
+}
+
+export async function reverseNominatimAddress(lat, lon, options = {}) {
+  const { signal, acceptLanguage = 'pt-BR,pt,en', selectedAreaLabel } = options;
+
+  const url = new URL('https://nominatim.openstreetmap.org/reverse');
+  url.searchParams.set('lat', String(lat));
+  url.searchParams.set('lon', String(lon));
+  url.searchParams.set('format', 'jsonv2');
+  url.searchParams.set('addressdetails', '1');
+  url.searchParams.set('zoom', '18');
+  url.searchParams.set('accept-language', acceptLanguage);
+
+  const response = await fetch(url.toString(), {
+    signal,
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': NOMINATIM_UA,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Nominatim reverse failed (${response.status})`);
+  }
+
+  const data = await response.json();
+  return formatNominatimReverseLine(data, { selectedAreaLabel });
+}
 
 class MapPopups {
   map;
@@ -23,10 +150,11 @@ class MapPopups {
   routeTooltips;
   previousCyclewayLayerClass;
 
-  constructor(map, debugMode, isDarkMode = false) {
+  constructor(map, debugMode, isDarkMode = false, selectedAreaLabel = '') {
     this.map = map;
     this.debugMode = debugMode;
     this.isDarkMode = isDarkMode;
+    this.selectedAreaLabel = selectedAreaLabel || '';
 
     // "closeOnClick: false" enables chaining clicks continually
     //   from POI to POI, otherwise clicking on another POI would
@@ -67,6 +195,10 @@ class MapPopups {
     this.routeTooltips = [];
     this.poiAddressAbortController = null;
     this.poiAddressRequestId = 0;
+  }
+
+  setSelectedAreaLabel(label) {
+    this.selectedAreaLabel = label || '';
   }
 
   attachMobileActiveHandler(popupInstance) {
@@ -257,28 +389,38 @@ class MapPopups {
     const addressFromOsm = formatAddressLineFromOsmProperties(properties);
     const propertiesForGrid = omitAddressTagsForDetailGrid(properties);
 
-    const addressRow = addressFromOsm
-      ? `<div class="mt-1 text-sm opacity-70 leading-snug" data-poi-address-slot>${escapeHtml(addressFromOsm)}</div>`
-      : `<div class="mt-1 text-sm opacity-50 italic leading-snug" data-poi-address-slot data-poi-address-pending>Buscando endereço…</div>`;
-
     const poiTypeMapFallback = {
       'poi-bikeshop': 'Oficina/loja (sem nome)',
       'poi-rental': 'Estação de bicicleta (sem nome)',
     };
 
-    let html = `
-            <div class="md:text-2xl text-lg mt-3 md:mb-3 mb-2 flex items-center">
-                <img src="${iconSrc}" class="inline-block align-bottom mr-2 md:w-8 md:h-8 w-6 h-6" alt=""/>
-                    ${
-                      properties.name
-                        ? escapeHtml(properties.name)
-                        : poiType === 'poi-bikeparking'
-                          ? '<span>Bicicletário/paraciclo</span>'
-                          : `<span class="italic opacity-50">${poiTypeMapFallback[poiType]} </span>`
-                    } 
-            </div>
+    const titleHtml = properties.name
+      ? escapeHtml(properties.name)
+      : poiType === 'poi-bikeparking'
+        ? '<span>Bicicletário/paraciclo</span>'
+        : `<span class="poi-popup-header__title-fallback">${poiTypeMapFallback[poiType]}</span>`;
 
-            ${addressRow}
+    const addressClasses = addressFromOsm
+      ? 'poi-popup-header__address'
+      : 'poi-popup-header__address poi-popup-header__address--pending';
+    const addressAttrs = addressFromOsm
+      ? 'data-poi-address-slot'
+      : 'data-poi-address-slot data-poi-address-pending aria-busy="true" aria-label="Carregando endereço"';
+    const addressInner = addressFromOsm
+      ? escapeHtml(addressFromOsm)
+      : `<span class="poi-popup-address-skeleton" aria-hidden="true">
+              <span class="poi-popup-address-skeleton__line poi-popup-address-skeleton__line--a"></span>
+              <span class="poi-popup-address-skeleton__line poi-popup-address-skeleton__line--b"></span>
+            </span>`;
+
+    let html = `
+            <div class="poi-popup-header">
+                <img src="${iconSrc}" class="poi-popup-header__icon" alt="" />
+                <div class="poi-popup-header__text">
+                    <div class="poi-popup-header__title">${titleHtml}</div>
+                    <div class="${addressClasses}" ${addressAttrs}>${addressInner}</div>
+                </div>
+            </div>
 
             ${this.renderProperties(propertiesForGrid)}
 
@@ -288,16 +430,20 @@ class MapPopups {
     this.poiPopup.setLngLat(coords).setHTML(html).addTo(this.map);
 
     if (!addressFromOsm) {
-      reverseNominatimAddress(coords.lat, coords.lng, { signal: addressSignal })
+      reverseNominatimAddress(coords.lat, coords.lng, {
+        signal: addressSignal,
+        selectedAreaLabel: this.selectedAreaLabel,
+      })
         .then((line) => {
           if (addressRequestId !== this.poiAddressRequestId) return;
           const el = this.poiPopup.getElement()?.querySelector('[data-poi-address-slot]');
           if (!el) return;
           if (line) {
             el.textContent = line;
-            el.classList.remove('opacity-50', 'italic');
-            el.classList.add('opacity-70');
+            el.classList.remove('poi-popup-header__address--pending');
             el.removeAttribute('data-poi-address-pending');
+            el.removeAttribute('aria-busy');
+            el.removeAttribute('aria-label');
           } else {
             el.remove();
           }
