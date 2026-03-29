@@ -83,6 +83,32 @@
   --popup-text-color: black;
 }
 
+/* Footer: bleed past .mapboxgl-popup-content horizontal padding (16px) so the bar reaches panel edges. */
+.popup-big .popup-footer-outer {
+  box-sizing: border-box;
+  margin-left: -16px;
+  margin-right: -16px;
+  width: calc(100% + 32px);
+}
+
+@media (min-width: 320px) and (max-width: 480px) {
+  .popup-big .popup-footer-outer {
+    /* Bottom sheet is full viewport width; span edge-to-edge of the sheet. */
+    border-radius: 0;
+  }
+}
+
+/* Footer action chips: single row, horizontal scroll on narrow widths (mobile). */
+.popup-big .popup-footer-actions {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.popup-big .popup-footer-actions::-webkit-scrollbar {
+  display: none;
+}
+
 .route-tooltip-popup .mapboxgl-popup-content {
   /* background: inherit; */
   padding: inherit;
