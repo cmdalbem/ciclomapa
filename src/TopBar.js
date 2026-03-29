@@ -129,7 +129,7 @@ function TopBar(props) {
                     size={IS_MOBILE ? 'large' : 'middle'}
                     onClick={showCityPicker}
                   >
-                    <h2 className="flex items-center justify-between gap-1 m-0">
+                    <h2 className="flex items-center justify-between gap-1 m-0 sm:w-auto w-full">
                       <span>
                         <span className="font-bold">{city},</span>
 
@@ -198,7 +198,7 @@ function TopBar(props) {
               <div className="hidden sm:flex gap-2 items-center">
                 <Space.Compact className="glass-bg rounded-full overflow-hidden">
                   <Button
-                    type={!isDarkMode ? 'default' : 'link'}
+                    type={!isDarkMode ? 'default' : 'text'}
                     className={!isDarkMode ? 'border border-opacity-10 border-white' : 'opacity-50'}
                     shape="circle"
                     onClick={() => toggleTheme()}
@@ -207,7 +207,7 @@ function TopBar(props) {
                     <IconSun />
                   </Button>
                   <Button
-                    type={isDarkMode ? 'default' : 'link'}
+                    type={isDarkMode ? 'default' : 'text'}
                     className={isDarkMode ? 'border border-opacity-10 border-white' : 'opacity-50'}
                     shape="circle"
                     onClick={() => toggleTheme()}
@@ -217,13 +217,13 @@ function TopBar(props) {
                   </Button>
                 </Space.Compact>
 
-                <Button className="glass-bg" type="link" onClick={openAboutModal}>
+                <Button className="glass-bg" onClick={openAboutModal}>
                   Sobre
                 </Button>
 
                 <Dropdown menu={collaborateMenu}>
                   <Button className="glass-bg">
-                    <span className="mr-2"> Colaborar </span>
+                    <span> Colaborar </span>
                     <IconCaret className="text-green-300" style={{ marginRight: '-3px' }} />
                   </Button>
                 </Dropdown>

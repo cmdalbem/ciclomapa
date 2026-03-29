@@ -264,11 +264,9 @@ class LayersLegendModal extends Component {
                 <Button
                   type="text"
                   onClick={onClose}
+                  shape="circle"
                   aria-label="Fechar legenda"
                   className="text-gray-300 hover:text-white"
-                  style={{
-                    padding: 0,
-                  }}
                 >
                   <HiOutlineXMark className="text-2xl" aria-hidden />
                 </Button>
@@ -276,64 +274,83 @@ class LayersLegendModal extends Component {
 
               {/* Tab Navigation */}
               <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1 -mb-1">
-                {pontosLayers.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => this.scrollToSection('pontos-section')}
-                    className={legendNavTabClass('pontos-section')}
-                  >
-                    Pontos de interesse
-                  </button>
-                )}
                 {viasCiclaveisLayers.length > 0 && (
-                  <button
-                    type="button"
+                  <Button
+                    type="text"
+                    htmlType="button"
                     onClick={() => this.scrollToSection('vias-ciclaveis-section')}
                     className={legendNavTabClass('vias-ciclaveis-section')}
                   >
                     Vias cicláveis
-                  </button>
+                  </Button>
+                )}
+                {pontosLayers.length > 0 && (
+                  <Button
+                    type="text"
+                    htmlType="button"
+                    onClick={() => this.scrollToSection('pontos-section')}
+                    className={legendNavTabClass('pontos-section')}
+                  >
+                    Pontos de interesse
+                  </Button>
                 )}
                 {outrasViasLayers.length > 0 && (
-                  <button
-                    type="button"
+                  <Button
+                    type="text"
+                    htmlType="button"
                     onClick={() => this.scrollToSection('outras-vias-section')}
                     className={legendNavTabClass('outras-vias-section')}
                   >
                     Outras vias
-                  </button>
+                  </Button>
                 )}
-                <button
-                  type="button"
+                <Button
+                  type="text"
+                  htmlType="button"
                   onClick={() => this.scrollToSection('routes-section')}
                   className={legendNavTabClass('routes-section')}
                 >
                   Rotas
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Content */}
             <div className="px-5 pt-6 pb-10">
               <div className="space-y-10 mb-10">
-                {/* Pontos de Interesse */}
-                {pontosLayers.length > 0 && (
-                  <div id="pontos-section">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">
-                      Pontos de interesse
-                    </h3>
-                    <div className={categoryContainerClasses}>{pontosLayers.map(renderLayer)}</div>
-                  </div>
-                )}
-
                 {/* Vias cicláveis */}
                 {viasCiclaveisLayers.length > 0 && (
                   <div id="vias-ciclaveis-section">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">
-                      Vias cicláveis
-                    </h3>
+                    <h3 className="text-xl mb-4 pl-2">Vias cicláveis</h3>
                     <div className={categoryContainerClasses}>
                       {viasCiclaveisLayers.map(renderLayer)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pontos de Interesse */}
+                {pontosLayers.length > 0 && (
+                  <div id="pontos-section">
+                    <h3 className="text-xl mb-4 pl-2">Pontos de interesse</h3>
+                    <div className={categoryContainerClasses}>
+                      {pontosLayers.map(renderLayer)}
+                      <div className="rounded-xl border border-white border-opacity-10 bg-gray-900 bg-opacity-80 p-4">
+                        <div className="flex gap-4 md:flex-col flex-row">
+                          <div className="flex-shrink-0">
+                            <img className="h-7 w-7 opacity-90" src={commentIcon} alt="" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-base font-semibold leading-snug text-white mb-0 pr-1">
+                              Comentários da comunidade
+                            </h3>
+                            <p className="text-sm text-gray-400 leading-relaxed mb-0 mt-2">
+                              Enviados por quem usa o CicloMapa, servem para relatar problemas,
+                              sugestões ou observações sobre o local para auxiliar parceiros
+                              editores do OpenStreetMap.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -341,9 +358,7 @@ class LayersLegendModal extends Component {
                 {/* Outras vias */}
                 {outrasViasLayers.length > 0 && (
                   <div id="outras-vias-section">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">
-                      Outras vias
-                    </h3>
+                    <h3 className="text-xl mb-4 pl-2">Outras vias</h3>
                     <div className={categoryContainerClasses}>
                       {outrasViasLayers.map(renderLayer)}
                     </div>
@@ -354,9 +369,7 @@ class LayersLegendModal extends Component {
               {/* Route Coverage & Protection Scores Section */}
               <div id="routes-section" className="space-y-8 mb-10">
                 <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">
-                    Rotas
-                  </h3>
+                  <h3 className="text-xl mb-4 pl-2">Rotas</h3>
                   <p className="text-sm md:text-base text-gray-300 leading-relaxed mb-0 max-w-prose">
                     Quando você calcula uma rota, analisamos quantos quilômetros dela estão cobertos
                     por cada tipo de infraestrutura cicloviária. Cada tipo tem um peso diferente na
