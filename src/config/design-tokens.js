@@ -24,7 +24,7 @@ export const colors = {
   loader4: '#FFA500',
   // Logo (TopBar)
   logoDark: '#B6F9D1',
-  logoLight: '#386641',
+  logoLight: '#39583C',
 };
 
 /** Map-specific colors for Mapbox paint (Map.js). Theme-based stroke, halo, route padding line, fallback. */
