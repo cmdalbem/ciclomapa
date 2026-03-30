@@ -4,7 +4,7 @@ const { defaultAlgorithm, darkAlgorithm } = theme;
 
 /** Matches legacy CicloMapa branding; dark tokens align with former antd.dark.less base. */
 const BRAND_TOKEN = {
-  colorPrimary: '#4ea76f',
+  colorPrimary: 'black',
   colorLink: '#ffffff',
   borderRadius: 8,
   fontFamily: "'IBM Plex Sans', sans-serif",
@@ -12,7 +12,17 @@ const BRAND_TOKEN = {
 
 const DARK_EXTRA = {
   // colorPrimary: '#b6f9d1',
-  colorLink: '#ffffff',
+  // colorPrimary: '#4ea76f',
+  colorPrimary: '#FFFFFF',
+  // colorPrimaryText: 'black',
+  // `Button[type="primary"]` uses the "light solid" text token for its label.
+  // When `colorPrimary` is white, the default label also becomes white unless
+  // we explicitly override this token.
+  colorTextLightSolid: 'black',
+  colorTextLightSolidHover: 'black',
+  colorTextLightSolidActive: 'black',
+  // colorLink: 'white',
+  // colorText: 'white',
   // colorBgBase: '#141414',
   // colorBgContainer: '#141414',
   // colorBgElevated: '#262626',
