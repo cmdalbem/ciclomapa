@@ -137,20 +137,17 @@ function AboutModal({
             visible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
           ].join(' ')}
           style={{
-            '--glass-bg-opacity': '0.1',
+            '--glass-bg-opacity': '0.6',
             paddingBottom: 'max(1.75rem, env(safe-area-inset-bottom))',
           }}
         >
-          <header className="flex items-center justify-between gap-4 mb-6">
-            <div
-              className="-ml-1"
-              style={{ color: isDarkMode ? colors.logoDark : colors.logoLight }}
-            >
-              <Logo />
+          <header className="flex items-start justify-between gap-4 mb-6">
+            <div className="-ml-0.5">
+              <Logo className={cityContext ? `b-and-w opacity-30` : 'text-4xl mt-3 mb-1'} />
             </div>
             <Button
               type="text"
-              className="!p-2 flex items-center justify-center !min-w-0"
+              className="!p-2 flex items-center justify-center !min-w-0 -mt-2 -mr-2"
               onClick={onClose}
               aria-label="Fechar"
               icon={<HiOutlineXMark className="text-lg opacity-70" aria-hidden />}
@@ -195,7 +192,7 @@ function AboutModal({
                             )}
                           </span>
                         )}
-                        <span className="opacity-80 font-normal"> ciclovias</span>
+                        <span className="font-normal"> ciclovias</span>
                       </InfrastructureBadge>
                     </li>
                     <li
@@ -219,7 +216,7 @@ function AboutModal({
                             )}
                           </span>
                         )}
-                        <span className="opacity-80 font-normal"> ciclofaixas</span>
+                        <span className="font-normal"> ciclofaixas</span>
                       </InfrastructureBadge>
                     </li>
                     <li
@@ -235,7 +232,7 @@ function AboutModal({
                             {metrics.poiTotal.toLocaleString('pt-BR')}
                           </span>
                         )}
-                        <span className="opacity-80 font-normal"> pontos de interesse</span>
+                        <span className="font-normal"> pontos de interesse</span>
                       </InfrastructureBadge>
                     </li>
                     {/* <li className="m-0">
@@ -245,7 +242,7 @@ function AboutModal({
                         ) : specialMetric ? (
                           <>
                             <span className="tabular-nums">{specialMetric.valueText}</span>
-                            <span className="opacity-80 font-normal">
+                            <span className="font-normal">
                               {' · '}
                               {specialMetric.title}
                             </span>
@@ -253,7 +250,7 @@ function AboutModal({
                         ) : (
                           <>
                             <span className="tabular-nums">—</span>
-                            <span className="opacity-80 font-normal"> · PNB / IDECiclo</span>
+                            <span className="font-normal"> · PNB / IDECiclo</span>
                           </>
                         )}
                       </InfrastructureBadge>
@@ -267,12 +264,12 @@ function AboutModal({
               </h2>
             )}
             <p className="leading-relaxed mb-3">
-              O CicloMapa é uma plataforma colaborativa gratuita que mostra, nas cidades
-              brasileiras, onde existem — e onde ainda faltam — ciclovias, ciclofaixas, ciclorrotas
-              e outros equipamentos para quem pedala.
+              Pedale com mais segurança planejando suas rotas com o CicloMapa: ciclovias,
+              ciclofaixas, bicicletários, oficinas, e tudo mais que importa para quem pedala na
+              cidade.
             </p>
             <p className="leading-relaxed mb-3">
-              Os dados vêm do{' '}
+              Com base no{' '}
               <a
                 className={inlineLinkClass}
                 href={CITY_ABOUT_OSM_URL}
@@ -281,9 +278,9 @@ function AboutModal({
               >
                 OpenStreetMap
               </a>{' '}
-              (a “Wikipédia dos mapas”): um jeito simples de explorar, baixar e reutilizar essas
-              informações — seja você morador, pesquisador ou gestor público — para melhorar a
-              mobilidade de bicicleta no Brasil.
+              (o maior mapa colaborativo aberto do mundo) o CicloMapa amplia o acesso a dados
+              cicloviários para cidadãos, pesquisadores e gestores públicos, fortalecendo a
+              mobilidade por bicicleta no Brasil.
             </p>
             {/* 
                 {metrics && (
@@ -368,39 +365,39 @@ function AboutModal({
             <div className="flex flex-wrap gap-2 mt-12 mb-8">
               <Button
                 type="primary"
-                size="large"
+                size="medium"
                 className="font-semibold"
                 data-testid="about-modal-dismiss"
                 onClick={onClose}
               >
-                Explorar o mapa
+                Começar
               </Button>
               {cityContext ? (
                 <Button
                   type="text"
-                  size="large"
+                  size="medium"
                   className={aboutModalSecondaryButtonClass(isDarkMode)}
                   data-testid="about-modal-open-legend"
                   onClick={openLayersLegendModal}
                 >
-                  Saiba mais
+                  Legenda
                 </Button>
               ) : null}
               {!cityContext ? (
                 <Button
                   type="text"
-                  size="large"
+                  size="medium"
                   className={aboutModalSecondaryButtonClass(isDarkMode)}
                   data-testid="about-modal-open-city-picker"
                   onClick={openCityPicker}
                 >
-                  Ver cidades
+                  Explorar cidades
                 </Button>
               ) : null}
             </div>
           </div>
 
-          <footer className={`pt-5 border-t border-white border-opacity-10`}>
+          <footer className={`pt-5 border-t border-white border-opacity-10 -mb-2`}>
             <div className="flex flex-wrap items-center gap-4 w-full">
               <div className="flex flex-wrap items-center gap-6 min-w-0">
                 <a
