@@ -114,8 +114,8 @@ function TopBar(props) {
       >
         <div className="flex items-start justify-between text-white w-full">
           {!IS_MOBILE && (
-            <a href="/" className={'mt-2 ' + (embedMode ? 'opacity-25' : '')}>
-              <Logo />
+            <a href="/" className={'mt-2'}>
+              <Logo className={embedMode ? 'text-white opacity-20' : 'text-xl'} />
             </a>
           )}
 
