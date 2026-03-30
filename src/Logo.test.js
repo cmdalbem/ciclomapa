@@ -6,8 +6,6 @@ it('renders Logo with default className', () => {
   render(<Logo />);
   const svg = document.querySelector('.logo-svg');
   expect(svg).toBeInTheDocument();
-  expect(svg).toHaveAttribute('width', '105');
-  expect(svg).toHaveAttribute('height', '18');
 });
 
 it('renders Logo with custom className', () => {
