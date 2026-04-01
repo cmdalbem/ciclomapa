@@ -12,7 +12,6 @@ import OSMController from './OSMController.js';
 import AppLayout from './AppLayout.js';
 import Storage from './Storage.js';
 import AirtableDatabase from './AirtableDatabase.js';
-import { matchCityAirtableFields } from './matchCityAirtableMetadata.js';
 import { downloadObjectAsJson } from './utils/utils.js';
 import { updateDocumentMeta } from './utils/documentMeta.js';
 import { getSystemThemePreference } from './utils/themeUtils';
@@ -194,7 +193,8 @@ class App extends Component {
   syncAirtableCityFields = () => {
     const { airtableMetadataRecords, area } = this.state;
     if (!Array.isArray(airtableMetadataRecords)) return;
-    const fields = matchCityAirtableFields(airtableMetadataRecords, area);
+    const db = new AirtableDatabase();
+    const fields = db.matchCityMetadataFields(airtableMetadataRecords, area);
     this.setState({ airtableCityFields: fields });
   };
 

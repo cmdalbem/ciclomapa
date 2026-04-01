@@ -1,8 +1,4 @@
-import {
-  getAboutModalMetrics,
-  formatLengthStrategyLabel,
-  formatMapDataUpdatedAt,
-} from './aboutModalMetrics.js';
+import { getAboutModalMetrics, formatMapDataUpdatedAt } from './aboutModalMetrics.js';
 
 describe('aboutModalMetrics', () => {
   const minimalLayers = [
@@ -36,10 +32,6 @@ describe('aboutModalMetrics', () => {
 
   it('returns null when layers missing', () => {
     expect(getAboutModalMetrics({}, null)).toBe(null);
-  });
-
-  it('formatLengthStrategyLabel maps defaults', () => {
-    expect(formatLengthStrategyLabel('average')).toMatch(/média/);
   });
 
   it('formatMapDataUpdatedAt formats pt-BR', () => {

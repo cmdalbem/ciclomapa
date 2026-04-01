@@ -9,7 +9,7 @@ import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
 import premiobicicletabrasil from './img/premiobicicletabrasil.png';
 
-import { getCityAboutContext, CITY_ABOUT_OSM_URL } from './cityAboutContext.js';
+import { getPredefinedCityStaticLocation } from './config/citySlugCatalog.js';
 import { getAboutModalMetrics } from './aboutModalMetrics.js';
 import Logo from './components/Logo';
 import InfrastructureBadge from './components/InfrastructureBadge';
@@ -18,6 +18,28 @@ import { appendKmUnit } from './utils/routeUtils.js';
 
 /** Must sit above `.app-modal-root` (`--z-app-modal` in App.less is 1210). */
 const ABOUT_MODAL_FOOTER_TOOLTIP_Z_INDEX = 1220;
+
+const CITY_ABOUT_OSM_URL = 'https://www.openstreetmap.org/';
+
+function primaryPlaceName(areaLabel) {
+  if (!areaLabel || typeof areaLabel !== 'string') return '';
+  return areaLabel.split(',')[0].trim();
+}
+
+/**
+ * @param {string | undefined} canonicalSlug
+ * @returns {{ canonicalSlug: string; primary: string; fullLabel: string } | null}
+ */
+function getCityAboutContext(canonicalSlug) {
+  if (!canonicalSlug) return null;
+  const staticLocation = getPredefinedCityStaticLocation(canonicalSlug);
+  if (!staticLocation?.areaLabel) return null;
+  return {
+    canonicalSlug,
+    primary: primaryPlaceName(staticLocation.areaLabel),
+    fullLabel: staticLocation.areaLabel,
+  };
+}
 
 const aboutModalSecondaryButtonClass = (isDarkMode) =>
   ['font-semibold', isDarkMode ? '!text-gray-200 hover:!bg-white/10' : ''].join(' ');

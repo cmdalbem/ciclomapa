@@ -1,19 +1,20 @@
-import { matchCityAirtableFields } from './matchCityAirtableMetadata.js';
+import AirtableDatabase from './AirtableDatabase.js';
 
-describe('matchCityAirtableFields', () => {
+describe('AirtableDatabase.matchCityMetadataFields', () => {
+  const db = new AirtableDatabase();
   const records = [
     { fields: { location: 'São Paulo', pnb_total: 10 } },
     { fields: { location: 'Curitiba', pnb_total: 20 } },
   ];
 
   it('returns null for empty input', () => {
-    expect(matchCityAirtableFields(null, 'São Paulo, SP')).toBe(null);
-    expect(matchCityAirtableFields([], 'São Paulo, SP')).toBe(null);
-    expect(matchCityAirtableFields(records, '')).toBe(null);
+    expect(db.matchCityMetadataFields(null, 'São Paulo, SP')).toBe(null);
+    expect(db.matchCityMetadataFields([], 'São Paulo, SP')).toBe(null);
+    expect(db.matchCityMetadataFields(records, '')).toBe(null);
   });
 
   it('matches when area label contains the Airtable location', () => {
-    expect(matchCityAirtableFields(records, 'São Paulo, SP, Brasil')?.pnb_total).toBe(10);
-    expect(matchCityAirtableFields(records, 'Curitiba, PR')?.pnb_total).toBe(20);
+    expect(db.matchCityMetadataFields(records, 'São Paulo, SP, Brasil')?.pnb_total).toBe(10);
+    expect(db.matchCityMetadataFields(records, 'Curitiba, PR')?.pnb_total).toBe(20);
   });
 });

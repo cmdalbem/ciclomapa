@@ -1,3 +1,5 @@
+import { removeAccents } from './utils/utils.js';
+
 const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.REACT_APP_AIRTABLE_BASE_ID;
 
@@ -13,6 +15,30 @@ const debugStyles = {
 };
 
 class AirtableDatabase {
+  /**
+   * Find the Metadata row whose `location` is contained in the current area label.
+   * @param {Array<{ fields?: { location?: string } }>|null|undefined} records
+   * @param {string|null|undefined} areaLabel
+   * @returns {Record<string, unknown>|null}
+   */
+  matchCityMetadataFields(records, areaLabel) {
+    if (
+      !Array.isArray(records) ||
+      records.length === 0 ||
+      !areaLabel ||
+      typeof areaLabel !== 'string'
+    ) {
+      return null;
+    }
+    const normalizedArea = removeAccents(areaLabel.toLowerCase());
+    const hit = records.find((row) => {
+      const loc = row?.fields?.location;
+      if (!loc || typeof loc !== 'string') return false;
+      return normalizedArea.includes(removeAccents(loc.toLowerCase()));
+    });
+    return hit?.fields ?? null;
+  }
+
   async fetchTable(tableName, view, offset, accumulator = []) {
     if (!AIRTABLE_API_KEY) {
       console.error('No AIRTABLE_API_KEY found');

@@ -262,12 +262,12 @@ class MapPopups {
             break;
         }
 
-        const labelColor = this.debugMode && !isTranslated ? 'text-red-500' : 'opacity-30';
+        const labelColor = this.debugMode && !isTranslated ? 'text-red-500' : 'opacity-50';
         const displayName = translatedName || key;
 
         return `
                     <div class="mt-2">
-                        <div class="font-bold ${labelColor}">
+                        <div class="${labelColor}">
                             ${displayName}
                         </div>
                         <div class="overflow-ellipsis overflow-hidden">
@@ -398,11 +398,10 @@ class MapPopups {
       ? escapeHtml(properties.name)
       : poiType === 'poi-bikeparking'
         ? '<span>Bicicletário/paraciclo</span>'
-        : `<span class="poi-popup-header__title-fallback">${poiTypeMapFallback[poiType]}</span>`;
+        : `<span class="font-medium italic opacity-50">${poiTypeMapFallback[poiType]}</span>`;
 
-    const addressClasses = addressFromOsm
-      ? 'poi-popup-header__address'
-      : 'poi-popup-header__address poi-popup-header__address--pending';
+    const addressClassesBase =
+      'mt-1 sm:mt-0 text-xs md:text-sm break-words opacity-60 leading-snug';
     const addressAttrs = addressFromOsm
       ? 'data-poi-address-slot'
       : 'data-poi-address-slot data-poi-address-pending aria-busy="true" aria-label="Carregando endereço"';
@@ -414,11 +413,11 @@ class MapPopups {
             </span>`;
 
     let html = `
-            <div class="poi-popup-header">
-                <img src="${iconSrc}" class="poi-popup-header__icon" alt="" />
-                <div class="poi-popup-header__text">
-                    <div class="poi-popup-header__title">${titleHtml}</div>
-                    <div class="${addressClasses}" ${addressAttrs}>${addressInner}</div>
+            <div class="flex items-start space-x-3 mt-2 mb-3">
+                <img src="${iconSrc}" class="w-9 h-9 md:w-10 md:h-10 flex-shrink-0 mt-0.5 md:mt-1 object-contain" alt="" />
+                <div class="flex-1 min-w-0">
+                    <div class="text-base md:text-lg font-semibold leading-tight tracking-tight break-words">${titleHtml}</div>
+                    <div class="${addressClassesBase}" ${addressAttrs}>${addressInner}</div>
                 </div>
             </div>
 
