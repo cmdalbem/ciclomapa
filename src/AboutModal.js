@@ -9,7 +9,6 @@ import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
 import premiobicicletabrasil from './img/premiobicicletabrasil.png';
 
-import { colors } from './config/design-tokens.js';
 import { getCityAboutContext, CITY_ABOUT_OSM_URL } from './cityAboutContext.js';
 import { getAboutModalMetrics } from './aboutModalMetrics.js';
 import Logo from './components/Logo';
@@ -91,7 +90,7 @@ function AboutModal({
 
   const footerIconLinkClass = [
     'inline-flex items-center justify-center p-1.5 rounded-md outline-none',
-    'opacity-40 hover:opacity-100 focus-visible:opacity-100 text-white transition-[opacity,colors,background-color] duration-200',
+    'opacity-40 hover:opacity-100 focus-visible:opacity-100 text-white transition duration-200',
     'hover:bg-white/15',
   ].join(' ');
 
@@ -121,10 +120,16 @@ function AboutModal({
 
       <div
         className={[
-          'fixed inset-0 z-10 flex pointer-events-none items-start justify-start box-border',
-          'pt-[max(1rem,env(safe-area-inset-top))] pl-[max(1rem,env(safe-area-inset-left))] pr-4 pb-4',
-          'sm:pt-6 sm:pl-6',
+          'fixed inset-0 z-10 flex pointer-events-none box-border',
+          'items-center justify-center',
+          'p-4',
         ].join(' ')}
+        style={{
+          paddingTop: 'max(1rem, env(safe-area-inset-top))',
+          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+          paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+          paddingRight: 'max(1rem, env(safe-area-inset-right))',
+        }}
       >
         <div
           ref={modalRef}
@@ -133,17 +138,25 @@ function AboutModal({
           aria-modal="true"
           aria-labelledby="about-modal-title"
           className={[
-            'glass-bg w-full max-w-lg box-border rounded-2xl px-6 pt-6 text-white transition-opacity duration-300 ease-out',
+            'glass-bg w-full max-w-lg box-border text-white transition-opacity duration-300 ease-out',
+            'rounded-2xl',
+            'px-4 sm:px-6 pt-4 sm:pt-6',
+            'overscroll-contain',
             visible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
           ].join(' ')}
           style={{
             '--glass-bg-opacity': '0.6',
+            maxHeight: 'calc(100vh - max(1rem, env(safe-area-inset-top)))',
             paddingBottom: 'max(1.75rem, env(safe-area-inset-bottom))',
+            WebkitOverflowScrolling: 'touch',
+            overflowY: 'auto',
           }}
         >
-          <header className="flex items-start justify-between gap-4 mb-6">
+          <header className="flex items-start justify-between gap-4 mb-5 sm:mb-6">
             <div className="-ml-0.5">
-              <Logo className={cityContext ? `b-and-w opacity-30` : 'text-4xl mt-3 mb-1'} />
+              <Logo
+                className={cityContext ? `b-and-w opacity-30` : 'text-5xl sm:text-6xl mt-4 mb-6'}
+              />
             </div>
             <Button
               type="text"
@@ -161,7 +174,7 @@ function AboutModal({
                   id="about-modal-title"
                   data-testid="about-modal-title"
                   data-about-city-slug={cityCanonicalSlug}
-                  className="text-4xl sm:text-6xl leading-none mb-4 font-heading-display"
+                  className="text-5xl sm:text-6xl leading-none mb-4 font-heading-display"
                 >
                   {cityContext.primary}
                 </h2>
@@ -263,12 +276,12 @@ function AboutModal({
                 Sobre o CicloMapa
               </h2>
             )}
-            <p className="leading-relaxed mb-3">
+            <p className="mb-3 text-sm sm:text-base sm:leading-relaxed">
               Pedale com mais segurança planejando suas rotas com o CicloMapa: ciclovias,
               ciclofaixas, bicicletários, oficinas, e tudo mais que importa para quem pedala na
               cidade.
             </p>
-            <p className="leading-relaxed mb-3">
+            <p className="mb-3 text-sm sm:text-base sm:leading-relaxed">
               Com base no{' '}
               <a
                 className={inlineLinkClass}
@@ -277,8 +290,8 @@ function AboutModal({
                 rel="noopener noreferrer"
               >
                 OpenStreetMap
-              </a>{' '}
-              (o maior mapa colaborativo aberto do mundo) o CicloMapa amplia o acesso a dados
+              </a>
+              , o maior mapa colaborativo aberto do mundo, o CicloMapa amplia o acesso a dados
               cicloviários para cidadãos, pesquisadores e gestores públicos, fortalecendo a
               mobilidade por bicicleta no Brasil.
             </p>
@@ -362,10 +375,10 @@ function AboutModal({
                   </section>
                 )} */}
 
-            <div className="flex flex-wrap gap-2 mt-12 mb-8">
+            <div className="flex flex-wrap gap-2 mt-8 sm:mt-12 mb-8">
               <Button
                 type="primary"
-                size="medium"
+                size="large"
                 className="font-semibold"
                 data-testid="about-modal-dismiss"
                 onClick={onClose}
@@ -375,18 +388,18 @@ function AboutModal({
               {cityContext ? (
                 <Button
                   type="text"
-                  size="medium"
+                  size="large"
                   className={aboutModalSecondaryButtonClass(isDarkMode)}
                   data-testid="about-modal-open-legend"
                   onClick={openLayersLegendModal}
                 >
-                  Legenda
+                  Legenda do mapa
                 </Button>
               ) : null}
               {!cityContext ? (
                 <Button
                   type="text"
-                  size="medium"
+                  size="large"
                   className={aboutModalSecondaryButtonClass(isDarkMode)}
                   data-testid="about-modal-open-city-picker"
                   onClick={openCityPicker}
@@ -438,7 +451,7 @@ function AboutModal({
                 </a>
               </div>
               <nav
-                className="flex items-center gap-2 ml-auto shrink-0"
+                className="flex items-center gap-2 ml-auto shrink-0 hidden sm:flex"
                 aria-label="Links do projeto"
               >
                 <Tooltip
