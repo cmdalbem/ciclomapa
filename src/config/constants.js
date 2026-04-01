@@ -172,7 +172,7 @@ export const IS_PROD = window.location.hostname === 'ciclomapa.app';
  * ignoring per-city welcome storage (useful to QA the modal in dev/staging).
  * When false: auto-open uses per-city persistence (once per city per browser).
  */
-export const ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD = false;
+export const ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD = true;
 
 /**
  * City switcher: persist km totals in localStorage and reload them on startup.
