@@ -170,6 +170,7 @@ export default function AppLayout({
         embedMode={state.embedMode}
         isDarkMode={state.isDarkMode}
         cityCanonicalSlug={cityCanonicalSlug}
+        forceGeneric={state.aboutModalForceGeneric}
         lengths={state.lengths}
         layers={state.layers}
         mapDataLoading={state.loading}
