@@ -1,4 +1,4 @@
-import { getAboutModalSpecialMetric } from './aboutModalSpecialMetric.js';
+import { getAboutModalSpecialMetric } from './aboutModalMetrics.js';
 
 describe('getAboutModalSpecialMetric', () => {
   it('prefers PNB over IDECiclo when both exist', () => {
