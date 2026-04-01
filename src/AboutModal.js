@@ -121,7 +121,7 @@ function AboutModal({
       <div
         className={[
           'fixed inset-0 z-10 flex pointer-events-none box-border',
-          'items-center justify-center',
+          'items-center justify-center sm:items-start sm:justify-start',
           'p-4',
         ].join(' ')}
         style={{
@@ -152,7 +152,7 @@ function AboutModal({
             overflowY: 'auto',
           }}
         >
-          <header className="flex items-start justify-between gap-4 mb-5 sm:mb-6">
+          <header className="flex items-start justify-between gap-4 mb-5 sm:mb-2">
             <div className="-ml-0.5">
               <Logo
                 className={cityContext ? `b-and-w opacity-30` : 'text-5xl sm:text-6xl mt-4 mb-6'}
@@ -375,7 +375,7 @@ function AboutModal({
                   </section>
                 )} */}
 
-            <div className="flex flex-wrap gap-2 mt-8 sm:mt-12 mb-8">
+            <div className="flex flex-wrap gap-2 mt-8 sm:mt-12 mb-3">
               <Button
                 type="primary"
                 size="large"
