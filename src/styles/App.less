@@ -381,52 +381,67 @@ a {
   }
 }
 
-@media (min-width: 480px) {
-  // Chrome show/hide (hideUI). Delay the *first* reveal via App.js setTimeout — not transition-delay here,
-  // or toggling hideUI (e.g. About modal) waits an extra second before the UI moves.
+// @media (min-width: 480px) {
+// Chrome show/hide (hideUI). Delay the *first* reveal via App.js setTimeout — not transition-delay here,
+// or toggling hideUI (e.g. About modal) waits an extra second before the UI moves.
+#ciclomapa #mapSwitcher,
+#ciclomapa .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate),
+#ciclomapa #layersPanel,
+#ciclomapa #layersPanelMobileButton,
+#ciclomapa #directionsPanelMobileButton,
+#ciclomapa .cm-layersbar__container,
+#ciclomapa #topbar {
+  transition:
+    transform 1200ms ease-out,
+    opacity 1200ms ease-out;
+  opacity: 1;
+  // transition-delay: 400ms;
+}
+
+/* Faster UI hide/show transitions on small screens */
+@media (max-width: 479px) {
   #ciclomapa #mapSwitcher,
   #ciclomapa .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate),
   #ciclomapa #layersPanel,
   #ciclomapa #layersPanelMobileButton,
-  #ciclomapa #directionsPanel,
   #ciclomapa #directionsPanelMobileButton,
+  #ciclomapa .cm-layersbar__container,
   #ciclomapa #topbar {
     transition:
-      transform 1200ms ease-out,
-      opacity 1200ms ease-out;
-    opacity: 1;
-    // transition-delay: 400ms;
-  }
-
-  #ciclomapa.hideUI #mapSwitcher,
-  #ciclomapa.hideUI .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate),
-  #ciclomapa.hideUI #layersPanel,
-  #ciclomapa.hideUI #layersPanelMobileButton,
-  #ciclomapa.hideUI #directionsPanel,
-  #ciclomapa.hideUI #directionsPanelMobileButton,
-  #ciclomapa.hideUI #topbar {
-    transition-delay: 0s;
-  }
-
-  // From the top
-  #ciclomapa.hideUI #topbar,
-  #ciclomapa.hideUI #directionsPanel {
-    transform: translateY(-30%);
-    opacity: 0;
-  }
-
-  // From the left
-  #ciclomapa.hideUI #layersPanel,
-  #ciclomapa.hideUI #layersPanelMobileButton {
-    transform: translateX(-20%);
-    opacity: 0;
-  }
-
-  // From the right
-  // #ciclomapa.hideUI #analyticsSidebar,
-  #ciclomapa.hideUI #directionsPanelMobileButton,
-  #ciclomapa.hideUI .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate) {
-    transform: translateX(30%);
-    opacity: 0;
+      transform 450ms ease-out,
+      opacity 450ms ease-out;
   }
 }
+
+// #ciclomapa.hideUI #mapSwitcher,
+// #ciclomapa.hideUI .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate),
+// #ciclomapa.hideUI #layersPanel,
+// #ciclomapa.hideUI #layersPanelMobileButton,
+// #ciclomapa.hideUI #directionsPanel,
+// #ciclomapa.hideUI #directionsPanelMobileButton,
+// #ciclomapa.hideUI #topbar {
+//   transition-delay: 0s;
+// }
+
+// From the top
+#ciclomapa.hideUI #topbar,
+#ciclomapa.hideUI .cm-layersbar__container {
+  transform: translateY(-30%);
+  opacity: 0;
+}
+
+// From the left
+#ciclomapa.hideUI #layersPanel,
+#ciclomapa.hideUI #layersPanelMobileButton {
+  transform: translateX(-20%);
+  opacity: 0;
+}
+
+// From the right
+// #ciclomapa.hideUI #analyticsSidebar,
+#ciclomapa.hideUI #directionsPanelMobileButton,
+#ciclomapa.hideUI .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate) {
+  transform: translateX(30%);
+  opacity: 0;
+}
+// }
