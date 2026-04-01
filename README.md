@@ -1,6 +1,5 @@
 ![Mockups of different devices showing the app](./mockups.png)
 
-
 # CicloMapa
 
 ## An open platform to democratize access to bike maps of brazilian cities, combining the collaborative power of OpenStreetMap with web technologies and easy-to-use design.
@@ -11,11 +10,9 @@ Today in Brazil we face a big challenge of not having data on the cycling infras
 
 We've developed the first cycling maps platform encompassing all Brazilian cities, leveraging the data and collaborativity of [OpenStreetMap (OSM)](https://www.openstreetmap.org/), the biggest initiative of this kind. We've created an open-source web application, free and accessible from any computer or smartphone, aimed at both the average citizen who wants to know more about their city, and researchers, who will have easy access to data without needing OSM knowledge.
 
-
 📕 [Full case study](https://cristianodalbem.com/ciclomapa/)
 
 🎓 [UCB website with more useful links and tutorials on OSM](https://www.uniaodeciclistas.org.br/atuacao/ciclomapa)
-
 
 ## Main features
 
@@ -24,15 +21,13 @@ We've developed the first cycling maps platform encompassing all Brazilian citie
 - **Download the GeoJSON data** with a single button click so you can import in your favorite GIS application and power up your research analysis.
 - Found something wrong? A **direct link** will take you to the OSM web editor so you can fix it and contribute.
 
-
 ## Architecture
 
-The basic premise is that the OSM Overpass API is *very* slow and we couldn't hit it directly without damaging a lot the user experience. However, differently than other similar projects, we didn't want to have data stuck in time, since we want contributors to be continually improving the data.
+The basic premise is that the OSM Overpass API is _very_ slow and we couldn't hit it directly without damaging a lot the user experience. However, differently than other similar projects, we didn't want to have data stuck in time, since we want contributors to be continually improving the data.
 
 We store a mirror of the OSM data in a Firebase Database. Any user (possibly an OSM contributor) can manually update this data, which will automatically update the Database.
 
 ![A diagram of the system architecture and how it communicates with external services](./arch.jpg)
-
 
 # Getting started
 
@@ -70,18 +65,15 @@ To deploy to production server:
 yarn run deploy
 ```
 
-
 ## Contributing
 
 We're using [GitHub Issues](https://github.com/cmdalbem/ciclomapa/issues) for our backlog. Feel free to take a look around and choose the task you want. Use the tags at your advantage:
 
-- `complexity` tags tell you how difficult a task *probably* is.
+- `complexity` tags tell you how difficult a task _probably_ is.
 - `good first issue` is the perfect place to start if you're new to the project, or to coding itself.
 - `help wanted` are issues where external help is currently more needed.
 
 Run `yarn test` before committing to ensure you don't introduce regressions.
-
-For how the repo is laid out and **how much to split code into files** (middle ground: avoid huge modules *and* avoid new tiny one-off util files—fold small helpers into existing `utils/*`), see [docs/structure.md](docs/structure.md).
 
 ## Design & UI
 
@@ -91,8 +83,8 @@ For styling conventions, design tokens, and the BEM pilot, see [docs/styling.md]
 
 [contato@ciclomapa.org.br](mailto:contato@ciclomapa.org.br)
 
-
 ## License
+
 The source code is available under a [GPLv3 license](https://github.com/cmdalbem/ciclomapa/blob/master/LICENSE).
 
 Data is directly imported from [OpenStreetMap®](https://www.openstreetmap.org/) and thus is open data, licensed under the [Open Data Commons Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/) by the [OpenStreetMap Foundation (OSMF)](https://osmfoundation.org/).
