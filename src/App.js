@@ -60,6 +60,7 @@ class App extends Component {
   deferredCityFocus = null;
   lastResolvedCitySlug = null;
   lastNotifiedCitySlugError = null;
+  initialBareRootEntry = false;
 
   constructor(props) {
     super(props);
@@ -84,6 +85,19 @@ class App extends Component {
     this.onDirectionsPanelToggle = this.onDirectionsPanelToggle.bind(this);
     this.setArea = this.setArea.bind(this);
     this.debouncedUpdateURL = debounce(this.updateURL, 300);
+
+    // If user lands on "/" with no URL params and no city slug in route,
+    // we treat this as the generic entrypoint and keep the URL clean.
+    // (We still allow area to be inferred from the map center, but we won't
+    // auto-append the city slug since that would flip the About modal to city mode.)
+    const initialPath = typeof window !== 'undefined' ? window.location.pathname : '';
+    const initialSearch = typeof window !== 'undefined' ? window.location.search : '';
+    const initialCitySlug = props?.router?.params?.city;
+    const initialHasCitySlug = Boolean(initialCitySlug && initialCitySlug !== 'routes');
+    this.initialBareRootEntry =
+      (initialPath === '/' || initialPath === '') &&
+      (!initialSearch || initialSearch === '') &&
+      !initialHasCitySlug;
 
     this.state = this.buildInitialState();
     this.updateData();
@@ -164,6 +178,7 @@ class App extends Component {
       isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : DEFAULT_SIDEBAR_OPEN,
       hideUI: !urlParams.embed,
       aboutModal: false,
+      aboutModalForceGeneric: false,
       layersLegendModal: false,
       layersLegendScrollToSection: null,
       lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
@@ -243,14 +258,16 @@ class App extends Component {
     this.setState({ isSidebarOpen: state });
   }
 
-  openAboutModal() {
-    this.setState({ aboutModal: true, hideUI: true });
+  openAboutModal(options = {}) {
+    const forceGeneric = options && options.forceGeneric === true;
+    this.setState({ aboutModal: true, hideUI: true, aboutModalForceGeneric: forceGeneric });
   }
 
   closeAboutModal() {
     this.setState({
       aboutModal: false,
       hideUI: false,
+      aboutModalForceGeneric: false,
     });
   }
 
@@ -1263,7 +1280,7 @@ class App extends Component {
 
     if (!IS_PROD && ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD) {
       if (fromMount) {
-        this.openAboutModal();
+        this.openAboutModal({ forceGeneric: this.initialBareRootEntry });
       }
       return;
     }
@@ -1272,7 +1289,7 @@ class App extends Component {
     if (!area || typeof area !== 'string' || !area.trim()) return;
 
     const cityKey = this.getStorageKeyForArea(area);
-    runPerCityWelcomeModal(cityKey, () => this.openAboutModal());
+    runPerCityWelcomeModal(cityKey, () => this.openAboutModal({ forceGeneric: false }));
   };
 
   componentDidMount() {
