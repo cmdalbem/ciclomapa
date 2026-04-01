@@ -139,26 +139,28 @@ export default function AppLayout({
         />
       </aside>
 
-      <aside aria-label="Painel de rotas">
-        <DirectionsPanel
-          ref={handlers.setDirectionsPanelRef}
-          embedMode={state.embedMode}
-          map={state.map}
-          geoJson={state.geoJson}
-          layers={state.layers}
-          area={state.area}
-          fromPoint={state.fromPoint}
-          toPoint={state.toPoint}
-          onFromPointChange={handlers.setFromPoint}
-          onToPointChange={handlers.setToPoint}
-          onClearRoutePoints={handlers.clearRoutePoints}
-          onDirectionsPanelToggle={handlers.onDirectionsPanelToggle}
-          isDarkMode={state.isDarkMode}
-          debugMode={state.debugMode}
-          onAreaChange={handlers.setArea}
-          openLayersLegendModal={handlers.openLayersLegendModal}
-        />
-      </aside>
+      {!state.embedMode && (
+        <aside aria-label="Painel de rotas">
+          <DirectionsPanel
+            ref={handlers.setDirectionsPanelRef}
+            embedMode={state.embedMode}
+            map={state.map}
+            geoJson={state.geoJson}
+            layers={state.layers}
+            area={state.area}
+            fromPoint={state.fromPoint}
+            toPoint={state.toPoint}
+            onFromPointChange={handlers.setFromPoint}
+            onToPointChange={handlers.setToPoint}
+            onClearRoutePoints={handlers.clearRoutePoints}
+            onDirectionsPanelToggle={handlers.onDirectionsPanelToggle}
+            isDarkMode={state.isDarkMode}
+            debugMode={state.debugMode}
+            onAreaChange={handlers.setArea}
+            openLayersLegendModal={handlers.openLayersLegendModal}
+          />
+        </aside>
+      )}
 
       <AboutModal
         visible={state.aboutModal}
