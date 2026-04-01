@@ -269,7 +269,7 @@ class LayersBar extends Component {
 
     return (
       <div
-        className="fixed left-0 right-0 px-2 overflow-scroll"
+        className="cm-layersbar__container fixed left-0 right-0 px-2 overflow-scroll"
         style={{
           top: `${TOPBAR_HEIGHT - 8}px`,
           scrollbarWidth: 'none',
