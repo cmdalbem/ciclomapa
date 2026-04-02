@@ -81,8 +81,14 @@ root.render(
 // This forces a clean reload once the updated service worker takes control.
 let hasReloadedForSwUpdate = false;
 if ('serviceWorker' in navigator) {
+  // On first service-worker install there is no previous controller yet.
+  // Reloading in that case creates the "auto refresh on first visit" symptom.
+  // We only want to reload for SW updates (when there *was* a controller).
+  const hadServiceWorkerControllerOnLoad = Boolean(navigator.serviceWorker.controller);
+
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (hasReloadedForSwUpdate) return;
+    if (!hadServiceWorkerControllerOnLoad) return;
     hasReloadedForSwUpdate = true;
     window.location.reload();
   });
