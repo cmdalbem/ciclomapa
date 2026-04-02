@@ -9,6 +9,7 @@ import itdp from './img/itdp.png';
 import ucb from './img/ucb.png';
 import premiobicicletabrasil from './img/premiobicicletabrasil.png';
 
+import { ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD, IS_PROD } from './config/constants.js';
 import { getPredefinedCityStaticLocation } from './config/citySlugCatalog.js';
 import { getAboutModalMetrics } from './aboutModalMetrics.js';
 import Logo from './components/Logo';
@@ -21,9 +22,38 @@ const ABOUT_MODAL_FOOTER_TOOLTIP_Z_INDEX = 1220;
 
 const CITY_ABOUT_OSM_URL = 'https://www.openstreetmap.org/';
 
-function primaryPlaceName(areaLabel) {
-  if (!areaLabel || typeof areaLabel !== 'string') return '';
-  return areaLabel.split(',')[0].trim();
+const WELCOME_SEEN_STORAGE_KEY = 'ciclomapa_welcomeSeen:v3';
+
+/**
+ * Welcome About modal auto-open logic (kept here to stay close to the About modal + its persistence key).
+ * Note: this is also used by `App` to decide initial UI state (avoid first-paint flicker).
+ * @param {{
+ *  embedMode: boolean,
+ *  fromMount: boolean,
+ *  openAboutModal?: () => void
+ * }} options
+ */
+export function shouldAutoOpenWelcomeAboutModal(options) {
+  const fromMount = options?.fromMount === true;
+  const embedMode = options?.embedMode === true;
+  if (embedMode) return false;
+
+  if (!IS_PROD && ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD) {
+    return fromMount;
+  }
+
+  try {
+    return window.localStorage.getItem(WELCOME_SEEN_STORAGE_KEY) !== '1';
+  } catch {
+    return false;
+  }
+}
+
+export function maybeAutoOpenWelcomeAboutModal(options) {
+  const openAboutModal = options?.openAboutModal;
+  if (typeof openAboutModal !== 'function') return;
+  if (!shouldAutoOpenWelcomeAboutModal(options)) return;
+  openAboutModal();
 }
 
 /**
@@ -34,9 +64,10 @@ function getCityAboutContext(canonicalSlug) {
   if (!canonicalSlug) return null;
   const staticLocation = getPredefinedCityStaticLocation(canonicalSlug);
   if (!staticLocation?.areaLabel) return null;
+  const primary = staticLocation.areaLabel.split(',')[0]?.trim() || '';
   return {
     canonicalSlug,
-    primary: primaryPlaceName(staticLocation.areaLabel),
+    primary,
     fullLabel: staticLocation.areaLabel,
   };
 }
@@ -50,7 +81,7 @@ function AboutModalMetricSkeleton({ isDarkMode, wide = false }) {
     <span
       data-testid="about-modal-metric-skeleton"
       className={[
-        'inline-block h-3 flex-shrink-0 rounded-sm align-middle animate-pulse',
+        'inline-block h-3 flex-shrink-0 rounded-full align-middle animate-pulse-2x',
         wide ? 'w-10' : 'w-6',
         isDarkMode ? 'bg-white bg-opacity-30' : 'bg-black bg-opacity-20',
       ].join(' ')}
@@ -83,6 +114,20 @@ function AboutModal({
 
   const cityContext = useMemo(() => getCityAboutContext(cityCanonicalSlug), [cityCanonicalSlug]);
 
+  const handleClose = () => {
+    try {
+      window.localStorage.setItem(WELCOME_SEEN_STORAGE_KEY, '1');
+    } catch {
+      /* ignore */
+    }
+    onClose();
+  };
+
+  const dismissAndThen = (fn) => {
+    handleClose();
+    if (typeof fn === 'function') fn();
+  };
+
   const metrics = useMemo(() => {
     if (!cityContext) return null;
     return getAboutModalMetrics(lengths, layers);
@@ -93,7 +138,7 @@ function AboutModal({
   useEffect(() => {
     if (visible) {
       setupModalFocus(modalRef, previousActiveElementRef);
-      const boundKeyDown = (e) => handleModalKeyDown(e, modalRef, onClose);
+      const boundKeyDown = (e) => handleModalKeyDown(e, modalRef, handleClose);
       document.addEventListener('keydown', boundKeyDown);
       return () => {
         document.removeEventListener('keydown', boundKeyDown);
@@ -137,7 +182,7 @@ function AboutModal({
             ? 'opacity-100 cursor-pointer pointer-events-auto'
             : 'opacity-0 pointer-events-none',
         ].join(' ')}
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       <div
@@ -183,7 +228,7 @@ function AboutModal({
             <Button
               type="text"
               className="!p-2 flex items-center justify-center !min-w-0 -mt-2 -mr-2"
-              onClick={onClose}
+              onClick={handleClose}
               aria-label="Fechar"
               icon={<HiOutlineXMark className="text-lg opacity-70" aria-hidden />}
             />
@@ -403,7 +448,7 @@ function AboutModal({
                 size="large"
                 className="font-semibold"
                 data-testid="about-modal-dismiss"
-                onClick={onClose}
+                onClick={handleClose}
               >
                 Começar
               </Button>
@@ -413,7 +458,9 @@ function AboutModal({
                   size="large"
                   className={aboutModalSecondaryButtonClass(isDarkMode)}
                   data-testid="about-modal-open-legend"
-                  onClick={openLayersLegendModal}
+                  onClick={() => {
+                    dismissAndThen(openLayersLegendModal);
+                  }}
                 >
                   Legenda do mapa
                 </Button>
@@ -424,7 +471,9 @@ function AboutModal({
                   size="large"
                   className={aboutModalSecondaryButtonClass(isDarkMode)}
                   data-testid="about-modal-open-city-picker"
-                  onClick={openCityPicker}
+                  onClick={() => {
+                    dismissAndThen(openCityPicker);
+                  }}
                 >
                   Explorar cidades
                 </Button>

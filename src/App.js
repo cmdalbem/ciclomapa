@@ -42,7 +42,7 @@ import {
   ENABLE_SATELLITE_TOGGLE,
   MAX_RECENT_CITIES,
 } from './config/constants.js';
-import { runPerCityWelcomeModal } from './welcomeAboutModalPersistence.js';
+import { maybeAutoOpenWelcomeAboutModal, shouldAutoOpenWelcomeAboutModal } from './AboutModal.js';
 
 // v5+ no longer ships global type scale in the old Less bundle; this restores baseline
 // margins for raw h1–p etc. (and complements Tailwind preflight). See antd/dist/reset.css.
@@ -157,6 +157,14 @@ class App extends Component {
       }
     }
 
+    const embedMode = urlParams.embed;
+
+    // Avoid first-paint flicker: decide welcome modal state before initial render.
+    const shouldAutoOpenWelcomeModal = shouldAutoOpenWelcomeAboutModal({
+      fromMount: true,
+      embedMode,
+    });
+
     return {
       area: prev.area || '',
       showSatellite: ENABLE_SATELLITE_TOGGLE
@@ -174,10 +182,10 @@ class App extends Component {
       layers: this.initLayers(prev.layersStates, isDarkMode, urlParams.debug || false),
       lengths: {},
       isTrackingUserLocation: IS_MOBILE && prev.isTrackingUserLocation === true ? true : false,
-      embedMode: urlParams.embed,
+      embedMode,
       isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : DEFAULT_SIDEBAR_OPEN,
-      hideUI: !urlParams.embed,
-      aboutModal: false,
+      hideUI: shouldAutoOpenWelcomeModal,
+      aboutModal: shouldAutoOpenWelcomeModal,
       layersLegendModal: false,
       layersLegendScrollToSection: null,
       lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
@@ -1177,7 +1185,11 @@ class App extends Component {
       }
 
       if (this.state.area && String(this.state.area).trim()) {
-        this.maybeAutoOpenWelcomeAboutModal({ fromMount: false });
+        maybeAutoOpenWelcomeAboutModal({
+          fromMount: false,
+          embedMode: this.state.embedMode,
+          openAboutModal: () => this.openAboutModal(),
+        });
       }
 
       document.querySelector('.city-picker span').setAttribute('style', 'opacity: 1');
@@ -1273,28 +1285,6 @@ class App extends Component {
     this.calculateLengths();
   };
 
-  /**
-   * @param {object} [options]
-   * @param {boolean} [options.fromMount] When using ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD, only true opens the modal (once per load).
-   */
-  maybeAutoOpenWelcomeAboutModal = (options = {}) => {
-    const fromMount = options.fromMount === true;
-    if (this.state.embedMode) return;
-
-    if (!IS_PROD && ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD) {
-      if (fromMount) {
-        this.openAboutModal();
-      }
-      return;
-    }
-
-    const area = this.state.area;
-    if (!area || typeof area !== 'string' || !area.trim()) return;
-
-    const cityKey = this.getStorageKeyForArea(area);
-    runPerCityWelcomeModal(cityKey, () => this.openAboutModal());
-  };
-
   componentDidMount() {
     updateDocumentMeta(this.state.area, this.getPreferredCanonicalSlugForMeta(this.state.area));
 
@@ -1314,13 +1304,13 @@ class App extends Component {
       this.themeChangeListener = handleThemeChange;
     }
 
-    this.maybeAutoOpenWelcomeAboutModal({ fromMount: true });
-
-    setTimeout(() => {
-      if (!this.state.aboutModal) {
-        this.setState({ hideUI: false });
-      }
-    }, 1000);
+    if (!this.state.aboutModal) {
+      maybeAutoOpenWelcomeAboutModal({
+        fromMount: true,
+        embedMode: this.state.embedMode,
+        openAboutModal: () => this.openAboutModal(),
+      });
+    }
 
     window.addEventListener('beforeunload', (e) => {
       this.saveStateToLocalStorage();
