@@ -178,7 +178,6 @@ class App extends Component {
       isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : DEFAULT_SIDEBAR_OPEN,
       hideUI: !urlParams.embed,
       aboutModal: false,
-      aboutModalForceGeneric: false,
       layersLegendModal: false,
       layersLegendScrollToSection: null,
       lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
@@ -258,16 +257,14 @@ class App extends Component {
     this.setState({ isSidebarOpen: state });
   }
 
-  openAboutModal(options = {}) {
-    const forceGeneric = options && options.forceGeneric === true;
-    this.setState({ aboutModal: true, hideUI: true, aboutModalForceGeneric: forceGeneric });
+  openAboutModal() {
+    this.setState({ aboutModal: true, hideUI: true });
   }
 
   closeAboutModal() {
     this.setState({
       aboutModal: false,
       hideUI: false,
-      aboutModalForceGeneric: false,
     });
   }
 
@@ -477,6 +474,12 @@ class App extends Component {
   }
 
   syncRouteSlugWithArea(area) {
+    // Prevent a "bare root" entry ("/" with no params) from being rewritten
+    // into "/:citySlug" by our map-inferred area initialization.
+    if (this.initialBareRootEntry && !this.getCanonicalRouteCitySlug()) {
+      return;
+    }
+
     const areaSlug = this.getCitySlugFromArea(area);
     if (!areaSlug) return;
 
@@ -1280,7 +1283,7 @@ class App extends Component {
 
     if (!IS_PROD && ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD) {
       if (fromMount) {
-        this.openAboutModal({ forceGeneric: this.initialBareRootEntry });
+        this.openAboutModal();
       }
       return;
     }
@@ -1289,7 +1292,7 @@ class App extends Component {
     if (!area || typeof area !== 'string' || !area.trim()) return;
 
     const cityKey = this.getStorageKeyForArea(area);
-    runPerCityWelcomeModal(cityKey, () => this.openAboutModal({ forceGeneric: false }));
+    runPerCityWelcomeModal(cityKey, () => this.openAboutModal());
   };
 
   componentDidMount() {

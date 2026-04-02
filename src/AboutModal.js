@@ -72,7 +72,6 @@ function AboutModal({
   embedMode = false,
   isDarkMode = true,
   cityCanonicalSlug,
-  forceGeneric = false,
   lengths,
   layers,
   mapDataLoading = false,
@@ -82,10 +81,7 @@ function AboutModal({
   const modalRef = useRef(null);
   const previousActiveElementRef = useRef(null);
 
-  const cityContext = useMemo(() => {
-    if (forceGeneric) return null;
-    return getCityAboutContext(cityCanonicalSlug);
-  }, [cityCanonicalSlug, forceGeneric]);
+  const cityContext = useMemo(() => getCityAboutContext(cityCanonicalSlug), [cityCanonicalSlug]);
 
   const metrics = useMemo(() => {
     if (!cityContext) return null;
@@ -541,7 +537,6 @@ AboutModal.propTypes = {
   embedMode: PropTypes.bool,
   isDarkMode: PropTypes.bool,
   cityCanonicalSlug: PropTypes.string,
-  forceGeneric: PropTypes.bool,
   lengths: PropTypes.objectOf(PropTypes.number),
   layers: PropTypes.array,
   mapDataLoading: PropTypes.bool,
