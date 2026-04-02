@@ -73,11 +73,6 @@ export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = false;
 export const ENABLE_COMMENTS = true;
 export const ENABLE_SATELLITE_TOGGLE = false;
 
-/*
- * Supported countries (geocoding, city search, UI labels — not PMTiles).
- * Keep in sync with entries in `citySlugCatalog.js`. Order: primary market,
- * Iberia, then Latin America by Portuguese name.
- */
 export const SUPPORTED_COUNTRIES = Object.freeze([
   { code: 'br', labelPt: 'Brasil', flag: '🇧🇷' },
   { code: 'pt', labelPt: 'Portugal', flag: '🇵🇹' },
@@ -167,12 +162,19 @@ export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAUL
 
 export const IS_PROD = window.location.hostname === 'ciclomapa.app';
 
+export const ENABLE_OFFICIAL_CITY_HALL_METRICS_COMPARISON =
+  process.env.REACT_APP_ENABLE_OFFICIAL_CITY_HALL_METRICS === 'true'
+    ? true
+    : process.env.REACT_APP_ENABLE_OFFICIAL_CITY_HALL_METRICS === 'false'
+      ? false
+      : !IS_PROD;
+
 /**
  * When true and not in production: the About modal auto-opens once on each full page load,
  * ignoring per-city welcome storage (useful to QA the modal in dev/staging).
  * When false: auto-open uses per-city persistence (once per city per browser).
  */
-export const ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD = true;
+export const ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD = false;
 
 /**
  * City switcher: persist km totals in localStorage and reload them on startup.

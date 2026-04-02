@@ -24,7 +24,11 @@ import {
 
 import { HiMiniCheckBadge as IconVerified } from 'react-icons/hi2';
 
-import { LENGTH_CALCULATE_STRATEGIES, LENGTH_COUNTED_LAYER_IDS } from './config/constants.js';
+import {
+  ENABLE_OFFICIAL_CITY_HALL_METRICS_COMPARISON,
+  LENGTH_CALCULATE_STRATEGIES,
+  LENGTH_COUNTED_LAYER_IDS,
+} from './config/constants.js';
 import { THIN_SPACE, appendKmUnit } from './utils/routeUtils.js';
 
 const PIE_CHART_WIDTH_PX = 207;
@@ -472,7 +476,8 @@ class AnalyticsSidebar extends Component {
                         <span className="text-sm">{`${THIN_SPACE}km`}</span>
                       </span>
                     </span>
-                    {this.props.cityMetadata &&
+                    {ENABLE_OFFICIAL_CITY_HALL_METRICS_COMPARISON &&
+                      this.props.cityMetadata &&
                       this.props.cityMetadata.alianca_2025 !== undefined &&
                       this.props.cityMetadata.alianca_2025 !== null && (
                         <>
