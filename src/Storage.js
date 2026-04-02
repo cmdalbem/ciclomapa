@@ -41,6 +41,13 @@ class Storage {
     }
 
     this.db = firebase.firestore();
+    this.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn('[Firestore] Persistence unavailable: multiple tabs open');
+      } else if (err.code === 'unimplemented') {
+        console.warn('[Firestore] Persistence not supported by this browser');
+      }
+    });
   }
 
   /**
