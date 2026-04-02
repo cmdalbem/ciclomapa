@@ -181,6 +181,19 @@
   color: rgba(239, 68, 68, var(--tw-text-opacity)) !important;
 }
 
+/* Directions panel error banner: Tailwind utilities tuned for light glass */
+.theme-light #directionsPanel .text-red-200 {
+  color: #7f1d1d !important;
+}
+
+.theme-light #directionsPanel .border-red-500 {
+  border-color: rgba(185, 28, 28, 0.4) !important;
+}
+
+.theme-light #directionsPanel .bg-red-600.bg-opacity-20 {
+  background-color: rgba(254, 202, 202, 0.55) !important;
+}
+
 .theme-light .text-opacity-50 {
   opacity: 0.5 !important;
 }

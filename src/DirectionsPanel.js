@@ -146,7 +146,7 @@ class DirectionsPanel extends Component {
     if (fromCity && toCity && fromCity !== toCity) {
       const targetCity = type === 'to' ? fromCity : toCity;
       this.setState({
-        cityValidationError: `Escolha ${type === 'to' ? 'um destino' : 'uma origem'} em ${targetCity} para calcular a rota.`,
+        cityValidationError: `Escolha ${type === 'to' ? 'um destino' : 'uma origem'} em ${targetCity}.`,
       });
       return false;
     }
@@ -1184,12 +1184,7 @@ class DirectionsPanel extends Component {
             {(directionsError || this.state.cityValidationError) && (
               <div className="mt-3 p-2 bg-red-600 bg-opacity-20 border border-red-500 rounded text-red-200 text-sm">
                 {directionsError && <div>Erro: {directionsError}</div>}
-                {this.state.cityValidationError && (
-                  <div>
-                    <strong>Destino fora da cidade da origem:</strong>{' '}
-                    {this.state.cityValidationError}
-                  </div>
-                )}
+                {this.state.cityValidationError && <div>{this.state.cityValidationError}</div>}
               </div>
             )}
 
