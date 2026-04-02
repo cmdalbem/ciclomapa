@@ -187,16 +187,27 @@
 }
 
 /* Higher specificity to override Ant Design button styles without !important */
-body.theme-light #layersPanelMobileButton.collapsed,
-body.theme-light .directions-panel-button.collapsed {
+body.theme-light #layersPanelMobileButton.collapsed {
   color: black;
   background: #ffffff;
 }
 
-body.theme-light #layersPanelMobileButton.expanded,
-body.theme-light .directions-panel-button.expanded {
+body.theme-light #layersPanelMobileButton.expanded {
   color: #111827;
   background: #f3f4f6;
+}
+
+/* Route mobile button: inverted vs layers — dark filled primary when idle */
+body.theme-light #directionsPanelMobileButton.collapsed {
+  color: #f9fafb;
+  background: #111827;
+}
+
+body.theme-light #directionsPanelMobileButton.expanded {
+  color: #f9fafb;
+  background: #374151;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 body.theme-light {
@@ -281,8 +292,9 @@ body.theme-light {
 }
 
 .directions-panel-button {
-  right: 12px;
+  right: 8px;
   left: auto;
+  bottom: calc(32px + env(safe-area-inset-bottom, 0px));
 }
 
 #layersPanelMobileButton.collapsed,
@@ -295,6 +307,21 @@ body.theme-light {
 .directions-panel-button.expanded {
   color: #111827;
   background: #f3f4f6;
+}
+
+/* Route only: light pill (primary) vs geolocate dark pill (secondary); expanded = inverted */
+#directionsPanelMobileButton.collapsed {
+  color: #111827;
+  background: #f3f4f6;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* Active while panel open: same “family” as primary pill, pressed inset */
+#directionsPanelMobileButton.expanded {
+  color: #111827;
+  background: #d1d5db;
+  border-color: rgba(0, 0, 0, 0.14);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
 .animate-pulse-2x {

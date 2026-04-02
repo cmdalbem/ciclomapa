@@ -106,3 +106,8 @@ body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
 .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl {
   margin-right: 12px;
 }
+
+/* Route FAB vs geolocate: geo high (ex-route), route low (ex-geo) */
+.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate) {
+  margin: 0 8px 74px 0;
+}
