@@ -17,6 +17,12 @@ import { appendKmUnit } from './utils/routeUtils.js';
 
 import './CitySwitcherModal.css';
 
+// `react-icons` exports icons typed as returning `ReactNode` (see `IconType`),
+// but React 19's JSX typings require a component return type that is a JSX element.
+// Cast here to keep the rest of the file type-safe without changing runtime behavior.
+const HiOutlineXMarkIcon = HiOutlineXMark as unknown as React.FC<React.SVGProps<SVGElement>>;
+const HiOutlineClockIcon = HiOutlineClock as unknown as React.FC<React.SVGProps<SVGElement>>;
+
 const CITY_SWITCHER_LOG_PREFIX = '[city-switcher]';
 
 const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
@@ -921,7 +927,7 @@ function CitySwitcherModal() {
             aria-label="Fechar"
             data-testid="city-switcher-close"
           >
-            <HiOutlineXMark className="text-2xl city-switcher-modal__closeIcon" aria-hidden />
+            <HiOutlineXMarkIcon className="text-2xl city-switcher-modal__closeIcon" aria-hidden />
           </Button>
         </div>
         <div className="city-switcher-modal__geocoderMount" aria-label="Buscar cidades" />
@@ -942,7 +948,10 @@ function CitySwitcherModal() {
                 style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
               >
                 <div className="city-switcher-modal__sectionTitle">
-                  <HiOutlineClock className="city-switcher-modal__clockIcon" aria-hidden="true" />
+                  <HiOutlineClockIcon
+                    className="city-switcher-modal__clockIcon"
+                    aria-hidden="true"
+                  />
                   Recentes
                 </div>
               </div>
