@@ -38,6 +38,14 @@ export function shouldAutoOpenWelcomeAboutModal(options) {
   const embedMode = options?.embedMode === true;
   if (embedMode) return false;
 
+  if (typeof window !== 'undefined') {
+    try {
+      if (new URLSearchParams(window.location.search).has('e2e')) return false;
+    } catch {
+      /* ignore */
+    }
+  }
+
   if (!IS_PROD && ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD) {
     return fromMount;
   }

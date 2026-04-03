@@ -21,6 +21,18 @@ Single run (no watch): `yarn test --watchAll=false`
 
 Before moving to the next step, run `yarn test --watchAll=false` and ensure all tests pass.
 
+## End-to-end (Playwright)
+
+UI smoke: start the dev server (`yarn start`), then in another terminal run `yarn e2e` (uses `/?e2e=1`, which skips Mapbox GL init — see `src/Map.js`). Optional: `PLAYWRIGHT_BASE_URL` if the app is not on port 3000.
+
+**API smoke** (`e2e/apis.spec.ts`) hits the same backends the product uses (Overpass, Nominatim, Valhalla, and optionally Mapbox / OpenRouteService / GraphHopper / Google when the usual `REACT_APP_*` env vars are set). It uses Playwright’s HTTP client only — **no browser and no local server**. Run:
+
+```bash
+yarn e2e:apis
+```
+
+Overpass is shared infrastructure and can be slow or return 5xx; the spec retries mirrors and rounds. Optional provider tests **skip** if the corresponding API key is not in the environment (so CI can run only public checks unless you add secrets).
+
 ## Mocks
 
 - **DirectionsPanel.test.js** — `mapbox-gl` and `GooglePlacesGeocoder` are mocked so the panel can render in jsdom without Map or Google APIs.
