@@ -1,19 +1,32 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { HiOutlineClock, HiOutlineXMark } from 'react-icons/hi2';
-import { Button } from 'antd';
+import { HiSearch as IconSearch } from 'react-icons/hi';
+import { AutoComplete, Button, Input } from 'antd';
+import type { AutoCompleteProps } from 'antd';
 import Storage from './Storage.js';
 import { slugify } from './utils/utils.js';
 import { getCanonicalCitySlug, getPredefinedCitySlugDefinition } from './config/citySlugCatalog.js';
 import { TOP_CITY_SLUGS } from './config/topCitiesCatalog.js';
 import {
+  CITY_SWITCHER_MINI_CHART_LAYER_IDS,
   ENABLE_CITY_SWITCHER_STATS_CACHE,
+  IS_PROD,
   LENGTH_COUNTED_LAYER_IDS,
   MAX_RECENT_CITIES,
+  SUPPORTED_COUNTRIES,
   SUPPORTED_COUNTRY_CODES,
   SUPPORTED_COUNTRY_LABEL_PT_BY_CODE,
 } from './config/constants.js';
 import { appendKmUnit } from './utils/routeUtils.js';
+import { getAreaStringFromResultLike } from './googlePlacesClient.js';
+import PlacesAutocompleteOptionLabel from './PlacesAutocompleteOptionLabel.jsx';
+import {
+  geocodePlacesSuggestionToResult,
+  PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
+  searchPlacesForAutocomplete,
+} from './placesAutocomplete.js';
+import OSMController from './OSMController.js';
 
 import './CitySwitcherModal.css';
 
@@ -22,6 +35,7 @@ import './CitySwitcherModal.css';
 // Cast here to keep the rest of the file type-safe without changing runtime behavior.
 const HiOutlineXMarkIcon = HiOutlineXMark as unknown as React.FC<React.SVGProps<SVGElement>>;
 const HiOutlineClockIcon = HiOutlineClock as unknown as React.FC<React.SVGProps<SVGElement>>;
+const IconSearchTyped = IconSearch as unknown as React.FC<React.SVGProps<SVGElement>>;
 
 const CITY_SWITCHER_LOG_PREFIX = '[city-switcher]';
 
@@ -30,14 +44,31 @@ const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 /** Persisted map: canonical city slug → summed km for that city only (layers in LENGTH_COUNTED_LAYER_IDS). */
 const CITY_SWITCHER_STATS_KM_CACHE_KEY = 'ciclomapa_city_switcher_stats_km_v2';
 
-const CITY_PICKER_INPUT_SELECTOR = '.city-switcher-modal__geocoderMount input';
+const CITY_PICKER_INPUT_SELECTOR =
+  '.city-switcher-modal__geocoderMount .city-switcher-global-search input';
 
 type StatsTotalsCacheEntry = {
   value: number | null;
   fetchedAt: number;
+  /** Per-layer km from Firestore `lengths` (only keys absent in older cache entries). */
+  lengthsKmByLayer?: Record<string, number> | null;
 };
 
 const statsTotalsByCanonicalSlugCache = new Map<string, StatsTotalsCacheEntry>();
+
+function parseStoredLengthsKmByLayer(raw: unknown): Record<string, number> | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null) return null;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const out: Record<string, number> = {};
+  for (const layerId of LENGTH_COUNTED_LAYER_IDS) {
+    const v = Number(o[layerId]);
+    if (Number.isFinite(v) && v >= 0) out[layerId] = v;
+  }
+  const sum = Object.values(out).reduce((a, b) => a + b, 0);
+  return sum > 0 ? out : null;
+}
 
 if (typeof window !== 'undefined' && ENABLE_CITY_SWITCHER_STATS_CACHE) {
   try {
@@ -46,7 +77,7 @@ if (typeof window !== 'undefined' && ENABLE_CITY_SWITCHER_STATS_CACHE) {
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       Object.entries(parsed as Record<string, unknown>).forEach(([slug, row]) => {
         if (!slug || !row || typeof row !== 'object' || Array.isArray(row)) return;
-        const r = row as { value?: unknown; fetchedAt?: unknown };
+        const r = row as { value?: unknown; fetchedAt?: unknown; lengthsKmByLayer?: unknown };
         const fetchedAt = typeof r.fetchedAt === 'number' ? r.fetchedAt : 0;
         const value =
           typeof r.value === 'number' && Number.isFinite(r.value)
@@ -54,12 +85,15 @@ if (typeof window !== 'undefined' && ENABLE_CITY_SWITCHER_STATS_CACHE) {
             : r.value === null
               ? null
               : null;
-        statsTotalsByCanonicalSlugCache.set(slug, { value, fetchedAt });
+        const lengthsKmByLayer = parseStoredLengthsKmByLayer(r.lengthsKmByLayer);
+        const entry: StatsTotalsCacheEntry = { value, fetchedAt };
+        if (lengthsKmByLayer !== undefined) {
+          entry.lengthsKmByLayer = lengthsKmByLayer;
+        }
+        statsTotalsByCanonicalSlugCache.set(slug, entry);
       });
     }
-  } catch {
-    // Ignore corrupt cache
-  }
+  } catch {}
 }
 
 let statsTotalsLoadPromise: Promise<void> | null = null;
@@ -81,9 +115,18 @@ const STATS_FETCH_CONCURRENCY = 10;
 function persistStatsKmCache(): void {
   if (typeof window === 'undefined' || !ENABLE_CITY_SWITCHER_STATS_CACHE) return;
   try {
-    const out: Record<string, { value: number | null; fetchedAt: number }> = {};
+    const out: Record<
+      string,
+      { value: number | null; fetchedAt: number; lengthsKmByLayer?: Record<string, number> | null }
+    > = {};
     statsTotalsByCanonicalSlugCache.forEach((entry, slug) => {
-      out[slug] = { value: entry.value, fetchedAt: entry.fetchedAt };
+      out[slug] = {
+        value: entry.value,
+        fetchedAt: entry.fetchedAt,
+        ...(entry.lengthsKmByLayer !== undefined
+          ? { lengthsKmByLayer: entry.lengthsKmByLayer }
+          : {}),
+      };
     });
     window.localStorage.setItem(CITY_SWITCHER_STATS_KM_CACHE_KEY, JSON.stringify(out));
   } catch {
@@ -127,6 +170,7 @@ type TopCityBase = {
 type CityWithStats = TopCityBase & {
   totalLength: number | null;
   isLoadingTotal: boolean;
+  lengthsKmByLayer: Record<string, number> | null;
 };
 
 type RecentCityWithStats = RecentCityEntry & {
@@ -136,6 +180,7 @@ type RecentCityWithStats = RecentCityEntry & {
   countryCode: string | null;
   totalLength: number | null;
   isLoadingTotal: boolean;
+  lengthsKmByLayer: Record<string, number> | null;
 };
 
 type CountryGroup = {
@@ -199,9 +244,7 @@ function writeRecentCitiesToStorage(
 ) {
   try {
     window.localStorage.setItem(RECENT_CITIES_STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    // Ignore
-  }
+  } catch {}
 }
 
 /** Same canonical dedupe rules as `readRecentCitiesFromStorage`, for rows we just wrote to storage. */
@@ -302,6 +345,18 @@ function sumLengthsToKm(lengths: unknown): number | null {
   return Number.isFinite(total) && total > 0 ? total : null;
 }
 
+/** Positive per-layer km for charting (same layers as `sumLengthsToKm`). */
+function lengthsKmByLayerFromFirestoreLengths(lengths: unknown): Record<string, number> | null {
+  const obj = lengths && typeof lengths === 'object' ? (lengths as Record<string, unknown>) : {};
+  const out: Record<string, number> = {};
+  for (const layerId of LENGTH_COUNTED_LAYER_IDS) {
+    const v = Number(obj[layerId]);
+    if (Number.isFinite(v) && v >= 0) out[layerId] = v;
+  }
+  const sum = Object.values(out).reduce((a, b) => a + b, 0);
+  return sum > 0 ? out : null;
+}
+
 /**
  * Firestore `stats` doc ids to try for this city, in order. Canonical slug first (matches `saveStatsToFirestore`).
  */
@@ -337,7 +392,9 @@ function statsCacheEntryFromDoc(docData: unknown, fetchedAt: number): StatsTotal
     docData && typeof docData === 'object' && 'lengths' in docData
       ? (docData as { lengths?: unknown }).lengths
       : undefined;
-  return { value: sumLengthsToKm(lengths), fetchedAt };
+  const value = sumLengthsToKm(lengths);
+  const lengthsKmByLayer = value !== null ? lengthsKmByLayerFromFirestoreLengths(lengths) : null;
+  return { value, fetchedAt, lengthsKmByLayer };
 }
 
 type CityStatsPreloadTask = {
@@ -397,12 +454,18 @@ async function resolveCityStatsKmForSlug(
     statsTotalsByCanonicalSlugCache.set(canonicalSlug, {
       value: previous.value,
       fetchedAt: now,
+      lengthsKmByLayer:
+        previous.lengthsKmByLayer !== undefined ? previous.lengthsKmByLayer : undefined,
     });
     schedulePersistStatsKmCache();
     return;
   }
 
-  statsTotalsByCanonicalSlugCache.set(canonicalSlug, { value: null, fetchedAt: now });
+  statsTotalsByCanonicalSlugCache.set(canonicalSlug, {
+    value: null,
+    fetchedAt: now,
+    lengthsKmByLayer: null,
+  });
   schedulePersistStatsKmCache();
 }
 
@@ -446,6 +509,19 @@ function getRealCityTotalLength(
   return entry && typeof entry.value === 'number' ? entry.value : null;
 }
 
+function getRealCityLengthsKmByLayer(
+  cityObj: StatsCityLike | null | undefined,
+  totalsByCanonicalSlug: Map<string, StatsTotalsCacheEntry>
+): Record<string, number> | null {
+  if (!cityObj || !totalsByCanonicalSlug) return null;
+  const canonicalSlug = getCanonicalCitySlug(cityObj.canonicalSlug || cityObj.slug || '');
+  if (!canonicalSlug) return null;
+  const entry = totalsByCanonicalSlug.get(canonicalSlug);
+  const raw = entry?.lengthsKmByLayer;
+  if (!raw || typeof raw !== 'object') return null;
+  return raw;
+}
+
 function shouldShowTotalSkeleton(
   cityObj: StatsCityLike | null | undefined,
   totalsByCanonicalSlug: Map<string, StatsTotalsCacheEntry>,
@@ -461,12 +537,17 @@ function attachCityStatsTotals(
   cityObj: StatsCityLike,
   totalsByCanonicalSlug: Map<string, StatsTotalsCacheEntry>,
   isLoadingTotals: boolean
-): { totalLength: number | null; isLoadingTotal: boolean } {
+): {
+  totalLength: number | null;
+  isLoadingTotal: boolean;
+  lengthsKmByLayer: Record<string, number> | null;
+} {
   const totalLength = getRealCityTotalLength(cityObj, totalsByCanonicalSlug);
   const isLoadingTotal =
     typeof totalLength !== 'number' &&
     shouldShowTotalSkeleton(cityObj, totalsByCanonicalSlug, isLoadingTotals);
-  return { totalLength, isLoadingTotal };
+  const lengthsKmByLayer = getRealCityLengthsKmByLayer(cityObj, totalsByCanonicalSlug);
+  return { totalLength, isLoadingTotal, lengthsKmByLayer };
 }
 
 function usePreloadedStatsTotalsByCanonicalSlug(cityObjs: StatsCityLike[], isPickerOpen: boolean) {
@@ -650,19 +731,201 @@ type CityPickerRowModel = {
   meta: string;
   totalLength: number | null;
   isLoadingTotal: boolean;
+  lengthsKmByLayer: Record<string, number> | null;
 };
+
+type CitySwitcherInfraLayer = {
+  id: string;
+  style?: {
+    lineStyle?: string;
+    lineColor?: string;
+  };
+};
+
+function useBodyThemeIsDark(): boolean {
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== 'undefined' && document.body.classList.contains('theme-dark')
+  );
+  useLayoutEffect(() => {
+    const sync = () => setIsDark(document.body.classList.contains('theme-dark'));
+    const observer = new MutationObserver(sync);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    sync();
+    return () => observer.disconnect();
+  }, []);
+  return isDark;
+}
+
+function miniChartSliceTotalKm(lengthsKmByLayer: Record<string, number>): number {
+  return CITY_SWITCHER_MINI_CHART_LAYER_IDS.reduce((sum, id) => {
+    const v = Number(lengthsKmByLayer[id]);
+    return Number.isFinite(v) && v > 0 ? sum + v : sum;
+  }, 0);
+}
+
+/** Degrees clockwise from top (12 o’clock); 0° = top center. */
+function polarOnRing(
+  cx: number,
+  cy: number,
+  r: number,
+  degCwFromTop: number
+): { x: number; y: number } {
+  const rad = ((degCwFromTop - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+/**
+ * Circular arc along one radius (stroke only). `sweepFlag` 1 = clockwise on screen (SVG y-down).
+ */
+function ringArcD(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
+  const start = polarOnRing(cx, cy, r, startDeg);
+  const end = polarOnRing(cx, cy, r, endDeg);
+  const delta = endDeg - startDeg;
+  const largeArc = delta > 180 ? 1 : 0;
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
+}
+
+const CITY_INFRA_RING_SIZE = 18;
+const CITY_INFRA_RING_CX = CITY_INFRA_RING_SIZE / 2;
+const CITY_INFRA_RING_CY = CITY_INFRA_RING_SIZE / 2;
+const CITY_INFRA_RING_R = CITY_INFRA_RING_SIZE / 2;
+const CITY_INFRA_RING_STROKE = 2;
+/** Angular gap left empty between coloured segments. */
+const CITY_INFRA_RING_GAP_DEG = 32;
+/** When only one layer has length, opening (no background ring — just empty space). */
+const CITY_INFRA_RING_SINGLE_OPENING_DEG = 32;
+/** Trim each arc at both ends (deg) so round stroke caps don’t spill into the gap between segments. */
+const CITY_INFRA_RING_CAP_TRIM_DEG = 2;
+
+/**
+ * Thin circular chart: ciclovia / ciclofaixa only, rounded stroke arcs, wide gaps, no track/background.
+ * testid kept as `city-switcher-mini-pie` for tests.
+ */
+function CityInfraMiniRing({
+  lengthsKmByLayer,
+  infraLayers,
+}: {
+  lengthsKmByLayer: Record<string, number>;
+  infraLayers: CitySwitcherInfraLayer[];
+}) {
+  const byId = Object.fromEntries(infraLayers.map((l) => [l.id, l]));
+  const segments = CITY_SWITCHER_MINI_CHART_LAYER_IDS.map((id) => {
+    const raw = Number(lengthsKmByLayer[id]);
+    const km = Number.isFinite(raw) && raw > 0 ? raw : 0;
+    const layer = byId[id];
+    const color = layer?.style?.lineColor || (id === 'ciclovia' ? '#386641' : '#A7C957');
+    return { id, km, color };
+  }).filter((s) => s.km > 0);
+
+  const totalKm = segments.reduce((sum, s) => sum + s.km, 0);
+  if (totalKm <= 0) return null;
+
+  const n = segments.length;
+  const gapTotalDeg = n === 1 ? CITY_INFRA_RING_SINGLE_OPENING_DEG : n * CITY_INFRA_RING_GAP_DEG;
+  const availDeg = 360 - gapTotalDeg;
+  const trimBase = n > 1 ? CITY_INFRA_RING_CAP_TRIM_DEG : CITY_INFRA_RING_CAP_TRIM_DEG * 0.75;
+
+  let cursor = 0;
+  const arcs: { id: string; d: string; color: string }[] = [];
+  for (let i = 0; i < n; i++) {
+    const seg = segments[i];
+    const span = (seg.km / totalKm) * availDeg;
+    const trim = Math.min(trimBase, Math.max(0, span / 2 - 0.75));
+    const arcStart = cursor + trim;
+    const arcEnd = cursor + span - trim;
+    if (arcEnd > arcStart) {
+      arcs.push({
+        id: seg.id,
+        d: ringArcD(CITY_INFRA_RING_CX, CITY_INFRA_RING_CY, CITY_INFRA_RING_R, arcStart, arcEnd),
+        color: seg.color,
+      });
+    }
+    const gapAfter = n === 1 ? CITY_INFRA_RING_SINGLE_OPENING_DEG : CITY_INFRA_RING_GAP_DEG;
+    cursor += span + gapAfter;
+  }
+
+  return (
+    <div
+      className="city-switcher-modal__cityInfraRing"
+      data-testid="city-switcher-mini-pie"
+      aria-hidden
+    >
+      <svg
+        width={CITY_INFRA_RING_SIZE}
+        height={CITY_INFRA_RING_SIZE}
+        viewBox={`0 0 ${CITY_INFRA_RING_SIZE} ${CITY_INFRA_RING_SIZE}`}
+        className="city-switcher-modal__cityInfraRingSvg"
+      >
+        {/* Horizontal mirror so segments grow counter‑clockwise from the chart’s start (toward the left). */}
+        <g
+          transform={`translate(${CITY_INFRA_RING_CX} ${CITY_INFRA_RING_CY}) scale(-1, 1) translate(${-CITY_INFRA_RING_CX} ${-CITY_INFRA_RING_CY})`}
+        >
+          {arcs.map((a) => (
+            <path
+              key={a.id}
+              d={a.d}
+              fill="none"
+              stroke={a.color}
+              strokeWidth={CITY_INFRA_RING_STROKE}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ))}
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+/** Same ring geometry as `CityInfraMiniRing` (radius, stroke width, caps); neutral stroke only = “empty” chart. */
+function CityInfraMiniRingPlaceholder() {
+  const s = CITY_INFRA_RING_SIZE;
+  const c = CITY_INFRA_RING_CX;
+  const r = CITY_INFRA_RING_R;
+  return (
+    <div
+      className="city-switcher-modal__cityInfraRing city-switcher-modal__cityInfraRing--placeholder"
+      data-testid="city-switcher-ring-placeholder"
+      aria-hidden
+    >
+      <svg
+        width={s}
+        height={s}
+        viewBox={`0 0 ${s} ${s}`}
+        className="city-switcher-modal__cityInfraRingSvg"
+      >
+        <circle
+          cx={c}
+          cy={c}
+          r={r}
+          fill="none"
+          strokeWidth={CITY_INFRA_RING_STROKE}
+          strokeLinecap="round"
+          className="city-switcher-modal__cityInfraRingPlaceholderStroke"
+        />
+      </svg>
+    </div>
+  );
+}
 
 function CityPickerCityCard({
   city,
   stagger,
   to,
   onActivate,
+  infraLayers,
 }: {
   city: CityPickerRowModel;
   stagger: number;
   to: string;
   onActivate: () => void;
+  infraLayers: CitySwitcherInfraLayer[];
 }) {
+  const hasRingData =
+    typeof city.totalLength === 'number' &&
+    city.lengthsKmByLayer &&
+    miniChartSliceTotalKm(city.lengthsKmByLayer) > 0;
+
   return (
     <div
       className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
@@ -679,32 +942,77 @@ function CityPickerCityCard({
         }}
       >
         <div className="city-switcher-modal__cityTopRow">
+          {hasRingData && city.lengthsKmByLayer ? (
+            <CityInfraMiniRing lengthsKmByLayer={city.lengthsKmByLayer} infraLayers={infraLayers} />
+          ) : (
+            <CityInfraMiniRingPlaceholder />
+          )}
           <div className="city-switcher-modal__cityNameWrap">
             <div className="city-switcher-modal__cityName">{city.name}</div>
-            {city.meta ? (
-              <div className="city-switcher-modal__cityMetaInline">{city.meta}</div>
-            ) : null}
+            {city.meta ? <div className="city-switcher-modal__cityMeta">{city.meta}</div> : null}
           </div>
-          {typeof city.totalLength === 'number' ? (
-            <div
-              className="city-switcher-modal__cityTotal"
-              data-city-total-km={city.totalLength.toFixed(0)}
-            >
-              {appendKmUnit(city.totalLength.toFixed(0))}
-            </div>
-          ) : city.isLoadingTotal ? (
-            <div className="city-switcher-modal__cityTotal" aria-hidden="true">
-              <span className="city-switcher-modal__cityTotalSkeleton" />
+          {typeof city.totalLength === 'number' || city.isLoadingTotal ? (
+            <div className="city-switcher-modal__cityMetrics">
+              {typeof city.totalLength === 'number' ? (
+                <div
+                  className="city-switcher-modal__cityTotal"
+                  data-city-total-km={city.totalLength.toFixed(0)}
+                >
+                  {appendKmUnit(city.totalLength.toFixed(0))}
+                </div>
+              ) : city.isLoadingTotal ? (
+                <div className="city-switcher-modal__cityTotal" aria-hidden="true">
+                  <span className="city-switcher-modal__cityTotalSkeleton" />
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
-        {city.meta ? <div className="city-switcher-modal__cityMeta">{city.meta}</div> : null}
       </Link>
     </div>
   );
 }
 
-function CitySwitcherModal() {
+export type CitySwitcherModalProps = {
+  mapCenter?: { lat: number; lng: number } | null;
+  onPlacesResultSelected?: (payload: {
+    lng: number;
+    lat: number;
+    areaLabel: string;
+    title: string;
+    address: string;
+  }) => void;
+  onCatalogCityPicked?: () => void;
+};
+
+type PlacesSuggestionRow = {
+  id: string;
+  place_name: string;
+  properties?: {
+    place_id?: string;
+    types?: string[];
+    structured_formatting?: { main_text?: string; secondary_text?: string };
+    formatted_address?: string;
+    name?: string;
+    address_components?: unknown[];
+  };
+};
+
+/** Shape after {@link geocodePlacesSuggestionToResult} (shared with DirectionsPanel). */
+type GeocodedPlaceResult = PlacesSuggestionRow & {
+  center?: [number, number];
+};
+
+type GlobalSearchOptionMeta = {
+  placeId?: string;
+  placeSuggestion?: PlacesSuggestionRow;
+};
+
+function CitySwitcherModal({
+  mapCenter = null,
+  onPlacesResultSelected,
+  onCatalogCityPicked,
+}: CitySwitcherModalProps = {}) {
   const { city } = useParams();
 
   const topCityBase = useMemo<TopCityBase[]>(() => {
@@ -739,6 +1047,11 @@ function CitySwitcherModal() {
   }, [topCityBase]);
 
   const [recentCityEntries, setRecentCityEntries] = useState(() => readRecentCitiesFromStorage());
+
+  const [globalSearchValue, setGlobalSearchValue] = useState('');
+  const [placesSuggestions, setPlacesSuggestions] = useState<PlacesSuggestionRow[]>([]);
+  const [placesSearchLoading, setPlacesSearchLoading] = useState(false);
+  const placesSearchDebounceRef = useRef<number | null>(null);
 
   const [isCityPickerOpen, setIsCityPickerOpen] = useState(
     () => typeof document !== 'undefined' && document.body.classList.contains('show-city-picker')
@@ -781,12 +1094,12 @@ function CitySwitcherModal() {
         name: c.name,
         meta: c.meta,
       };
-      const { totalLength, isLoadingTotal } = attachCityStatsTotals(
+      const { totalLength, isLoadingTotal, lengthsKmByLayer } = attachCityStatsTotals(
         cityObj,
         statsTotalsByCanonicalSlug,
         isLoadingTotals
       );
-      return { ...c, totalLength, isLoadingTotal };
+      return { ...c, totalLength, isLoadingTotal, lengthsKmByLayer };
     });
   }, [topCityBase, statsTotalsByCanonicalSlug, isLoadingTotals]);
 
@@ -801,7 +1114,7 @@ function CitySwitcherModal() {
           .map((s) => s.trim());
         const meta = getPrimaryAreaMeta(rest);
         const cityObj: StatsCityLike = { canonicalSlug: it.canonicalSlug, areaLabel, name, meta };
-        const { totalLength, isLoadingTotal } = attachCityStatsTotals(
+        const { totalLength, isLoadingTotal, lengthsKmByLayer } = attachCityStatsTotals(
           cityObj,
           statsTotalsByCanonicalSlug,
           isLoadingTotals
@@ -814,6 +1127,7 @@ function CitySwitcherModal() {
           countryCode: def?.countrycodes?.[0] || null,
           totalLength,
           isLoadingTotal,
+          lengthsKmByLayer,
         };
       })
       .filter((row): row is RecentCityWithStats => row !== null);
@@ -838,6 +1152,13 @@ function CitySwitcherModal() {
       .filter((g): g is CountryGroup => Boolean(g))
       .concat(map.has('other') ? [map.get('other')!] : []);
   }, [topCities, countryOrder]);
+
+  const themeIsDark = useBodyThemeIsDark();
+  const infraLayersForMiniPie = useMemo((): CitySwitcherInfraLayer[] => {
+    const layers = OSMController.getLayers(themeIsDark, false) as CitySwitcherInfraLayer[];
+    const byId = Object.fromEntries(layers.map((l) => [l.id, l]));
+    return CITY_SWITCHER_MINI_CHART_LAYER_IDS.map((id) => byId[id]).filter(Boolean);
+  }, [themeIsDark]);
 
   const closeCityPicker = useCallback(() => {
     const body = document.querySelector('body');
@@ -866,6 +1187,112 @@ function CitySwitcherModal() {
     []
   );
 
+  const schedulePlacesSearch = useCallback(
+    (q: string) => {
+      if (placesSearchDebounceRef.current !== null) {
+        window.clearTimeout(placesSearchDebounceRef.current);
+        placesSearchDebounceRef.current = null;
+      }
+      const trimmed = q.trim();
+      if (trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
+        setPlacesSuggestions([]);
+        setPlacesSearchLoading(false);
+        return;
+      }
+      placesSearchDebounceRef.current = window.setTimeout(async () => {
+        placesSearchDebounceRef.current = null;
+        setPlacesSearchLoading(true);
+        try {
+          const proximity =
+            mapCenter && Number.isFinite(mapCenter.lat) && Number.isFinite(mapCenter.lng)
+              ? ([mapCenter.lng, mapCenter.lat] as [number, number])
+              : null;
+          const results = (await searchPlacesForAutocomplete(trimmed, {
+            proximity: proximity ?? undefined,
+          })) as PlacesSuggestionRow[];
+          setPlacesSuggestions(results);
+        } catch (e) {
+          console.warn(CITY_SWITCHER_LOG_PREFIX, 'places search failed', e);
+          setPlacesSuggestions([]);
+        } finally {
+          setPlacesSearchLoading(false);
+        }
+      }, 280);
+    },
+    [mapCenter]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (placesSearchDebounceRef.current !== null) {
+        window.clearTimeout(placesSearchDebounceRef.current);
+      }
+    };
+  }, []);
+
+  const globalSearchPlaceholder = useMemo(() => {
+    const labelsPt = SUPPORTED_COUNTRIES.map((c) => c.labelPt);
+    const suffix =
+      labelsPt.length === 0
+        ? 'no mundo'
+        : labelsPt.length === 1
+          ? `em ${labelsPt[0]}`
+          : `em ${labelsPt.slice(0, -1).join(', ')} e ${labelsPt[labelsPt.length - 1]}`;
+    return IS_PROD ? `Buscar endereço ou local ${suffix}` : 'Buscar endereço ou local no mundo';
+  }, []);
+
+  const globalSearchOptions = useMemo((): AutoCompleteProps['options'] => {
+    return placesSuggestions.map((s) => {
+      const pid = s.properties?.place_id;
+      return {
+        value: `place:${pid || s.id}:${s.place_name}`,
+        placeId: pid,
+        placeSuggestion: s,
+        label: (
+          <PlacesAutocompleteOptionLabel
+            suggestion={s}
+            primaryClassName="truncate text-sm font-medium"
+            secondaryClassName="truncate text-xs opacity-50"
+          />
+        ),
+      };
+    });
+  }, [placesSuggestions]);
+
+  const handleGlobalSearchSelect = useCallback(
+    async (_value: string, opt: unknown) => {
+      const option = opt as GlobalSearchOptionMeta & { value?: string };
+      if (option.placeSuggestion) {
+        const sug = option.placeSuggestion;
+        try {
+          const { result: resolvedRaw } = await geocodePlacesSuggestionToResult(sug);
+          const resolved = resolvedRaw as GeocodedPlaceResult;
+          if (!resolved.center) {
+            console.error(CITY_SWITCHER_LOG_PREFIX, 'place resolve missing center', resolved);
+            return;
+          }
+          const [lng, lat] = resolved.center;
+          const { formatted_address: formattedAddress, name: resolvedName } =
+            resolved.properties ?? {};
+          const areaStr = getAreaStringFromResultLike(resolved) || formattedAddress || '';
+          onPlacesResultSelected?.({
+            lng,
+            lat,
+            areaLabel: areaStr,
+            title: resolvedName || resolved.place_name || '',
+            address: formattedAddress || '',
+          });
+          closeCityPicker();
+          setGlobalSearchValue('');
+          setPlacesSuggestions([]);
+        } catch (e) {
+          console.error(CITY_SWITCHER_LOG_PREFIX, 'place details failed', e);
+        }
+      }
+    },
+    [closeCityPicker, onPlacesResultSelected]
+  );
+
   /** Runs when the user follows a city link in this tab (navigation is handled by the link `to`). */
   const onCityLinkActivate = useCallback(
     (cityObj: PickableCity, source: 'recent' | 'top') => {
@@ -884,18 +1311,15 @@ function CitySwitcherModal() {
         areaLabel: cityObj?.areaLabel,
       });
 
+      onCatalogCityPicked?.();
+      setGlobalSearchValue('');
+      setPlacesSuggestions([]);
+
       recordRecentlyVisitedCity(nextSlug, cityObj?.areaLabel);
 
       closeCityPicker();
-
-      // Best-effort reset: hide Mapbox's input + suggestions after picking.
-      const input = document.querySelector(CITY_PICKER_INPUT_SELECTOR);
-      if (input instanceof HTMLInputElement) {
-        input.value = '';
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      }
     },
-    [recordRecentlyVisitedCity, closeCityPicker]
+    [recordRecentlyVisitedCity, closeCityPicker, onCatalogCityPicked]
   );
 
   const contentScrollElRef = useRef<HTMLDivElement | null>(null);
@@ -908,7 +1332,7 @@ function CitySwitcherModal() {
 
   return (
     <div
-      className="city-switcher-modal"
+      className="city-switcher-modal fixed inset-0 flex items-end justify-center"
       role="dialog"
       aria-modal="true"
       data-testid="city-switcher-dialog"
@@ -917,47 +1341,77 @@ function CitySwitcherModal() {
         if (e.target === e.currentTarget) closeCityPicker();
       }}
     >
-      <div ref={panelRef} className="city-switcher-modal__panel" tabIndex={-1}>
-        <div className="city-switcher-modal__topBar">
-          <div className="city-switcher-modal__geocoderMount" aria-label="Buscar cidades" />
-          <div className="city-switcher-modal__headerRow">
-            <div className="city-switcher-modal__headerSpacer" aria-hidden="true" />
-            <Button
-              onClick={closeCityPicker}
-              type="text"
-              shape="circle"
-              aria-label="Fechar"
-              data-testid="city-switcher-close"
-            >
-              <HiOutlineXMarkIcon className="text-2xl city-switcher-modal__closeIcon" aria-hidden />
-            </Button>
-          </div>
+      <div
+        ref={panelRef}
+        className="city-switcher-modal__panel relative z-10 flex flex-col bg-transparent pointer-events-auto"
+        tabIndex={-1}
+      >
+        <div className="city-switcher-modal__headerRow flex justify-end pr-3 mb-3">
+          <div />
+          <Button
+            onClick={closeCityPicker}
+            type="text"
+            shape="circle"
+            aria-label="Fechar"
+            data-testid="city-switcher-close"
+          >
+            <HiOutlineXMarkIcon className="text-2xl text-white opacity-90" aria-hidden />
+          </Button>
+        </div>
+        <div
+          className="city-switcher-modal__geocoderMount relative z-30 px-5 pb-2.5"
+          aria-label="Buscar endereço ou local (Google Places)"
+        >
+          <AutoComplete
+            className="city-switcher-global-search w-full"
+            popupClassName="city-switcher-modal__searchDropdown"
+            value={globalSearchValue}
+            onChange={(v) => {
+              const s = typeof v === 'string' ? v : '';
+              setGlobalSearchValue(s);
+            }}
+            onSearch={(s) => schedulePlacesSearch(s)}
+            onSelect={handleGlobalSearchSelect}
+            options={globalSearchOptions}
+            allowClear
+            notFoundContent={placesSearchLoading ? 'Buscando…' : undefined}
+          >
+            <Input
+              variant="borderless"
+              size="large"
+              prefix={<IconSearchTyped className="opacity-60" aria-hidden />}
+              placeholder={globalSearchPlaceholder}
+            />
+          </AutoComplete>
         </div>
 
         <div
           ref={contentScrollElRef}
-          className="city-switcher-modal__content"
+          className="city-switcher-modal__content relative z-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-2.5"
           aria-label="Lista de cidades"
         >
           {recentCities.length > 0 && (
             <section
-              className="city-switcher-modal__section"
+              className="city-switcher-modal__section mt-5"
               aria-label="Recentemente visitadas"
               data-testid="city-switcher-recent"
             >
               <div
-                className="city-switcher-modal__sectionTitleWrap city-switcher-modal__staggerEnter"
+                className="city-switcher-modal__staggerEnter"
                 style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
               >
-                <div className="city-switcher-modal__sectionTitle">
+                <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
                   <HiOutlineClockIcon
-                    className="city-switcher-modal__clockIcon"
+                    className="h-4 w-4 flex-shrink-0 opacity-75 text-white"
                     aria-hidden="true"
                   />
                   Recentes
                 </div>
               </div>
-              <div className="city-switcher-modal__citiesGrid" role="list">
+              <div
+                className="city-switcher-modal__citiesGrid grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3"
+                role="list"
+              >
                 {recentCities.map((c) => (
                   <CityPickerCityCard
                     key={c.canonicalSlug}
@@ -965,6 +1419,7 @@ function CitySwitcherModal() {
                     stagger={contentStaggerIndex++}
                     to={`/${encodeURIComponent(c.canonicalSlug)}`}
                     onActivate={() => onCityLinkActivate(c, 'recent')}
+                    infraLayers={infraLayersForMiniPie}
                   />
                 ))}
               </div>
@@ -977,17 +1432,22 @@ function CitySwitcherModal() {
             return (
               <section
                 key={group.countryCode}
-                className="city-switcher-modal__section city-switcher-modal__section--countryGroup"
+                className="city-switcher-modal__section mt-5"
                 aria-label={group.countryLabel}
                 data-country-code={group.countryCode}
               >
                 <div
-                  className="city-switcher-modal__sectionTitleWrap city-switcher-modal__staggerEnter"
+                  className="city-switcher-modal__staggerEnter"
                   style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
                 >
-                  <div className="city-switcher-modal__sectionTitle">{group.countryLabel}</div>
+                  <div className="city-switcher-modal__sectionTitle px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
+                    {group.countryLabel}
+                  </div>
                 </div>
-                <div className="city-switcher-modal__citiesGrid" role="list">
+                <div
+                  className="city-switcher-modal__citiesGrid grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3"
+                  role="list"
+                >
                   {cities.map((c) => (
                     <CityPickerCityCard
                       key={c.canonicalSlug}
@@ -995,6 +1455,7 @@ function CitySwitcherModal() {
                       stagger={contentStaggerIndex++}
                       to={`/${encodeURIComponent(c.canonicalSlug)}`}
                       onActivate={() => onCityLinkActivate(c, 'top')}
+                      infraLayers={infraLayersForMiniPie}
                     />
                   ))}
                 </div>
@@ -1018,9 +1479,7 @@ export function resetCitySwitcherStatsCacheForTest(): void {
   }
   try {
     window.localStorage.removeItem(CITY_SWITCHER_STATS_KM_CACHE_KEY);
-  } catch {
-    // Ignore
-  }
+  } catch {}
 }
 
 /**

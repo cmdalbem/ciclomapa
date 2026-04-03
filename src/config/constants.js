@@ -25,6 +25,9 @@ export const LENGTH_COUNTED_LAYER_IDS = [
   // 'proibido',
 ];
 
+/** City switcher card mini donut: ciclovia + ciclofaixa only (aligned with common “protected lane” reading). */
+export const CITY_SWITCHER_MINI_CHART_LAYER_IDS = ['ciclovia', 'ciclofaixa'];
+
 export const OVERPASS_SERVERS = [
   'https://overpass.private.coffee/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',

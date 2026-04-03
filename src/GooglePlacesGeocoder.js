@@ -2,34 +2,159 @@ import React from 'react';
 import {
   HiLocationMarker,
   HiHome,
-  HiOfficeBuilding,
   HiShoppingBag,
   HiShoppingCart,
-  HiCurrencyDollar,
   HiCreditCard,
   HiAcademicCap,
   HiBookOpen,
-  HiLibrary,
-  HiCake,
   HiBeaker,
   HiSparkles,
-  HiHeart,
   HiScissors,
-  HiCog,
-  HiDeviceMobile,
   HiFilm,
-  HiStar,
-  HiFire,
   HiGlobe,
   HiMap,
   HiFlag,
 } from 'react-icons/hi';
 import {
-  HiBuildingOffice,
-  HiBuildingStorefront,
+  HiBolt,
+  HiBriefcase,
   HiBuildingLibrary,
   HiBuildingOffice2,
+  HiBuildingStorefront,
+  HiCamera,
+  HiCpuChip,
+  HiCube,
+  HiHomeModern,
+  HiMapPin,
+  HiMusicalNote,
+  HiSun,
+  HiTicket,
+  HiTruck,
+  HiWrenchScrewdriver,
 } from 'react-icons/hi2';
+import {
+  FaBeer,
+  FaBicycle,
+  FaBowlingBall,
+  FaBus,
+  FaCampground,
+  FaCar,
+  FaCaravan,
+  FaCoffee,
+  FaDice,
+  FaGasPump,
+  FaHospital,
+  FaHotel,
+  FaLandmark,
+  FaParking,
+  FaPaw,
+  FaPlaceOfWorship,
+  FaSpa,
+  FaSubway,
+  FaTrain,
+  FaTree,
+} from 'react-icons/fa';
+import { MdAirplanemodeActive, MdLocalCarWash, MdLocalDining, MdRestaurant } from 'react-icons/md';
+
+/**
+ * Ordered most-specific → least-specific. `getPlaceTypeIcon` picks the first
+ * rule whose type appears in a Places/Geocoder `types` array (Google's order is ignored).
+ */
+const PLACE_TYPE_ICON_RULES = [
+  // Food & drink
+  ['meal_delivery', HiTruck],
+  ['meal_takeaway', HiShoppingBag],
+  ['restaurant', MdRestaurant],
+  ['food', MdLocalDining],
+  ['cafe', FaCoffee],
+  ['bar', FaBeer],
+  ['night_club', FaBeer],
+
+  // Lodging & shopping
+  ['lodging', HiHomeModern],
+  ['hotel', FaHotel],
+  ['shopping_mall', HiBuildingStorefront],
+  ['store', HiBuildingStorefront],
+  ['supermarket', HiShoppingCart],
+
+  // Money & auto services
+  ['gas_station', FaGasPump],
+  ['bank', HiBuildingOffice2],
+  ['atm', HiCreditCard],
+  ['car_wash', MdLocalCarWash],
+  ['car_repair', HiWrenchScrewdriver],
+  ['car_dealer', FaCar],
+  ['bicycle_store', FaBicycle],
+
+  // Health, education, culture
+  ['hospital', FaHospital],
+  ['pharmacy', HiBeaker],
+  ['school', HiAcademicCap],
+  ['university', HiAcademicCap],
+  ['library', HiBuildingLibrary],
+  ['museum', FaLandmark],
+  ['church', FaPlaceOfWorship],
+  ['mosque', FaPlaceOfWorship],
+  ['synagogue', FaPlaceOfWorship],
+  ['hindu_temple', FaPlaceOfWorship],
+
+  // Recreation & wellness
+  ['amusement_park', HiTicket],
+  ['zoo', FaPaw],
+  ['park', FaTree],
+  ['campground', FaCampground],
+  ['rv_park', FaCaravan],
+  ['tourist_attraction', HiCamera],
+  ['casino', FaDice],
+  ['bowling_alley', FaBowlingBall],
+  ['movie_theater', HiFilm],
+  ['movie_rental', HiFilm],
+  ['gym', HiBolt],
+  ['spa', FaSpa],
+  ['beauty_salon', HiSparkles],
+  ['hair_care', HiScissors],
+
+  // Specialty retail
+  ['book_store', HiBookOpen],
+  ['electronics_store', HiCpuChip],
+  ['furniture_store', HiCube],
+  ['jewelry_store', HiSparkles],
+  ['clothing_store', HiShoppingBag],
+  ['shoe_store', HiShoppingBag],
+
+  // Transit
+  ['airport', MdAirplanemodeActive],
+  ['train_station', FaTrain],
+  ['subway_station', FaSubway],
+  ['bus_station', FaBus],
+  ['transit_station', HiMapPin],
+  ['parking', FaParking],
+
+  // Broad POI / business (prefer specific categories above)
+  ['point_of_interest', HiMapPin],
+  ['establishment', HiMapPin],
+
+  // Street & parcel (finer address kinds before coarse geography)
+  ['premise', HiHome],
+  ['subpremise', HiHome],
+  ['street_address', HiLocationMarker],
+  ['intersection', HiLocationMarker],
+  ['route', HiLocationMarker],
+  ['natural_feature', HiSun],
+  ['postal_code', HiLocationMarker],
+
+  // Administrative (smaller → larger)
+  ['neighborhood', HiLocationMarker],
+  ['sublocality', HiLocationMarker],
+  ['locality', HiLocationMarker],
+  ['administrative_area_level_5', HiLocationMarker],
+  ['administrative_area_level_4', HiLocationMarker],
+  ['administrative_area_level_3', HiLocationMarker],
+  ['administrative_area_level_2', HiLocationMarker],
+  ['administrative_area_level_1', HiLocationMarker],
+  ['country', HiLocationMarker],
+  ['political', HiLocationMarker],
+];
 
 class GooglePlacesGeocoder {
   constructor(options = {}) {
@@ -172,91 +297,9 @@ class GooglePlacesGeocoder {
     if (!types || types.length === 0)
       return React.createElement(HiLocationMarker, { className: 'text-gray-400' });
 
-    const typeIcons = {
-      // Establishments
-      restaurant: HiCake,
-      food: HiCake,
-      meal_takeaway: HiCake,
-      meal_delivery: HiCake,
-      cafe: HiBeaker, // Using HiBeaker instead of HiCoffee
-      bar: HiBeaker,
-      night_club: HiBeaker,
-      lodging: HiHome,
-      hotel: HiHome,
-      shopping_mall: HiShoppingBag,
-      store: HiShoppingBag,
-      supermarket: HiShoppingCart,
-      gas_station: HiCog,
-      bank: HiBuildingOffice2,
-      atm: HiCreditCard,
-      hospital: HiBuildingStorefront,
-      pharmacy: HiHeart,
-      school: HiBuildingLibrary,
-      university: HiAcademicCap,
-      library: HiBuildingLibrary,
-      museum: HiBuildingLibrary,
-      church: HiBuildingOffice,
-      mosque: HiBuildingOffice,
-      synagogue: HiBuildingOffice,
-      hindu_temple: HiBuildingOffice,
-      park: HiLocationMarker,
-      zoo: HiStar,
-      amusement_park: HiStar,
-      gym: HiBuildingOffice,
-      spa: HiBuildingOffice,
-      beauty_salon: HiSparkles,
-      hair_care: HiScissors,
-      car_wash: HiCog,
-      car_repair: HiCog,
-      car_dealer: HiCog,
-      bicycle_store: HiCog,
-      electronics_store: HiDeviceMobile,
-      furniture_store: HiHome,
-      clothing_store: HiShoppingBag,
-      shoe_store: HiShoppingBag,
-      jewelry_store: HiSparkles,
-      book_store: HiBookOpen,
-      movie_theater: HiFilm,
-      movie_rental: HiFilm,
-      bowling_alley: HiStar,
-      casino: HiStar,
-      tourist_attraction: HiLocationMarker,
-      rv_park: HiHome,
-      campground: HiHome,
-
-      // Geographic
-      locality: HiBuildingOffice,
-      sublocality: HiBuildingOffice,
-      neighborhood: HiBuildingOffice,
-      administrative_area_level_1: HiBuildingOffice,
-      administrative_area_level_2: HiBuildingOffice,
-      administrative_area_level_3: HiBuildingOffice,
-      administrative_area_level_4: HiBuildingOffice,
-      administrative_area_level_5: HiBuildingOffice,
-      country: HiGlobe,
-      postal_code: HiLocationMarker,
-      street_address: HiHome,
-      route: HiMap,
-      intersection: HiLocationMarker,
-      political: HiFlag,
-      establishment: HiBuildingOffice,
-      point_of_interest: HiLocationMarker,
-      premise: HiHome,
-      subpremise: HiHome,
-      natural_feature: HiLocationMarker,
-      airport: HiBuildingOffice,
-      bus_station: HiBuildingOffice,
-      train_station: HiBuildingOffice,
-      subway_station: HiBuildingOffice,
-      transit_station: HiBuildingOffice,
-      parking: HiBuildingOffice,
-    };
-
-    // Return the first matching icon, or default
-    for (const type of types) {
-      if (typeIcons[type]) {
-        return React.createElement(typeIcons[type], { className: 'text-gray-500' });
-      }
+    const typeSet = new Set(types);
+    for (const [type, Icon] of PLACE_TYPE_ICON_RULES) {
+      if (typeSet.has(type)) return React.createElement(Icon, { className: 'text-gray-500' });
     }
 
     return React.createElement(HiLocationMarker, { className: 'text-gray-400' }); // Default icon

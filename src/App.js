@@ -197,6 +197,7 @@ class App extends Component {
       isDirectionsPanelOpen: false,
       airtableMetadataRecords: null,
       airtableCityFields: null,
+      globalSearchPin: null,
     };
   }
 
@@ -1403,6 +1404,41 @@ class App extends Component {
     }
   }
 
+  clearGlobalSearchPin = () => {
+    this.setState({ globalSearchPin: null });
+  };
+
+  handleGlobalSearchPlaceSelect = ({ lng, lat, areaLabel, title, address }) => {
+    const zoom = 16;
+    const rawArea =
+      areaLabel && String(areaLabel).trim() ? String(areaLabel).trim() : this.state.area;
+    const normalizedArea = this.normalizeAreaLabelForDisplay(rawArea);
+
+    this.setState(
+      {
+        area: normalizedArea || this.state.area,
+        lat,
+        lng,
+        zoom,
+        globalSearchPin: {
+          lng,
+          lat,
+          title: title || '',
+          address: address || '',
+        },
+      },
+      () => {
+        if (this.state.map) {
+          this.state.map.flyTo({
+            center: [lng, lat],
+            zoom,
+            duration: 1500,
+          });
+        }
+      }
+    );
+  };
+
   forceMapReinitialization() {
     this.setState((prevState) => ({
       mapKey: prevState.mapKey + 1,
@@ -1437,6 +1473,8 @@ class App extends Component {
       closeAboutModal: this.closeAboutModal,
       openCityPicker: this.openCityPicker,
       closeLayersLegendModal: this.closeLayersLegendModal,
+      clearGlobalSearchPin: this.clearGlobalSearchPin,
+      handleGlobalSearchPlaceSelect: this.handleGlobalSearchPlaceSelect,
     };
     return (
       <AntdAppShell isDarkMode={this.state.isDarkMode}>

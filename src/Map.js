@@ -5,8 +5,6 @@ import mapboxgl from 'mapbox-gl';
 import turfBbox from '@turf/bbox';
 import turfCircle from '@turf/circle';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
-import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import { PmTilesSource } from 'mapbox-pmtiles';
 
 import {
@@ -16,9 +14,6 @@ import {
   INTERACTIVE_LAYERS_ZOOM_THRESHOLD,
   ENABLE_COMMENTS,
   IS_MOBILE,
-  IS_PROD,
-  MAPBOX_GEOCODER_COUNTRIES,
-  SUPPORTED_COUNTRIES,
   DEFAULT_LINE_WIDTH_MULTIPLIER,
   COMMENTS_ZOOM_THRESHOLD,
   MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
@@ -109,7 +104,10 @@ class Map extends Component {
     this.afterCommentCreate = this.afterCommentCreate.bind(this);
     this.showCommentModal = this.showCommentModal.bind(this);
     this.hideCommentModal = this.hideCommentModal.bind(this);
+    this.openCommentAtCoordinates = this.openCommentAtCoordinates.bind(this);
+    this._onSearchResultPopupClosed = this._onSearchResultPopupClosed.bind(this);
     document.addEventListener('newComment', this.newComment);
+    document.addEventListener('ciclomapa-comment-at', this.openCommentAtCoordinates);
 
     if (ENABLE_COMMENTS) {
       this.airtableDatabase = new AirtableDatabase();
@@ -131,6 +129,22 @@ class Map extends Component {
       this.syncMapState(placeName);
       document.querySelector('.city-picker span').setAttribute('style', 'opacity: 1');
     }, 1000);
+  }
+
+  _onSearchResultPopupClosed() {
+    this.props.onGlobalSearchPinDismiss?.();
+  }
+
+  openCommentAtCoordinates(e) {
+    if (!ENABLE_COMMENTS) return;
+    const d = e && e.detail;
+    if (!d || typeof d.lng !== 'number' || typeof d.lat !== 'number') return;
+    this.newCommentCoords = { lng: d.lng, lat: d.lat };
+    if (this.popups) {
+      this.popups.searchResultPopup.off('close', this._onSearchResultPopupClosed);
+      this.popups.closeAllPopups();
+    }
+    this.showCommentModal();
   }
 
   showCommentModal() {
@@ -1679,6 +1693,40 @@ class Map extends Component {
     if (hoveredRouteChanged || routesChanged) {
       this.updateHoveredRoute(this.props.hoveredRouteIndex);
     }
+
+    if (this.props.globalSearchPin !== prevProps.globalSearchPin) {
+      this.applyGlobalSearchPin(this.props.globalSearchPin);
+    }
+  }
+
+  applyGlobalSearchPin(pin) {
+    if (!this.map || !this.popups) return;
+
+    if (this.globalSearchMarker) {
+      this.globalSearchMarker.remove();
+      this.globalSearchMarker = null;
+    }
+
+    this.popups.searchResultPopup.off('close', this._onSearchResultPopupClosed);
+    this.popups.hideSearchResultPopup();
+
+    if (!pin || !Number.isFinite(pin.lng) || !Number.isFinite(pin.lat)) return;
+
+    const el = document.createElement('div');
+    el.className = 'global-search-marker';
+    el.setAttribute('aria-hidden', 'true');
+
+    this.globalSearchMarker = new mapboxgl.Marker({ element: el, draggable: false })
+      .setLngLat([pin.lng, pin.lat])
+      .addTo(this.map);
+
+    this.popups.showSearchResultPopup({
+      lng: pin.lng,
+      lat: pin.lat,
+      title: pin.title,
+      address: pin.address,
+    });
+    this.popups.searchResultPopup.on('close', this._onSearchResultPopupClosed);
   }
 
   updateRoutesLayer(routes) {
@@ -2397,102 +2445,6 @@ class Map extends Component {
 
   initMapControls() {
     if (!this.props.embedMode) {
-      // if (!IS_MOBILE) {
-      //     this.searchBar = new MapboxGeocoder({
-      //         accessToken: mapboxgl.accessToken,
-      //         mapboxgl: mapboxgl,
-      //         language: 'pt-br',
-      //         placeholder: 'Buscar endereços, estabelecimentos, ...',
-      //         countries: IS_PROD ? 'br' : '',
-      //         collapsed: true
-      //     });
-      //     this.map.addControl(this.searchBar, 'bottom-right');
-      // }
-
-      const cityPickerLabelsPt = SUPPORTED_COUNTRIES.map((c) => c.labelPt);
-      const cityPickerPlaceholderSuffixPtProd =
-        cityPickerLabelsPt.length === 0
-          ? 'no mundo'
-          : cityPickerLabelsPt.length === 1
-            ? `em ${cityPickerLabelsPt[0]}`
-            : `em ${cityPickerLabelsPt.slice(0, -1).join(', ')} e ${
-                cityPickerLabelsPt[cityPickerLabelsPt.length - 1]
-              }`;
-
-      const cityPicker = new MapboxGeocoder({
-        accessToken: mapboxgl.accessToken,
-        mapboxgl: mapboxgl,
-        language: 'pt-br',
-        placeholder: `Buscar cidades ${IS_PROD ? cityPickerPlaceholderSuffixPtProd : 'no mundo'}`,
-        countries: IS_PROD ? MAPBOX_GEOCODER_COUNTRIES : '',
-        types: 'place',
-        marker: false,
-        clearOnBlur: true,
-        flyTo: false,
-      });
-      cityPicker.on('result', (result) => {
-        console.debug('geocoder result', result);
-
-        const resultCenter = result?.result?.center;
-        const resultLabel = result?.result?.place_name;
-        const placeNameForFocus = resultLabel ?? result?.place_name;
-
-        if (Array.isArray(resultCenter) && resultCenter.length === 2) {
-          flyMapToCityFocus(this.map, resultCenter, placeNameForFocus);
-        }
-
-        // Keep city source of truth from picker selection instead of a follow-up reverse geocode.
-        this.syncMapState(resultLabel || this.props.location);
-
-        // Hide UI
-        // @todo refactor this to use React state
-        document.querySelector('body').classList.remove('show-city-picker');
-        cityPicker.clear();
-      });
-
-      // Doesn't matter where we add this, it's customized via CSS
-      this.map.addControl(cityPicker, 'top-left');
-
-      // Move the Geocoder DOM into the React modal, so the input feels native.
-      // (We keep Mapbox's JS integration for search + results; camera uses flyMapToCityFocus.)
-      const relocateCityPickerToModal = (attempt = 0) => {
-        if (attempt > 20) return;
-
-        const modalMount = document.querySelector('.city-switcher-modal__geocoderMount');
-        const geocoderEl =
-          cityPicker?._container ||
-          document.querySelector('.mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder');
-
-        if (!modalMount || !geocoderEl) {
-          setTimeout(() => relocateCityPickerToModal(attempt + 1), 100);
-          return;
-        }
-
-        if (geocoderEl.parentElement !== modalMount) {
-          modalMount.appendChild(geocoderEl);
-        }
-
-        // Ensure the moved element isn't affected by any map-based positioning rules.
-        geocoderEl.style.position = 'relative';
-
-        const focusCityPickerIfOpen = () => {
-          if (!document.body.classList.contains('show-city-picker')) return;
-          const input = modalMount.querySelector('input');
-          if (!input || typeof input.focus !== 'function') return;
-          try {
-            input.focus({ preventScroll: true });
-          } catch {
-            input.focus();
-          }
-        };
-
-        focusCityPickerIfOpen();
-        requestAnimationFrame(focusCityPickerIfOpen);
-        window.setTimeout(focusCityPickerIfOpen, 0);
-      };
-
-      relocateCityPickerToModal();
-
       const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: {
           enableHighAccuracy: true,
@@ -2665,6 +2617,9 @@ class Map extends Component {
     this.initMapControls();
     this.setRealisticLighting();
     this.updateBoundaryMask();
+    if (this.props.globalSearchPin) {
+      this.applyGlobalSearchPin(this.props.globalSearchPin);
+    }
   }
 
   loadImages() {
@@ -2745,6 +2700,19 @@ class Map extends Component {
       this.popups.clearRouteTooltips();
     }
     document.removeEventListener('newComment', this.newComment);
+    document.removeEventListener('ciclomapa-comment-at', this.openCommentAtCoordinates);
+
+    if (this.globalSearchMarker) {
+      try {
+        this.globalSearchMarker.remove();
+      } catch (e) {
+        /* ignore */
+      }
+      this.globalSearchMarker = null;
+    }
+    if (this.popups) {
+      this.popups.searchResultPopup?.off?.('close', this._onSearchResultPopupClosed);
+    }
 
     // Cancel any pending debounced calls
     if (this.debouncedOnMapMoveEnded) {

@@ -6,7 +6,7 @@ import Analytics from './Analytics.js';
 import { formatDistance, formatDuration } from './utils/routeUtils.js';
 import { formatTimeAgo } from './utils/utils.js';
 
-import { IS_MOBILE } from './config/constants.js';
+import { ENABLE_COMMENTS, IS_MOBILE } from './config/constants.js';
 
 /** POI address line from Overpass tags; Nominatim fallback (https://operations.osmfoundation.org/policies/nominatim/). */
 
@@ -192,6 +192,12 @@ class MapPopups {
       this.poiAddressAbortController = null;
     });
 
+    this.searchResultPopup = new mapboxgl.Popup({
+      className: 'popup-big',
+      closeOnClick: true,
+      offset: 25,
+    });
+
     this.routeTooltips = [];
     this.poiAddressAbortController = null;
     this.poiAddressRequestId = 0;
@@ -285,6 +291,69 @@ class MapPopups {
             <div class="mt-2 md:text-sm text-xs grid grid-cols-2 gap-2">
                 ${propertiesHtml}
             </div>`;
+  }
+
+  getSearchResultFooter(color = 'white', coordinates = null) {
+    if (!coordinates || coordinates.length !== 2) return '';
+    const [lng, lat] = coordinates;
+    return `
+            <div class="popup-footer-outer -mb-6 md:mt-10 mt-5 pt-4 pb-4 rounded-bl-lg rounded-br-lg" style="background-color: rgba(0,0,0,0.04)">
+                <div class="popup-footer-actions flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5 px-4">
+                    <button type="button" class="flex-shrink-0 border border-opacity-25 border-${color} px-3 py-1.5 text-sm rounded-full whitespace-nowrap"
+                        onclick="window.setDestinationFromPopup && window.setDestinationFromPopup(${JSON.stringify(
+                          coordinates
+                        )})" style="background-color: var(--popup-text-color); color: var(--popup-bg-color);"
+                    >
+                        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.62515 0.569498C5.38448 -0.189833 6.61582 -0.189833 7.37515 0.569498L11.4308 4.62516C12.19 5.38451 12.1901 6.61589 11.4308 7.37516L7.37515 11.4308C6.61588 12.1901 5.38449 12.19 4.62515 11.4308L0.569489 7.37516C-0.189836 6.61584 -0.189824 5.38449 0.569489 4.62516L4.62515 0.569498ZM7.00015 5.00016H4.50015C3.67173 5.00016 3.00015 5.67173 3.00015 6.50016V8.00016H4.00015V6.50016C4.00015 6.22402 4.22401 6.00016 4.50015 6.00016H7.00015V8.65153L9.10074 5.50016L7.00015 2.34879V5.00016Z"/></svg>
+                        Como chegar
+                    </button>
+                    ${
+                      ENABLE_COMMENTS
+                        ? `
+                    <button type="button"
+                        class="flex-shrink-0 border border-opacity-25 border-${color} px-3 py-1.5 text-sm rounded-full whitespace-nowrap"
+                        onclick="document.dispatchEvent(new CustomEvent('ciclomapa-comment-at', { detail: { lng: ${lng}, lat: ${lat} } }));"
+                    >
+                        <svg fill="currentColor" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-1">
+                          <path fill-rule="evenodd" clip-rule="evenodd" d="M5.5 1.28953e-06C6.7728 1.28953e-06 8.02305 0.101033 9.24609 0.293947C10.2822 0.458667 11 1.43545 11 2.5332V5.92969C10.9998 7.02731 10.2821 8.00424 9.24609 8.16895C8.23004 8.32913 7.19514 8.42589 6.14453 8.4541C6.09235 8.4552 6.0421 8.47721 6.00488 8.5166L3.81348 10.877C3.75856 10.936 3.6884 10.9759 3.6123 10.9922C3.53618 11.0085 3.45745 10.9997 3.38574 10.9678C3.314 10.9358 3.25216 10.882 3.20898 10.8125C3.16593 10.7431 3.14273 10.6615 3.14258 10.5781V8.34668C2.67824 8.30092 2.21523 8.24099 1.75391 8.16797C0.717811 8.00437 0 7.02649 0 5.92871V2.53418C0 1.4364 0.717811 0.457542 1.75391 0.293947C2.99428 0.0978829 4.24634 -0.00041067 5.5 1.28953e-06ZM4.75 4H2.75V5L4.75 5.01465V7H5.75V5.01465L7.75 5V4H5.75V2H4.75V4Z"/>
+                        </svg>
+                        Comentar
+                    </button>`
+                        : ''
+                    }
+                </div>
+            </div>
+        `;
+  }
+
+  showSearchResultPopup({ lng, lat, title, address }) {
+    const titleHtml = title
+      ? escapeHtml(title)
+      : '<span class="font-medium italic opacity-50">Local</span>';
+    const addressLine = address ? escapeHtml(address) : '';
+    const addressBlock = addressLine
+      ? `<div class="mt-1 sm:mt-0 text-xs md:text-sm break-words opacity-60 leading-snug">${addressLine}</div>`
+      : '';
+
+    const html = `
+            <div class="flex items-start space-x-3 mt-2 mb-3">
+                <div class="flex-1 min-w-0">
+                    <div class="text-base md:text-lg font-semibold leading-tight tracking-tight break-words">${titleHtml}</div>
+                    ${addressBlock}
+                </div>
+            </div>
+            ${this.getSearchResultFooter('white', [lng, lat])}
+        `;
+
+    this.searchResultPopup.setLngLat([lng, lat]).setHTML(html).addTo(this.map);
+  }
+
+  hideSearchResultPopup() {
+    try {
+      this.searchResultPopup.remove();
+    } catch (e) {
+      /* already removed */
+    }
   }
 
   getFooter(osmUrl, color = 'black', coordinates = null) {
@@ -684,6 +753,7 @@ class MapPopups {
     this.cyclewayPopup.remove();
     this.commentPopup.remove();
     this.poiPopup.remove();
+    this.hideSearchResultPopup();
   }
 }
 

@@ -9,6 +9,15 @@
   }
 }
 
+.global-search-marker {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-bg-dark);
+  border: 1px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
 .mapboxgl-canvas,
 .mapboxgl-map {
   width: 100% !important;
@@ -78,16 +87,6 @@ body.theme-dark .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group {
 
 .mapboxgl-ctrl-logo {
   opacity: 0.2;
-}
-
-/* City picker input (Mapbox Geocoder):
-   hide while modal is closed; Mapbox container is moved into the modal. */
-.mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
-  visibility: hidden;
-}
-
-body.show-city-picker .mapboxgl-ctrl-top-left .mapboxgl-ctrl-geocoder {
-  visibility: visible !important;
 }
 
 /* Mobile */
