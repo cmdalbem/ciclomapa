@@ -44,6 +44,7 @@
 .popup-big .mapboxgl-popup-content {
   background: var(--popup-bg-color);
   color: var(--popup-text-color);
+  backdrop-filter: blur(32px);
 }
 
 .popup-big .mapboxgl-popup-content {
@@ -69,8 +70,9 @@
 
 .theme-dark .route-tooltip-popup.mapboxgl-popup,
 .theme-dark .popup-big.mapboxgl-popup {
-  --popup-bg-color: #171717;
+  --popup-bg-color: rgba(0, 0, 0, 0.2);
   --popup-text-color: white;
+  --popup-text-color-on-primary: black;
 }
 
 .theme-dark .mapboxgl-popup-close-button:hover {
@@ -79,8 +81,9 @@
 
 .theme-light .route-tooltip-popup.mapboxgl-popup,
 .theme-light .popup-big.mapboxgl-popup {
-  --popup-bg-color: white;
+  --popup-bg-color: rgba(255, 255, 255, 0.2);
   --popup-text-color: black;
+  --popup-text-color-on-primary: white;
 }
 
 .popup-big .poi-popup-address-skeleton {

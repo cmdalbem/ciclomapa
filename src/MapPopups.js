@@ -316,7 +316,7 @@ class MapPopups {
                     <button type="button" class="flex-shrink-0 border border-opacity-25 border-${color} px-3 py-1.5 text-sm rounded-full whitespace-nowrap"
                         onclick="window.setDestinationFromPopup && window.setDestinationFromPopup(${JSON.stringify(
                           coordinates
-                        )})" style="background-color: var(--popup-text-color); color: var(--popup-bg-color);"
+                        )})" style="background-color: var(--popup-text-color); color: var(--popup-text-color-on-primary);"
                     >
                         <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.62515 0.569498C5.38448 -0.189833 6.61582 -0.189833 7.37515 0.569498L11.4308 4.62516C12.19 5.38451 12.1901 6.61589 11.4308 7.37516L7.37515 11.4308C6.61588 12.1901 5.38449 12.19 4.62515 11.4308L0.569489 7.37516C-0.189836 6.61584 -0.189824 5.38449 0.569489 4.62516L4.62515 0.569498ZM7.00015 5.00016H4.50015C3.67173 5.00016 3.00015 5.67173 3.00015 6.50016V8.00016H4.00015V6.50016C4.00015 6.22402 4.22401 6.00016 4.50015 6.00016H7.00015V8.65153L9.10074 5.50016L7.00015 2.34879V5.00016Z"/></svg>
                         Como chegar
@@ -381,7 +381,7 @@ class MapPopups {
                   (coordinates &&
                     `
                     <button type="button" class="flex-shrink-0 border border-opacity-25 border-${color} px-3 py-1.5 text-sm rounded-full whitespace-nowrap"
-                        onclick="window.setDestinationFromPopup && window.setDestinationFromPopup(${JSON.stringify(coordinates)})" style="background-color: var(--popup-text-color); color: var(--popup-bg-color);"
+                        onclick="window.setDestinationFromPopup && window.setDestinationFromPopup(${JSON.stringify(coordinates)})" style="background-color: var(--popup-text-color); color: var(--popup-text-color-on-primary);"
                     >
                         <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.62515 0.569498C5.38448 -0.189833 6.61582 -0.189833 7.37515 0.569498L11.4308 4.62516C12.19 5.38451 12.1901 6.61589 11.4308 7.37516L7.37515 11.4308C6.61588 12.1901 5.38449 12.19 4.62515 11.4308L0.569489 7.37516C-0.189836 6.61584 -0.189824 5.38449 0.569489 4.62516L4.62515 0.569498ZM7.00015 5.00016H4.50015C3.67173 5.00016 3.00015 5.67173 3.00015 6.50016V8.00016H4.00015V6.50016C4.00015 6.22402 4.22401 6.00016 4.50015 6.00016H7.00015V8.65153L9.10074 5.50016L7.00015 2.34879V5.00016Z"/></svg>
                         Como chegar
@@ -612,6 +612,9 @@ class MapPopups {
       .style.setProperty('--popup-bg-color', layer.style.lineColor);
     document
       .querySelector('.popup-big.mapboxgl-popup')
+      .style.setProperty('--popup-text-color-on-primary', layer.style.lineColor);
+    document
+      .querySelector('.popup-big.mapboxgl-popup')
       .style.setProperty('--popup-text-color', layer.style.textColor);
 
     // document.querySelector('.mapboxgl-popup-content').style.backgroundColor = layer.style.lineColor;
@@ -750,6 +753,7 @@ class MapPopups {
       if (contentDiv) {
         const stateVariables = this.getTooltipStateVariables(index, selectedRouteIndex);
         contentDiv.style.setProperty('--popup-bg-color', stateVariables.bgColor);
+        contentDiv.style.setProperty('--popup-text-color-on-primary', stateVariables.bgColor);
         contentDiv.style.setProperty('--popup-text-color', stateVariables.textColor);
       }
     });
