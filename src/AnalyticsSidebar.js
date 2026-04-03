@@ -456,7 +456,7 @@ class AnalyticsSidebar extends Component {
                   paddingAngle={vias.hasPieBreakdown ? 4 : 0}
                   strokeWidth={0}
                   startAngle={90}
-                  endAngle={-2700}
+                  endAngle={450}
                   cornerRadius="50%"
                 />
               </PieChart>
