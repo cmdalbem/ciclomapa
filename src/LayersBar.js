@@ -276,6 +276,49 @@ class LayersBar extends Component {
         }}
       >
         <div className="flex justify-start space-x-1 transition-all duration-300">
+          {/* Cicloways category button (only when all cycleways are deactivated) */}
+          {(() => {
+            const config = categoryConfig.cicloways;
+            const hasLayers = categories.cicloways.length > 0;
+            const allLayersDeactivated =
+              hasLayers && categories.cicloways.every((layer) => !layer.isActive);
+
+            if (!hasLayers || !allLayersDeactivated) return null;
+
+            return this.renderLayerButton({
+              id: 'cicloways',
+              onClick: () => this.toggleCategoryExpansion('cicloways'),
+              isActive: false,
+              icon: config.icon,
+              lineStyle: config.style,
+              label: config.label,
+              isAnimated: this.state.ciclowaysAnimating,
+              isCategoryPill: true,
+            });
+          })()}
+
+          {/* Individual Cicloways layers - show when any are active or when expanded */}
+          {(() => {
+            const hasActiveCiclowaysLayers = categories.cicloways.some((layer) => layer.isActive);
+            const shouldShowIndividual = hasActiveCiclowaysLayers || this.state.ciclowaysExpanded;
+
+            if (!shouldShowIndividual) return null;
+
+            return categories.cicloways.map((layer, index) => {
+              const shouldMergeWithNext = index < categories.cicloways.length - 1;
+
+              return this.renderLayerButton({
+                id: layer.id,
+                onClick: () => this.toggleCategoryLayer('cicloways', layer.id),
+                isActive: layer.isActive,
+                lineStyle: layer.style,
+                label: layer.shortName || layer.displayName || layer.name,
+                shouldMergeWithNext,
+                isAnimated: this.state.ciclowaysAnimating,
+              });
+            });
+          })()}
+
           {/* Pontos category button (only when all POI are deactivated or when expanding) */}
           {(() => {
             const config = categoryConfig.pontos;
@@ -317,49 +360,6 @@ class LayersBar extends Component {
                 label: layer.shortName || layer.displayName || layer.name,
                 shouldMergeWithNext,
                 isAnimated: this.state.pontosAnimating,
-              });
-            });
-          })()}
-
-          {/* Cicloways category button (only when all cycleways are deactivated) */}
-          {(() => {
-            const config = categoryConfig.cicloways;
-            const hasLayers = categories.cicloways.length > 0;
-            const allLayersDeactivated =
-              hasLayers && categories.cicloways.every((layer) => !layer.isActive);
-
-            if (!hasLayers || !allLayersDeactivated) return null;
-
-            return this.renderLayerButton({
-              id: 'cicloways',
-              onClick: () => this.toggleCategoryExpansion('cicloways'),
-              isActive: false,
-              icon: config.icon,
-              lineStyle: config.style,
-              label: config.label,
-              isAnimated: this.state.ciclowaysAnimating,
-              isCategoryPill: true,
-            });
-          })()}
-
-          {/* Individual Cicloways layers - show when any are active or when expanded */}
-          {(() => {
-            const hasActiveCiclowaysLayers = categories.cicloways.some((layer) => layer.isActive);
-            const shouldShowIndividual = hasActiveCiclowaysLayers || this.state.ciclowaysExpanded;
-
-            if (!shouldShowIndividual) return null;
-
-            return categories.cicloways.map((layer, index) => {
-              const shouldMergeWithNext = index < categories.cicloways.length - 1;
-
-              return this.renderLayerButton({
-                id: layer.id,
-                onClick: () => this.toggleCategoryLayer('cicloways', layer.id),
-                isActive: layer.isActive,
-                lineStyle: layer.style,
-                label: layer.shortName || layer.displayName || layer.name,
-                shouldMergeWithNext,
-                isAnimated: this.state.ciclowaysAnimating,
               });
             });
           })()}

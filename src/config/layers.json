@@ -60,16 +60,15 @@
     }
   },
   {
-    "name": "Lojas & oficinas",
-    "displayName": "Lojas e oficinas",
-    "shortName": "Lojas",
-    "description": "Estabelecimentos especializadas em venda e reparo de bicicletas e acessórios.",
-    "filters": [["shop", "bicycle"]],
+    "name": "Bicicletários & paraciclos",
+    "shortName": "Bicicletários",
+    "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos. Sempre verifique a qualidade e segurança oferecida!",
+    "filters": [["amenity", "bicycle_parking"]],
     "type": "poi",
-    "icon": "poi-bikeshop",
-    "zoomThreshold": 15,
+    "icon": "poi-bikeparking",
+    "zoomThreshold": 16.5,
     "style": {
-      "textColor": "#2A7BF4"
+      "textColor": "#2F904A"
     }
   },
   {
@@ -86,15 +85,16 @@
     }
   },
   {
-    "name": "Bicicletários & paraciclos",
-    "shortName": "Bicicletários",
-    "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos. Sempre verifique a qualidade e segurança oferecida!",
-    "filters": [["amenity", "bicycle_parking"]],
+    "name": "Lojas & oficinas",
+    "displayName": "Lojas e oficinas",
+    "shortName": "Lojas",
+    "description": "Estabelecimentos especializadas em venda e reparo de bicicletas e acessórios.",
+    "filters": [["shop", "bicycle"]],
     "type": "poi",
-    "icon": "poi-bikeparking",
-    "zoomThreshold": 16.5,
+    "icon": "poi-bikeshop",
+    "zoomThreshold": 15,
     "style": {
-      "textColor": "#2F904A"
+      "textColor": "#2A7BF4"
     }
   },
   {
