@@ -11,13 +11,8 @@ import {
   HiSparkles,
   HiScissors,
   HiFilm,
-  HiGlobe,
-  HiMap,
-  HiFlag,
 } from 'react-icons/hi';
 import {
-  HiBolt,
-  HiBriefcase,
   HiBuildingLibrary,
   HiBuildingOffice2,
   HiBuildingStorefront,
@@ -26,9 +21,8 @@ import {
   HiCube,
   HiHomeModern,
   HiMapPin,
-  HiMusicalNote,
-  HiSun,
   HiTicket,
+  HiBuildingOffice,
   HiTruck,
   HiWrenchScrewdriver,
 } from 'react-icons/hi2';
@@ -49,12 +43,19 @@ import {
   FaParking,
   FaPaw,
   FaPlaceOfWorship,
-  FaSpa,
   FaSubway,
   FaTrain,
   FaTree,
+  FaGem,
 } from 'react-icons/fa';
-import { MdAirplanemodeActive, MdLocalCarWash, MdLocalDining, MdRestaurant } from 'react-icons/md';
+import {
+  MdAirplanemodeActive,
+  MdFitnessCenter,
+  MdLocalCarWash,
+  MdLocalDining,
+  MdRestaurant,
+  MdSpa,
+} from 'react-icons/md';
 
 /**
  * Ordered most-specific → least-specific. `getPlaceTypeIcon` picks the first
@@ -109,8 +110,8 @@ const PLACE_TYPE_ICON_RULES = [
   ['bowling_alley', FaBowlingBall],
   ['movie_theater', HiFilm],
   ['movie_rental', HiFilm],
-  ['gym', HiBolt],
-  ['spa', FaSpa],
+  ['gym', MdFitnessCenter],
+  ['spa', MdSpa],
   ['beauty_salon', HiSparkles],
   ['hair_care', HiScissors],
 
@@ -118,7 +119,7 @@ const PLACE_TYPE_ICON_RULES = [
   ['book_store', HiBookOpen],
   ['electronics_store', HiCpuChip],
   ['furniture_store', HiCube],
-  ['jewelry_store', HiSparkles],
+  ['jewelry_store', FaGem],
   ['clothing_store', HiShoppingBag],
   ['shoe_store', HiShoppingBag],
 
@@ -131,16 +132,16 @@ const PLACE_TYPE_ICON_RULES = [
   ['parking', FaParking],
 
   // Broad POI / business (prefer specific categories above)
-  ['point_of_interest', HiMapPin],
+  ['point_of_interest', FaLandmark],
   ['establishment', HiMapPin],
 
   // Street & parcel (finer address kinds before coarse geography)
-  ['premise', HiHome],
-  ['subpremise', HiHome],
+  ['premise', HiBuildingOffice],
+  ['subpremise', HiBuildingOffice],
   ['street_address', HiLocationMarker],
   ['intersection', HiLocationMarker],
   ['route', HiLocationMarker],
-  ['natural_feature', HiSun],
+  ['natural_feature', HiLocationMarker],
   ['postal_code', HiLocationMarker],
 
   // Administrative (smaller → larger)
@@ -372,4 +373,5 @@ class GooglePlacesGeocoder {
   }
 }
 
+export { PLACE_TYPE_ICON_RULES };
 export default GooglePlacesGeocoder;
