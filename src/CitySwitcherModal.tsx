@@ -973,8 +973,23 @@ function CityPickerCityCard({
   );
 }
 
+/** Options forwarded to {@link searchPlacesForAutocomplete} (proximity and limit are set by the modal). */
+export type CitySwitcherPlacesAutocompleteOptions = {
+  types?: string[];
+  exclude?: {
+    adminRegions?: boolean | string[] | null;
+    bareCity?: boolean;
+  };
+  countryCodes?: string[];
+  radius?: number;
+  language?: string;
+  region?: string;
+};
+
 export type CitySwitcherModalProps = {
   mapCenter?: { lat: number; lng: number } | null;
+  /** e.g. `types`, `exclude`; modal defaults to `exclude: { bareCity: false }` so cities stay visible */
+  placesAutocompleteOptions?: CitySwitcherPlacesAutocompleteOptions;
   onPlacesResultSelected?: (payload: {
     lng: number;
     lat: number;
@@ -1010,6 +1025,7 @@ type GlobalSearchOptionMeta = {
 
 function CitySwitcherModal({
   mapCenter = null,
+  placesAutocompleteOptions,
   onPlacesResultSelected,
   onCatalogCityPicked,
 }: CitySwitcherModalProps = {}) {
@@ -1207,8 +1223,11 @@ function CitySwitcherModal({
             mapCenter && Number.isFinite(mapCenter.lat) && Number.isFinite(mapCenter.lng)
               ? ([mapCenter.lng, mapCenter.lat] as [number, number])
               : null;
+          const { exclude: pasExclude, ...pasRest } = placesAutocompleteOptions ?? {};
           const results = (await searchPlacesForAutocomplete(trimmed, {
             proximity: proximity ?? undefined,
+            ...pasRest,
+            exclude: { bareCity: false, ...pasExclude },
           })) as PlacesSuggestionRow[];
           setPlacesSuggestions(results);
         } catch (e) {
@@ -1219,7 +1238,7 @@ function CitySwitcherModal({
         }
       }, 280);
     },
-    [mapCenter]
+    [mapCenter, placesAutocompleteOptions]
   );
 
   useEffect(() => {
@@ -1361,7 +1380,7 @@ function CitySwitcherModal({
           </div>
           <div
             className="city-switcher-modal__geocoderMount relative z-30 px-5"
-            aria-label="Buscar endereço ou local (Google Places)"
+            aria-label="Buscar endereço ou local"
           >
             <AutoComplete
               className="city-switcher-global-search w-full"

@@ -18,6 +18,11 @@ export const PLACES_AUTOCOMPLETE_DEFAULT_LIMIT = HYBRID_MAX_RESULTS;
  * @param {[number, number] | null} [options.proximity] — [lng, lat]
  * @param {string[]} [options.countryCodes]
  * @param {number} [options.limit]
+ * @param {string[]} [options.types] — single-type requests only if including `establishment` (Google forbids mixing it)
+ * @param {object} [options.exclude]
+ * @param {boolean|string[]|null} [options.exclude.adminRegions] — country/state/continent rows; default on; `false`/`null` off; array = custom Places `types`
+ * @param {boolean} [options.exclude.bareCity] — drop city-only rows (e.g. route endpoints)
+ * @param {number} [options.radius]
  * @returns {Promise<object[]>}
  */
 export async function searchPlacesForAutocomplete(query, options = {}) {
@@ -30,6 +35,11 @@ export async function searchPlacesForAutocomplete(query, options = {}) {
     proximity = null,
     countryCodes = [...SUPPORTED_COUNTRY_CODES],
     limit = PLACES_AUTOCOMPLETE_DEFAULT_LIMIT,
+    types,
+    exclude,
+    language,
+    region,
+    radius,
   } = options;
 
   await ensureGooglePlacesReady();
@@ -37,6 +47,11 @@ export async function searchPlacesForAutocomplete(query, options = {}) {
     proximity,
     countryCodes,
     limit,
+    types,
+    exclude,
+    language,
+    region,
+    radius,
   });
   return Array.isArray(results) ? results : [];
 }

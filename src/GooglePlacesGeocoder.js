@@ -157,6 +157,72 @@ const PLACE_TYPE_ICON_RULES = [
   ['political', HiLocationMarker],
 ];
 
+/** Country / state / continent-style Places `types`; used when {@link GooglePlacesGeocoder.search} `exclude.adminRegions` is on. */
+export const DEFAULT_EXCLUDE_ADMIN_REGION_TYPES = [
+  'country',
+  'administrative_area_level_1',
+  'continent',
+];
+
+const FINER_THAN_CITY_FOR_ADDRESS_SEARCH = new Set([
+  'street_address',
+  'route',
+  'intersection',
+  'establishment',
+  'point_of_interest',
+  'premise',
+  'subpremise',
+  'airport',
+  'subway_station',
+  'train_station',
+  'bus_station',
+  'transit_station',
+  'park',
+  'sublocality',
+  'sublocality_level_1',
+  'sublocality_level_2',
+  'sublocality_level_3',
+  'sublocality_level_4',
+  'sublocality_level_5',
+  'neighborhood',
+  'postal_code',
+  'floor',
+  'room',
+]);
+
+/**
+ * @param {object} [exclude]
+ * @param {boolean|string[]|null} [exclude.adminRegions] — `true`/omit: default list; `false`/`null`: off; array: custom Places `types` to drop
+ */
+function resolveAdminRegionExcludeFromBlock(exclude) {
+  const opt = exclude?.adminRegions;
+  if (opt === false || opt === null) {
+    return null;
+  }
+  if (Array.isArray(opt)) {
+    return opt;
+  }
+  return [...DEFAULT_EXCLUDE_ADMIN_REGION_TYPES];
+}
+
+function predictionMatchesExcludedAdminRegionTypes(types, excludedList) {
+  if (!excludedList?.length) return false;
+  const t = types || [];
+  return t.some((x) => excludedList.includes(x));
+}
+
+/** True when this is a bare city / admin_level_3 result (no street, POI, bairro, CEP, etc.). */
+function isLocalityOnlyCityPrediction(types) {
+  const t = types || [];
+  const set = new Set(t);
+  const inCityBucket = set.has('locality') || set.has('administrative_area_level_3');
+  if (!inCityBucket) return false;
+  for (const finer of FINER_THAN_CITY_FOR_ADDRESS_SEARCH) {
+    if (set.has(finer)) return false;
+  }
+  return true;
+}
+
 class GooglePlacesGeocoder {
   constructor(options = {}) {
     this.apiKey = options.apiKey;
@@ -250,25 +316,45 @@ class GooglePlacesGeocoder {
       input: query,
       language: options.language || this.language,
       region: options.region || this.region,
-      types: options.types || ['establishment', 'geocode'],
       componentRestrictions: options.countryCodes ? { country: options.countryCodes } : undefined,
     };
 
-    // Add location bias if provided
-    if (options.proximity) {
-      request.location = new window.google.maps.LatLng(options.proximity[1], options.proximity[0]);
-      request.radius = options.radius || 50000; // 50km radius for Places API
+    if (Array.isArray(options.types) && options.types.length > 0) {
+      request.types = options.types;
     }
 
-    return new Promise((resolve, reject) => {
+    if (options.proximity) {
+      request.location = new window.google.maps.LatLng(options.proximity[1], options.proximity[0]);
+      request.radius = options.radius || 50000;
+    }
+
+    const limit = options.limit || 5;
+    const adminRegionExclude = resolveAdminRegionExcludeFromBlock(options.exclude);
+    const excludeCityOnly = Boolean(options.exclude?.bareCity);
+
+    return new Promise((resolve) => {
       this.autocompleteService.getPlacePredictions(request, (predictions, status) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-          const formattedResults = predictions
-            .slice(0, options.limit || 5)
+          let filtered = predictions;
+          if (adminRegionExclude) {
+            filtered = filtered.filter(
+              (p) => !predictionMatchesExcludedAdminRegionTypes(p.types, adminRegionExclude)
+            );
+          }
+          if (excludeCityOnly) {
+            filtered = filtered.filter((p) => !isLocalityOnlyCityPrediction(p.types));
+          }
+          const formattedResults = filtered
+            .slice(0, limit)
             .map((prediction) => this.formatPredictionResult(prediction));
           resolve(formattedResults);
         } else {
-          console.warn('Google Places API error:', status);
+          if (
+            status !== window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS &&
+            status !== window.google.maps.places.PlacesServiceStatus.OK
+          ) {
+            console.warn('Google Places API error:', status);
+          }
           resolve([]);
         }
       });
