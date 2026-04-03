@@ -1,4 +1,5 @@
 import mapboxgl from 'mapbox-gl';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 import './MapPopups.css';
 import { osmi18n as i18n } from './osmi18n';
@@ -7,6 +8,7 @@ import { formatDistance, formatDuration } from './utils/routeUtils.js';
 import { formatTimeAgo } from './utils/utils.js';
 
 import { ENABLE_COMMENTS, IS_MOBILE } from './config/constants.js';
+import { getPlaceTypeIconElement } from './GooglePlacesGeocoder.js';
 
 /** POI address line from Overpass tags; Nominatim fallback (https://operations.osmfoundation.org/policies/nominatim/). */
 
@@ -16,6 +18,18 @@ export function escapeHtml(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+const POPUP_PLACE_TYPE_ICON_CLASS =
+  'search-result-popup-place-icon w-6 h-6 flex-shrink-0 opacity-90';
+
+/** SVG string for the same place-type icon as the city search dropdown (Google `types`). */
+function renderPlaceTypeIconHtml(types) {
+  const el = getPlaceTypeIconElement(types, {
+    className: POPUP_PLACE_TYPE_ICON_CLASS,
+    matchedClassName: POPUP_PLACE_TYPE_ICON_CLASS,
+  });
+  return renderToStaticMarkup(el);
 }
 
 export function formatAddressLineFromOsmProperties(properties) {
@@ -326,7 +340,7 @@ class MapPopups {
         `;
   }
 
-  showSearchResultPopup({ lng, lat, title, address }) {
+  showSearchResultPopup({ lng, lat, title, address, placeTypes }) {
     const titleHtml = title
       ? escapeHtml(title)
       : '<span class="font-medium italic opacity-50">Local</span>';
@@ -335,8 +349,11 @@ class MapPopups {
       ? `<div class="mt-1 sm:mt-0 text-xs md:text-sm break-words opacity-60 leading-snug">${addressLine}</div>`
       : '';
 
+    const iconHtml = renderPlaceTypeIconHtml(placeTypes);
+
     const html = `
-            <div class="flex items-start space-x-3 mt-2 mb-3">
+            <div class="flex items-start gap-3 mt-2 mb-3">
+                <div class="flex-shrink-0 flex items-start justify-center pt-0.5" aria-hidden="true">${iconHtml}</div>
                 <div class="flex-1 min-w-0">
                     <div class="text-base md:text-lg font-semibold leading-tight tracking-tight break-words">${titleHtml}</div>
                     ${addressBlock}

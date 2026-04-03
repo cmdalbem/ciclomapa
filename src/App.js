@@ -1408,7 +1408,7 @@ class App extends Component {
     this.setState({ globalSearchPin: null });
   };
 
-  handleGlobalSearchPlaceSelect = ({ lng, lat, areaLabel, title, address }) => {
+  handleGlobalSearchPlaceSelect = ({ lng, lat, areaLabel, title, address, placeTypes }) => {
     const zoom = 16;
     const rawArea =
       areaLabel && String(areaLabel).trim() ? String(areaLabel).trim() : this.state.area;
@@ -1425,6 +1425,7 @@ class App extends Component {
           lat,
           title: title || '',
           address: address || '',
+          placeTypes: Array.isArray(placeTypes) ? placeTypes : [],
         },
       },
       () => {

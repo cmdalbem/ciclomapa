@@ -27,7 +27,6 @@ jest.mock('./googlePlacesClient.js', () => {
         types: ['establishment'],
         address_components: [],
       }),
-      getPlaceTypeIcon: jest.fn(() => null),
     },
   };
 });

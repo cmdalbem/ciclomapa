@@ -42,7 +42,7 @@ import { adjustColorBrightness } from './utils/utils.js';
 import debounce from 'lodash.debounce';
 import { getCurrentSunPosition } from './sunPositionUtils';
 import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/map/icons';
-import { reverseGeocodePlace } from './features/map/geocoding.js';
+import { reverseGeocodePlace } from './googlePlacesClient.js';
 
 import './Map.css';
 
@@ -168,17 +168,10 @@ class Map extends Component {
   }
 
   reverseGeocode(lngLat) {
-    return reverseGeocodePlace(lngLat)
-      .then((result) => {
-        if (this.searchBar && result.bbox) {
-          this.searchBar.setBbox(result.bbox);
-        }
-        return result;
-      })
-      .catch((err) => {
-        console.error('Reverse geocoding failed:', err);
-        throw err;
-      });
+    return reverseGeocodePlace(lngLat).catch((err) => {
+      console.error('Reverse geocoding failed:', err);
+      throw err;
+    });
   }
 
   onMapMoveEnded() {
@@ -1725,6 +1718,7 @@ class Map extends Component {
       lat: pin.lat,
       title: pin.title,
       address: pin.address,
+      placeTypes: pin.placeTypes,
     });
     this.popups.searchResultPopup.on('close', this._onSearchResultPopupClosed);
   }

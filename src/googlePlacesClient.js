@@ -56,3 +56,23 @@ export function getAreaStringFromResultLike(resultLike) {
   const parts = [city, state, country].filter(Boolean);
   return parts.length ? parts.join(', ') : null;
 }
+
+/** Reverse geocode with the same area label pipeline as forward city search. */
+export async function reverseGeocodePlace(lngLat) {
+  let coords = lngLat;
+
+  if (lngLat && lngLat.lat !== undefined && lngLat.lng !== undefined) {
+    coords = [lngLat.lng, lngLat.lat];
+  }
+
+  if (!coords || coords[0] === undefined || coords[1] === undefined) {
+    throw new Error('Invalid coordinates');
+  }
+
+  await ensureGooglePlacesReady();
+  const result = await googlePlacesGeocoder.reverseGeocode(coords);
+
+  const place_name = getAreaStringFromResultLike(result) || result.place_name;
+
+  return { place_name };
+}

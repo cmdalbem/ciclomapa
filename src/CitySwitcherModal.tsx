@@ -20,7 +20,7 @@ import {
 } from './config/constants.js';
 import { appendKmUnit } from './utils/routeUtils.js';
 import { getAreaStringFromResultLike } from './googlePlacesClient.js';
-import PlacesAutocompleteOptionLabel from './PlacesAutocompleteOptionLabel.jsx';
+import { PlacesAutocompleteOptionLabel } from './GooglePlacesGeocoder.js';
 import {
   geocodePlacesSuggestionToResult,
   PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
@@ -996,6 +996,8 @@ export type CitySwitcherModalProps = {
     areaLabel: string;
     title: string;
     address: string;
+    /** Google Places `types` from resolved details (drives the same icon as the dropdown). */
+    placeTypes?: string[];
   }) => void;
   onCatalogCityPicked?: () => void;
 };
@@ -1270,8 +1272,8 @@ function CitySwitcherModal({
         label: (
           <PlacesAutocompleteOptionLabel
             suggestion={s}
-            primaryClassName="truncate text-sm font-medium"
-            secondaryClassName="truncate text-xs opacity-50"
+            primaryClassName="truncate text-base font-medium leading-snug"
+            secondaryClassName="truncate text-sm leading-snug opacity-50"
           />
         ),
       };
@@ -1300,6 +1302,7 @@ function CitySwitcherModal({
             areaLabel: areaStr,
             title: resolvedName || resolved.place_name || '',
             address: formattedAddress || '',
+            placeTypes: resolved.properties?.types,
           });
           closeCityPicker();
           setGlobalSearchValue('');

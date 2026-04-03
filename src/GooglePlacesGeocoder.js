@@ -58,7 +58,7 @@ import {
 } from 'react-icons/md';
 
 /**
- * Ordered most-specific → least-specific. `getPlaceTypeIcon` picks the first
+ * Ordered most-specific → least-specific. `getPlaceTypeIconElement` picks the first
  * rule whose type appears in a Places/Geocoder `types` array (Google's order is ignored).
  */
 const PLACE_TYPE_ICON_RULES = [
@@ -223,6 +223,87 @@ function isLocalityOnlyCityPrediction(types) {
   return true;
 }
 
+/**
+ * @param {string[]} [types] — Google Places `types` array
+ * @param {object} [iconProps] — passed to the underlying react-icon (className defaults differ for matched vs fallback)
+ */
+export function getPlaceTypeIconElement(types, iconProps = {}) {
+  const { className = 'text-gray-400', matchedClassName = 'text-gray-500', ...rest } = iconProps;
+
+  if (!types || types.length === 0) {
+    return React.createElement(HiLocationMarker, { className, ...rest });
+  }
+  const typeSet = new Set(types);
+  for (const [type, Icon] of PLACE_TYPE_ICON_RULES) {
+    if (typeSet.has(type)) {
+      return React.createElement(Icon, { className: matchedClassName, ...rest });
+    }
+  }
+  return React.createElement(HiLocationMarker, { className, ...rest });
+}
+
+/**
+ * Single suggestion row for Ant Design AutoComplete (DirectionsPanel + city switcher).
+ * Defaults match DirectionsPanel / LocationSearchInput.
+ */
+export function PlacesAutocompleteOptionLabel({
+  suggestion,
+  rowClassName = 'flex min-w-0 items-center gap-3 py-1',
+  iconWrapperClassName = 'flex-shrink-0 text-lg opacity-70',
+  primaryClassName = 'text-sm font-medium truncate',
+  secondaryClassName = 'text-xs text-gray-400 truncate',
+}) {
+  const mainText =
+    suggestion?.properties?.structured_formatting?.main_text || suggestion?.place_name || '';
+  const secondaryText = suggestion?.properties?.structured_formatting?.secondary_text;
+
+  return (
+    <div className={rowClassName}>
+      <span className={iconWrapperClassName}>
+        {getPlaceTypeIconElement(suggestion?.properties?.types, {
+          className: 'text-gray-400',
+          matchedClassName: 'text-gray-500',
+        })}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className={primaryClassName}>{mainText}</span>
+        {secondaryText ? <span className={secondaryClassName}>{secondaryText}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+/** One shared inject so HMR / concurrent callers do not append multiple script tags. */
+let googleMapsScriptReadyPromise = null;
+
+function ensureGoogleMapsScriptLoaded(apiKey, language, region) {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('Google Maps API not available (SSR)'));
+  }
+  if (window.google?.maps) {
+    return Promise.resolve();
+  }
+  if (!googleMapsScriptReadyPromise) {
+    googleMapsScriptReadyPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = `https://maps.googleapis.com/maps/api/js?${new URLSearchParams({
+        key: apiKey,
+        libraries: 'places',
+        language,
+        region,
+      }).toString()}`;
+      script.onload = () => resolve();
+      script.onerror = () => {
+        googleMapsScriptReadyPromise = null;
+        reject(new Error('Failed to load Google Maps API'));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return googleMapsScriptReadyPromise;
+}
+
 class GooglePlacesGeocoder {
   constructor(options = {}) {
     this.apiKey = options.apiKey;
@@ -244,66 +325,34 @@ class GooglePlacesGeocoder {
   }
 
   async loadGoogleMapsAPI() {
-    return new Promise((resolve, reject) => {
-      if (window.google && window.google.maps) {
-        this.initializeServices().then(resolve).catch(reject);
-        return;
-      }
-
-      const script = document.createElement('script');
-      // Load the latest version without specifying a version number
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${this.apiKey}&libraries=places&language=${this.language}&region=${this.region}&loading=async`;
-      script.async = true;
-      script.defer = true;
-
-      script.onload = () => {
-        // Add a small delay to ensure all services are loaded
-        setTimeout(async () => {
-          try {
-            await this.initializeServices();
-            resolve();
-          } catch (error) {
-            reject(error);
-          }
-        }, 100);
-      };
-
-      script.onerror = () => {
-        reject(new Error('Failed to load Google Maps API'));
-      };
-
-      document.head.appendChild(script);
-    });
+    if (!this.apiKey) {
+      throw new Error('Google Maps API key is missing');
+    }
+    await ensureGoogleMapsScriptLoaded(this.apiKey, this.language, this.region);
+    await this.initializeServices();
   }
 
   async initializeServices() {
-    if (!window.google || !window.google.maps) {
+    if (!window.google?.maps) {
       throw new Error('Google Maps API not loaded');
     }
 
+    const maps = window.google.maps;
+
     try {
-      // Initialize both services for comprehensive results
-      this.geocoder = new window.google.maps.Geocoder();
+      // Classic script URL (no loading=async): onload means Geocoder + libraries=places are ready.
+      this.geocoder = new maps.Geocoder();
 
-      // Try to use AutocompleteService for rich place suggestions
-      if (window.google.maps.places && window.google.maps.places.AutocompleteService) {
-        this.autocompleteService = new window.google.maps.places.AutocompleteService();
+      if (maps.places?.AutocompleteService) {
+        this.autocompleteService = new maps.places.AutocompleteService();
       }
-
-      // Also try PlacesService for place details
-      if (window.google.maps.places && window.google.maps.places.PlacesService) {
-        // Create a dummy div for PlacesService (it requires a DOM element)
+      if (maps.places?.PlacesService) {
         const dummyDiv = document.createElement('div');
-        this.placesService = new window.google.maps.places.PlacesService(dummyDiv);
+        this.placesService = new maps.places.PlacesService(dummyDiv);
       }
     } catch (error) {
       console.error('Failed to initialize Google Maps services:', error);
-      // Fallback to just Geocoder if other services fail
-      try {
-        this.geocoder = new window.google.maps.Geocoder();
-      } catch (fallbackError) {
-        throw fallbackError;
-      }
+      throw error;
     }
   }
 
@@ -377,19 +426,6 @@ class GooglePlacesGeocoder {
         prediction: prediction,
       },
     };
-  }
-
-  // Helper method to get icon for place type
-  getPlaceTypeIcon(types) {
-    if (!types || types.length === 0)
-      return React.createElement(HiLocationMarker, { className: 'text-gray-400' });
-
-    const typeSet = new Set(types);
-    for (const [type, Icon] of PLACE_TYPE_ICON_RULES) {
-      if (typeSet.has(type)) return React.createElement(Icon, { className: 'text-gray-500' });
-    }
-
-    return React.createElement(HiLocationMarker, { className: 'text-gray-400' }); // Default icon
   }
 
   async getPlaceDetails(placeId) {
