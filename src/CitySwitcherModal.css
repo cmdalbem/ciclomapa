@@ -5,6 +5,8 @@
   display: flex;
   justify-content: center;
   align-items: flex-end;
+  box-sizing: border-box;
+  min-height: 0;
   /* Leave breathing room for mobile dynamic toolbars / notches. */
   padding-top: max(8px, env(safe-area-inset-top));
   padding-left: 16px;
@@ -69,18 +71,44 @@ body.show-city-picker .city-switcher-modal {
   display: flex;
   flex-direction: column;
   width: min(860px, 100%);
-  height: auto;
-  /* Use dynamic viewport units so the header (close button) doesn't get clipped on mobile. */
-  max-height: clamp(420px, calc(100dvh - 200px), 960px);
-  max-height: clamp(420px, calc(100vh - 200px), 960px);
+  min-height: 0;
+  height: clamp(420px, calc(100vh - 200px), 960px);
+  max-height: none;
+  /* Geocoder suggestions extend past the panel; keep visible. */
   overflow: visible;
   border-radius: 32px;
   border: none;
   background: transparent;
 }
+
+@supports (height: 100dvh) {
+  .city-switcher-modal__panel {
+    height: clamp(420px, calc(100dvh - 200px), 960px);
+  }
+}
+
+.city-switcher-modal__topBar {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* DOM order is geocoder then close; on desktop the close row is shown above the search. */
+.city-switcher-modal__topBar .city-switcher-modal__headerRow {
+  order: -1;
+}
+
+.city-switcher-modal__headerSpacer {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
 .city-switcher-modal__headerRow {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  flex-shrink: 0;
   padding-right: 12px;
   margin-bottom: 12px;
 }
@@ -110,6 +138,7 @@ body.show-city-picker .city-switcher-modal {
 .city-switcher-modal__geocoderMount {
   position: relative;
   z-index: 3;
+  flex-shrink: 0;
   padding: 0 20px 10px;
   opacity: 0;
   transform: translateY(-12px);
@@ -262,6 +291,7 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   z-index: 0;
   padding: 0 18px 10px;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
 
@@ -523,7 +553,7 @@ a.city-switcher-modal__cityBtn:visited {
   opacity: 0.58;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .city-switcher-modal {
     align-items: flex-end;
     padding-top: max(8px, env(safe-area-inset-top));
@@ -532,20 +562,63 @@ a.city-switcher-modal__cityBtn:visited {
     padding-bottom: max(4px, env(safe-area-inset-bottom));
   }
 
+  /*
+   * Mobile: `100vh` / `100dvh` can still be taller than the *visible* area in some browsers.
+   * Prefer `svh` (small viewport) when available, and subtract this overlay’s vertical padding
+   * so the sheet (and close button) never extends past the top inset.
+   */
   .city-switcher-modal__panel {
     height: auto;
-    max-height: clamp(420px, calc(100dvh - 22px), 860px);
-    max-height: clamp(420px, calc(100vh - 22px), 860px);
+    max-height: min(
+      860px,
+      calc(
+        100vh - max(8px, env(safe-area-inset-top, 0px)) -
+          max(4px, env(safe-area-inset-bottom, 0px)) - 20px
+      )
+    );
     border-radius: 18px;
   }
 
-  .city-switcher-modal__geocoderMount {
-    padding: 0 14px 8px;
+  @supports (height: 100svh) {
+    .city-switcher-modal__panel {
+      max-height: min(
+        860px,
+        calc(
+          100svh - max(8px, env(safe-area-inset-top, 0px)) -
+            max(4px, env(safe-area-inset-bottom, 0px)) - 20px
+        )
+      );
+    }
   }
 
-  .city-switcher-modal__headerRow {
-    padding-right: 8px;
-    margin-bottom: 6px;
+  .city-switcher-modal__topBar {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+
+  /* Mobile: geocoder left, close right (follows DOM order). */
+  .city-switcher-modal__topBar .city-switcher-modal__headerRow,
+  .city-switcher-modal__topBar .city-switcher-modal__geocoderMount {
+    order: 0;
+  }
+
+  .city-switcher-modal__headerSpacer {
+    display: none;
+  }
+
+  .city-switcher-modal__topBar .city-switcher-modal__geocoderMount {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 0 8px 12px;
+  }
+
+  .city-switcher-modal__topBar .city-switcher-modal__headerRow {
+    padding-right: 4px;
+    margin-bottom: 0;
+    align-self: center;
   }
 
   .city-switcher-modal__content {
