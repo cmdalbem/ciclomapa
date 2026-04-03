@@ -1,4 +1,4 @@
-import React, { useLayoutEffect } from 'react';
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
@@ -11,6 +11,26 @@ import CitySwitcherModal, {
   resetCitySwitcherStatsCacheForTest,
   STATS_TOTALS_SUCCESS_TTL_MS,
 } from './CitySwitcherModal';
+
+jest.mock('./googlePlacesClient.js', () => {
+  const actual = jest.requireActual('./googlePlacesClient.js');
+  return {
+    getCityFromResultLike: actual.getCityFromResultLike,
+    getAreaStringFromResultLike: actual.getAreaStringFromResultLike,
+    ensureGooglePlacesReady: jest.fn().mockResolvedValue(undefined),
+    googlePlacesGeocoder: {
+      search: jest.fn().mockResolvedValue([]),
+      getPlaceDetails: jest.fn().mockResolvedValue({
+        coordinates: [-46.6333, -23.5505],
+        formatted_address: 'Endereço de teste',
+        name: 'Local de teste',
+        types: ['establishment'],
+        address_components: [],
+      }),
+      getPlaceTypeIcon: jest.fn(() => null),
+    },
+  };
+});
 
 const RECENT_KEY = 'ciclomapa_recent_cities_v1';
 
@@ -40,16 +60,8 @@ afterEach(() => {
   window.localStorage.removeItem(RECENT_KEY);
 });
 
-/** Injects a dummy geocoder input so focus retries from CitySwitcherModal do not spin for seconds. */
-function CitySwitcherWithGeocoderStub() {
+function CitySwitcherTestHost() {
   const loc = useLocation();
-
-  useLayoutEffect(() => {
-    const mount = document.querySelector('.city-switcher-modal__geocoderMount');
-    if (mount && !mount.querySelector('input')) {
-      mount.appendChild(document.createElement('input'));
-    }
-  }, []);
 
   return (
     <>
@@ -64,7 +76,7 @@ function renderOpenPicker(initialPath = '/curitiba') {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <Routes>
-        <Route path="/:city" element={<CitySwitcherWithGeocoderStub />} />
+        <Route path="/:city" element={<CitySwitcherTestHost />} />
       </Routes>
     </MemoryRouter>
   );
@@ -163,6 +175,43 @@ describe('city stats totals from Storage', () => {
     });
   });
 
+  it('renders a ciclovia/ciclofaixa ring chart next to the km total when those layers have length', async () => {
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) =>
+      id === 'sao-paulo'
+        ? Promise.resolve({
+            lengths: { ciclovia: 10, ciclofaixa: 5, ciclorrota: 3 },
+          })
+        : Promise.resolve(null)
+    );
+
+    renderOpenPicker('/curitiba');
+
+    await waitFor(() => {
+      const link = cityLink('sao-paulo');
+      expect(link.querySelector('[data-testid="city-switcher-mini-pie"]')).not.toBeNull();
+      expectCityLinkTotalKm(link, '18');
+    });
+  });
+
+  it('shows ring placeholder (not data chart) when only ciclorrota / calçada lengths exist', async () => {
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) =>
+      id === 'sao-paulo'
+        ? Promise.resolve({
+            lengths: { ciclorrota: 10, 'calcada-compartilhada': 4 },
+          })
+        : Promise.resolve(null)
+    );
+
+    renderOpenPicker('/curitiba');
+
+    await waitFor(() => {
+      expectCityLinkTotalKm(cityLink('sao-paulo'), '14');
+    });
+    const link = cityLink('sao-paulo');
+    expect(link.querySelector('[data-testid="city-switcher-mini-pie"]')).toBeNull();
+    expect(link.querySelector('[data-testid="city-switcher-ring-placeholder"]')).not.toBeNull();
+  });
+
   it('resolves totals when Firestore id matches a secondary slug candidate (area label), not only canonical slug', async () => {
     const areaDocId = slugify('São Paulo, São Paulo, Brasil');
     expect(areaDocId).not.toBe('sao-paulo');
@@ -243,7 +292,7 @@ describe('city stats totals from Storage', () => {
     render(
       <MemoryRouter initialEntries={['/curitiba']}>
         <Routes>
-          <Route path="/:city" element={<CitySwitcherWithGeocoderStub />} />
+          <Route path="/:city" element={<CitySwitcherTestHost />} />
         </Routes>
       </MemoryRouter>
     );

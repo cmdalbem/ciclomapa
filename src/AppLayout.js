@@ -83,6 +83,8 @@ export default function AppLayout({
             toPoint={state.toPoint}
             isTrackingUserLocation={state.isTrackingUserLocation}
             onTrackingUserLocationChange={handlers.onTrackingUserLocationChange}
+            globalSearchPin={state.globalSearchPin}
+            onGlobalSearchPinDismiss={handlers.clearGlobalSearchPin}
           />
 
           {!IS_MOBILE && !state.embedMode && (
@@ -115,7 +117,15 @@ export default function AppLayout({
         </main>
       </div>
 
-      <CitySwitcherModal />
+      <CitySwitcherModal
+        mapCenter={
+          typeof state.lat === 'number' && typeof state.lng === 'number'
+            ? { lat: state.lat, lng: state.lng }
+            : null
+        }
+        onPlacesResultSelected={handlers.handleGlobalSearchPlaceSelect}
+        onCatalogCityPicked={handlers.clearGlobalSearchPin}
+      />
 
       {!(IS_MOBILE && state.isDirectionsPanelOpen) && (
         <nav aria-label="Camadas do mapa">

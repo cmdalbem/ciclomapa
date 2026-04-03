@@ -6,45 +6,34 @@ import { FaDirections as IconRoute } from 'react-icons/fa';
 import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash } from 'react-icons/hi2';
 import { HiCog as IconCog } from 'react-icons/hi';
 import { HiInformationCircle as IconInfoCircle } from 'react-icons/hi';
-import GooglePlacesGeocoder from './GooglePlacesGeocoder.js';
 import mapboxgl from 'mapbox-gl';
 import { Popover } from 'antd';
 
 import './DirectionsPanel.css';
 
 import {
-  GOOGLE_PLACES_API_KEY,
   IS_MOBILE,
   HYBRID_MAX_RESULTS,
+  HYBRID_MAX_RESULTS_DESKTOP,
   ENABLE_MAP_CLICK_TO_SET_POINTS,
   ENABLE_AUTO_AREA_CHANGE_ON_POINT,
-  SUPPORTED_COUNTRY_CODES,
-  GOOGLE_PLACES_DEFAULT_REGION,
 } from './config/constants.js';
 import DirectionsManager from './DirectionsManager.js';
 
 import LocationSearchInput from './features/directions/components/LocationSearchInput.js';
 import RouteSortDropdown from './features/directions/components/RouteSortDropdown.js';
 import RoutesList from './features/directions/components/RoutesList.js';
-
-const googlePlacesGeocoder = new GooglePlacesGeocoder({
-  apiKey: GOOGLE_PLACES_API_KEY,
-  language: 'pt-BR',
-  region: GOOGLE_PLACES_DEFAULT_REGION,
-});
-
-// Initialize the geocoder when needed
-let geocoderInitialized = false;
-const ensureGeocoderReady = async () => {
-  if (!geocoderInitialized) {
-    try {
-      await googlePlacesGeocoder.loadGoogleMapsAPI();
-      geocoderInitialized = true;
-    } catch (error) {
-      console.error('Failed to initialize Google Places Geocoder:', error);
-    }
-  }
-};
+import {
+  ensureGooglePlacesReady,
+  getAreaStringFromResultLike,
+  getCityFromResultLike,
+  googlePlacesGeocoder,
+} from './googlePlacesClient.js';
+import {
+  geocodePlacesSuggestionToResult,
+  PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
+  searchPlacesForAutocomplete,
+} from './placesAutocomplete.js';
 
 class DirectionsPanel extends Component {
   constructor(props) {
@@ -95,43 +84,6 @@ class DirectionsPanel extends Component {
     this.getSortedRoutes = this.getSortedRoutes.bind(this);
   }
 
-  getCityFromResultLike(resultLike) {
-    const props =
-      resultLike && (resultLike.properties || (resultLike.result && resultLike.result.properties));
-    const addressComponents = props && props.address_components;
-    if (!addressComponents || !Array.isArray(addressComponents)) return null;
-    const findComp = (type) => addressComponents.find((c) => (c.types || []).includes(type));
-    // Prefer locality, fallback to administrative_area_level_2 (common municipality level in BR)
-    const locality = findComp('locality');
-    const admin2 = findComp('administrative_area_level_2');
-    const sublocality = findComp('sublocality');
-    return (
-      (locality && locality.long_name) ||
-      (admin2 && admin2.long_name) ||
-      (sublocality && sublocality.long_name) ||
-      null
-    );
-  }
-
-  getAreaStringFromResultLike(resultLike) {
-    const props =
-      resultLike && (resultLike.properties || (resultLike.result && resultLike.result.properties));
-    const addressComponents = props && props.address_components;
-    if (!addressComponents || !Array.isArray(addressComponents)) return null;
-    const findComp = (type) => addressComponents.find((c) => (c.types || []).includes(type));
-    const city = this.getCityFromResultLike(resultLike);
-    const state =
-      (findComp('administrative_area_level_1') &&
-        (findComp('administrative_area_level_1').short_name ||
-          findComp('administrative_area_level_1').long_name)) ||
-      null;
-    const country =
-      (findComp('country') && (findComp('country').long_name || findComp('country').short_name)) ||
-      null;
-    const parts = [city, state, country].filter(Boolean);
-    return parts.length ? parts.join(', ') : null;
-  }
-
   validateSameCity(type, newResultLike) {
     // Determine the other point
     const otherPoint = type === 'to' ? this.props.fromPoint : this.props.toPoint;
@@ -141,8 +93,8 @@ class DirectionsPanel extends Component {
     }
     const fromLike = type === 'to' ? otherPoint : newResultLike;
     const toLike = type === 'to' ? newResultLike : otherPoint;
-    const fromCity = this.getCityFromResultLike(fromLike.result || fromLike);
-    const toCity = this.getCityFromResultLike(toLike.result || toLike);
+    const fromCity = getCityFromResultLike(fromLike.result || fromLike);
+    const toCity = getCityFromResultLike(toLike.result || toLike);
     if (fromCity && toCity && fromCity !== toCity) {
       const targetCity = type === 'to' ? fromCity : toCity;
       this.setState({
@@ -284,7 +236,7 @@ class DirectionsPanel extends Component {
   }
 
   async handleSearch(value, inputType) {
-    if (!value || value.length < 3) {
+    if (!value || value.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
       this.setState({ [`${inputType}Suggestions`]: [] });
       return;
     }
@@ -292,13 +244,12 @@ class DirectionsPanel extends Component {
     this.setState({ [`${inputType}SearchLoading`]: true });
 
     try {
-      await ensureGeocoderReady();
-      const results = await googlePlacesGeocoder.search(value, {
+      const results = await searchPlacesForAutocomplete(value, {
         proximity: this.props.map
           ? [this.props.map.getCenter().lng, this.props.map.getCenter().lat]
           : null,
-        countryCodes: [...SUPPORTED_COUNTRY_CODES],
-        limit: 5,
+        // Historically always 5 results; keep route search denser than the responsive city-switcher cap.
+        limit: HYBRID_MAX_RESULTS_DESKTOP,
       });
 
       this.setState({
@@ -318,42 +269,16 @@ class DirectionsPanel extends Component {
     console.debug(`${inputType} point selected:`, result);
 
     try {
-      // If this is a Places API prediction, we need to get the coordinates
-      if (result.properties && result.properties.place_id && !result.center) {
-        await ensureGeocoderReady();
-        const placeDetails = await googlePlacesGeocoder.getPlaceDetails(result.properties.place_id);
+      const { result: resolved } = await geocodePlacesSuggestionToResult(result);
 
-        // Create a complete result with coordinates
-        const completeResult = {
-          ...result,
-          center: placeDetails.coordinates,
-          geometry: {
-            coordinates: placeDetails.coordinates,
-          },
-          properties: {
-            ...result.properties,
-            formatted_address: placeDetails.formatted_address,
-            name: placeDetails.name,
-            types: placeDetails.types,
-            address_components: placeDetails.address_components,
-          },
-        };
-        // Validate city when setting origin/destination
-        if (!this.validateSameCity(inputType, completeResult)) {
-          return;
-        }
-        this.handleGeocoderResult({ result: completeResult }, inputType, true);
-      } else {
-        // If it already has coordinates, use it directly
-        if (!this.validateSameCity(inputType, result)) {
-          return;
-        }
-        this.handleGeocoderResult({ result }, inputType, true);
+      if (!this.validateSameCity(inputType, resolved)) {
+        return;
       }
+      this.handleGeocoderResult({ result: resolved }, inputType, true);
 
       this.setState({
         [`${inputType}Suggestions`]: [],
-        [`${inputType}SearchValue`]: result.place_name,
+        [`${inputType}SearchValue`]: resolved.place_name,
       });
 
       // Auto-focus to destination input if origin is selected and no destination is set
@@ -365,7 +290,6 @@ class DirectionsPanel extends Component {
       }
     } catch (error) {
       console.error('Error getting place details:', error);
-      // Fallback to the original result
       if (this.validateSameCity(inputType, result)) {
         this.handleGeocoderResult({ result }, inputType);
       }
@@ -460,7 +384,7 @@ class DirectionsPanel extends Component {
       isFirstPoint &&
       typeof this.props.onAreaChange === 'function'
     ) {
-      const areaStr = this.getAreaStringFromResultLike(result.result || result);
+      const areaStr = getAreaStringFromResultLike(result.result || result);
       if (areaStr && this.props.area !== areaStr) {
         this.props.onAreaChange(areaStr);
       }
@@ -766,7 +690,7 @@ class DirectionsPanel extends Component {
     console.debug(`Reverse geocoding for ${type} point:`, lngLat);
 
     try {
-      await ensureGeocoderReady();
+      await ensureGooglePlacesReady();
       const result = await googlePlacesGeocoder.reverseGeocode(lngLat, {
         language: 'pt-BR',
       });
@@ -777,7 +701,7 @@ class DirectionsPanel extends Component {
       // check if the user's current city matches the app's current city
       if (IS_MOBILE && isAutoTriggered && type === 'from' && this.props.area) {
         const appCity = this.props.area.split(',')[0].trim();
-        const geolocationCity = this.getCityFromResultLike(result);
+        const geolocationCity = getCityFromResultLike(result);
 
         if (geolocationCity && appCity && geolocationCity !== appCity) {
           console.debug(
@@ -1114,13 +1038,11 @@ class DirectionsPanel extends Component {
                   <LocationSearchInput
                     inputType="from"
                     parentComponent={this}
-                    googlePlacesGeocoder={googlePlacesGeocoder}
                     className="w-full cm-route-points__input cm-route-points__input--from"
                   />
                   <LocationSearchInput
                     inputType="to"
                     parentComponent={this}
-                    googlePlacesGeocoder={googlePlacesGeocoder}
                     className="w-full cm-route-points__input cm-route-points__input--to"
                   />
                 </div>
