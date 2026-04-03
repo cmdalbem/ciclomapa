@@ -14,7 +14,6 @@ import './DirectionsPanel.css';
 import {
   IS_MOBILE,
   HYBRID_MAX_RESULTS,
-  HYBRID_MAX_RESULTS_DESKTOP,
   ENABLE_MAP_CLICK_TO_SET_POINTS,
   ENABLE_AUTO_AREA_CHANGE_ON_POINT,
 } from './config/constants.js';
@@ -31,6 +30,7 @@ import {
 } from './googlePlacesClient.js';
 import {
   geocodePlacesSuggestionToResult,
+  getDirectionsPanelPlacesSearchOptions,
   PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
@@ -244,14 +244,10 @@ class DirectionsPanel extends Component {
     this.setState({ [`${inputType}SearchLoading`]: true });
 
     try {
-      const results = await searchPlacesForAutocomplete(value, {
-        proximity: this.props.map
-          ? [this.props.map.getCenter().lng, this.props.map.getCenter().lat]
-          : null,
-        // Historically always 5 results; keep route search denser than the responsive city-switcher cap.
-        limit: HYBRID_MAX_RESULTS_DESKTOP,
-        exclude: { bareCity: true },
-      });
+      const results = await searchPlacesForAutocomplete(
+        value,
+        getDirectionsPanelPlacesSearchOptions(this.props.map)
+      );
 
       this.setState({
         [`${inputType}Suggestions`]: results,

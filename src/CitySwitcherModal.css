@@ -1,5 +1,10 @@
 .city-switcher-modal {
   z-index: var(--z-app-modal);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  overflow: hidden;
   padding-top: max(8px, env(safe-area-inset-top));
   padding-left: 16px;
   padding-right: 16px;
@@ -57,15 +62,31 @@ body.show-city-picker .city-switcher-modal {
 }
 
 .city-switcher-modal__panel {
+  display: flex;
+  flex-direction: column;
   width: min(860px, 100%);
-  max-height: clamp(420px, calc(100dvh - 200px), 960px);
-  max-height: clamp(420px, calc(100vh - 200px), 960px);
+  max-height: calc(100dvh - 18px);
+  max-height: calc(100vh - 18px);
   border-radius: 32px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (min-width: 1600px) {
   .city-switcher-modal__panel {
     width: min(900px, 100%);
+  }
+}
+
+@media (min-width: 768px) {
+  .city-switcher-modal {
+    padding-top: max(env(safe-area-inset-top), clamp(96px, calc(33vh - 72px), 240px));
+    padding-top: max(env(safe-area-inset-top), clamp(96px, calc(33dvh - 72px), 240px));
+  }
+
+  .city-switcher-modal__panel {
+    max-height: calc(100vh - clamp(96px, calc(33vh - 72px), 240px) - 16px);
+    max-height: calc(100dvh - clamp(96px, calc(33dvh - 72px), 240px) - 16px);
   }
 }
 
@@ -90,24 +111,10 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   animation: city-switcher-modal-enter-down 600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/*
- * AutoComplete + <Input /> (Ant Design 6 combobox): no .ant-select-selector — the field is
- * .ant-input-affix-wrapper. Legacy .ant-select-selector rules do nothing for this path.
- */
-.city-switcher-modal__geocoderMount .city-switcher-global-search.ant-select {
+.city-switcher-modal__geocoderMount .city-switcher-global-search {
   position: relative;
   z-index: 10;
   width: 100%;
-}
-
-/* Outermost node is the rc-select flex row — strip default outline/fill so only the Input pill shows */
-.city-switcher-modal__geocoderMount
-  .city-switcher-global-search.ant-select.ant-select-customize-input {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  align-items: center;
 }
 
 .city-switcher-modal__geocoderMount .city-switcher-global-search .ant-input-affix-wrapper {
@@ -150,10 +157,8 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
 }
 
 /* Absolutely positioned on the flex root (see antd select base styles) */
-.city-switcher-modal__geocoderMount .city-switcher-global-search .ant-select-clear {
-  inset-inline-end: 10px;
+.city-switcher-modal__geocoderMount .city-switcher-global-search .ant-input-clear-icon {
   color: rgba(255, 255, 255, 0.48);
-  background: transparent;
 }
 
 .theme-light
@@ -187,7 +192,10 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   color: rgba(0, 0, 0, 0.45);
 }
 
-.theme-light .city-switcher-modal__geocoderMount .city-switcher-global-search .ant-select-clear {
+.theme-light
+  .city-switcher-modal__geocoderMount
+  .city-switcher-global-search
+  .ant-input-clear-icon {
   color: rgba(87, 87, 87, 0.55);
 }
 
@@ -199,11 +207,91 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   color: rgba(87, 87, 87, 0.55);
 }
 
-.city-switcher-modal__searchDropdown .ant-select-item-group {
-  color: inherit;
+.city-switcher-modal__placeSearchSection {
+  min-height: 0;
+}
+
+/* One result per row (catalog cities use multi-column __citiesGrid). */
+.city-switcher-modal__placeResultsList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.city-switcher-modal__placeSearchStatus {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.theme-light .city-switcher-modal__placeSearchStatus {
+  color: rgba(0, 0, 0, 0.78);
+}
+
+/* Place result row: same card shell as catalog cities; inner row aligns icon + text like the old dropdown */
+.city-switcher-modal__placeSearchBtn {
+  width: 100%;
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.city-switcher-modal__placeSearchRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+}
+
+.city-switcher-modal__placeSearchIconWrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 1.125rem;
+  line-height: 0;
+  opacity: 0.88;
+}
+
+.city-switcher-modal__placeSearchIcon {
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.city-switcher-modal__placeSearchIcon--matched {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.theme-light .city-switcher-modal__placeSearchIcon {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.theme-light .city-switcher-modal__placeSearchIcon--matched {
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.city-switcher-modal__placeSearchPrimary {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.city-switcher-modal__placeSearchSecondary {
+  white-space: normal;
+  word-break: break-word;
 }
 
 .city-switcher-modal__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -457,10 +545,6 @@ a.city-switcher-modal__cityBtn {
 
   .city-switcher-modal__sectionTitle {
     padding: 12px 10px !important;
-  }
-
-  .city-switcher-modal__searchDropdown .rc-virtual-list {
-    max-height: min(40vh, 320px) !important;
   }
 
   .city-switcher-modal__citiesGrid {

@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 import { HiOutlineClock, HiOutlineXMark } from 'react-icons/hi2';
 import { HiSearch as IconSearch } from 'react-icons/hi';
-import { AutoComplete, Button, Input } from 'antd';
-import type { AutoCompleteProps } from 'antd';
+import { Button, Input } from 'antd';
 import Storage from './Storage.js';
 import { slugify } from './utils/utils.js';
 import { getCanonicalCitySlug, getPredefinedCitySlugDefinition } from './config/citySlugCatalog.js';
@@ -23,6 +23,7 @@ import { getAreaStringFromResultLike } from './googlePlacesClient.js';
 import { PlacesAutocompleteOptionLabel } from './GooglePlacesGeocoder.js';
 import {
   geocodePlacesSuggestionToResult,
+  getCitySwitcherPlacesSearchOptions,
   PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
@@ -606,6 +607,73 @@ function usePreloadedStatsTotalsByCanonicalSlug(cityObjs: StatsCityLike[], isPic
   return { statsTotalsByCanonicalSlug, isLoadingTotals };
 }
 
+type PlacesAutocompleteSearchOptions = NonNullable<
+  Parameters<typeof searchPlacesForAutocomplete>[1]
+>;
+
+/** Debounced Google Places predictions for the city picker search field (single consumer). */
+function usePlacesAutocompleteSearch({
+  debounceMs = 280,
+  getAutocompleteOptions,
+}: {
+  debounceMs?: number;
+  getAutocompleteOptions: () => PlacesAutocompleteSearchOptions;
+}) {
+  const [suggestions, setSuggestions] = useState<unknown[]>([]);
+  const [loading, setLoading] = useState(false);
+  const debounceTimerRef = useRef<number | null>(null);
+  const getOptionsRef = useRef(getAutocompleteOptions);
+  getOptionsRef.current = getAutocompleteOptions;
+
+  const clearResults = useCallback(() => {
+    if (debounceTimerRef.current !== null) {
+      window.clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    setSuggestions([]);
+    setLoading(false);
+  }, []);
+
+  const scheduleSearch = useCallback(
+    (q: string) => {
+      if (debounceTimerRef.current !== null) {
+        window.clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      const trimmed = q.trim();
+      if (trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
+        setSuggestions([]);
+        setLoading(false);
+        return;
+      }
+      debounceTimerRef.current = window.setTimeout(async () => {
+        debounceTimerRef.current = null;
+        setLoading(true);
+        try {
+          const results = await searchPlacesForAutocomplete(trimmed, getOptionsRef.current());
+          setSuggestions(Array.isArray(results) ? results : []);
+        } catch (e) {
+          console.warn(CITY_SWITCHER_LOG_PREFIX, 'places search failed', e);
+          setSuggestions([]);
+        } finally {
+          setLoading(false);
+        }
+      }, debounceMs);
+    },
+    [debounceMs]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current !== null) {
+        window.clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  return { suggestions, loading, scheduleSearch, clearResults } as const;
+}
+
 function useCityPickerFocusAndRestore({
   contentScrollElRef,
 }: {
@@ -1020,11 +1088,6 @@ type GeocodedPlaceResult = PlacesSuggestionRow & {
   center?: [number, number];
 };
 
-type GlobalSearchOptionMeta = {
-  placeId?: string;
-  placeSuggestion?: PlacesSuggestionRow;
-};
-
 function CitySwitcherModal({
   mapCenter = null,
   placesAutocompleteOptions,
@@ -1067,9 +1130,20 @@ function CitySwitcherModal({
   const [recentCityEntries, setRecentCityEntries] = useState(() => readRecentCitiesFromStorage());
 
   const [globalSearchValue, setGlobalSearchValue] = useState('');
-  const [placesSuggestions, setPlacesSuggestions] = useState<PlacesSuggestionRow[]>([]);
-  const [placesSearchLoading, setPlacesSearchLoading] = useState(false);
-  const placesSearchDebounceRef = useRef<number | null>(null);
+
+  const getCitySwitcherAutocompleteOptions = useCallback(
+    () => getCitySwitcherPlacesSearchOptions(mapCenter, placesAutocompleteOptions),
+    [mapCenter, placesAutocompleteOptions]
+  );
+
+  const {
+    suggestions: placesSuggestions,
+    loading: placesSearchLoading,
+    scheduleSearch: schedulePlacesSearch,
+    clearResults: clearPlacesSearch,
+  } = usePlacesAutocompleteSearch({
+    getAutocompleteOptions: getCitySwitcherAutocompleteOptions,
+  });
 
   const [isCityPickerOpen, setIsCityPickerOpen] = useState(
     () => typeof document !== 'undefined' && document.body.classList.contains('show-city-picker')
@@ -1086,6 +1160,13 @@ function CitySwitcherModal({
     sync();
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!isCityPickerOpen) {
+      setGlobalSearchValue('');
+      clearPlacesSearch();
+    }
+  }, [isCityPickerOpen, clearPlacesSearch]);
 
   useEffect(() => {
     console.debug(CITY_SWITCHER_LOG_PREFIX, 'reload recent cities from storage', {
@@ -1205,52 +1286,6 @@ function CitySwitcherModal({
     []
   );
 
-  const schedulePlacesSearch = useCallback(
-    (q: string) => {
-      if (placesSearchDebounceRef.current !== null) {
-        window.clearTimeout(placesSearchDebounceRef.current);
-        placesSearchDebounceRef.current = null;
-      }
-      const trimmed = q.trim();
-      if (trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
-        setPlacesSuggestions([]);
-        setPlacesSearchLoading(false);
-        return;
-      }
-      placesSearchDebounceRef.current = window.setTimeout(async () => {
-        placesSearchDebounceRef.current = null;
-        setPlacesSearchLoading(true);
-        try {
-          const proximity =
-            mapCenter && Number.isFinite(mapCenter.lat) && Number.isFinite(mapCenter.lng)
-              ? ([mapCenter.lng, mapCenter.lat] as [number, number])
-              : null;
-          const { exclude: pasExclude, ...pasRest } = placesAutocompleteOptions ?? {};
-          const results = (await searchPlacesForAutocomplete(trimmed, {
-            proximity: proximity ?? undefined,
-            ...pasRest,
-            exclude: { bareCity: false, ...pasExclude },
-          })) as PlacesSuggestionRow[];
-          setPlacesSuggestions(results);
-        } catch (e) {
-          console.warn(CITY_SWITCHER_LOG_PREFIX, 'places search failed', e);
-          setPlacesSuggestions([]);
-        } finally {
-          setPlacesSearchLoading(false);
-        }
-      }, 280);
-    },
-    [mapCenter, placesAutocompleteOptions]
-  );
-
-  useEffect(() => {
-    return () => {
-      if (placesSearchDebounceRef.current !== null) {
-        window.clearTimeout(placesSearchDebounceRef.current);
-      }
-    };
-  }, []);
-
   const globalSearchPlaceholder = useMemo(() => {
     const labelsPt = SUPPORTED_COUNTRIES.map((c) => c.labelPt);
     const suffix =
@@ -1262,57 +1297,35 @@ function CitySwitcherModal({
     return IS_PROD ? `Buscar endereço ou local ${suffix}` : 'Buscar endereço ou local no mundo';
   }, []);
 
-  const globalSearchOptions = useMemo((): AutoCompleteProps['options'] => {
-    return placesSuggestions.map((s) => {
-      const pid = s.properties?.place_id;
-      return {
-        value: `place:${pid || s.id}:${s.place_name}`,
-        placeId: pid,
-        placeSuggestion: s,
-        label: (
-          <PlacesAutocompleteOptionLabel
-            suggestion={s}
-            primaryClassName="truncate text-base font-medium leading-snug"
-            secondaryClassName="truncate text-sm leading-snug opacity-50"
-          />
-        ),
-      };
-    });
-  }, [placesSuggestions]);
-
-  const handleGlobalSearchSelect = useCallback(
-    async (_value: string, opt: unknown) => {
-      const option = opt as GlobalSearchOptionMeta & { value?: string };
-      if (option.placeSuggestion) {
-        const sug = option.placeSuggestion;
-        try {
-          const { result: resolvedRaw } = await geocodePlacesSuggestionToResult(sug);
-          const resolved = resolvedRaw as GeocodedPlaceResult;
-          if (!resolved.center) {
-            console.error(CITY_SWITCHER_LOG_PREFIX, 'place resolve missing center', resolved);
-            return;
-          }
-          const [lng, lat] = resolved.center;
-          const { formatted_address: formattedAddress, name: resolvedName } =
-            resolved.properties ?? {};
-          const areaStr = getAreaStringFromResultLike(resolved) || formattedAddress || '';
-          onPlacesResultSelected?.({
-            lng,
-            lat,
-            areaLabel: areaStr,
-            title: resolvedName || resolved.place_name || '',
-            address: formattedAddress || '',
-            placeTypes: resolved.properties?.types,
-          });
-          closeCityPicker();
-          setGlobalSearchValue('');
-          setPlacesSuggestions([]);
-        } catch (e) {
-          console.error(CITY_SWITCHER_LOG_PREFIX, 'place details failed', e);
+  const handlePlaceSuggestionPick = useCallback(
+    async (sug: PlacesSuggestionRow) => {
+      try {
+        const { result: resolvedRaw } = await geocodePlacesSuggestionToResult(sug);
+        const resolved = resolvedRaw as GeocodedPlaceResult;
+        if (!resolved.center) {
+          console.error(CITY_SWITCHER_LOG_PREFIX, 'place resolve missing center', resolved);
+          return;
         }
+        const [lng, lat] = resolved.center;
+        const { formatted_address: formattedAddress, name: resolvedName } =
+          resolved.properties ?? {};
+        const areaStr = getAreaStringFromResultLike(resolved) || formattedAddress || '';
+        onPlacesResultSelected?.({
+          lng,
+          lat,
+          areaLabel: areaStr,
+          title: resolvedName || resolved.place_name || '',
+          address: formattedAddress || '',
+          placeTypes: resolved.properties?.types,
+        });
+        closeCityPicker();
+        setGlobalSearchValue('');
+        clearPlacesSearch();
+      } catch (e) {
+        console.error(CITY_SWITCHER_LOG_PREFIX, 'place details failed', e);
       }
     },
-    [closeCityPicker, onPlacesResultSelected]
+    [clearPlacesSearch, closeCityPicker, onPlacesResultSelected]
   );
 
   /** Runs when the user follows a city link in this tab (navigation is handled by the link `to`). */
@@ -1335,13 +1348,13 @@ function CitySwitcherModal({
 
       onCatalogCityPicked?.();
       setGlobalSearchValue('');
-      setPlacesSuggestions([]);
+      clearPlacesSearch();
 
       recordRecentlyVisitedCity(nextSlug, cityObj?.areaLabel);
 
       closeCityPicker();
     },
-    [recordRecentlyVisitedCity, closeCityPicker, onCatalogCityPicked]
+    [recordRecentlyVisitedCity, closeCityPicker, onCatalogCityPicked, clearPlacesSearch]
   );
 
   const contentScrollElRef = useRef<HTMLDivElement | null>(null);
@@ -1350,11 +1363,29 @@ function CitySwitcherModal({
   useCityPickerFocusAndRestore({ contentScrollElRef });
   useCityPickerKeyboardTrap({ panelRef, closeCityPicker });
 
+  const trimmedGlobalSearch = globalSearchValue.trim();
+  const showPlaceSearchResults = trimmedGlobalSearch.length >= PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH;
+  const placeSuggestionList = placesSuggestions as PlacesSuggestionRow[];
+
+  const placeSearchResultsEnteredRef = useRef(false);
+  useEffect(() => {
+    if (!showPlaceSearchResults) {
+      placeSearchResultsEnteredRef.current = false;
+      return;
+    }
+    if (placeSearchResultsEnteredRef.current) return;
+    placeSearchResultsEnteredRef.current = true;
+    const el = contentScrollElRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [showPlaceSearchResults]);
+
   let contentStaggerIndex = 0;
 
-  return (
+  /** Portaled to `document.body` so `#ciclomapa { overflow: hidden }` does not clip this overlay. */
+  const modalTree = (
     <div
-      className="city-switcher-modal fixed inset-0 flex items-end justify-center"
+      className="city-switcher-modal fixed inset-0"
       role="dialog"
       aria-modal="true"
       data-testid="city-switcher-dialog"
@@ -1365,7 +1396,7 @@ function CitySwitcherModal({
     >
       <div
         ref={panelRef}
-        className="city-switcher-modal__panel relative z-10 flex flex-col bg-transparent pointer-events-auto"
+        className="city-switcher-modal__panel relative z-10 bg-transparent pointer-events-auto"
         tabIndex={-1}
       >
         <div className="city-switcher-modal__topControls">
@@ -1385,36 +1416,85 @@ function CitySwitcherModal({
             className="city-switcher-modal__geocoderMount relative z-30 px-5"
             aria-label="Buscar endereço ou local"
           >
-            <AutoComplete
-              className="city-switcher-global-search w-full"
-              popupClassName="city-switcher-modal__searchDropdown"
-              value={globalSearchValue}
-              onChange={(v) => {
-                const s = typeof v === 'string' ? v : '';
-                setGlobalSearchValue(s);
-              }}
-              onSearch={(s) => schedulePlacesSearch(s)}
-              onSelect={handleGlobalSearchSelect}
-              options={globalSearchOptions}
-              allowClear
-              notFoundContent={placesSearchLoading ? 'Buscando…' : undefined}
-            >
+            <div className="city-switcher-global-search w-full">
               <Input
                 variant="borderless"
                 size="large"
+                allowClear
+                value={globalSearchValue}
+                onChange={(e) => {
+                  const s = e.target.value;
+                  setGlobalSearchValue(s);
+                  schedulePlacesSearch(s);
+                }}
                 prefix={<IconSearchTyped className="opacity-60" aria-hidden />}
                 placeholder={globalSearchPlaceholder}
+                aria-autocomplete="list"
+                aria-controls={
+                  showPlaceSearchResults ? 'city-switcher-place-results-list' : undefined
+                }
+                aria-expanded={showPlaceSearchResults}
               />
-            </AutoComplete>
+            </div>
           </div>
         </div>
 
         <div
           ref={contentScrollElRef}
-          className="city-switcher-modal__content relative z-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-2.5"
-          aria-label="Lista de cidades"
+          className="city-switcher-modal__content relative z-0 px-4 pb-2.5"
+          aria-label={showPlaceSearchResults ? 'Resultados da busca' : 'Lista de cidades'}
         >
-          {recentCities.length > 0 && (
+          {showPlaceSearchResults ? (
+            <section
+              id="city-switcher-place-results"
+              className="city-switcher-modal__section city-switcher-modal__placeSearchSection mt-5"
+              aria-label="Locais encontrados"
+              data-testid="city-switcher-place-results"
+            >
+              {placesSearchLoading ? (
+                <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm opacity-75">
+                  Buscando…
+                </p>
+              ) : placeSuggestionList.length === 0 ? (
+                <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm opacity-75">
+                  Nenhum resultado
+                </p>
+              ) : (
+                <div
+                  id="city-switcher-place-results-list"
+                  className="city-switcher-modal__placeResultsList"
+                  role="list"
+                >
+                  {placeSuggestionList.map((s, i) => (
+                    <div
+                      key={s.id || s.properties?.place_id || `${s.place_name}-${i}`}
+                      className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
+                      style={{ '--city-content-stagger': i } as React.CSSProperties}
+                      role="listitem"
+                    >
+                      <button
+                        type="button"
+                        className="city-switcher-modal__cityBtn city-switcher-modal__placeSearchBtn"
+                        onClick={() => void handlePlaceSuggestionPick(s)}
+                      >
+                        <PlacesAutocompleteOptionLabel
+                          suggestion={s}
+                          rowClassName="city-switcher-modal__placeSearchRow"
+                          iconWrapperClassName="city-switcher-modal__placeSearchIconWrap"
+                          primaryClassName="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary"
+                          secondaryClassName="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary"
+                          iconClassName="city-switcher-modal__placeSearchIcon"
+                          iconMatchedClassName="city-switcher-modal__placeSearchIcon city-switcher-modal__placeSearchIcon--matched"
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {!showPlaceSearchResults && recentCities.length > 0 && (
             <section
               className="city-switcher-modal__section mt-5"
               aria-label="Recentemente visitadas"
@@ -1450,46 +1530,51 @@ function CitySwitcherModal({
             </section>
           )}
 
-          {topCitiesByCountry.map((group) => {
-            const cities = group.cities;
-            if (cities.length === 0) return null;
-            return (
-              <section
-                key={group.countryCode}
-                className="city-switcher-modal__section mt-5"
-                aria-label={group.countryLabel}
-                data-country-code={group.countryCode}
-              >
-                <div
-                  className="city-switcher-modal__staggerEnter"
-                  style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
+          {!showPlaceSearchResults &&
+            topCitiesByCountry.map((group) => {
+              const cities = group.cities;
+              if (cities.length === 0) return null;
+              return (
+                <section
+                  key={group.countryCode}
+                  className="city-switcher-modal__section mt-5"
+                  aria-label={group.countryLabel}
+                  data-country-code={group.countryCode}
                 >
-                  <div className="city-switcher-modal__sectionTitle px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
-                    {group.countryLabel}
+                  <div
+                    className="city-switcher-modal__staggerEnter"
+                    style={
+                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
+                    }
+                  >
+                    <div className="city-switcher-modal__sectionTitle px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
+                      {group.countryLabel}
+                    </div>
                   </div>
-                </div>
-                <div
-                  className="city-switcher-modal__citiesGrid grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3"
-                  role="list"
-                >
-                  {cities.map((c) => (
-                    <CityPickerCityCard
-                      key={c.canonicalSlug}
-                      city={c}
-                      stagger={contentStaggerIndex++}
-                      to={`/${encodeURIComponent(c.canonicalSlug)}`}
-                      onActivate={() => onCityLinkActivate(c, 'top')}
-                      infraLayers={infraLayersForMiniPie}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+                  <div
+                    className="city-switcher-modal__citiesGrid grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3"
+                    role="list"
+                  >
+                    {cities.map((c) => (
+                      <CityPickerCityCard
+                        key={c.canonicalSlug}
+                        city={c}
+                        stagger={contentStaggerIndex++}
+                        to={`/${encodeURIComponent(c.canonicalSlug)}`}
+                        onActivate={() => onCityLinkActivate(c, 'top')}
+                        infraLayers={infraLayersForMiniPie}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
         </div>
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalTree, document.body) : null;
 }
 
 /** Clears module-level stats cache and in-flight preload promise (Jest only; no-op in production). */

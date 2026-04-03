@@ -1,4 +1,4 @@
-import { HYBRID_MAX_RESULTS, SUPPORTED_COUNTRY_CODES } from './config/constants.js';
+import { SUPPORTED_COUNTRY_CODES } from './config/constants.js';
 import { ensureGooglePlacesReady, googlePlacesGeocoder } from './googlePlacesClient.js';
 
 /** Same threshold as DirectionsPanel origin/destination search. */
@@ -8,7 +8,7 @@ export const PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH = 3;
  * Default result cap: responsive (desktop 5, mobile 3), shared with hybrid routing settings.
  * DirectionsPanel previously used a fixed 5; city modal already used HYBRID_MAX_RESULTS.
  */
-export const PLACES_AUTOCOMPLETE_DEFAULT_LIMIT = HYBRID_MAX_RESULTS;
+export const PLACES_AUTOCOMPLETE_DEFAULT_LIMIT = 5;
 
 /**
  * Run a Places autocomplete query (predictions). Returns [] if the query is too short.
@@ -63,6 +63,42 @@ export async function searchPlacesForAutocomplete(query, options = {}) {
  * @param {object} suggestion — item from {@link googlePlacesGeocoder.search}
  * @returns {Promise<{ result: object }>} — {@code result} is suitable for {@code handleGeocoderResult} / area helpers
  */
+/**
+ * Options object for {@link searchPlacesForAutocomplete} — directions origin/destination field.
+ * Keeps result density and city-only exclusion aligned across call sites.
+ *
+ * @param {{ getCenter: () => { lng: number; lat: number } } | null | undefined} map
+ * @returns {object}
+ */
+export function getDirectionsPanelPlacesSearchOptions(map) {
+  return {
+    proximity: map ? [map.getCenter().lng, map.getCenter().lat] : null,
+    exclude: { bareCity: true },
+  };
+}
+
+/**
+ * Options for CitySwitcherModal global search: cities stay visible unless caller overrides `exclude`.
+ *
+ * @param {{ lat: number; lng: number } | null | undefined} mapCenter
+ * @param {object | undefined} placesAutocompleteOptions — forwarded modal prop (types, exclude, countryCodes, etc.)
+ */
+export function getCitySwitcherPlacesSearchOptions(mapCenter, placesAutocompleteOptions) {
+  /** @type {[number, number] | null} */
+  const proximity =
+    mapCenter && Number.isFinite(mapCenter.lat) && Number.isFinite(mapCenter.lng)
+      ? [mapCenter.lng, mapCenter.lat]
+      : null;
+
+  const { exclude: pasExclude, ...pasRest } = placesAutocompleteOptions ?? {};
+
+  return {
+    proximity: proximity ?? undefined,
+    ...pasRest,
+    exclude: { bareCity: false, ...pasExclude },
+  };
+}
+
 export async function geocodePlacesSuggestionToResult(suggestion) {
   if (!suggestion) {
     throw new Error('geocodePlacesSuggestionToResult: missing suggestion');
