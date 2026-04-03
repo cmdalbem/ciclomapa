@@ -82,7 +82,8 @@ export const motion = {
 };
 
 /** Focus ring for keyboard navigation / a11y */
-export const focusRing = '2px solid #0ea5e9';
+// export const focusRing = '2px solid #0ea5e9';
+export const focusRing = 'none';
 
 export const layout = {
   spinnerSize: 60,
