@@ -252,6 +252,8 @@ export function PlacesAutocompleteOptionLabel({
   iconWrapperClassName = 'flex-shrink-0 text-lg opacity-70',
   primaryClassName = 'text-sm font-medium truncate',
   secondaryClassName = 'text-xs text-gray-400 truncate',
+  iconClassName = 'text-gray-400',
+  iconMatchedClassName = 'text-gray-500',
 }) {
   const mainText =
     suggestion?.properties?.structured_formatting?.main_text || suggestion?.place_name || '';
@@ -261,8 +263,8 @@ export function PlacesAutocompleteOptionLabel({
     <div className={rowClassName}>
       <span className={iconWrapperClassName}>
         {getPlaceTypeIconElement(suggestion?.properties?.types, {
-          className: 'text-gray-400',
-          matchedClassName: 'text-gray-500',
+          className: iconClassName,
+          matchedClassName: iconMatchedClassName,
         })}
       </span>
       <div className="flex min-w-0 flex-1 flex-col">
