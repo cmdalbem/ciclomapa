@@ -1096,9 +1096,9 @@ class Map extends Component {
         // Interactions
 
         this.map.on('mouseenter', 'comentarios', (e) => {
-          if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
-            return;
-          }
+          // if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
+          //   return;
+          // }
           if (e.features.length > 0) {
             // Disable comment hover effects when in route mode
             if (self.props.isInRouteMode) {
@@ -1143,9 +1143,9 @@ class Map extends Component {
         });
 
         this.map.on('click', 'comentarios', (e) => {
-          if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
-            return;
-          }
+          // if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
+          //   return;
+          // }
           if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
             // Disable comment clicks when in route mode
             if (self.props.isInRouteMode) {
