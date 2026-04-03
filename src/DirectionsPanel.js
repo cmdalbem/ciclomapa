@@ -250,6 +250,7 @@ class DirectionsPanel extends Component {
           : null,
         // Historically always 5 results; keep route search denser than the responsive city-switcher cap.
         limit: HYBRID_MAX_RESULTS_DESKTOP,
+        exclude: { bareCity: true },
       });
 
       this.setState({
