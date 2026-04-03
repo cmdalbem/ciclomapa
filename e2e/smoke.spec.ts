@@ -5,7 +5,7 @@ test.describe('CicloMapa smoke', () => {
 
   test('loads shell and map container', async ({ page }) => {
     await page.goto(basePath);
-    await expect(page.getByRole('heading', { name: 'CicloMapa' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'CicloMapa', exact: true })).toBeVisible();
     await expect(page.getByTestId('map-container')).toBeVisible();
   });
 
@@ -18,13 +18,20 @@ test.describe('CicloMapa smoke', () => {
     await expect(aboutDialog).toBeHidden();
   });
 
-  test('opens and closes Layers legend (Escape)', async ({ page }) => {
-    await page.goto(basePath);
-    await page.getByRole('button', { name: /legenda/i }).click();
-    const anyDialog = page.getByRole('dialog');
-    await expect(anyDialog).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(anyDialog).toBeHidden();
+  // LayersBar (incl. legend control) mounts only when IS_MOBILE is true at first paint
+  // (`matchMedia` in constants.js). Use a narrow viewport for this test only.
+  test.describe('mobile layers bar', () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+
+    test('opens and closes Layers legend (Escape)', async ({ page }) => {
+      await page.goto(basePath);
+      await page.getByRole('button', { name: /abrir legenda do mapa/i }).click();
+      const legendDialog = page.getByRole('dialog', { name: /legenda do mapa/i });
+      await expect(legendDialog).toBeVisible();
+      await page.keyboard.press('Escape');
+      // LayersLegendModal stays mounted and only animates opacity; Playwright still treats it as "visible".
+      await expect(page.locator('#layers-legend-modal')).toHaveClass(/opacity-0/);
+    });
   });
 
   test('toggles theme', async ({ page }) => {

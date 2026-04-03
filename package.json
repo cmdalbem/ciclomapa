@@ -42,6 +42,7 @@
     "build": "craco build",
     "test": "craco test",
     "e2e": "playwright test",
+    "e2e:apis": "playwright test e2e/apis.spec.ts",
     "e2e:ui": "playwright test --ui",
     "lint": "eslint src/",
     "typecheck": "tsc -p tsconfig.json --noEmit",

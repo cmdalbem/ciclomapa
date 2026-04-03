@@ -2758,7 +2758,19 @@ class Map extends Component {
     return (
       <>
         {/* Thanks https://blog.mapbox.com/mapbox-gl-js-react-764da6cc074a */}
-        <div data-testid="map-container" ref={(el) => (this.mapContainer = el)}></div>
+        <div
+          data-testid="map-container"
+          ref={(el) => (this.mapContainer = el)}
+          style={
+            isE2E
+              ? {
+                  width: '100%',
+                  height: 'var(--viewport-height, 100vh)',
+                  minHeight: 'var(--viewport-height, 100vh)',
+                }
+              : undefined
+          }
+        />
 
         {ENABLE_COMMENTS && this.state.showCommentCursor && (
           <NewCommentCursor isDarkMode={this.props.isDarkMode} />
