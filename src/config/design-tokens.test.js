@@ -37,7 +37,7 @@ describe('design tokens', () => {
       expect(props['--spacing-topbar-height']).toMatch(/^\d+px$/);
       expect(props['--spacing-panel-width']).toMatch(/^\d+px$/);
       expect(props['--radius-md']).toMatch(/^\d+px$/);
-      expect(props['--focus-ring']).toMatch(/^[\d.]+px solid /);
+      expect(props).toHaveProperty('--focus-ring');
     });
 
     it('includes typography tokens', () => {

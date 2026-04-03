@@ -14,7 +14,6 @@ jest.mock('./googlePlacesClient.js', () => {
       getPlaceDetails: jest.fn(),
       reverseGeocode: jest.fn(),
       loadGoogleMapsAPI: jest.fn(),
-      getPlaceTypeIcon: jest.fn(() => null),
     },
     ensureGooglePlacesReady: jest.fn().mockResolvedValue(undefined),
   };

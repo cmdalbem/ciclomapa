@@ -4,7 +4,7 @@ import { MdGpsFixed as IconGPS } from 'react-icons/md';
 import { HiSearch as IconSearch } from 'react-icons/hi';
 
 import { ENABLE_MAP_CLICK_TO_SET_POINTS } from '../../../config/constants.js';
-import PlacesAutocompleteOptionLabel from '../../../PlacesAutocompleteOptionLabel.jsx';
+import { PlacesAutocompleteOptionLabel } from '../../../GooglePlacesGeocoder.js';
 
 export default function LocationSearchInput({ inputType, parentComponent, className = 'w-full' }) {
   const state = parentComponent.state;
