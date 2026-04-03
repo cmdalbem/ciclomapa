@@ -1346,43 +1346,45 @@ function CitySwitcherModal({
         className="city-switcher-modal__panel relative z-10 flex flex-col bg-transparent pointer-events-auto"
         tabIndex={-1}
       >
-        <div className="city-switcher-modal__headerRow flex justify-end pr-3 mb-3">
-          <div />
-          <Button
-            onClick={closeCityPicker}
-            type="text"
-            shape="circle"
-            aria-label="Fechar"
-            data-testid="city-switcher-close"
+        <div className="city-switcher-modal__topControls">
+          <div className="city-switcher-modal__closeSlot">
+            <Button
+              className="city-switcher-modal__closeBtn"
+              onClick={closeCityPicker}
+              type="text"
+              shape="circle"
+              aria-label="Fechar"
+              data-testid="city-switcher-close"
+            >
+              <HiOutlineXMarkIcon className="text-2xl text-white opacity-90" aria-hidden />
+            </Button>
+          </div>
+          <div
+            className="city-switcher-modal__geocoderMount relative z-30 px-5"
+            aria-label="Buscar endereço ou local (Google Places)"
           >
-            <HiOutlineXMarkIcon className="text-2xl text-white opacity-90" aria-hidden />
-          </Button>
-        </div>
-        <div
-          className="city-switcher-modal__geocoderMount relative z-30 px-5 pb-2.5"
-          aria-label="Buscar endereço ou local (Google Places)"
-        >
-          <AutoComplete
-            className="city-switcher-global-search w-full"
-            popupClassName="city-switcher-modal__searchDropdown"
-            value={globalSearchValue}
-            onChange={(v) => {
-              const s = typeof v === 'string' ? v : '';
-              setGlobalSearchValue(s);
-            }}
-            onSearch={(s) => schedulePlacesSearch(s)}
-            onSelect={handleGlobalSearchSelect}
-            options={globalSearchOptions}
-            allowClear
-            notFoundContent={placesSearchLoading ? 'Buscando…' : undefined}
-          >
-            <Input
-              variant="borderless"
-              size="large"
-              prefix={<IconSearchTyped className="opacity-60" aria-hidden />}
-              placeholder={globalSearchPlaceholder}
-            />
-          </AutoComplete>
+            <AutoComplete
+              className="city-switcher-global-search w-full"
+              popupClassName="city-switcher-modal__searchDropdown"
+              value={globalSearchValue}
+              onChange={(v) => {
+                const s = typeof v === 'string' ? v : '';
+                setGlobalSearchValue(s);
+              }}
+              onSearch={(s) => schedulePlacesSearch(s)}
+              onSelect={handleGlobalSearchSelect}
+              options={globalSearchOptions}
+              allowClear
+              notFoundContent={placesSearchLoading ? 'Buscando…' : undefined}
+            >
+              <Input
+                variant="borderless"
+                size="large"
+                prefix={<IconSearchTyped className="opacity-60" aria-hidden />}
+                placeholder={globalSearchPlaceholder}
+              />
+            </AutoComplete>
+          </div>
         </div>
 
         <div
