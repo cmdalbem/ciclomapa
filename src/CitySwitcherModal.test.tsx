@@ -31,7 +31,8 @@ jest.mock('./googlePlacesClient.js', () => {
   };
 });
 
-const RECENT_KEY = 'ciclomapa_recent_cities_v1';
+const RECENT_CITIES_STATS_KEY = 'ciclomapa_recent_cities_v1';
+const RECENT_ITEMS_KEY = 'ciclomapa_recent_items_v1';
 
 function cityLink(slug: string): HTMLElement {
   const el = document.querySelector(`a[data-city-slug="${slug}"]`);
@@ -56,7 +57,8 @@ afterEach(() => {
   jest.restoreAllMocks();
   resetCitySwitcherStatsCacheForTest();
   document.body.classList.remove('show-city-picker');
-  window.localStorage.removeItem(RECENT_KEY);
+  window.localStorage.removeItem(RECENT_CITIES_STATS_KEY);
+  window.localStorage.removeItem(RECENT_ITEMS_KEY);
 });
 
 function CitySwitcherTestHost() {
@@ -129,13 +131,16 @@ it('clicking a top city navigates to that slug and closes the picker', async () 
   expect(document.body.classList.contains('show-city-picker')).toBe(false);
 });
 
-it('shows Recentes when localStorage has recent cities with catalog entries', async () => {
+it('shows Recentes when localStorage has recent city items (favoritesStore)', async () => {
   window.localStorage.setItem(
-    RECENT_KEY,
+    RECENT_ITEMS_KEY,
     JSON.stringify([
       {
-        slug: 'rio-de-janeiro',
-        areaLabel: 'Rio de Janeiro, Rio de Janeiro, Brasil',
+        id: 'city:rio-de-janeiro',
+        type: 'city',
+        title: 'Rio de Janeiro',
+        subtitle: 'Rio de Janeiro, Brasil',
+        citySlug: 'rio-de-janeiro',
         visitedAt: Date.now(),
       },
     ])
@@ -145,11 +150,10 @@ it('shows Recentes when localStorage has recent cities with catalog entries', as
 
   const recentSection = await screen.findByTestId('city-switcher-recent');
   await waitFor(() => {
-    expect(recentSection.querySelector('a[data-city-slug="rio-de-janeiro"]')).toBeInstanceOf(
-      HTMLAnchorElement
-    );
+    const link = recentSection.querySelector('a[href="/rio-de-janeiro"]');
+    expect(link).toBeInstanceOf(HTMLAnchorElement);
   });
-  expect(recentSection.contains(cityLink('rio-de-janeiro'))).toBe(true);
+  expect(recentSection).toHaveTextContent('Rio de Janeiro');
 });
 
 describe('city stats totals from Storage', () => {

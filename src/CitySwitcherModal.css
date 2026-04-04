@@ -211,7 +211,7 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   min-height: 0;
 }
 
-/* One result per row (catalog cities use multi-column __citiesGrid). */
+/* Place search results: full-width rows (catalog / favorites / recents use __citiesGrid). */
 .city-switcher-modal__placeResultsList {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -257,10 +257,10 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
   height: 24px;
   font-size: 1.125rem;
   line-height: 0;
-  opacity: 0.88;
+  opacity: 0.3;
 }
 
-.city-switcher-modal__placeSearchIcon {
+/* .city-switcher-modal__placeSearchIcon {
   color: rgba(255, 255, 255, 0.52);
 }
 
@@ -274,7 +274,7 @@ body.show-city-picker .city-switcher-modal__geocoderMount {
 
 .theme-light .city-switcher-modal__placeSearchIcon--matched {
   color: rgba(0, 0, 0, 0.62);
-}
+} */
 
 .city-switcher-modal__placeSearchPrimary {
   white-space: normal;
@@ -489,7 +489,7 @@ a.city-switcher-modal__cityBtn {
 
 @media (max-width: 480px) {
   .city-switcher-modal {
-    padding-top: max(8px, env(safe-area-inset-top));
+    padding-top: max(12px, env(safe-area-inset-top));
     padding-left: max(4px, env(safe-area-inset-left));
     padding-right: max(4px, env(safe-area-inset-right));
     padding-bottom: max(4px, env(safe-area-inset-bottom));
@@ -555,7 +555,153 @@ a.city-switcher-modal__cityBtn {
   .city-switcher-modal__cityBtn {
     padding: 12px 12px !important;
   }
+
+  /*
+   * One-line title · subtitle (baseline-aligned) on mobile for home lists only
+   * (catalog, favorites, recents). Place search keeps a stacked column (no __cityNameWrap there).
+   */
+  .city-switcher-modal__cityNameWrap {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0;
+    flex-wrap: nowrap;
+  }
+
+  .city-switcher-modal__cityNameWrap > .city-switcher-modal__cityMeta::before {
+    content: '\00a0·\00a0';
+    font-weight: 400;
+  }
+
+  /* Title keeps full width; subtitle yields space and ellipsizes first. */
+  .city-switcher-modal__cityNameWrap > .city-switcher-modal__cityName {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .city-switcher-modal__cityNameWrap > .city-switcher-modal__cityMeta {
+    flex: 1 1 0%;
+    min-width: 0;
+  }
+
+  /* Overrides __placeSearchPrimary word-wrap only inside home cards that reuse those classes. */
+  .city-switcher-modal__cityNameWrap .city-switcher-modal__placeSearchPrimary,
+  .city-switcher-modal__cityNameWrap .city-switcher-modal__placeSearchSecondary {
+    white-space: nowrap !important;
+    word-break: normal !important;
+  }
 }
+
+/* Search result: one card (same shell as catalog) with pick + favorite inside */
+.city-switcher-modal__placeSearchResultCard {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.86);
+  padding: 0;
+  overflow: hidden;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.theme-light .city-switcher-modal__placeSearchResultCard {
+  background: rgba(0, 0, 0, 0.02) !important;
+  color: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(14px) saturate(1.08);
+}
+
+.city-switcher-modal__placeSearchResultCard:hover {
+  transform: translateY(-1px);
+  border-color: rgba(162, 162, 162, 0.28);
+  background: rgba(162, 162, 162, 0.06) !important;
+}
+
+.theme-light .city-switcher-modal__placeSearchResultCard:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
+.city-switcher-modal__placeSearchCardPick {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 14px 8px 14px 14px;
+  background: transparent;
+  color: inherit;
+}
+
+/* Favorite (heart) button */
+.city-switcher-modal__favBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.city-switcher-modal__placeSearchCardFav {
+  margin: 0 10px 0 0;
+}
+
+.city-switcher-modal__favBtn:hover {
+  background: rgba(162, 162, 162, 0.1);
+  transform: scale(1.1);
+}
+
+.city-switcher-modal__favIcon {
+  width: 18px;
+  height: 18px;
+  color: rgba(255, 255, 255, 0.35);
+  transition: color 160ms ease;
+}
+
+.theme-light .city-switcher-modal__favIcon {
+  color: rgba(0, 0, 0, 0.25);
+}
+
+.city-switcher-modal__favBtn:hover .city-switcher-modal__favIcon {
+  color: color-mix(in srgb, var(--color-favorite-accent) 80%, transparent);
+}
+
+.theme-dark .city-switcher-modal__favBtn:hover .city-switcher-modal__favIcon {
+  color: color-mix(in srgb, var(--color-favorite-accent-dark) 80%, transparent);
+}
+
+.city-switcher-modal__favIcon--active {
+  color: var(--color-favorite-accent) !important;
+}
+
+.theme-dark .city-switcher-modal__favIcon--active {
+  color: var(--color-favorite-accent-dark) !important;
+}
+
+/* Section / list hearts (replaces ad-hoc Tailwind amber) */
+/* .city-switcher-modal__favoriteHeart {
+  color: var(--color-favorite-accent);
+}
+
+.theme-dark .city-switcher-modal__favoriteHeart {
+  color: var(--color-favorite-accent-dark);
+} */
 
 @media (prefers-reduced-motion: reduce) {
   .city-switcher-modal__geocoderMount,

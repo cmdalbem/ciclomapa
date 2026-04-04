@@ -1,5 +1,10 @@
+import { FAVORITE_COLORS } from '../../config/design-tokens.js';
+
 import commentIcon from '../../img/icons/poi-comment.png';
 import commentIconLight from '../../img/icons/poi-comment--light.png';
+
+import favoriteIcon from '../../img/icons/poi-favorite.png';
+import favoriteIconLight from '../../img/icons/poi-favorite--light.png';
 
 import bikeparkingIcon from '../../img/icons/poi-bikeparking.png';
 import bikeparkingIconLight from '../../img/icons/poi-bikeparking--light.png';
@@ -25,6 +30,9 @@ import arrowCicloviaLight from '../../img/icons/arrow-ciclovia--light.png';
 import arrowCiclofaixa from '../../img/icons/arrow-ciclofaixa.png';
 import arrowCiclofaixaLight from '../../img/icons/arrow-ciclofaixa--light.png';
 
+/** Re-export: regenerate `poi-favorite*.png` when these token values change. */
+export { FAVORITE_COLORS as favoritePoiIconTints };
+
 export const arrowIconsByLayer: Record<string, string> = {
   Ciclovia: 'arrow-ciclovia',
   'Calçada compartilhada': 'arrow-ciclovia',
@@ -35,6 +43,8 @@ export const arrowIconsByLayer: Record<string, string> = {
 export const iconsMap: Record<string, string> = {
   'poi-comment': commentIcon,
   'poi-comment--light': commentIconLight,
+  'poi-favorite': favoriteIcon,
+  'poi-favorite--light': favoriteIconLight,
   'poi-bikeparking': bikeparkingIcon,
   'poi-bikeparking--light': bikeparkingIconLight,
   'poi-bikeparking-2x': bikeparkingIcon2x,
