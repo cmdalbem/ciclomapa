@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
-import { HiOutlineClock, HiOutlineXMark } from 'react-icons/hi2';
+import { HiMiniClock, HiOutlineXMark, HiOutlineHeart, HiHeart } from 'react-icons/hi2';
 import { HiSearch as IconSearch } from 'react-icons/hi';
 import { Button, Input } from 'antd';
 import Storage from './Storage.js';
@@ -14,6 +14,7 @@ import {
   IS_PROD,
   LENGTH_COUNTED_LAYER_IDS,
   MAX_RECENT_CITIES,
+  MAX_RECENT_ITEMS_DISPLAY,
   SUPPORTED_COUNTRIES,
   SUPPORTED_COUNTRY_CODES,
   SUPPORTED_COUNTRY_LABEL_PT_BY_CODE,
@@ -28,6 +29,15 @@ import {
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
 import OSMController from './OSMController.js';
+import {
+  readFavorites,
+  toggleFavorite,
+  readRecentItems,
+  addRecentCity,
+  addRecentPlace,
+  type FavoriteItem,
+  type RecentItem,
+} from './favoritesStore';
 
 import './CitySwitcherModal.css';
 
@@ -35,8 +45,10 @@ import './CitySwitcherModal.css';
 // but React 19's JSX typings require a component return type that is a JSX element.
 // Cast here to keep the rest of the file type-safe without changing runtime behavior.
 const HiOutlineXMarkIcon = HiOutlineXMark as unknown as React.FC<React.SVGProps<SVGElement>>;
-const HiOutlineClockIcon = HiOutlineClock as unknown as React.FC<React.SVGProps<SVGElement>>;
+const HiMiniClockIcon = HiMiniClock as unknown as React.FC<React.SVGProps<SVGElement>>;
 const IconSearchTyped = IconSearch as unknown as React.FC<React.SVGProps<SVGElement>>;
+const HiOutlineHeartIcon = HiOutlineHeart as unknown as React.FC<React.SVGProps<SVGElement>>;
+const HiHeartIcon = HiHeart as unknown as React.FC<React.SVGProps<SVGElement>>;
 
 const CITY_SWITCHER_LOG_PREFIX = '[city-switcher]';
 
@@ -47,6 +59,10 @@ const CITY_SWITCHER_STATS_KM_CACHE_KEY = 'ciclomapa_city_switcher_stats_km_v2';
 
 const CITY_PICKER_INPUT_SELECTOR =
   '.city-switcher-modal__geocoderMount .city-switcher-global-search input';
+
+/** Responsive columns for catalog cities, favorites, and recents (mobile: single column via CSS). */
+const CITY_SWITCHER_CARD_GRID_CLASS =
+  'city-switcher-modal__citiesGrid grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3';
 
 type StatsTotalsCacheEntry = {
   value: number | null;
@@ -1061,13 +1077,20 @@ export type CitySwitcherModalProps = {
   onPlacesResultSelected?: (payload: {
     lng: number;
     lat: number;
-    areaLabel: string;
+    /**
+     * City + state + country for app `state.area` (`getAreaStringFromResultLike` shape),
+     * never a street-only line.
+     */
+    areaContext: string;
     title: string;
     address: string;
     /** Google Places `types` from resolved details (drives the same icon as the dropdown). */
     placeTypes?: string[];
+    /** Google `place_id` or suggestion id when available (favorites + global search pin). */
+    placeId?: string;
   }) => void;
   onCatalogCityPicked?: () => void;
+  onFavoritesChanged?: (favorites: FavoriteItem[]) => void;
 };
 
 type PlacesSuggestionRow = {
@@ -1088,11 +1111,22 @@ type GeocodedPlaceResult = PlacesSuggestionRow & {
   center?: [number, number];
 };
 
+function placeSearchRowKey(s: PlacesSuggestionRow): string | undefined {
+  return s.properties?.place_id || s.id || undefined;
+}
+
+function isPlaceSearchRowFavorited(s: PlacesSuggestionRow, favorites: FavoriteItem[]): boolean {
+  const key = placeSearchRowKey(s);
+  if (!key) return false;
+  return favorites.some((f) => f.placeId === key);
+}
+
 function CitySwitcherModal({
   mapCenter = null,
   placesAutocompleteOptions,
   onPlacesResultSelected,
   onCatalogCityPicked,
+  onFavoritesChanged,
 }: CitySwitcherModalProps = {}) {
   const { city } = useParams();
 
@@ -1128,6 +1162,13 @@ function CitySwitcherModal({
   }, [topCityBase]);
 
   const [recentCityEntries, setRecentCityEntries] = useState(() => readRecentCitiesFromStorage());
+  const [recentItems, setRecentItems] = useState<RecentItem[]>(() => readRecentItems());
+  const [favorites, setFavorites] = useState<FavoriteItem[]>(() => readFavorites());
+
+  const recentItemsDisplayed = useMemo(
+    () => recentItems.slice(0, MAX_RECENT_ITEMS_DISPLAY),
+    [recentItems]
+  );
 
   const [globalSearchValue, setGlobalSearchValue] = useState('');
 
@@ -1165,6 +1206,9 @@ function CitySwitcherModal({
     if (!isCityPickerOpen) {
       setGlobalSearchValue('');
       clearPlacesSearch();
+    } else {
+      setRecentItems(readRecentItems());
+      setFavorites(readFavorites());
     }
   }, [isCityPickerOpen, clearPlacesSearch]);
 
@@ -1201,36 +1245,6 @@ function CitySwitcherModal({
       return { ...c, totalLength, isLoadingTotal, lengthsKmByLayer };
     });
   }, [topCityBase, statsTotalsByCanonicalSlug, isLoadingTotals]);
-
-  const recentCities = useMemo<RecentCityWithStats[]>(() => {
-    return recentCityEntries
-      .map((it): RecentCityWithStats | null => {
-        const def = getPredefinedCitySlugDefinition(it.canonicalSlug);
-        if (!def) return null;
-        const areaLabel = def?.staticLocation?.areaLabel || it.areaLabel;
-        const [name, ...rest] = String(areaLabel)
-          .split(',')
-          .map((s) => s.trim());
-        const meta = getPrimaryAreaMeta(rest);
-        const cityObj: StatsCityLike = { canonicalSlug: it.canonicalSlug, areaLabel, name, meta };
-        const { totalLength, isLoadingTotal, lengthsKmByLayer } = attachCityStatsTotals(
-          cityObj,
-          statsTotalsByCanonicalSlug,
-          isLoadingTotals
-        );
-        return {
-          ...it,
-          areaLabel,
-          name,
-          meta,
-          countryCode: def?.countrycodes?.[0] || null,
-          totalLength,
-          isLoadingTotal,
-          lengthsKmByLayer,
-        };
-      })
-      .filter((row): row is RecentCityWithStats => row !== null);
-  }, [recentCityEntries, statsTotalsByCanonicalSlug, isLoadingTotals]);
 
   const topCitiesByCountry = useMemo<CountryGroup[]>(() => {
     const map = new Map<string, CountryGroup>();
@@ -1282,8 +1296,33 @@ function CitySwitcherModal({
         writeRecentCitiesToStorage(nextItems);
         return recentCityEntriesFromStorageWriteShape(nextItems);
       });
+
+      setRecentItems(addRecentCity(nextSlug, areaLabel || nextSlug));
     },
     []
+  );
+
+  const recordRecentPlace = useCallback(
+    (place: {
+      lng: number;
+      lat: number;
+      title: string;
+      subtitle: string;
+      placeTypes?: string[];
+      areaContext?: string;
+    }) => {
+      setRecentItems(addRecentPlace(place));
+    },
+    []
+  );
+
+  const handleToggleFavorite = useCallback(
+    (fav: Omit<FavoriteItem, 'id' | 'addedAt'>) => {
+      const { favorites: next } = toggleFavorite(fav);
+      setFavorites(next);
+      onFavoritesChanged?.(next);
+    },
+    [onFavoritesChanged]
   );
 
   const globalSearchPlaceholder = useMemo(() => {
@@ -1309,14 +1348,25 @@ function CitySwitcherModal({
         const [lng, lat] = resolved.center;
         const { formatted_address: formattedAddress, name: resolvedName } =
           resolved.properties ?? {};
-        const areaStr = getAreaStringFromResultLike(resolved) || formattedAddress || '';
+        const areaContext = getAreaStringFromResultLike(resolved) || '';
+        const title = resolvedName || resolved.place_name || '';
+        const addressLine = formattedAddress || '';
         onPlacesResultSelected?.({
           lng,
           lat,
-          areaLabel: areaStr,
-          title: resolvedName || resolved.place_name || '',
-          address: formattedAddress || '',
+          areaContext,
+          title,
+          address: addressLine,
           placeTypes: resolved.properties?.types,
+          placeId: resolved.properties?.place_id || sug.id || '',
+        });
+        recordRecentPlace({
+          lng,
+          lat,
+          title,
+          subtitle: addressLine || areaContext,
+          placeTypes: resolved.properties?.types,
+          areaContext,
         });
         closeCityPicker();
         setGlobalSearchValue('');
@@ -1325,7 +1375,7 @@ function CitySwitcherModal({
         console.error(CITY_SWITCHER_LOG_PREFIX, 'place details failed', e);
       }
     },
-    [clearPlacesSearch, closeCityPicker, onPlacesResultSelected]
+    [clearPlacesSearch, closeCityPicker, onPlacesResultSelected, recordRecentPlace]
   );
 
   /** Runs when the user follows a city link in this tab (navigation is handled by the link `to`). */
@@ -1465,66 +1515,288 @@ function CitySwitcherModal({
                   className="city-switcher-modal__placeResultsList"
                   role="list"
                 >
-                  {placeSuggestionList.map((s, i) => (
-                    <div
-                      key={s.id || s.properties?.place_id || `${s.place_name}-${i}`}
-                      className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
-                      style={{ '--city-content-stagger': i } as React.CSSProperties}
-                      role="listitem"
-                    >
-                      <button
-                        type="button"
-                        className="city-switcher-modal__cityBtn city-switcher-modal__placeSearchBtn"
-                        onClick={() => void handlePlaceSuggestionPick(s)}
+                  {placeSuggestionList.map((s, i) => {
+                    const sugName =
+                      s.properties?.structured_formatting?.main_text ||
+                      s.properties?.name ||
+                      s.place_name ||
+                      '';
+                    const sugSecondary =
+                      s.properties?.structured_formatting?.secondary_text ||
+                      s.properties?.formatted_address ||
+                      '';
+                    const rowFav = isPlaceSearchRowFavorited(s, favorites);
+                    const rowPlaceId = placeSearchRowKey(s);
+                    return (
+                      <div
+                        key={s.id || s.properties?.place_id || `${s.place_name}-${i}`}
+                        className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
+                        style={{ '--city-content-stagger': i } as React.CSSProperties}
+                        role="listitem"
                       >
-                        <PlacesAutocompleteOptionLabel
-                          suggestion={s}
-                          rowClassName="city-switcher-modal__placeSearchRow"
-                          iconWrapperClassName="city-switcher-modal__placeSearchIconWrap"
-                          primaryClassName="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary"
-                          secondaryClassName="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary"
-                          iconClassName="city-switcher-modal__placeSearchIcon"
-                          iconMatchedClassName="city-switcher-modal__placeSearchIcon city-switcher-modal__placeSearchIcon--matched"
-                        />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="city-switcher-modal__placeSearchResultCard">
+                          <button
+                            type="button"
+                            className="city-switcher-modal__placeSearchCardPick"
+                            onClick={() => void handlePlaceSuggestionPick(s)}
+                          >
+                            <PlacesAutocompleteOptionLabel
+                              suggestion={s}
+                              rowClassName="city-switcher-modal__placeSearchRow"
+                              iconWrapperClassName="city-switcher-modal__placeSearchIconWrap"
+                              primaryClassName="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary"
+                              secondaryClassName="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary"
+                              iconClassName="city-switcher-modal__placeSearchIcon"
+                              iconMatchedClassName="city-switcher-modal__placeSearchIcon city-switcher-modal__placeSearchIcon--matched"
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            className="city-switcher-modal__favBtn city-switcher-modal__placeSearchCardFav"
+                            aria-label={
+                              rowFav ? `Remover ${sugName} dos favoritos` : `Favoritar ${sugName}`
+                            }
+                            aria-pressed={rowFav}
+                            onClick={() => {
+                              (async () => {
+                                try {
+                                  const { result: resolvedRaw } =
+                                    await geocodePlacesSuggestionToResult(s);
+                                  const resolved = resolvedRaw as GeocodedPlaceResult;
+                                  if (!resolved.center) return;
+                                  const [lng, lat] = resolved.center;
+                                  handleToggleFavorite({
+                                    lng,
+                                    lat,
+                                    title:
+                                      resolved.properties?.name || resolved.place_name || sugName,
+                                    subtitle:
+                                      resolved.properties?.formatted_address || sugSecondary,
+                                    placeTypes: resolved.properties?.types,
+                                    placeId: rowPlaceId,
+                                    areaContext: getAreaStringFromResultLike(resolved) || '',
+                                  });
+                                } catch {}
+                              })();
+                            }}
+                          >
+                            {rowFav ? (
+                              <HiHeartIcon
+                                className="city-switcher-modal__favIcon city-switcher-modal__favIcon--active"
+                                aria-hidden
+                              />
+                            ) : (
+                              <HiOutlineHeartIcon
+                                className="city-switcher-modal__favIcon"
+                                aria-hidden
+                              />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </section>
           ) : null}
 
-          {!showPlaceSearchResults && recentCities.length > 0 && (
+          {!showPlaceSearchResults && favorites.length > 0 && (
             <section
               className="city-switcher-modal__section mt-5"
-              aria-label="Recentemente visitadas"
+              aria-label="Favoritos"
+              data-testid="city-switcher-favorites"
+            >
+              <div
+                className="city-switcher-modal__staggerEnter"
+                style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
+              >
+                {/* <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
+                  <HiHeartIcon
+                    className="h-4 w-4 flex-shrink-0 city-switcher-modal__favoriteHeart"
+                    aria-hidden="true"
+                  />
+                  Favoritos
+                </div> */}
+              </div>
+              <div
+                className={CITY_SWITCHER_CARD_GRID_CLASS}
+                role="list"
+                data-testid="city-switcher-favorites-list"
+              >
+                {favorites.map((fav) => (
+                  <div
+                    key={fav.id}
+                    className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
+                    style={
+                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
+                    }
+                    role="listitem"
+                  >
+                    <button
+                      type="button"
+                      className="city-switcher-modal__cityBtn city-switcher-modal__placeSearchBtn"
+                      onClick={() => {
+                        onPlacesResultSelected?.({
+                          lng: fav.lng,
+                          lat: fav.lat,
+                          areaContext: fav.areaContext || '',
+                          title: fav.title,
+                          address: fav.subtitle,
+                          placeTypes: fav.placeTypes,
+                          placeId: fav.placeId || '',
+                        });
+                        recordRecentPlace({
+                          lng: fav.lng,
+                          lat: fav.lat,
+                          title: fav.title,
+                          subtitle: fav.subtitle,
+                          placeTypes: fav.placeTypes,
+                          areaContext: fav.areaContext,
+                        });
+                        closeCityPicker();
+                      }}
+                    >
+                      <div className="city-switcher-modal__placeSearchRow">
+                        <div
+                          className="city-switcher-modal__placeSearchIconWrap"
+                          aria-hidden="true"
+                        >
+                          <HiHeartIcon className="city-switcher-modal__placeSearchIcon city-switcher-modal__placeSearchIcon--matched city-switcher-modal__favoriteHeart h-[1.125rem] w-[1.125rem]" />
+                        </div>
+                        <div className="city-switcher-modal__cityNameWrap">
+                          <div className="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary">
+                            {fav.title}
+                          </div>
+                          {fav.subtitle ? (
+                            <div className="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary">
+                              {fav.subtitle}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {!showPlaceSearchResults && recentItemsDisplayed.length > 0 && (
+            <section
+              className="city-switcher-modal__section mt-5"
+              aria-label="Recentes"
               data-testid="city-switcher-recent"
             >
               <div
                 className="city-switcher-modal__staggerEnter"
                 style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
               >
-                <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
-                  <HiOutlineClockIcon
+                {/* <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
+                  <HiMiniClockIcon
                     className="h-4 w-4 flex-shrink-0 opacity-75 text-white"
                     aria-hidden="true"
                   />
                   Recentes
-                </div>
+                </div> */}
               </div>
               <div
-                className="city-switcher-modal__citiesGrid grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3"
+                className={CITY_SWITCHER_CARD_GRID_CLASS}
                 role="list"
+                data-testid="city-switcher-recent-list"
               >
-                {recentCities.map((c) => (
-                  <CityPickerCityCard
-                    key={c.canonicalSlug}
-                    city={c}
-                    stagger={contentStaggerIndex++}
-                    to={`/${encodeURIComponent(c.canonicalSlug)}`}
-                    onActivate={() => onCityLinkActivate(c, 'recent')}
-                    infraLayers={infraLayersForMiniPie}
-                  />
+                {recentItemsDisplayed.map((item) => (
+                  <div
+                    key={item.id}
+                    className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
+                    style={
+                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
+                    }
+                    role="listitem"
+                  >
+                    {item.type === 'city' && item.citySlug ? (
+                      <Link
+                        to={`/${encodeURIComponent(item.citySlug)}`}
+                        className="city-switcher-modal__cityBtn city-switcher-modal__placeSearchBtn"
+                        onClick={() => {
+                          if (item.citySlug) {
+                            const def = getPredefinedCitySlugDefinition(item.citySlug);
+                            const areaLabel =
+                              def?.staticLocation?.areaLabel ||
+                              `${item.title}${item.subtitle ? `, ${item.subtitle}` : ''}`;
+                            recordRecentlyVisitedCity(item.citySlug, areaLabel);
+                          }
+                          onCatalogCityPicked?.();
+                          closeCityPicker();
+                        }}
+                      >
+                        <div className="city-switcher-modal__placeSearchRow">
+                          <div
+                            className="city-switcher-modal__placeSearchIconWrap"
+                            aria-hidden="true"
+                          >
+                            <HiMiniClockIcon className="city-switcher-modal__placeSearchIcon h-[1.125rem] w-[1.125rem]" />
+                          </div>
+                          <div className="city-switcher-modal__cityNameWrap">
+                            <div className="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary">
+                              {item.title}
+                            </div>
+                            {item.subtitle ? (
+                              <div className="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary">
+                                {item.subtitle}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className="city-switcher-modal__cityBtn city-switcher-modal__placeSearchBtn"
+                        onClick={() => {
+                          if (item.lng != null && item.lat != null) {
+                            onPlacesResultSelected?.({
+                              lng: item.lng,
+                              lat: item.lat,
+                              areaContext: item.areaContext || '',
+                              title: item.title,
+                              address: item.subtitle,
+                              placeTypes: item.placeTypes,
+                              placeId: '',
+                            });
+                            recordRecentPlace({
+                              lng: item.lng,
+                              lat: item.lat,
+                              title: item.title,
+                              subtitle: item.subtitle,
+                              placeTypes: item.placeTypes,
+                              areaContext: item.areaContext,
+                            });
+                          }
+                          closeCityPicker();
+                        }}
+                      >
+                        <div className="city-switcher-modal__placeSearchRow">
+                          <div
+                            className="city-switcher-modal__placeSearchIconWrap"
+                            aria-hidden="true"
+                          >
+                            <HiMiniClockIcon className="city-switcher-modal__placeSearchIcon h-[1.125rem] w-[1.125rem]" />
+                          </div>
+                          <div className="city-switcher-modal__cityNameWrap">
+                            <div className="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary">
+                              {item.title}
+                            </div>
+                            {item.subtitle ? (
+                              <div className="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary">
+                                {item.subtitle}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             </section>
@@ -1551,10 +1823,7 @@ function CitySwitcherModal({
                       {group.countryLabel}
                     </div>
                   </div>
-                  <div
-                    className="city-switcher-modal__citiesGrid grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3"
-                    role="list"
-                  >
+                  <div className={CITY_SWITCHER_CARD_GRID_CLASS} role="list">
                     {cities.map((c) => (
                       <CityPickerCityCard
                         key={c.canonicalSlug}

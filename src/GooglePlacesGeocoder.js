@@ -250,6 +250,7 @@ export function PlacesAutocompleteOptionLabel({
   suggestion,
   rowClassName = 'flex min-w-0 items-center gap-3 py-1',
   iconWrapperClassName = 'flex-shrink-0 text-lg opacity-70',
+  textColumnClassName = 'flex min-w-0 flex-1 flex-col',
   primaryClassName = 'text-sm font-medium truncate',
   secondaryClassName = 'text-xs text-gray-400 truncate',
   iconClassName = 'text-gray-400',
@@ -267,7 +268,7 @@ export function PlacesAutocompleteOptionLabel({
           matchedClassName: iconMatchedClassName,
         })}
       </span>
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className={textColumnClassName}>
         <span className={primaryClassName}>{mainText}</span>
         {secondaryText ? <span className={secondaryClassName}>{secondaryText}</span> : null}
       </div>

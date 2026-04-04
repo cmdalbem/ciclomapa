@@ -43,6 +43,8 @@ import {
   MAX_RECENT_CITIES,
 } from './config/constants.js';
 import { maybeAutoOpenWelcomeAboutModal, shouldAutoOpenWelcomeAboutModal } from './AboutModal.js';
+import { readFavorites, toggleFavorite } from './favoritesStore';
+import { reverseGeocodePlace } from './googlePlacesClient.js';
 
 // v5+ no longer ships global type scale in the old Less bundle; this restores baseline
 // margins for raw h1–p etc. (and complements Tailwind preflight). See antd/dist/reset.css.
@@ -159,6 +161,9 @@ class App extends Component {
 
     const embedMode = urlParams.embed;
 
+    const urlFlagEnabled = (raw) =>
+      Boolean(raw) && String(raw).toLowerCase() !== 'false' && String(raw) !== '0';
+
     // Avoid first-paint flicker: decide welcome modal state before initial render.
     const shouldAutoOpenWelcomeModal = shouldAutoOpenWelcomeAboutModal({
       fromMount: true,
@@ -185,7 +190,9 @@ class App extends Component {
       embedMode,
       isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : DEFAULT_SIDEBAR_OPEN,
       hideUI: shouldAutoOpenWelcomeModal,
+      hideUIFromUrl: urlFlagEnabled(urlParams.hideui),
       aboutModal: shouldAutoOpenWelcomeModal,
+      cleanMode: urlFlagEnabled(urlParams.clean),
       layersLegendModal: false,
       layersLegendScrollToSection: null,
       lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
@@ -198,8 +205,13 @@ class App extends Component {
       airtableMetadataRecords: null,
       airtableCityFields: null,
       globalSearchPin: null,
+      favorites: readFavorites(),
     };
   }
+
+  handleFavoritesChanged = (favorites) => {
+    this.setState({ favorites });
+  };
 
   loadAirtableMetadata = async () => {
     try {
@@ -343,7 +355,7 @@ class App extends Component {
   }
 
   getParamsFromURL() {
-    const possibleParams = ['z', 'lat', 'lng', 'embed', 'debug', 'from', 'to'];
+    const possibleParams = ['z', 'lat', 'lng', 'embed', 'debug', 'from', 'to', 'clean', 'hideui'];
     const urlParams = new URLSearchParams(this.props.location.search);
     let paramsObj = {};
 
@@ -763,6 +775,18 @@ class App extends Component {
       currentParams.set('embed', 'true');
     } else {
       currentParams.delete('embed');
+    }
+
+    if (this.state.cleanMode) {
+      currentParams.set('clean', 'true');
+    } else {
+      currentParams.delete('clean');
+    }
+
+    if (this.state.hideUIFromUrl) {
+      currentParams.set('hideui', 'true');
+    } else {
+      currentParams.delete('hideui');
     }
 
     if (this.state.fromPoint && this.state.toPoint) {
@@ -1408,10 +1432,28 @@ class App extends Component {
     this.setState({ globalSearchPin: null });
   };
 
-  handleGlobalSearchPlaceSelect = ({ lng, lat, areaLabel, title, address, placeTypes }) => {
+  handleGlobalSearchPlaceSelect = async ({
+    lng,
+    lat,
+    areaContext,
+    title,
+    address,
+    placeTypes,
+    placeId,
+  }) => {
     const zoom = 16;
-    const rawArea =
-      areaLabel && String(areaLabel).trim() ? String(areaLabel).trim() : this.state.area;
+    let rawArea = areaContext != null ? String(areaContext).trim() : '';
+    if (!rawArea) {
+      try {
+        const rev = await reverseGeocodePlace({ lng, lat });
+        rawArea = rev?.place_name ? String(rev.place_name).trim() : '';
+      } catch (e) {
+        console.debug('[global-search] reverse geocode for app area failed', e);
+      }
+    }
+    if (!rawArea) {
+      rawArea = this.state.area ? String(this.state.area).trim() : '';
+    }
     const normalizedArea = this.normalizeAreaLabelForDisplay(rawArea);
 
     this.setState(
@@ -1426,6 +1468,8 @@ class App extends Component {
           title: title || '',
           address: address || '',
           placeTypes: Array.isArray(placeTypes) ? placeTypes : [],
+          placeId: placeId != null ? String(placeId) : '',
+          areaContext: rawArea || '',
         },
       },
       () => {
@@ -1476,6 +1520,7 @@ class App extends Component {
       closeLayersLegendModal: this.closeLayersLegendModal,
       clearGlobalSearchPin: this.clearGlobalSearchPin,
       handleGlobalSearchPlaceSelect: this.handleGlobalSearchPlaceSelect,
+      handleFavoritesChanged: this.handleFavoritesChanged,
     };
     return (
       <AntdAppShell isDarkMode={this.state.isDarkMode}>

@@ -1,6 +1,6 @@
 @keyframes popupFadeIn {
   0% {
-    transform: translateY(4px);
+    transform: translateY(-8px);
     opacity: 0;
   }
   100% {
@@ -11,7 +11,7 @@
 
 @keyframes popupSlideUp {
   0% {
-    transform: translateY(100%);
+    transform: translateY(16px);
     opacity: 0;
   }
   100% {
@@ -21,7 +21,7 @@
 }
 
 .mapboxgl-popup > div {
-  animation: popupFadeIn 300ms ease-out;
+  animation: popupFadeIn 600ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -49,7 +49,7 @@
 
 .popup-big .mapboxgl-popup-content {
   padding: 24px 16px;
-  min-width: 460px;
+  min-width: 478px;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
   /* box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3); */
   border-radius: 12px;
@@ -169,17 +169,17 @@
 @media (min-width: 320px) and (max-width: 480px) {
   .popup-big.mapboxgl-popup {
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
     top: unset;
     z-index: 10;
-    max-width: 100% !important;
+    max-width: calc(100% - 16px) !important;
     transform: translateY(0) !important;
   }
 
   .popup-big.mapboxgl-popup > div {
-    animation: popupSlideUp 350ms cubic-bezier(0.16, 1, 0.3, 1);
+    animation: popupSlideUp 600ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* .popup-big .mapboxgl-popup-content .-mb-2.mt-10 {
@@ -192,8 +192,19 @@
 
   .popup-big .mapboxgl-popup-content {
     min-width: auto;
-    width: 100vw;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
+    width: 100%;
+    /* border-bottom-left-radius: 0; */
+    /* border-bottom-right-radius: 0; */
   }
+}
+
+/* Popup favorite button active state (see design-tokens --color-favorite-accent*) */
+.popup-fav-btn--active {
+  color: var(--color-favorite-accent) !important;
+  border-color: var(--color-favorite-accent) !important;
+}
+
+.theme-dark .popup-fav-btn--active {
+  color: var(--color-favorite-accent-dark) !important;
+  border-color: var(--color-favorite-accent-dark) !important;
 }
