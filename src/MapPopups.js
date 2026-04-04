@@ -9,6 +9,7 @@ import { formatTimeAgo } from './utils/utils.js';
 
 import { ENABLE_COMMENTS, IS_MOBILE } from './config/constants.js';
 import { getPlaceTypeIconElement } from './GooglePlacesGeocoder.js';
+import { isFavorite, isFavoriteById } from './favoritesStore';
 
 /** POI address line from Overpass tags; Nominatim fallback (https://operations.osmfoundation.org/policies/nominatim/). */
 
@@ -21,7 +22,7 @@ export function escapeHtml(text) {
 }
 
 const POPUP_PLACE_TYPE_ICON_CLASS =
-  'search-result-popup-place-icon w-6 h-6 flex-shrink-0 opacity-90';
+  'search-result-popup-place-icon w-4 h-4 flex-shrink-0 mt-1 opacity-70';
 
 /** SVG string for the same place-type icon as the city search dropdown (Google `types`). */
 function renderPlaceTypeIconHtml(types) {
@@ -30,6 +31,37 @@ function renderPlaceTypeIconHtml(types) {
     matchedClassName: POPUP_PLACE_TYPE_ICON_CLASS,
   });
   return renderToStaticMarkup(el);
+}
+
+const FAV_HEART_OUTLINE_SVG = `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>`;
+const FAV_HEART_FILLED_SVG = `<svg fill="currentColor" stroke="currentColor" stroke-width="0" viewBox="0 0 24 24" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17l-.022.012-.007.004-.002.001h-.002L12 21.12l-1.645-.211z" clip-rule="evenodd"/></svg>`;
+
+/** `favMeta` mirrors `favoritesStore` fields when favoriting from the search-result popup. */
+function buildFavBtnHtml(lng, lat, title, color, favoriteId = null, favMeta = null) {
+  const active =
+    favoriteId != null && favoriteId !== ''
+      ? isFavoriteById(favoriteId)
+      : isFavorite(lng, lat, title);
+  const activeClass = active ? ' popup-fav-btn--active' : '';
+  const icon = active ? FAV_HEART_FILLED_SVG : FAV_HEART_OUTLINE_SVG;
+  const label = active ? 'Favoritado' : 'Favoritar';
+  const idAttr =
+    favoriteId != null && favoriteId !== ''
+      ? ` data-fav-id="${escapeHtml(String(favoriteId))}"`
+      : '';
+  let metaAttrs = '';
+  if (favMeta && typeof favMeta === 'object') {
+    const typesJson = JSON.stringify(Array.isArray(favMeta.placeTypes) ? favMeta.placeTypes : []);
+    metaAttrs = ` data-fav-subtitle="${escapeHtml(favMeta.subtitle || '')}" data-fav-area-context="${escapeHtml(
+      favMeta.areaContext || ''
+    )}" data-fav-place-id="${escapeHtml(favMeta.placeId || '')}" data-fav-place-types="${escapeHtml(typesJson)}"`;
+  }
+  return `<button type="button"
+      class="popup-fav-btn${activeClass} flex-shrink-0 border border-opacity-25 border-${color} px-3 py-1.5 text-sm rounded-full whitespace-nowrap"
+      data-fav-lng="${lng}" data-fav-lat="${lat}" data-fav-title="${escapeHtml(title)}"
+      ${idAttr}${metaAttrs}
+      onclick="window.toggleFavoriteFromPopup && window.toggleFavoriteFromPopup(this);"
+  ><span class="popup-fav-btn__icon">${icon}</span><span class="popup-fav-btn__label">${label}</span></button>`;
 }
 
 export function formatAddressLineFromOsmProperties(properties) {
@@ -286,7 +318,7 @@ class MapPopups {
         const displayName = translatedName || key;
 
         return `
-                    <div class="mt-2">
+                    <div>
                         <div class="${labelColor}">
                             ${displayName}
                         </div>
@@ -302,16 +334,22 @@ class MapPopups {
     }
 
     return `
-            <div class="mt-2 md:text-sm text-xs grid grid-cols-2 gap-2">
+            <div class="mt-4 md:text-sm text-xs grid grid-cols-2 gap-3">
                 ${propertiesHtml}
             </div>`;
   }
 
-  getSearchResultFooter(color = 'white', coordinates = null) {
+  getSearchResultFooter(
+    color = 'white',
+    coordinates = null,
+    title = '',
+    favoriteId = null,
+    favMeta = null
+  ) {
     if (!coordinates || coordinates.length !== 2) return '';
     const [lng, lat] = coordinates;
     return `
-            <div class="popup-footer-outer -mb-6 md:mt-10 mt-5 pt-4 pb-4 rounded-bl-lg rounded-br-lg" style="background-color: rgba(0,0,0,0.04)">
+            <div class="popup-footer-outer -mb-6 md:mt-8 mt-5 pt-4 pb-4 rounded-bl-lg rounded-br-lg" >
                 <div class="popup-footer-actions flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5 px-4">
                     <button type="button" class="flex-shrink-0 border border-opacity-25 border-${color} px-3 py-1.5 text-sm rounded-full whitespace-nowrap"
                         onclick="window.setDestinationFromPopup && window.setDestinationFromPopup(${JSON.stringify(
@@ -321,6 +359,7 @@ class MapPopups {
                         <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.62515 0.569498C5.38448 -0.189833 6.61582 -0.189833 7.37515 0.569498L11.4308 4.62516C12.19 5.38451 12.1901 6.61589 11.4308 7.37516L7.37515 11.4308C6.61588 12.1901 5.38449 12.19 4.62515 11.4308L0.569489 7.37516C-0.189836 6.61584 -0.189824 5.38449 0.569489 4.62516L4.62515 0.569498ZM7.00015 5.00016H4.50015C3.67173 5.00016 3.00015 5.67173 3.00015 6.50016V8.00016H4.00015V6.50016C4.00015 6.22402 4.22401 6.00016 4.50015 6.00016H7.00015V8.65153L9.10074 5.50016L7.00015 2.34879V5.00016Z"/></svg>
                         Como chegar
                     </button>
+                    ${buildFavBtnHtml(lng, lat, title, color, favoriteId, favMeta)}
                     ${
                       ENABLE_COMMENTS
                         ? `
@@ -340,16 +379,32 @@ class MapPopups {
         `;
   }
 
-  showSearchResultPopup({ lng, lat, title, address, placeTypes }) {
+  showSearchResultPopup({
+    lng,
+    lat,
+    title,
+    address,
+    placeTypes,
+    favoriteId,
+    placeId,
+    areaContext,
+  }) {
     const titleHtml = title
       ? escapeHtml(title)
       : '<span class="font-medium italic opacity-50">Local</span>';
     const addressLine = address ? escapeHtml(address) : '';
     const addressBlock = addressLine
-      ? `<div class="mt-1 sm:mt-0 text-xs md:text-sm break-words opacity-60 leading-snug">${addressLine}</div>`
+      ? `<div class="text-xs md:text-sm break-words opacity-60 leading-snug">${addressLine}</div>`
       : '';
 
     const iconHtml = renderPlaceTypeIconHtml(placeTypes);
+
+    const favMeta = {
+      subtitle: address || '',
+      placeTypes: Array.isArray(placeTypes) ? placeTypes : [],
+      placeId: placeId || '',
+      areaContext: areaContext || '',
+    };
 
     const html = `
             <div class="flex items-start gap-3 mt-2 mb-3">
@@ -359,7 +414,7 @@ class MapPopups {
                     ${addressBlock}
                 </div>
             </div>
-            ${this.getSearchResultFooter('white', [lng, lat])}
+            ${this.getSearchResultFooter('white', [lng, lat], title || '', favoriteId ?? null, favMeta)}
         `;
 
     this.searchResultPopup.setLngLat([lng, lat]).setHTML(html).addTo(this.map);
@@ -373,14 +428,15 @@ class MapPopups {
     }
   }
 
+  /** Footer for map feature popups (POI, cycleway, …). Favorite control lives only in {@link getSearchResultFooter}. */
   getFooter(osmUrl, color = 'black', coordinates = null) {
     return `
-            <div class="popup-footer-outer -mb-6 md:mt-10 mt-5 pt-4 pb-4 rounded-bl-lg rounded-br-lg" style="background-color: rgba(0,0,0,0.04)">
+            <div class="popup-footer-outer -mb-6 md:mt-8 mt-5 pt-4 pb-4 rounded-bl-lg rounded-br-lg" >
                 <div class="popup-footer-actions flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5 px-4">
                 ${
                   (coordinates &&
                     `
-                    <button type="button" class="flex-shrink-0 border border-opacity-25 border-${color} px-3 py-1.5 text-sm rounded-full whitespace-nowrap"
+                    <button type="button" class="flex-shrink-0 px-3 py-1.5 text-sm rounded-full whitespace-nowrap"
                         onclick="window.setDestinationFromPopup && window.setDestinationFromPopup(${JSON.stringify(coordinates)})" style="background-color: var(--popup-text-color); color: var(--popup-text-color-on-primary);"
                     >
                         <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.62515 0.569498C5.38448 -0.189833 6.61582 -0.189833 7.37515 0.569498L11.4308 4.62516C12.19 5.38451 12.1901 6.61589 11.4308 7.37516L7.37515 11.4308C6.61588 12.1901 5.38449 12.19 4.62515 11.4308L0.569489 7.37516C-0.189836 6.61584 -0.189824 5.38449 0.569489 4.62516L4.62515 0.569498ZM7.00015 5.00016H4.50015C3.67173 5.00016 3.00015 5.67173 3.00015 6.50016V8.00016H4.00015V6.50016C4.00015 6.22402 4.22401 6.00016 4.50015 6.00016H7.00015V8.65153L9.10074 5.50016L7.00015 2.34879V5.00016Z"/></svg>
@@ -486,8 +542,7 @@ class MapPopups {
         ? '<span>Bicicletário/paraciclo</span>'
         : `<span class="font-medium italic opacity-50">${poiTypeMapFallback[poiType]}</span>`;
 
-    const addressClassesBase =
-      'mt-1 sm:mt-0 text-xs md:text-sm break-words opacity-60 leading-snug';
+    const addressClassesBase = 'text-xs md:text-sm break-words opacity-60 leading-snug';
     const addressAttrs = addressFromOsm
       ? 'data-poi-address-slot'
       : 'data-poi-address-slot data-poi-address-pending aria-busy="true" aria-label="Carregando endereço"';

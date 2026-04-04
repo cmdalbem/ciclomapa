@@ -38,6 +38,7 @@ import AirtableDatabase from './AirtableDatabase.js';
 import CommentModal from './CommentModal.js';
 import NewCommentCursor from './NewCommentCursor.js';
 import MapPopups from './MapPopups.js';
+import { readFavorites, removeFavorite, toggleFavorite } from './favoritesStore';
 import { adjustColorBrightness } from './utils/utils.js';
 import debounce from 'lodash.debounce';
 import { getCurrentSunPosition } from './sunPositionUtils';
@@ -71,6 +72,20 @@ export function flyMapToCityFocus(map, centerLngLat, placeName) {
     minZoom: 6,
   });
 }
+
+/** Geo sources for app data layers; basemap (e.g. composite) is everything else. */
+const CICLOMAPA_DATA_SOURCES = new Set([
+  'osmdata',
+  'pmtiles-source',
+  'commentsSrc',
+  'favoritesSrc',
+  'route-selected',
+  'routes-unselected',
+  'overlapping-cyclepaths-selected',
+  'overlapping-cyclepaths-unselected',
+  'boundaryLineSrc',
+  'destination-filter-circle',
+]);
 
 const isE2E =
   typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('e2e');
@@ -319,6 +334,29 @@ class Map extends Component {
         : '';
   }
 
+  /** Hide map-supplied symbol layers that render text (street / place labels), not CicloMapa POIs. */
+  applyCleanModeBasemapLabels() {
+    const map = this.map;
+    if (!map?.getStyle) return;
+    const style = map.getStyle();
+    const styleLayers = style?.layers;
+    if (!styleLayers) return;
+
+    const hide = Boolean(this.props.cleanMode);
+    for (const layer of styleLayers) {
+      if (layer.type !== 'symbol') continue;
+      if (CICLOMAPA_DATA_SOURCES.has(layer.source)) continue;
+      const textField = layer.layout && layer.layout['text-field'];
+      if (textField === undefined || textField === '' || textField === false) continue;
+      if (!map.getLayer(layer.id)) continue;
+      try {
+        map.setLayoutProperty(layer.id, 'visibility', hide ? 'none' : 'visible');
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   initPOILayerForSource(l, sourceId) {
     const filters = this.convertFilterToMapboxFilter(l, sourceId);
 
@@ -405,6 +443,8 @@ class Map extends Component {
         'icon-image': this.props.isDarkMode ? `${l.icon}` : `${l.icon}--light`,
       },
       paint: {
+        'icon-occlusion-opacity': 1,
+        'text-occlusion-opacity': 1,
         'text-color': l.style.textColor || 'white',
         'text-halo-width': 1,
         'text-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.7, 1.0],
@@ -864,6 +904,7 @@ class Map extends Component {
             ],
           },
           paint: {
+            'icon-occlusion-opacity': 1,
             ...(useSdf && {
               'icon-color': adjustColorBrightness(
                 l.style.lineColor,
@@ -1082,6 +1123,7 @@ class Map extends Component {
             'icon-allow-overlap': ['step', ['zoom'], false, COMMENTS_ZOOM_THRESHOLD, true],
           },
           paint: {
+            'icon-occlusion-opacity': 1,
             'icon-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.8, 1],
           },
         });
@@ -1150,6 +1192,9 @@ class Map extends Component {
             e.originalEvent.preventDefault();
           }
         });
+
+        self.updateLayerVisibility();
+        self.applyCleanModeBasemapLabels();
       }
     });
   }
@@ -1236,6 +1281,13 @@ class Map extends Component {
             features: [],
           },
           generateId: true,
+        });
+      }
+
+      if (!map.getSource('favoritesSrc')) {
+        map.addSource('favoritesSrc', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] },
         });
       }
 
@@ -1690,6 +1742,15 @@ class Map extends Component {
     if (this.props.globalSearchPin !== prevProps.globalSearchPin) {
       this.applyGlobalSearchPin(this.props.globalSearchPin);
     }
+
+    if (this.props.favorites !== prevProps.favorites) {
+      this.applyFavoriteMarkers(this.props.favorites);
+    }
+
+    if (this.props.cleanMode !== prevProps.cleanMode) {
+      this.applyCleanModeBasemapLabels();
+      this.updateLayerVisibility();
+    }
   }
 
   applyGlobalSearchPin(pin) {
@@ -1719,8 +1780,35 @@ class Map extends Component {
       title: pin.title,
       address: pin.address,
       placeTypes: pin.placeTypes,
+      placeId: pin.placeId,
+      areaContext: pin.areaContext,
     });
     this.popups.searchResultPopup.on('close', this._onSearchResultPopupClosed);
+  }
+
+  applyFavoriteMarkers(favorites) {
+    if (!this.map) return;
+
+    const source = this.map.getSource('favoritesSrc');
+    if (!source) return;
+
+    const features = (favorites || [])
+      .filter((f) => Number.isFinite(f.lng) && Number.isFinite(f.lat))
+      .map((f, i) => ({
+        type: 'Feature',
+        id: i,
+        geometry: { type: 'Point', coordinates: [f.lng, f.lat] },
+        properties: {
+          title: f.title || '',
+          subtitle: f.subtitle || '',
+          placeTypes: JSON.stringify(f.placeTypes || []),
+          favoriteId: f.id || '',
+          areaContext: f.areaContext || '',
+          placeId: f.placeId || '',
+        },
+      }));
+
+    source.setData({ type: 'FeatureCollection', features });
   }
 
   updateRoutesLayer(routes) {
@@ -2279,7 +2367,8 @@ class Map extends Component {
     });
 
     if (map.getLayer('comentarios')) {
-      map.setLayoutProperty('comentarios', 'visibility', hasRoutes ? 'none' : 'visible');
+      const showComments = !hasRoutes && !this.props.cleanMode;
+      map.setLayoutProperty('comentarios', 'visibility', showComments ? 'visible' : 'none');
     }
   }
 
@@ -2353,6 +2442,8 @@ class Map extends Component {
       this.map = new mapboxgl.Map({
         container: this.mapContainer,
         style: this.props.style,
+        // TEMPORARY: globe projection — remove or set to mercator when done experimenting
+        projection: 'globe',
         preserveDrawingBuffer: true,
         // style: MAP_STYLES.LIGHT,
         // config: {
@@ -2412,6 +2503,68 @@ class Map extends Component {
         this.props.directionsPanelRef.setDestinationFromMapClick(coordinates);
         // Close all popups after setting destination
         this.popups.closeAllPopups();
+      }
+    };
+
+    window.toggleFavoriteFromPopup = (btn) => {
+      if (!btn || !btn.dataset) return;
+      const lng = Number(btn.dataset.favLng);
+      const lat = Number(btn.dataset.favLat);
+      const title = btn.dataset.favTitle != null ? String(btn.dataset.favTitle) : '';
+      const favoriteId = btn.dataset.favId ? String(btn.dataset.favId) : undefined;
+
+      let subtitle = '';
+      let placeTypes;
+      let placeId;
+      let areaContext;
+      if (btn.hasAttribute('data-fav-place-types')) {
+        try {
+          placeTypes = JSON.parse(btn.dataset.favPlaceTypes || '[]');
+        } catch {
+          placeTypes = undefined;
+        }
+        subtitle = btn.dataset.favSubtitle != null ? String(btn.dataset.favSubtitle) : '';
+        if (btn.dataset.favPlaceId) placeId = String(btn.dataset.favPlaceId);
+        if (btn.dataset.favAreaContext) areaContext = String(btn.dataset.favAreaContext);
+      }
+
+      let next;
+      let added;
+      if (favoriteId && readFavorites().some((f) => f.id === favoriteId)) {
+        next = removeFavorite(favoriteId);
+        added = false;
+      } else {
+        const r = toggleFavorite({
+          lng,
+          lat,
+          title: title || '',
+          subtitle,
+          placeTypes,
+          placeId,
+          areaContext,
+        });
+        next = r.favorites;
+        added = r.added;
+      }
+      if (this.props.onFavoritesChanged) {
+        this.props.onFavoritesChanged(next);
+      }
+      this.applyFavoriteMarkers(next);
+
+      const iconEl = btn.querySelector('.popup-fav-btn__icon');
+      const labelEl = btn.querySelector('.popup-fav-btn__label');
+      if (added) {
+        btn.classList.add('popup-fav-btn--active');
+        if (iconEl)
+          iconEl.innerHTML =
+            '<svg fill="currentColor" stroke="currentColor" stroke-width="0" viewBox="0 0 24 24" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17l-.022.012-.007.004-.002.001h-.002L12 21.12l-1.645-.211z" clip-rule="evenodd"/></svg>';
+        if (labelEl) labelEl.textContent = 'Favoritado';
+      } else {
+        btn.classList.remove('popup-fav-btn--active');
+        if (iconEl)
+          iconEl.innerHTML =
+            '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>';
+        if (labelEl) labelEl.textContent = 'Favoritar';
       }
     };
 
@@ -2654,6 +2807,74 @@ class Map extends Component {
     });
   }
 
+  initFavoritesLayer() {
+    const map = this.map;
+    if (!map || !map.getSource('favoritesSrc')) return;
+
+    if (!map.getLayer('favorites')) {
+      map.addLayer({
+        id: 'favorites',
+        type: 'symbol',
+        source: 'favoritesSrc',
+        layout: {
+          'icon-image': this.props.isDarkMode ? 'poi-favorite' : 'poi-favorite--light',
+          'icon-size': 0.5,
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+        },
+        paint: {
+          'icon-occlusion-opacity': 1,
+          'icon-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.85, 1],
+        },
+      });
+
+      const self = this;
+
+      map.on('mouseenter', 'favorites', () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+
+      map.on('mouseleave', 'favorites', () => {
+        map.getCanvas().style.cursor = '';
+      });
+
+      map.on('click', 'favorites', (e) => {
+        if (!e.features || e.features.length === 0) return;
+        e.originalEvent.preventDefault();
+        const f = e.features[0];
+        const [lng, lat] = f.geometry.coordinates;
+        let placeTypes = [];
+        try {
+          placeTypes = JSON.parse(f.properties.placeTypes || '[]');
+        } catch {}
+        const favId =
+          f.properties.favoriteId != null && f.properties.favoriteId !== ''
+            ? String(f.properties.favoriteId)
+            : undefined;
+        const favPlaceId =
+          f.properties.placeId != null && f.properties.placeId !== ''
+            ? String(f.properties.placeId)
+            : undefined;
+        const areaCtx =
+          f.properties.areaContext != null && f.properties.areaContext !== ''
+            ? String(f.properties.areaContext)
+            : undefined;
+        self.popups.showSearchResultPopup({
+          lng,
+          lat,
+          title: f.properties.title || '',
+          address: f.properties.subtitle || '',
+          placeTypes,
+          favoriteId: favId,
+          placeId: favPlaceId,
+          areaContext: areaCtx,
+        });
+      });
+    }
+
+    this.applyFavoriteMarkers(this.props.favorites);
+  }
+
   async initLayers() {
     // The order in which layers are initialized will define their paint order
     await this.initGeojsonLayers(this.props.layers);
@@ -2663,6 +2884,8 @@ class Map extends Component {
     if (ENABLE_COMMENTS) {
       this.initCommentsLayer();
     }
+
+    this.initFavoritesLayer();
 
     // Restore current routes if they exist
     if (this.props.routes) {
@@ -2676,6 +2899,7 @@ class Map extends Component {
 
     // Initial way/POI visibility for route mode (updateRoutesLayer already set sources).
     this.updateLayerVisibility();
+    this.applyCleanModeBasemapLabels();
 
     this.map.on('moveend', this.debouncedOnMapMoveEnded);
   }
