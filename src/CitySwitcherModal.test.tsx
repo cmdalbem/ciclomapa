@@ -56,7 +56,6 @@ beforeEach(() => {
 afterEach(() => {
   jest.restoreAllMocks();
   resetCitySwitcherStatsCacheForTest();
-  document.body.classList.remove('show-city-picker');
   window.localStorage.removeItem(RECENT_CITIES_STATS_KEY);
   window.localStorage.removeItem(RECENT_ITEMS_KEY);
 });
@@ -73,9 +72,8 @@ function CitySwitcherTestHost() {
 }
 
 function renderOpenPicker(initialPath = '/curitiba') {
-  document.body.classList.add('show-city-picker');
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
+    <MemoryRouter initialEntries={[initialPath, `${initialPath}?buscar`]}>
       <Routes>
         <Route path="/:city" element={<CitySwitcherTestHost />} />
       </Routes>
@@ -99,18 +97,18 @@ it('close button removes show-city-picker from body', async () => {
   const user = userEvent.setup();
   renderOpenPicker();
 
-  expect(document.body.classList.contains('show-city-picker')).toBe(true);
+  expect(document.querySelector('.city-switcher-modal--open')).not.toBeNull();
   await user.click(screen.getByTestId('city-switcher-close'));
-  expect(document.body.classList.contains('show-city-picker')).toBe(false);
+  expect(document.querySelector('.city-switcher-modal--open')).toBeNull();
 });
 
 it('Escape closes the city picker', async () => {
   const user = userEvent.setup();
   renderOpenPicker();
 
-  expect(document.body.classList.contains('show-city-picker')).toBe(true);
+  expect(document.querySelector('.city-switcher-modal--open')).not.toBeNull();
   await user.keyboard('{Escape}');
-  expect(document.body.classList.contains('show-city-picker')).toBe(false);
+  expect(document.querySelector('.city-switcher-modal--open')).toBeNull();
 });
 
 it('clicking a top city navigates to that slug and closes the picker', async () => {
@@ -128,7 +126,7 @@ it('clicking a top city navigates to that slug and closes the picker', async () 
   await waitFor(() => {
     expect(screen.getByTestId('pathname')).toHaveTextContent('/sao-paulo');
   });
-  expect(document.body.classList.contains('show-city-picker')).toBe(false);
+  expect(document.querySelector('.city-switcher-modal--open')).toBeNull();
 });
 
 it('shows Recentes when localStorage has recent city items (favoritesStore)', async () => {
@@ -291,9 +289,8 @@ describe('city stats totals from Storage', () => {
     (Storage.prototype.getCityStatsDoc as jest.Mock).mockClear();
 
     first.unmount();
-    document.body.classList.add('show-city-picker');
     render(
-      <MemoryRouter initialEntries={['/curitiba']}>
+      <MemoryRouter initialEntries={['/curitiba', '/curitiba?buscar']}>
         <Routes>
           <Route path="/:city" element={<CitySwitcherTestHost />} />
         </Routes>

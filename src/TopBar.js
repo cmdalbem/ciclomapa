@@ -14,6 +14,8 @@ import {
 
 import { IconContext } from 'react-icons';
 
+import { useNavigate } from 'react-router-dom';
+
 import { timeSince, getOsmUrl } from './utils/utils.js';
 
 import { TOPBAR_HEIGHT, IS_MOBILE } from './config/constants.js';
@@ -40,6 +42,8 @@ function TopBar(props) {
     toggleSidebar,
   } = props;
 
+  const navigate = useNavigate();
+
   const [editModal, setEditModal] = useState(false);
   const [hasDismissedEditModal, setHasDismissedEditModal] = useState(false);
 
@@ -50,9 +54,8 @@ function TopBar(props) {
   }, []);
 
   const showCityPicker = useCallback(() => {
-    const body = document.querySelector('body');
-    body.classList.add('show-city-picker');
-  }, []);
+    navigate({ search: '?buscar' });
+  }, [navigate]);
 
   const newComment = useCallback(() => {
     document.dispatchEvent(new Event('newComment'));
