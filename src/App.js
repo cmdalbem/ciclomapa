@@ -291,8 +291,7 @@ class App extends Component {
 
   openCityPicker() {
     this.setState({ aboutModal: false, hideUI: false });
-    const body = document.querySelector('body');
-    if (body) body.classList.add('show-city-picker');
+    this.props.router.navigate({ search: '?buscar' });
   }
 
   openLayersLegendModal(scrollToSection = null) {

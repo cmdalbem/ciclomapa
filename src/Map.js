@@ -92,7 +92,6 @@ const isE2E =
 
 class Map extends Component {
   map;
-  searchBar;
   popups;
 
   selectedCycleway;

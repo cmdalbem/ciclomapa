@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { HiMiniClock, HiOutlineXMark, HiOutlineHeart, HiHeart } from 'react-icons/hi2';
 import { HiSearch as IconSearch } from 'react-icons/hi';
 import { Button, Input } from 'antd';
@@ -317,7 +317,7 @@ function isElementConnected(el: Element | null): el is Element {
  */
 function focusCityPickerSearchInput(attempt = 0): void {
   if (attempt > 80) return;
-  if (!document.body.classList.contains('show-city-picker')) return;
+  if (!document.querySelector('.city-switcher-modal--open')) return;
 
   const modalRoot = document.querySelector('.city-switcher-modal');
   if (modalRoot && getComputedStyle(modalRoot).visibility === 'hidden') {
@@ -692,68 +692,62 @@ function usePlacesAutocompleteSearch({
 
 function useCityPickerFocusAndRestore({
   contentScrollElRef,
+  isCityPickerOpen,
 }: {
   contentScrollElRef: React.RefObject<HTMLDivElement | null>;
+  isCityPickerOpen: boolean;
 }) {
   const lastFocusedBeforeOpenRef = useRef<Element | null>(null);
   const cityPickerWasOpenRef = useRef(false);
 
-  useLayoutEffect(() => {
-    const body = document.body;
-    if (!body) return undefined;
-
-    const onBodyClassChange = () => {
-      const open = body.classList.contains('show-city-picker');
-      if (open && !cityPickerWasOpenRef.current) {
-        console.debug(CITY_SWITCHER_LOG_PREFIX, 'opened');
-        lastFocusedBeforeOpenRef.current = document.activeElement;
-        const el = contentScrollElRef.current;
-        if (el) el.scrollTop = 0;
-        window.requestAnimationFrame(() => {
-          focusCityPickerSearchInput();
-        });
-      }
-      if (!open && cityPickerWasOpenRef.current) {
-        console.debug(CITY_SWITCHER_LOG_PREFIX, 'closed');
-        const toFocus = lastFocusedBeforeOpenRef.current;
-        lastFocusedBeforeOpenRef.current = null;
-        if (
-          isElementConnected(toFocus) &&
-          toFocus instanceof HTMLElement &&
-          typeof toFocus.focus === 'function'
-        ) {
-          try {
-            toFocus.focus({ preventScroll: true });
-          } catch {
-            toFocus.focus();
-          }
+  useEffect(() => {
+    const open = isCityPickerOpen;
+    if (open && !cityPickerWasOpenRef.current) {
+      console.debug(CITY_SWITCHER_LOG_PREFIX, 'opened');
+      lastFocusedBeforeOpenRef.current = document.activeElement;
+      const el = contentScrollElRef.current;
+      if (el) el.scrollTop = 0;
+      window.requestAnimationFrame(() => {
+        focusCityPickerSearchInput();
+      });
+    }
+    if (!open && cityPickerWasOpenRef.current) {
+      console.debug(CITY_SWITCHER_LOG_PREFIX, 'closed');
+      const toFocus = lastFocusedBeforeOpenRef.current;
+      lastFocusedBeforeOpenRef.current = null;
+      if (
+        isElementConnected(toFocus) &&
+        toFocus instanceof HTMLElement &&
+        typeof toFocus.focus === 'function'
+      ) {
+        try {
+          toFocus.focus({ preventScroll: true });
+        } catch {
+          toFocus.focus();
         }
       }
-      cityPickerWasOpenRef.current = open;
-    };
-
-    const observer = new MutationObserver(onBodyClassChange);
-    observer.observe(body, { attributes: true, attributeFilter: ['class'] });
-    onBodyClassChange();
-
-    return () => observer.disconnect();
-  }, [contentScrollElRef]);
+    }
+    cityPickerWasOpenRef.current = open;
+  }, [isCityPickerOpen, contentScrollElRef]);
 }
 
 function useCityPickerKeyboardTrap({
   panelRef,
   closeCityPicker,
+  isCityPickerOpen,
 }: {
   panelRef: React.RefObject<HTMLDivElement | null>;
   closeCityPicker: () => void;
+  isCityPickerOpen: boolean;
 }) {
+  const isCityPickerOpenRef = useRef(isCityPickerOpen);
   useEffect(() => {
-    const body = document.body;
-    if (!body) return undefined;
+    isCityPickerOpenRef.current = isCityPickerOpen;
+  }, [isCityPickerOpen]);
 
+  useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      const open = body.classList.contains('show-city-picker');
-      if (!open) return;
+      if (!isCityPickerOpenRef.current) return;
 
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -1018,6 +1012,7 @@ function CityPickerCityCard({
     >
       <Link
         to={to}
+        replace
         className="city-switcher-modal__cityBtn"
         data-city-slug={city.canonicalSlug}
         onClick={(e) => {
@@ -1186,21 +1181,9 @@ function CitySwitcherModal({
     getAutocompleteOptions: getCitySwitcherAutocompleteOptions,
   });
 
-  const [isCityPickerOpen, setIsCityPickerOpen] = useState(
-    () => typeof document !== 'undefined' && document.body.classList.contains('show-city-picker')
-  );
-
-  useLayoutEffect(() => {
-    const body = document.body;
-    if (!body) return undefined;
-    const sync = () => {
-      setIsCityPickerOpen(body.classList.contains('show-city-picker'));
-    };
-    const observer = new MutationObserver(sync);
-    observer.observe(body, { attributes: true, attributeFilter: ['class'] });
-    sync();
-    return () => observer.disconnect();
-  }, []);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isCityPickerOpen = searchParams.has('buscar');
 
   useEffect(() => {
     if (!isCityPickerOpen) {
@@ -1274,9 +1257,8 @@ function CitySwitcherModal({
   }, [themeIsDark]);
 
   const closeCityPicker = useCallback(() => {
-    const body = document.querySelector('body');
-    if (body) body.classList.remove('show-city-picker');
-  }, []);
+    navigate(-1);
+  }, [navigate]);
 
   const recordRecentlyVisitedCity = useCallback(
     (nextSlug: string, areaLabel: string | undefined) => {
@@ -1401,17 +1383,15 @@ function CitySwitcherModal({
       clearPlacesSearch();
 
       recordRecentlyVisitedCity(nextSlug, cityObj?.areaLabel);
-
-      closeCityPicker();
     },
-    [recordRecentlyVisitedCity, closeCityPicker, onCatalogCityPicked, clearPlacesSearch]
+    [recordRecentlyVisitedCity, onCatalogCityPicked, clearPlacesSearch]
   );
 
   const contentScrollElRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
-  useCityPickerFocusAndRestore({ contentScrollElRef });
-  useCityPickerKeyboardTrap({ panelRef, closeCityPicker });
+  useCityPickerFocusAndRestore({ contentScrollElRef, isCityPickerOpen });
+  useCityPickerKeyboardTrap({ panelRef, closeCityPicker, isCityPickerOpen });
 
   const trimmedGlobalSearch = globalSearchValue.trim();
   const showPlaceSearchResults = trimmedGlobalSearch.length >= PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH;
@@ -1435,7 +1415,7 @@ function CitySwitcherModal({
   /** Portaled to `document.body` so `#ciclomapa { overflow: hidden }` does not clip this overlay. */
   const modalTree = (
     <div
-      className="city-switcher-modal fixed inset-0"
+      className={`city-switcher-modal fixed inset-0${isCityPickerOpen ? ' city-switcher-modal--open' : ''}`}
       role="dialog"
       aria-modal="true"
       data-testid="city-switcher-dialog"
