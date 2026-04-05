@@ -47,8 +47,8 @@ export function getAreaStringFromResultLike(resultLike) {
   const city = getCityFromResultLike(resultLike);
   const state =
     (findComp('administrative_area_level_1') &&
-      (findComp('administrative_area_level_1').short_name ||
-        findComp('administrative_area_level_1').long_name)) ||
+      (findComp('administrative_area_level_1').long_name ||
+        findComp('administrative_area_level_1').short_name)) ||
     null;
   const country =
     (findComp('country') && (findComp('country').long_name || findComp('country').short_name)) ||
