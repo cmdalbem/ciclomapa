@@ -1,25 +1,37 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
-
-<head>
-    <meta charset="utf-8">
-    <meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml" />
 
     <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-WNF7RZF');</script>
+    <script>
+      (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l != 'dataLayer' ? '&l=' + l : '';
+        j.async = true;
+        j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, 'script', 'dataLayer', 'GTM-WNF7RZF');
+    </script>
     <!-- End Google Tag Manager -->
 
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,500;0,600;0,700;1,500&display=swap"
+      rel="stylesheet"
+    />
     <!-- <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap" rel="stylesheet"> -->
     <!-- <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600&display=swap" rel="stylesheet"> -->
 
-    <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet" />
 
     <meta name="theme-color" content="#1c1717" />
     <!--
@@ -30,33 +42,47 @@
 
     <link rel="canonical" href="https://ciclomapa.app/" />
 
-    <meta name="description" content="O mapa do ciclista urbano: encontre ciclovias, escolha rotas mais seguras no dia a dia e veja bicicletários e oficinas por perto.">
+    <meta
+      name="description"
+      content="O mapa do ciclista urbano: encontre ciclovias, escolha rotas mais seguras no dia a dia e veja bicicletários e oficinas por perto."
+    />
 
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="CicloMapa">
-    <meta property="og:title" content="CicloMapa">
-    <meta property="og:description" content="O mapa do ciclista urbano: encontre ciclovias, escolha rotas mais seguras no dia a dia e veja bicicletários e oficinas por perto.">
-    <meta property="og:image" content="https://ciclomapa.app/cover.png">
-    <meta property="og:url" content="https://ciclomapa.app/">
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CicloMapa" />
+    <meta property="og:title" content="CicloMapa" />
+    <meta
+      property="og:description"
+      content="O mapa do ciclista urbano: encontre ciclovias, escolha rotas mais seguras no dia a dia e veja bicicletários e oficinas por perto."
+    />
+    <meta property="og:image" content="https://ciclomapa.app/cover.png" />
+    <meta property="og:url" content="https://ciclomapa.app/" />
 
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="CicloMapa">
-    <meta name="twitter:description" content="O mapa do ciclista urbano: encontre ciclovias, escolha rotas mais seguras no dia a dia e veja bicicletários e oficinas por perto.">
-    <meta name="twitter:image" content="https://ciclomapa.app/cover.png">
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="CicloMapa" />
+    <meta
+      name="twitter:description"
+      content="O mapa do ciclista urbano: encontre ciclovias, escolha rotas mais seguras no dia a dia e veja bicicletários e oficinas por perto."
+    />
+    <meta name="twitter:image" content="https://ciclomapa.app/cover.png" />
 
     <script src="https://static.airtable.com/js/embed/embed_snippet_v1.js"></script>
 
     <title>CicloMapa</title>
-</head>
+  </head>
 
-<body>
+  <body>
     <!-- Google Tag Manager (noscript) -->
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WNF7RZF"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <noscript
+      ><iframe
+        src="https://www.googletagmanager.com/ns.html?id=GTM-WNF7RZF"
+        height="0"
+        width="0"
+        style="display: none; visibility: hidden"
+      ></iframe
+    ></noscript>
     <!-- End Google Tag Manager (noscript) -->
 
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-</body>
-
+  </body>
 </html>
