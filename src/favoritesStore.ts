@@ -31,11 +31,15 @@ export type RecentItem = {
   citySlug?: string;
   lng?: number;
   lat?: number;
+  /** Google `place_id` when the row came from Places (stable id for `id` / deduping). */
+  placeId?: string;
   placeTypes?: string[];
   visitedAt: number;
 };
 
-function makePlaceId(lng: number, lat: number, title: string): string {
+function makePlaceId(lng: number, lat: number, title: string, placeId?: string | null): string {
+  const trimmed = placeId?.trim();
+  if (trimmed) return `place:${trimmed}`;
   return `place:${lng.toFixed(6)},${lat.toFixed(6)}:${title}`;
 }
 
@@ -70,7 +74,7 @@ export function writeFavorites(items: FavoriteItem[]): void {
 }
 
 export function addFavorite(fav: Omit<FavoriteItem, 'id' | 'addedAt'>): FavoriteItem[] {
-  const id = makePlaceId(fav.lng, fav.lat, fav.title);
+  const id = makePlaceId(fav.lng, fav.lat, fav.title, fav.placeId);
   const items = readFavorites();
   if (items.some((f) => f.id === id)) return items;
   const newItem: FavoriteItem = { ...fav, id, addedAt: Date.now() };
@@ -85,8 +89,13 @@ export function removeFavorite(id: string): FavoriteItem[] {
   return items;
 }
 
-export function isFavorite(lng: number, lat: number, title: string): boolean {
-  const id = makePlaceId(lng, lat, title);
+export function isFavorite(
+  lng: number,
+  lat: number,
+  title: string,
+  placeId?: string | null
+): boolean {
+  const id = makePlaceId(lng, lat, title, placeId);
   return readFavorites().some((f) => f.id === id);
 }
 
@@ -100,7 +109,7 @@ export function toggleFavorite(fav: Omit<FavoriteItem, 'id' | 'addedAt'>): {
   favorites: FavoriteItem[];
   added: boolean;
 } {
-  const id = makePlaceId(fav.lng, fav.lat, fav.title);
+  const id = makePlaceId(fav.lng, fav.lat, fav.title, fav.placeId);
   const items = readFavorites();
   const exists = items.some((f) => f.id === id);
   if (exists) {
@@ -109,8 +118,13 @@ export function toggleFavorite(fav: Omit<FavoriteItem, 'id' | 'addedAt'>): {
   return { favorites: addFavorite(fav), added: true };
 }
 
-export function getFavoriteId(lng: number, lat: number, title: string): string {
-  return makePlaceId(lng, lat, title);
+export function getFavoriteId(
+  lng: number,
+  lat: number,
+  title: string,
+  placeId?: string | null
+): string {
+  return makePlaceId(lng, lat, title, placeId);
 }
 
 // --- Recent items (unified: cities + places) ---
@@ -163,10 +177,11 @@ export function addRecentPlace(place: {
   lat: number;
   title: string;
   subtitle: string;
+  placeId?: string;
   placeTypes?: string[];
   areaContext?: string;
 }): RecentItem[] {
-  const id = makePlaceId(place.lng, place.lat, place.title);
+  const id = makePlaceId(place.lng, place.lat, place.title, place.placeId);
   const items = readRecentItems().filter((r) => r.id !== id);
   const newItem: RecentItem = {
     id,
@@ -175,6 +190,7 @@ export function addRecentPlace(place: {
     subtitle: place.subtitle,
     lng: place.lng,
     lat: place.lat,
+    placeId: place.placeId?.trim() || undefined,
     placeTypes: place.placeTypes,
     areaContext: place.areaContext,
     visitedAt: Date.now(),
