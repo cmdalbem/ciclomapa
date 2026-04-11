@@ -1290,6 +1290,7 @@ function CitySwitcherModal({
       lat: number;
       title: string;
       subtitle: string;
+      placeId?: string;
       placeTypes?: string[];
       areaContext?: string;
     }) => {
@@ -1347,6 +1348,7 @@ function CitySwitcherModal({
           lat,
           title,
           subtitle: addressLine || areaContext,
+          placeId: resolved.properties?.place_id || sug.id || '',
           placeTypes: resolved.properties?.types,
           areaContext,
         });
@@ -1631,6 +1633,7 @@ function CitySwitcherModal({
                           lat: fav.lat,
                           title: fav.title,
                           subtitle: fav.subtitle,
+                          placeId: fav.placeId,
                           placeTypes: fav.placeTypes,
                           areaContext: fav.areaContext,
                         });
@@ -1742,13 +1745,14 @@ function CitySwitcherModal({
                               title: item.title,
                               address: item.subtitle,
                               placeTypes: item.placeTypes,
-                              placeId: '',
+                              placeId: item.placeId || '',
                             });
                             recordRecentPlace({
                               lng: item.lng,
                               lat: item.lat,
                               title: item.title,
                               subtitle: item.subtitle,
+                              placeId: item.placeId,
                               placeTypes: item.placeTypes,
                               areaContext: item.areaContext,
                             });
