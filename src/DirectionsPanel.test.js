@@ -9,12 +9,12 @@ jest.mock('./googlePlacesClient.js', () => {
   return {
     getCityFromResultLike: actual.getCityFromResultLike,
     getAreaStringFromResultLike: actual.getAreaStringFromResultLike,
-    googlePlacesGeocoder: {
+    getGooglePlacesGeocoder: jest.fn().mockReturnValue({
       search: jest.fn(),
       getPlaceDetails: jest.fn(),
       reverseGeocode: jest.fn(),
       loadGoogleMapsAPI: jest.fn(),
-    },
+    }),
     ensureGooglePlacesReady: jest.fn().mockResolvedValue(undefined),
   };
 });

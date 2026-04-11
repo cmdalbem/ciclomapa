@@ -26,7 +26,7 @@ import {
   ensureGooglePlacesReady,
   getAreaStringFromResultLike,
   getCityFromResultLike,
-  googlePlacesGeocoder,
+  getGooglePlacesGeocoder,
 } from './googlePlacesClient.js';
 import {
   geocodePlacesSuggestionToResult,
@@ -688,7 +688,7 @@ class DirectionsPanel extends Component {
 
     try {
       await ensureGooglePlacesReady();
-      const result = await googlePlacesGeocoder.reverseGeocode(lngLat, {
+      const result = await getGooglePlacesGeocoder().reverseGeocode(lngLat, {
         language: 'pt-BR',
       });
 
