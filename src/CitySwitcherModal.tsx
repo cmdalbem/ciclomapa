@@ -1603,13 +1603,13 @@ function CitySwitcherModal({
                 className="city-switcher-modal__staggerEnter"
                 style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
               >
-                {/* <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
-                  <HiHeartIcon
+                <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
+                  {/* <HiHeartIcon
                     className="h-4 w-4 flex-shrink-0 city-switcher-modal__favoriteHeart"
                     aria-hidden="true"
-                  />
+                  /> */}
                   Favoritos
-                </div> */}
+                </div>
               </div>
               <div
                 className={CITY_SWITCHER_CARD_GRID_CLASS}
@@ -1685,13 +1685,13 @@ function CitySwitcherModal({
                 className="city-switcher-modal__staggerEnter"
                 style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
               >
-                {/* <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
-                  <HiMiniClockIcon
+                <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
+                  {/* <HiMiniClockIcon
                     className="h-4 w-4 flex-shrink-0 opacity-75 text-white"
                     aria-hidden="true"
-                  />
+                  /> */}
                   Recentes
-                </div> */}
+                </div>
               </div>
               <div
                 className={CITY_SWITCHER_CARD_GRID_CLASS}
