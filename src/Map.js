@@ -2441,8 +2441,7 @@ class Map extends Component {
       this.map = new mapboxgl.Map({
         container: this.mapContainer,
         style: this.props.style,
-        // TEMPORARY: globe projection — remove or set to mercator when done experimenting
-        projection: 'globe',
+        // projection: 'globe',
         preserveDrawingBuffer: true,
         // style: MAP_STYLES.LIGHT,
         // config: {
