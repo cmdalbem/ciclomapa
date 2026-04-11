@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom/client'; // Note the updated import
 import App from './App';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import PlaceTypeIconsReviewPage from './dev/PlaceTypeIconsReviewPage.jsx';
 import { getCssCustomProperties } from './config/design-tokens.js';
 import { IS_PROD } from './config/constants.js';
+
+// Dev-only screen: lazy so its module (and helpers under ./dev/) stay out of the initial
+// bundle; the rest of the app still loads App and friends eagerly on every visit.
+const PlaceTypeIconsReviewPage = React.lazy(() =>
+  IS_PROD ? Promise.resolve({ default: () => null }) : import('./dev/PlaceTypeIconsReviewPage.jsx')
+);
 
 // No-op console.debug in production to reduce noise
 if (process.env.NODE_ENV === 'production') {
@@ -68,7 +73,14 @@ function AppRoutes() {
       <Route path="/:city/routes" element={<App ref={appRef} />} />
       <Route path="/:city" element={<App ref={appRef} />} />
       {!IS_PROD ? (
-        <Route path="/dev/place-type-icons" element={<PlaceTypeIconsReviewPage />} />
+        <Route
+          path="/dev/place-type-icons"
+          element={
+            <Suspense fallback={null}>
+              <PlaceTypeIconsReviewPage />
+            </Suspense>
+          }
+        />
       ) : null}
     </Routes>
   );
