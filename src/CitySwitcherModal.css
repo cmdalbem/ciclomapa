@@ -65,8 +65,8 @@
   display: flex;
   flex-direction: column;
   width: min(860px, 100%);
-  max-height: calc(100dvh - 18px);
   max-height: calc(100vh - 18px);
+  max-height: calc(100dvh - 18px);
   border-radius: 32px;
   min-height: 0;
   overflow: hidden;
@@ -121,7 +121,7 @@
   border-radius: 999px !important;
   min-height: 44px !important;
   padding-block: 0 !important;
-  padding-inline: 14px 36px !important;
+  padding-inline: 16px 16px !important;
   background: rgba(255, 255, 255, 0.02) !important;
   border: none !important;
   box-shadow: none !important;
@@ -278,12 +278,12 @@
 
 .city-switcher-modal__placeSearchPrimary {
   white-space: normal;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .city-switcher-modal__placeSearchSecondary {
   white-space: normal;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .city-switcher-modal__content {
