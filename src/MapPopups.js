@@ -41,7 +41,7 @@ function buildFavBtnHtml(lng, lat, title, color, favoriteId = null, favMeta = nu
   const active =
     favoriteId != null && favoriteId !== ''
       ? isFavoriteById(favoriteId)
-      : isFavorite(lng, lat, title);
+      : isFavorite(lng, lat, title, favMeta?.placeId);
   const activeClass = active ? ' popup-fav-btn--active' : '';
   const icon = active ? FAV_HEART_FILLED_SVG : FAV_HEART_OUTLINE_SVG;
   const label = active ? 'Favoritado' : 'Favoritar';
