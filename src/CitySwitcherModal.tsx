@@ -638,10 +638,12 @@ function usePlacesAutocompleteSearch({
   const [suggestions, setSuggestions] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(false);
   const debounceTimerRef = useRef<number | null>(null);
+  const requestSeqRef = useRef(0);
   const getOptionsRef = useRef(getAutocompleteOptions);
   getOptionsRef.current = getAutocompleteOptions;
 
   const clearResults = useCallback(() => {
+    requestSeqRef.current += 1;
     if (debounceTimerRef.current !== null) {
       window.clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
@@ -658,21 +660,29 @@ function usePlacesAutocompleteSearch({
       }
       const trimmed = q.trim();
       if (trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
+        requestSeqRef.current += 1;
         setSuggestions([]);
         setLoading(false);
         return;
       }
+      requestSeqRef.current += 1;
+      const scheduledSeq = requestSeqRef.current;
+      setLoading(true);
       debounceTimerRef.current = window.setTimeout(async () => {
         debounceTimerRef.current = null;
-        setLoading(true);
+        if (scheduledSeq !== requestSeqRef.current) return;
         try {
           const results = await searchPlacesForAutocomplete(trimmed, getOptionsRef.current());
+          if (scheduledSeq !== requestSeqRef.current) return;
           setSuggestions(Array.isArray(results) ? results : []);
         } catch (e) {
+          if (scheduledSeq !== requestSeqRef.current) return;
           console.warn(CITY_SWITCHER_LOG_PREFIX, 'places search failed', e);
           setSuggestions([]);
         } finally {
-          setLoading(false);
+          if (scheduledSeq === requestSeqRef.current) {
+            setLoading(false);
+          }
         }
       }, debounceMs);
     },
