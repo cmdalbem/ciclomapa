@@ -1,23 +1,28 @@
 import GooglePlacesGeocoder from './GooglePlacesGeocoder.js';
 import { GOOGLE_PLACES_API_KEY, GOOGLE_PLACES_DEFAULT_REGION } from './config/constants.js';
 
-export const googlePlacesGeocoder = new GooglePlacesGeocoder({
-  apiKey: GOOGLE_PLACES_API_KEY,
-  language: 'pt-BR',
-  region: GOOGLE_PLACES_DEFAULT_REGION,
-});
-
+let googlePlacesGeocoder = null;
 let geocoderInitialized = false;
+
+export function getGooglePlacesGeocoder() {
+  return googlePlacesGeocoder;
+}
 
 export async function ensureGooglePlacesReady() {
   if (!geocoderInitialized) {
     try {
+      googlePlacesGeocoder = new GooglePlacesGeocoder({
+        apiKey: GOOGLE_PLACES_API_KEY,
+        language: 'pt-BR',
+        region: GOOGLE_PLACES_DEFAULT_REGION,
+      });
       await googlePlacesGeocoder.loadGoogleMapsAPI();
       geocoderInitialized = true;
     } catch (error) {
       console.error('Failed to initialize Google Places Geocoder:', error);
     }
   }
+  return googlePlacesGeocoder;
 }
 
 /** City / area strings from Google Places result shapes (DirectionsPanel + city search). */
@@ -70,7 +75,7 @@ export async function reverseGeocodePlace(lngLat) {
   }
 
   await ensureGooglePlacesReady();
-  const result = await googlePlacesGeocoder.reverseGeocode(coords);
+  const result = await getGooglePlacesGeocoder().reverseGeocode(coords);
 
   const place_name = getAreaStringFromResultLike(result) || result.place_name;
 

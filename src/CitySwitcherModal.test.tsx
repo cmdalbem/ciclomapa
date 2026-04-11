@@ -18,7 +18,7 @@ jest.mock('./googlePlacesClient.js', () => {
     getCityFromResultLike: actual.getCityFromResultLike,
     getAreaStringFromResultLike: actual.getAreaStringFromResultLike,
     ensureGooglePlacesReady: jest.fn().mockResolvedValue(undefined),
-    googlePlacesGeocoder: {
+    getGooglePlacesGeocoder: jest.fn().mockReturnValue({
       search: jest.fn().mockResolvedValue([]),
       getPlaceDetails: jest.fn().mockResolvedValue({
         coordinates: [-46.6333, -23.5505],
@@ -27,7 +27,7 @@ jest.mock('./googlePlacesClient.js', () => {
         types: ['establishment'],
         address_components: [],
       }),
-    },
+    }),
   };
 });
 

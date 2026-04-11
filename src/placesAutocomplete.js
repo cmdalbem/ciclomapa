@@ -1,5 +1,5 @@
 import { SUPPORTED_COUNTRY_CODES } from './config/constants.js';
-import { ensureGooglePlacesReady, googlePlacesGeocoder } from './googlePlacesClient.js';
+import { ensureGooglePlacesReady, getGooglePlacesGeocoder } from './googlePlacesClient.js';
 
 /** Same threshold as DirectionsPanel origin/destination search. */
 export const PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH = 3;
@@ -43,7 +43,7 @@ export async function searchPlacesForAutocomplete(query, options = {}) {
   } = options;
 
   await ensureGooglePlacesReady();
-  const results = await googlePlacesGeocoder.search(trimmed, {
+  const results = await getGooglePlacesGeocoder().search(trimmed, {
     proximity,
     countryCodes,
     limit,
@@ -60,7 +60,7 @@ export async function searchPlacesForAutocomplete(query, options = {}) {
  * Resolve a prediction from {@link searchPlacesForAutocomplete} to coordinates + merged properties.
  * Matches DirectionsPanel {@code handleSelect} / city modal POI pick behavior.
  *
- * @param {object} suggestion — item from {@link googlePlacesGeocoder.search}
+ * @param {object} suggestion — item from {@link getGooglePlacesGeocoder().search}
  * @returns {Promise<{ result: object }>} — {@code result} is suitable for {@code handleGeocoderResult} / area helpers
  */
 /**
@@ -106,7 +106,7 @@ export async function geocodePlacesSuggestionToResult(suggestion) {
 
   if (suggestion.properties?.place_id && !suggestion.center) {
     await ensureGooglePlacesReady();
-    const details = await googlePlacesGeocoder.getPlaceDetails(suggestion.properties.place_id);
+    const details = await getGooglePlacesGeocoder().getPlaceDetails(suggestion.properties.place_id);
     const completeResult = {
       ...suggestion,
       center: details.coordinates,
