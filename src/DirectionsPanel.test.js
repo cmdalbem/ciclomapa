@@ -4,10 +4,20 @@ import { DirectionsProvider } from './contexts/DirectionsContext';
 import DirectionsPanel from './DirectionsPanel.js';
 
 jest.mock('mapbox-gl', () => ({ default: {} }));
-jest.mock('./GooglePlacesGeocoder.js', () => ({
-  __esModule: true,
-  default: class GooglePlacesGeocoder {},
-}));
+jest.mock('./googlePlacesClient.js', () => {
+  const actual = jest.requireActual('./googlePlacesClient.js');
+  return {
+    getCityFromResultLike: actual.getCityFromResultLike,
+    getAreaStringFromResultLike: actual.getAreaStringFromResultLike,
+    getGooglePlacesGeocoder: jest.fn().mockReturnValue({
+      search: jest.fn(),
+      getPlaceDetails: jest.fn(),
+      reverseGeocode: jest.fn(),
+      loadGoogleMapsAPI: jest.fn(),
+    }),
+    ensureGooglePlacesReady: jest.fn().mockResolvedValue(undefined),
+  };
+});
 
 const noop = () => {};
 

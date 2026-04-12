@@ -25,6 +25,10 @@ export const colors = {
   // Logo (TopBar)
   logoDark: '#B6F9D1',
   logoLight: '#39583C',
+  /** Favorites: hearts, active “Favoritar” on light surfaces; map `poi-favorite--light` should stay aligned. */
+  favoriteAccent: '#F63737',
+  /** Favorites on dark surfaces (`theme-dark`); slightly lighter for contrast — align `poi-favorite.png` if needed. */
+  favoriteAccentDark: '#FF6B6B',
 };
 
 /** Map-specific colors for Mapbox paint (Map.js). Theme-based stroke, halo, route padding line, fallback. */
@@ -82,7 +86,8 @@ export const motion = {
 };
 
 /** Focus ring for keyboard navigation / a11y */
-export const focusRing = '2px solid #0ea5e9';
+// export const focusRing = '2px solid #0ea5e9';
+export const focusRing = 'none';
 
 export const layout = {
   spinnerSize: 60,
@@ -99,6 +104,12 @@ export const ROUTE_COLORS = {
     SELECTED: colors.routeSelectedLight,
     UNSELECTED: colors.routeUnselectedLight,
   },
+};
+
+/** Favorites UI (import from JS when you need hex/RGB, e.g. charts or inline styles). */
+export const FAVORITE_COLORS = {
+  ACCENT: colors.favoriteAccent,
+  ACCENT_DARK: colors.favoriteAccentDark,
 };
 
 /** For JS consumers that need map paint colors (Map.js). */
@@ -140,6 +151,8 @@ export function getCssCustomProperties() {
     '--color-loader-4': colors.loader4,
     '--color-logo-dark': colors.logoDark,
     '--color-logo-light': colors.logoLight,
+    '--color-favorite-accent': colors.favoriteAccent,
+    '--color-favorite-accent-dark': colors.favoriteAccentDark,
     /* Legacy names used by loader keyframes */
     '--color1': colors.loader1,
     '--color2': colors.loader2,

@@ -25,6 +25,9 @@ export const LENGTH_COUNTED_LAYER_IDS = [
   // 'proibido',
 ];
 
+/** City switcher card mini donut: ciclovia + ciclofaixa only (aligned with common “protected lane” reading). */
+export const CITY_SWITCHER_MINI_CHART_LAYER_IDS = ['ciclovia', 'ciclofaixa'];
+
 export const OVERPASS_SERVERS = [
   'https://overpass.private.coffee/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
@@ -49,7 +52,7 @@ export const MOBILE_MAX_WIDTH = '480px';
 export const IS_MOBILE =
   window.matchMedia && window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH})`).matches;
 
-export { TOPBAR_HEIGHT, ROUTE_COLORS, MAP_COLORS } from './design-tokens.js';
+export { TOPBAR_HEIGHT, ROUTE_COLORS, MAP_COLORS, FAVORITE_COLORS } from './design-tokens.js';
 
 /*
  * Routing
@@ -68,6 +71,9 @@ export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
  * City picker
  */
 export const MAX_RECENT_CITIES = IS_MOBILE ? 3 : 6;
+/** Max unified recent rows (cities + places) persisted in `localStorage`. */
+export const MAX_RECENT_ITEMS_STORED = 10;
+export const MAX_RECENT_ITEMS_DISPLAY = IS_MOBILE ? 3 : 5;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
 export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = false;
 export const ENABLE_COMMENTS = true;

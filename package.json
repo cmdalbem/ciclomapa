@@ -8,7 +8,6 @@
   },
   "dependencies": {
     "@craco/craco": "^7.1.0",
-    "@mapbox/mapbox-gl-geocoder": "^5.0.3",
     "@mapbox/mapbox-sdk": "^0.16.2",
     "@turf/bbox": "^7.2.0",
     "@turf/circle": "^7.2.0",
@@ -43,6 +42,7 @@
     "build": "craco build",
     "test": "craco test",
     "e2e": "playwright test",
+    "e2e:apis": "playwright test e2e/apis.spec.ts",
     "e2e:ui": "playwright test --ui",
     "lint": "eslint src/",
     "typecheck": "tsc -p tsconfig.json --noEmit",

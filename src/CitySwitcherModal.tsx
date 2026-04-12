@@ -1,19 +1,43 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { HiOutlineClock, HiOutlineXMark } from 'react-icons/hi2';
-import { Button } from 'antd';
+import { createPortal } from 'react-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { HiMiniClock, HiOutlineXMark, HiOutlineHeart, HiHeart } from 'react-icons/hi2';
+import { HiSearch as IconSearch } from 'react-icons/hi';
+import { Button, Input } from 'antd';
 import Storage from './Storage.js';
 import { slugify } from './utils/utils.js';
 import { getCanonicalCitySlug, getPredefinedCitySlugDefinition } from './config/citySlugCatalog.js';
 import { TOP_CITY_SLUGS } from './config/topCitiesCatalog.js';
 import {
+  CITY_SWITCHER_MINI_CHART_LAYER_IDS,
   ENABLE_CITY_SWITCHER_STATS_CACHE,
+  IS_PROD,
   LENGTH_COUNTED_LAYER_IDS,
   MAX_RECENT_CITIES,
+  MAX_RECENT_ITEMS_DISPLAY,
+  SUPPORTED_COUNTRIES,
   SUPPORTED_COUNTRY_CODES,
   SUPPORTED_COUNTRY_LABEL_PT_BY_CODE,
 } from './config/constants.js';
 import { appendKmUnit } from './utils/routeUtils.js';
+import { getAreaStringFromResultLike } from './googlePlacesClient.js';
+import { PlacesAutocompleteOptionLabel } from './GooglePlacesGeocoder.js';
+import {
+  geocodePlacesSuggestionToResult,
+  getCitySwitcherPlacesSearchOptions,
+  PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
+  searchPlacesForAutocomplete,
+} from './placesAutocomplete.js';
+import OSMController from './OSMController.js';
+import {
+  readFavorites,
+  toggleFavorite,
+  readRecentItems,
+  addRecentCity,
+  addRecentPlace,
+  type FavoriteItem,
+  type RecentItem,
+} from './favoritesStore';
 
 import './CitySwitcherModal.css';
 
@@ -21,7 +45,10 @@ import './CitySwitcherModal.css';
 // but React 19's JSX typings require a component return type that is a JSX element.
 // Cast here to keep the rest of the file type-safe without changing runtime behavior.
 const HiOutlineXMarkIcon = HiOutlineXMark as unknown as React.FC<React.SVGProps<SVGElement>>;
-const HiOutlineClockIcon = HiOutlineClock as unknown as React.FC<React.SVGProps<SVGElement>>;
+const HiMiniClockIcon = HiMiniClock as unknown as React.FC<React.SVGProps<SVGElement>>;
+const IconSearchTyped = IconSearch as unknown as React.FC<React.SVGProps<SVGElement>>;
+const HiOutlineHeartIcon = HiOutlineHeart as unknown as React.FC<React.SVGProps<SVGElement>>;
+const HiHeartIcon = HiHeart as unknown as React.FC<React.SVGProps<SVGElement>>;
 
 const CITY_SWITCHER_LOG_PREFIX = '[city-switcher]';
 
@@ -30,14 +57,35 @@ const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 /** Persisted map: canonical city slug → summed km for that city only (layers in LENGTH_COUNTED_LAYER_IDS). */
 const CITY_SWITCHER_STATS_KM_CACHE_KEY = 'ciclomapa_city_switcher_stats_km_v2';
 
-const CITY_PICKER_INPUT_SELECTOR = '.city-switcher-modal__geocoderMount input';
+const CITY_PICKER_INPUT_SELECTOR =
+  '.city-switcher-modal__geocoderMount .city-switcher-global-search input';
+
+/** Responsive columns for catalog cities, favorites, and recents (mobile: single column via CSS). */
+const CITY_SWITCHER_CARD_GRID_CLASS =
+  'city-switcher-modal__citiesGrid grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3';
 
 type StatsTotalsCacheEntry = {
   value: number | null;
   fetchedAt: number;
+  /** Per-layer km from Firestore `lengths` (only keys absent in older cache entries). */
+  lengthsKmByLayer?: Record<string, number> | null;
 };
 
 const statsTotalsByCanonicalSlugCache = new Map<string, StatsTotalsCacheEntry>();
+
+function parseStoredLengthsKmByLayer(raw: unknown): Record<string, number> | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null) return null;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const out: Record<string, number> = {};
+  for (const layerId of LENGTH_COUNTED_LAYER_IDS) {
+    const v = Number(o[layerId]);
+    if (Number.isFinite(v) && v >= 0) out[layerId] = v;
+  }
+  const sum = Object.values(out).reduce((a, b) => a + b, 0);
+  return sum > 0 ? out : null;
+}
 
 if (typeof window !== 'undefined' && ENABLE_CITY_SWITCHER_STATS_CACHE) {
   try {
@@ -46,7 +94,7 @@ if (typeof window !== 'undefined' && ENABLE_CITY_SWITCHER_STATS_CACHE) {
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       Object.entries(parsed as Record<string, unknown>).forEach(([slug, row]) => {
         if (!slug || !row || typeof row !== 'object' || Array.isArray(row)) return;
-        const r = row as { value?: unknown; fetchedAt?: unknown };
+        const r = row as { value?: unknown; fetchedAt?: unknown; lengthsKmByLayer?: unknown };
         const fetchedAt = typeof r.fetchedAt === 'number' ? r.fetchedAt : 0;
         const value =
           typeof r.value === 'number' && Number.isFinite(r.value)
@@ -54,12 +102,15 @@ if (typeof window !== 'undefined' && ENABLE_CITY_SWITCHER_STATS_CACHE) {
             : r.value === null
               ? null
               : null;
-        statsTotalsByCanonicalSlugCache.set(slug, { value, fetchedAt });
+        const lengthsKmByLayer = parseStoredLengthsKmByLayer(r.lengthsKmByLayer);
+        const entry: StatsTotalsCacheEntry = { value, fetchedAt };
+        if (lengthsKmByLayer !== undefined) {
+          entry.lengthsKmByLayer = lengthsKmByLayer;
+        }
+        statsTotalsByCanonicalSlugCache.set(slug, entry);
       });
     }
-  } catch {
-    // Ignore corrupt cache
-  }
+  } catch {}
 }
 
 let statsTotalsLoadPromise: Promise<void> | null = null;
@@ -81,9 +132,18 @@ const STATS_FETCH_CONCURRENCY = 10;
 function persistStatsKmCache(): void {
   if (typeof window === 'undefined' || !ENABLE_CITY_SWITCHER_STATS_CACHE) return;
   try {
-    const out: Record<string, { value: number | null; fetchedAt: number }> = {};
+    const out: Record<
+      string,
+      { value: number | null; fetchedAt: number; lengthsKmByLayer?: Record<string, number> | null }
+    > = {};
     statsTotalsByCanonicalSlugCache.forEach((entry, slug) => {
-      out[slug] = { value: entry.value, fetchedAt: entry.fetchedAt };
+      out[slug] = {
+        value: entry.value,
+        fetchedAt: entry.fetchedAt,
+        ...(entry.lengthsKmByLayer !== undefined
+          ? { lengthsKmByLayer: entry.lengthsKmByLayer }
+          : {}),
+      };
     });
     window.localStorage.setItem(CITY_SWITCHER_STATS_KM_CACHE_KEY, JSON.stringify(out));
   } catch {
@@ -127,6 +187,7 @@ type TopCityBase = {
 type CityWithStats = TopCityBase & {
   totalLength: number | null;
   isLoadingTotal: boolean;
+  lengthsKmByLayer: Record<string, number> | null;
 };
 
 type RecentCityWithStats = RecentCityEntry & {
@@ -136,6 +197,7 @@ type RecentCityWithStats = RecentCityEntry & {
   countryCode: string | null;
   totalLength: number | null;
   isLoadingTotal: boolean;
+  lengthsKmByLayer: Record<string, number> | null;
 };
 
 type CountryGroup = {
@@ -199,9 +261,7 @@ function writeRecentCitiesToStorage(
 ) {
   try {
     window.localStorage.setItem(RECENT_CITIES_STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    // Ignore
-  }
+  } catch {}
 }
 
 /** Same canonical dedupe rules as `readRecentCitiesFromStorage`, for rows we just wrote to storage. */
@@ -257,7 +317,7 @@ function isElementConnected(el: Element | null): el is Element {
  */
 function focusCityPickerSearchInput(attempt = 0): void {
   if (attempt > 80) return;
-  if (!document.body.classList.contains('show-city-picker')) return;
+  if (!document.querySelector('.city-switcher-modal--open')) return;
 
   const modalRoot = document.querySelector('.city-switcher-modal');
   if (modalRoot && getComputedStyle(modalRoot).visibility === 'hidden') {
@@ -302,6 +362,18 @@ function sumLengthsToKm(lengths: unknown): number | null {
   return Number.isFinite(total) && total > 0 ? total : null;
 }
 
+/** Positive per-layer km for charting (same layers as `sumLengthsToKm`). */
+function lengthsKmByLayerFromFirestoreLengths(lengths: unknown): Record<string, number> | null {
+  const obj = lengths && typeof lengths === 'object' ? (lengths as Record<string, unknown>) : {};
+  const out: Record<string, number> = {};
+  for (const layerId of LENGTH_COUNTED_LAYER_IDS) {
+    const v = Number(obj[layerId]);
+    if (Number.isFinite(v) && v >= 0) out[layerId] = v;
+  }
+  const sum = Object.values(out).reduce((a, b) => a + b, 0);
+  return sum > 0 ? out : null;
+}
+
 /**
  * Firestore `stats` doc ids to try for this city, in order. Canonical slug first (matches `saveStatsToFirestore`).
  */
@@ -337,7 +409,9 @@ function statsCacheEntryFromDoc(docData: unknown, fetchedAt: number): StatsTotal
     docData && typeof docData === 'object' && 'lengths' in docData
       ? (docData as { lengths?: unknown }).lengths
       : undefined;
-  return { value: sumLengthsToKm(lengths), fetchedAt };
+  const value = sumLengthsToKm(lengths);
+  const lengthsKmByLayer = value !== null ? lengthsKmByLayerFromFirestoreLengths(lengths) : null;
+  return { value, fetchedAt, lengthsKmByLayer };
 }
 
 type CityStatsPreloadTask = {
@@ -397,12 +471,18 @@ async function resolveCityStatsKmForSlug(
     statsTotalsByCanonicalSlugCache.set(canonicalSlug, {
       value: previous.value,
       fetchedAt: now,
+      lengthsKmByLayer:
+        previous.lengthsKmByLayer !== undefined ? previous.lengthsKmByLayer : undefined,
     });
     schedulePersistStatsKmCache();
     return;
   }
 
-  statsTotalsByCanonicalSlugCache.set(canonicalSlug, { value: null, fetchedAt: now });
+  statsTotalsByCanonicalSlugCache.set(canonicalSlug, {
+    value: null,
+    fetchedAt: now,
+    lengthsKmByLayer: null,
+  });
   schedulePersistStatsKmCache();
 }
 
@@ -446,6 +526,19 @@ function getRealCityTotalLength(
   return entry && typeof entry.value === 'number' ? entry.value : null;
 }
 
+function getRealCityLengthsKmByLayer(
+  cityObj: StatsCityLike | null | undefined,
+  totalsByCanonicalSlug: Map<string, StatsTotalsCacheEntry>
+): Record<string, number> | null {
+  if (!cityObj || !totalsByCanonicalSlug) return null;
+  const canonicalSlug = getCanonicalCitySlug(cityObj.canonicalSlug || cityObj.slug || '');
+  if (!canonicalSlug) return null;
+  const entry = totalsByCanonicalSlug.get(canonicalSlug);
+  const raw = entry?.lengthsKmByLayer;
+  if (!raw || typeof raw !== 'object') return null;
+  return raw;
+}
+
 function shouldShowTotalSkeleton(
   cityObj: StatsCityLike | null | undefined,
   totalsByCanonicalSlug: Map<string, StatsTotalsCacheEntry>,
@@ -461,12 +554,17 @@ function attachCityStatsTotals(
   cityObj: StatsCityLike,
   totalsByCanonicalSlug: Map<string, StatsTotalsCacheEntry>,
   isLoadingTotals: boolean
-): { totalLength: number | null; isLoadingTotal: boolean } {
+): {
+  totalLength: number | null;
+  isLoadingTotal: boolean;
+  lengthsKmByLayer: Record<string, number> | null;
+} {
   const totalLength = getRealCityTotalLength(cityObj, totalsByCanonicalSlug);
   const isLoadingTotal =
     typeof totalLength !== 'number' &&
     shouldShowTotalSkeleton(cityObj, totalsByCanonicalSlug, isLoadingTotals);
-  return { totalLength, isLoadingTotal };
+  const lengthsKmByLayer = getRealCityLengthsKmByLayer(cityObj, totalsByCanonicalSlug);
+  return { totalLength, isLoadingTotal, lengthsKmByLayer };
 }
 
 function usePreloadedStatsTotalsByCanonicalSlug(cityObjs: StatsCityLike[], isPickerOpen: boolean) {
@@ -525,70 +623,141 @@ function usePreloadedStatsTotalsByCanonicalSlug(cityObjs: StatsCityLike[], isPic
   return { statsTotalsByCanonicalSlug, isLoadingTotals };
 }
 
+type PlacesAutocompleteSearchOptions = NonNullable<
+  Parameters<typeof searchPlacesForAutocomplete>[1]
+>;
+
+/** Debounced Google Places predictions for the city picker search field (single consumer). */
+function usePlacesAutocompleteSearch({
+  debounceMs = 280,
+  getAutocompleteOptions,
+}: {
+  debounceMs?: number;
+  getAutocompleteOptions: () => PlacesAutocompleteSearchOptions;
+}) {
+  const [suggestions, setSuggestions] = useState<unknown[]>([]);
+  const [loading, setLoading] = useState(false);
+  const debounceTimerRef = useRef<number | null>(null);
+  const requestSeqRef = useRef(0);
+  const getOptionsRef = useRef(getAutocompleteOptions);
+  getOptionsRef.current = getAutocompleteOptions;
+
+  const clearResults = useCallback(() => {
+    requestSeqRef.current += 1;
+    if (debounceTimerRef.current !== null) {
+      window.clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    setSuggestions([]);
+    setLoading(false);
+  }, []);
+
+  const scheduleSearch = useCallback(
+    (q: string) => {
+      if (debounceTimerRef.current !== null) {
+        window.clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      const trimmed = q.trim();
+      if (trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
+        requestSeqRef.current += 1;
+        setSuggestions([]);
+        setLoading(false);
+        return;
+      }
+      requestSeqRef.current += 1;
+      const scheduledSeq = requestSeqRef.current;
+      setLoading(true);
+      debounceTimerRef.current = window.setTimeout(async () => {
+        debounceTimerRef.current = null;
+        if (scheduledSeq !== requestSeqRef.current) return;
+        try {
+          const results = await searchPlacesForAutocomplete(trimmed, getOptionsRef.current());
+          if (scheduledSeq !== requestSeqRef.current) return;
+          setSuggestions(Array.isArray(results) ? results : []);
+        } catch (e) {
+          if (scheduledSeq !== requestSeqRef.current) return;
+          console.warn(CITY_SWITCHER_LOG_PREFIX, 'places search failed', e);
+          setSuggestions([]);
+        } finally {
+          if (scheduledSeq === requestSeqRef.current) {
+            setLoading(false);
+          }
+        }
+      }, debounceMs);
+    },
+    [debounceMs]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current !== null) {
+        window.clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  return { suggestions, loading, scheduleSearch, clearResults } as const;
+}
+
 function useCityPickerFocusAndRestore({
   contentScrollElRef,
+  isCityPickerOpen,
 }: {
   contentScrollElRef: React.RefObject<HTMLDivElement | null>;
+  isCityPickerOpen: boolean;
 }) {
   const lastFocusedBeforeOpenRef = useRef<Element | null>(null);
   const cityPickerWasOpenRef = useRef(false);
 
-  useLayoutEffect(() => {
-    const body = document.body;
-    if (!body) return undefined;
-
-    const onBodyClassChange = () => {
-      const open = body.classList.contains('show-city-picker');
-      if (open && !cityPickerWasOpenRef.current) {
-        console.debug(CITY_SWITCHER_LOG_PREFIX, 'opened');
-        lastFocusedBeforeOpenRef.current = document.activeElement;
-        const el = contentScrollElRef.current;
-        if (el) el.scrollTop = 0;
-        window.requestAnimationFrame(() => {
-          focusCityPickerSearchInput();
-        });
-      }
-      if (!open && cityPickerWasOpenRef.current) {
-        console.debug(CITY_SWITCHER_LOG_PREFIX, 'closed');
-        const toFocus = lastFocusedBeforeOpenRef.current;
-        lastFocusedBeforeOpenRef.current = null;
-        if (
-          isElementConnected(toFocus) &&
-          toFocus instanceof HTMLElement &&
-          typeof toFocus.focus === 'function'
-        ) {
-          try {
-            toFocus.focus({ preventScroll: true });
-          } catch {
-            toFocus.focus();
-          }
+  useEffect(() => {
+    const open = isCityPickerOpen;
+    if (open && !cityPickerWasOpenRef.current) {
+      console.debug(CITY_SWITCHER_LOG_PREFIX, 'opened');
+      lastFocusedBeforeOpenRef.current = document.activeElement;
+      const el = contentScrollElRef.current;
+      if (el) el.scrollTop = 0;
+      window.requestAnimationFrame(() => {
+        focusCityPickerSearchInput();
+      });
+    }
+    if (!open && cityPickerWasOpenRef.current) {
+      console.debug(CITY_SWITCHER_LOG_PREFIX, 'closed');
+      const toFocus = lastFocusedBeforeOpenRef.current;
+      lastFocusedBeforeOpenRef.current = null;
+      if (
+        isElementConnected(toFocus) &&
+        toFocus instanceof HTMLElement &&
+        typeof toFocus.focus === 'function'
+      ) {
+        try {
+          toFocus.focus({ preventScroll: true });
+        } catch {
+          toFocus.focus();
         }
       }
-      cityPickerWasOpenRef.current = open;
-    };
-
-    const observer = new MutationObserver(onBodyClassChange);
-    observer.observe(body, { attributes: true, attributeFilter: ['class'] });
-    onBodyClassChange();
-
-    return () => observer.disconnect();
-  }, [contentScrollElRef]);
+    }
+    cityPickerWasOpenRef.current = open;
+  }, [isCityPickerOpen, contentScrollElRef]);
 }
 
 function useCityPickerKeyboardTrap({
   panelRef,
   closeCityPicker,
+  isCityPickerOpen,
 }: {
   panelRef: React.RefObject<HTMLDivElement | null>;
   closeCityPicker: () => void;
+  isCityPickerOpen: boolean;
 }) {
+  const isCityPickerOpenRef = useRef(isCityPickerOpen);
   useEffect(() => {
-    const body = document.body;
-    if (!body) return undefined;
+    isCityPickerOpenRef.current = isCityPickerOpen;
+  }, [isCityPickerOpen]);
 
+  useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      const open = body.classList.contains('show-city-picker');
-      if (!open) return;
+      if (!isCityPickerOpenRef.current) return;
 
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -650,19 +819,201 @@ type CityPickerRowModel = {
   meta: string;
   totalLength: number | null;
   isLoadingTotal: boolean;
+  lengthsKmByLayer: Record<string, number> | null;
 };
+
+type CitySwitcherInfraLayer = {
+  id: string;
+  style?: {
+    lineStyle?: string;
+    lineColor?: string;
+  };
+};
+
+function useBodyThemeIsDark(): boolean {
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== 'undefined' && document.body.classList.contains('theme-dark')
+  );
+  useLayoutEffect(() => {
+    const sync = () => setIsDark(document.body.classList.contains('theme-dark'));
+    const observer = new MutationObserver(sync);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    sync();
+    return () => observer.disconnect();
+  }, []);
+  return isDark;
+}
+
+function miniChartSliceTotalKm(lengthsKmByLayer: Record<string, number>): number {
+  return CITY_SWITCHER_MINI_CHART_LAYER_IDS.reduce((sum, id) => {
+    const v = Number(lengthsKmByLayer[id]);
+    return Number.isFinite(v) && v > 0 ? sum + v : sum;
+  }, 0);
+}
+
+/** Degrees clockwise from top (12 o’clock); 0° = top center. */
+function polarOnRing(
+  cx: number,
+  cy: number,
+  r: number,
+  degCwFromTop: number
+): { x: number; y: number } {
+  const rad = ((degCwFromTop - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+/**
+ * Circular arc along one radius (stroke only). `sweepFlag` 1 = clockwise on screen (SVG y-down).
+ */
+function ringArcD(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
+  const start = polarOnRing(cx, cy, r, startDeg);
+  const end = polarOnRing(cx, cy, r, endDeg);
+  const delta = endDeg - startDeg;
+  const largeArc = delta > 180 ? 1 : 0;
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
+}
+
+const CITY_INFRA_RING_SIZE = 18;
+const CITY_INFRA_RING_CX = CITY_INFRA_RING_SIZE / 2;
+const CITY_INFRA_RING_CY = CITY_INFRA_RING_SIZE / 2;
+const CITY_INFRA_RING_R = CITY_INFRA_RING_SIZE / 2;
+const CITY_INFRA_RING_STROKE = 2;
+/** Angular gap left empty between coloured segments. */
+const CITY_INFRA_RING_GAP_DEG = 32;
+/** When only one layer has length, opening (no background ring — just empty space). */
+const CITY_INFRA_RING_SINGLE_OPENING_DEG = 32;
+/** Trim each arc at both ends (deg) so round stroke caps don’t spill into the gap between segments. */
+const CITY_INFRA_RING_CAP_TRIM_DEG = 2;
+
+/**
+ * Thin circular chart: ciclovia / ciclofaixa only, rounded stroke arcs, wide gaps, no track/background.
+ * testid kept as `city-switcher-mini-pie` for tests.
+ */
+function CityInfraMiniRing({
+  lengthsKmByLayer,
+  infraLayers,
+}: {
+  lengthsKmByLayer: Record<string, number>;
+  infraLayers: CitySwitcherInfraLayer[];
+}) {
+  const byId = Object.fromEntries(infraLayers.map((l) => [l.id, l]));
+  const segments = CITY_SWITCHER_MINI_CHART_LAYER_IDS.map((id) => {
+    const raw = Number(lengthsKmByLayer[id]);
+    const km = Number.isFinite(raw) && raw > 0 ? raw : 0;
+    const layer = byId[id];
+    const color = layer?.style?.lineColor || (id === 'ciclovia' ? '#386641' : '#A7C957');
+    return { id, km, color };
+  }).filter((s) => s.km > 0);
+
+  const totalKm = segments.reduce((sum, s) => sum + s.km, 0);
+  if (totalKm <= 0) return null;
+
+  const n = segments.length;
+  const gapTotalDeg = n === 1 ? CITY_INFRA_RING_SINGLE_OPENING_DEG : n * CITY_INFRA_RING_GAP_DEG;
+  const availDeg = 360 - gapTotalDeg;
+  const trimBase = n > 1 ? CITY_INFRA_RING_CAP_TRIM_DEG : CITY_INFRA_RING_CAP_TRIM_DEG * 0.75;
+
+  let cursor = 0;
+  const arcs: { id: string; d: string; color: string }[] = [];
+  for (let i = 0; i < n; i++) {
+    const seg = segments[i];
+    const span = (seg.km / totalKm) * availDeg;
+    const trim = Math.min(trimBase, Math.max(0, span / 2 - 0.75));
+    const arcStart = cursor + trim;
+    const arcEnd = cursor + span - trim;
+    if (arcEnd > arcStart) {
+      arcs.push({
+        id: seg.id,
+        d: ringArcD(CITY_INFRA_RING_CX, CITY_INFRA_RING_CY, CITY_INFRA_RING_R, arcStart, arcEnd),
+        color: seg.color,
+      });
+    }
+    const gapAfter = n === 1 ? CITY_INFRA_RING_SINGLE_OPENING_DEG : CITY_INFRA_RING_GAP_DEG;
+    cursor += span + gapAfter;
+  }
+
+  return (
+    <div
+      className="city-switcher-modal__cityInfraRing"
+      data-testid="city-switcher-mini-pie"
+      aria-hidden
+    >
+      <svg
+        width={CITY_INFRA_RING_SIZE}
+        height={CITY_INFRA_RING_SIZE}
+        viewBox={`0 0 ${CITY_INFRA_RING_SIZE} ${CITY_INFRA_RING_SIZE}`}
+        className="city-switcher-modal__cityInfraRingSvg"
+      >
+        {/* Horizontal mirror so segments grow counter‑clockwise from the chart’s start (toward the left). */}
+        <g
+          transform={`translate(${CITY_INFRA_RING_CX} ${CITY_INFRA_RING_CY}) scale(-1, 1) translate(${-CITY_INFRA_RING_CX} ${-CITY_INFRA_RING_CY})`}
+        >
+          {arcs.map((a) => (
+            <path
+              key={a.id}
+              d={a.d}
+              fill="none"
+              stroke={a.color}
+              strokeWidth={CITY_INFRA_RING_STROKE}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ))}
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+/** Same ring geometry as `CityInfraMiniRing` (radius, stroke width, caps); neutral stroke only = “empty” chart. */
+function CityInfraMiniRingPlaceholder() {
+  const s = CITY_INFRA_RING_SIZE;
+  const c = CITY_INFRA_RING_CX;
+  const r = CITY_INFRA_RING_R;
+  return (
+    <div
+      className="city-switcher-modal__cityInfraRing city-switcher-modal__cityInfraRing--placeholder"
+      data-testid="city-switcher-ring-placeholder"
+      aria-hidden
+    >
+      <svg
+        width={s}
+        height={s}
+        viewBox={`0 0 ${s} ${s}`}
+        className="city-switcher-modal__cityInfraRingSvg"
+      >
+        <circle
+          cx={c}
+          cy={c}
+          r={r}
+          fill="none"
+          strokeWidth={CITY_INFRA_RING_STROKE}
+          strokeLinecap="round"
+          className="city-switcher-modal__cityInfraRingPlaceholderStroke"
+        />
+      </svg>
+    </div>
+  );
+}
 
 function CityPickerCityCard({
   city,
   stagger,
   to,
   onActivate,
+  infraLayers,
 }: {
   city: CityPickerRowModel;
   stagger: number;
   to: string;
   onActivate: () => void;
+  infraLayers: CitySwitcherInfraLayer[];
 }) {
+  const hasRingData =
+    typeof city.totalLength === 'number' &&
+    city.lengthsKmByLayer &&
+    miniChartSliceTotalKm(city.lengthsKmByLayer) > 0;
+
   return (
     <div
       className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
@@ -671,6 +1022,7 @@ function CityPickerCityCard({
     >
       <Link
         to={to}
+        replace
         className="city-switcher-modal__cityBtn"
         data-city-slug={city.canonicalSlug}
         onClick={(e) => {
@@ -679,32 +1031,108 @@ function CityPickerCityCard({
         }}
       >
         <div className="city-switcher-modal__cityTopRow">
+          {hasRingData && city.lengthsKmByLayer ? (
+            <CityInfraMiniRing lengthsKmByLayer={city.lengthsKmByLayer} infraLayers={infraLayers} />
+          ) : (
+            <CityInfraMiniRingPlaceholder />
+          )}
           <div className="city-switcher-modal__cityNameWrap">
             <div className="city-switcher-modal__cityName">{city.name}</div>
-            {city.meta ? (
-              <div className="city-switcher-modal__cityMetaInline">{city.meta}</div>
-            ) : null}
+            {city.meta ? <div className="city-switcher-modal__cityMeta">{city.meta}</div> : null}
           </div>
-          {typeof city.totalLength === 'number' ? (
-            <div
-              className="city-switcher-modal__cityTotal"
-              data-city-total-km={city.totalLength.toFixed(0)}
-            >
-              {appendKmUnit(city.totalLength.toFixed(0))}
-            </div>
-          ) : city.isLoadingTotal ? (
-            <div className="city-switcher-modal__cityTotal" aria-hidden="true">
-              <span className="city-switcher-modal__cityTotalSkeleton" />
+          {typeof city.totalLength === 'number' || city.isLoadingTotal ? (
+            <div className="city-switcher-modal__cityMetrics">
+              {typeof city.totalLength === 'number' ? (
+                <div
+                  className="city-switcher-modal__cityTotal"
+                  data-city-total-km={city.totalLength.toFixed(0)}
+                >
+                  {appendKmUnit(city.totalLength.toFixed(0))}
+                </div>
+              ) : city.isLoadingTotal ? (
+                <div className="city-switcher-modal__cityTotal" aria-hidden="true">
+                  <span className="city-switcher-modal__cityTotalSkeleton" />
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
-        {city.meta ? <div className="city-switcher-modal__cityMeta">{city.meta}</div> : null}
       </Link>
     </div>
   );
 }
 
-function CitySwitcherModal() {
+/** Options forwarded to {@link searchPlacesForAutocomplete} (proximity and limit are set by the modal). */
+export type CitySwitcherPlacesAutocompleteOptions = {
+  types?: string[];
+  exclude?: {
+    adminRegions?: boolean | string[] | null;
+    bareCity?: boolean;
+  };
+  countryCodes?: string[];
+  radius?: number;
+  language?: string;
+  region?: string;
+};
+
+export type CitySwitcherModalProps = {
+  mapCenter?: { lat: number; lng: number } | null;
+  /** e.g. `types`, `exclude`; modal defaults to `exclude: { bareCity: false }` so cities stay visible */
+  placesAutocompleteOptions?: CitySwitcherPlacesAutocompleteOptions;
+  onPlacesResultSelected?: (payload: {
+    lng: number;
+    lat: number;
+    /**
+     * City + state + country for app `state.area` (`getAreaStringFromResultLike` shape),
+     * never a street-only line.
+     */
+    areaContext: string;
+    title: string;
+    address: string;
+    /** Google Places `types` from resolved details (drives the same icon as the dropdown). */
+    placeTypes?: string[];
+    /** Google `place_id` or suggestion id when available (favorites + global search pin). */
+    placeId?: string;
+  }) => void;
+  onCatalogCityPicked?: () => void;
+  onFavoritesChanged?: (favorites: FavoriteItem[]) => void;
+};
+
+type PlacesSuggestionRow = {
+  id: string;
+  place_name: string;
+  properties?: {
+    place_id?: string;
+    types?: string[];
+    structured_formatting?: { main_text?: string; secondary_text?: string };
+    formatted_address?: string;
+    name?: string;
+    address_components?: unknown[];
+  };
+};
+
+/** Shape after {@link geocodePlacesSuggestionToResult} (shared with DirectionsPanel). */
+type GeocodedPlaceResult = PlacesSuggestionRow & {
+  center?: [number, number];
+};
+
+function placeSearchRowKey(s: PlacesSuggestionRow): string | undefined {
+  return s.properties?.place_id || s.id || undefined;
+}
+
+function isPlaceSearchRowFavorited(s: PlacesSuggestionRow, favorites: FavoriteItem[]): boolean {
+  const key = placeSearchRowKey(s);
+  if (!key) return false;
+  return favorites.some((f) => f.placeId === key);
+}
+
+function CitySwitcherModal({
+  mapCenter = null,
+  placesAutocompleteOptions,
+  onPlacesResultSelected,
+  onCatalogCityPicked,
+  onFavoritesChanged,
+}: CitySwitcherModalProps = {}) {
   const { city } = useParams();
 
   const topCityBase = useMemo<TopCityBase[]>(() => {
@@ -739,22 +1167,43 @@ function CitySwitcherModal() {
   }, [topCityBase]);
 
   const [recentCityEntries, setRecentCityEntries] = useState(() => readRecentCitiesFromStorage());
+  const [recentItems, setRecentItems] = useState<RecentItem[]>(() => readRecentItems());
+  const [favorites, setFavorites] = useState<FavoriteItem[]>(() => readFavorites());
 
-  const [isCityPickerOpen, setIsCityPickerOpen] = useState(
-    () => typeof document !== 'undefined' && document.body.classList.contains('show-city-picker')
+  const recentItemsDisplayed = useMemo(
+    () => recentItems.slice(0, MAX_RECENT_ITEMS_DISPLAY),
+    [recentItems]
   );
 
-  useLayoutEffect(() => {
-    const body = document.body;
-    if (!body) return undefined;
-    const sync = () => {
-      setIsCityPickerOpen(body.classList.contains('show-city-picker'));
-    };
-    const observer = new MutationObserver(sync);
-    observer.observe(body, { attributes: true, attributeFilter: ['class'] });
-    sync();
-    return () => observer.disconnect();
-  }, []);
+  const [globalSearchValue, setGlobalSearchValue] = useState('');
+
+  const getCitySwitcherAutocompleteOptions = useCallback(
+    () => getCitySwitcherPlacesSearchOptions(mapCenter, placesAutocompleteOptions),
+    [mapCenter, placesAutocompleteOptions]
+  );
+
+  const {
+    suggestions: placesSuggestions,
+    loading: placesSearchLoading,
+    scheduleSearch: schedulePlacesSearch,
+    clearResults: clearPlacesSearch,
+  } = usePlacesAutocompleteSearch({
+    getAutocompleteOptions: getCitySwitcherAutocompleteOptions,
+  });
+
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isCityPickerOpen = searchParams.has('buscar');
+
+  useEffect(() => {
+    if (!isCityPickerOpen) {
+      setGlobalSearchValue('');
+      clearPlacesSearch();
+    } else {
+      setRecentItems(readRecentItems());
+      setFavorites(readFavorites());
+    }
+  }, [isCityPickerOpen, clearPlacesSearch]);
 
   useEffect(() => {
     console.debug(CITY_SWITCHER_LOG_PREFIX, 'reload recent cities from storage', {
@@ -781,43 +1230,14 @@ function CitySwitcherModal() {
         name: c.name,
         meta: c.meta,
       };
-      const { totalLength, isLoadingTotal } = attachCityStatsTotals(
+      const { totalLength, isLoadingTotal, lengthsKmByLayer } = attachCityStatsTotals(
         cityObj,
         statsTotalsByCanonicalSlug,
         isLoadingTotals
       );
-      return { ...c, totalLength, isLoadingTotal };
+      return { ...c, totalLength, isLoadingTotal, lengthsKmByLayer };
     });
   }, [topCityBase, statsTotalsByCanonicalSlug, isLoadingTotals]);
-
-  const recentCities = useMemo<RecentCityWithStats[]>(() => {
-    return recentCityEntries
-      .map((it): RecentCityWithStats | null => {
-        const def = getPredefinedCitySlugDefinition(it.canonicalSlug);
-        if (!def) return null;
-        const areaLabel = def?.staticLocation?.areaLabel || it.areaLabel;
-        const [name, ...rest] = String(areaLabel)
-          .split(',')
-          .map((s) => s.trim());
-        const meta = getPrimaryAreaMeta(rest);
-        const cityObj: StatsCityLike = { canonicalSlug: it.canonicalSlug, areaLabel, name, meta };
-        const { totalLength, isLoadingTotal } = attachCityStatsTotals(
-          cityObj,
-          statsTotalsByCanonicalSlug,
-          isLoadingTotals
-        );
-        return {
-          ...it,
-          areaLabel,
-          name,
-          meta,
-          countryCode: def?.countrycodes?.[0] || null,
-          totalLength,
-          isLoadingTotal,
-        };
-      })
-      .filter((row): row is RecentCityWithStats => row !== null);
-  }, [recentCityEntries, statsTotalsByCanonicalSlug, isLoadingTotals]);
 
   const topCitiesByCountry = useMemo<CountryGroup[]>(() => {
     const map = new Map<string, CountryGroup>();
@@ -839,10 +1259,16 @@ function CitySwitcherModal() {
       .concat(map.has('other') ? [map.get('other')!] : []);
   }, [topCities, countryOrder]);
 
+  const themeIsDark = useBodyThemeIsDark();
+  const infraLayersForMiniPie = useMemo((): CitySwitcherInfraLayer[] => {
+    const layers = OSMController.getLayers(themeIsDark, false) as CitySwitcherInfraLayer[];
+    const byId = Object.fromEntries(layers.map((l) => [l.id, l]));
+    return CITY_SWITCHER_MINI_CHART_LAYER_IDS.map((id) => byId[id]).filter(Boolean);
+  }, [themeIsDark]);
+
   const closeCityPicker = useCallback(() => {
-    const body = document.querySelector('body');
-    if (body) body.classList.remove('show-city-picker');
-  }, []);
+    navigate(-1);
+  }, [navigate]);
 
   const recordRecentlyVisitedCity = useCallback(
     (nextSlug: string, areaLabel: string | undefined) => {
@@ -862,8 +1288,88 @@ function CitySwitcherModal() {
         writeRecentCitiesToStorage(nextItems);
         return recentCityEntriesFromStorageWriteShape(nextItems);
       });
+
+      setRecentItems(addRecentCity(nextSlug, areaLabel || nextSlug));
     },
     []
+  );
+
+  const recordRecentPlace = useCallback(
+    (place: {
+      lng: number;
+      lat: number;
+      title: string;
+      subtitle: string;
+      placeId?: string;
+      placeTypes?: string[];
+      areaContext?: string;
+    }) => {
+      setRecentItems(addRecentPlace(place));
+    },
+    []
+  );
+
+  const handleToggleFavorite = useCallback(
+    (fav: Omit<FavoriteItem, 'id' | 'addedAt'>) => {
+      const { favorites: next } = toggleFavorite(fav);
+      setFavorites(next);
+      onFavoritesChanged?.(next);
+    },
+    [onFavoritesChanged]
+  );
+
+  const globalSearchPlaceholder = useMemo(() => {
+    const labelsPt = SUPPORTED_COUNTRIES.map((c) => c.labelPt);
+    const suffix =
+      labelsPt.length === 0
+        ? 'no mundo'
+        : labelsPt.length === 1
+          ? `em ${labelsPt[0]}`
+          : `em ${labelsPt.slice(0, -1).join(', ')} e ${labelsPt[labelsPt.length - 1]}`;
+    return IS_PROD ? `Buscar endereço ou local ${suffix}` : 'Buscar endereço ou local no mundo';
+  }, []);
+
+  const handlePlaceSuggestionPick = useCallback(
+    async (sug: PlacesSuggestionRow) => {
+      try {
+        const { result: resolvedRaw } = await geocodePlacesSuggestionToResult(sug);
+        const resolved = resolvedRaw as GeocodedPlaceResult;
+        if (!resolved.center) {
+          console.error(CITY_SWITCHER_LOG_PREFIX, 'place resolve missing center', resolved);
+          return;
+        }
+        const [lng, lat] = resolved.center;
+        const { formatted_address: formattedAddress, name: resolvedName } =
+          resolved.properties ?? {};
+        const areaContext = getAreaStringFromResultLike(resolved) || '';
+        const title = resolvedName || resolved.place_name || '';
+        const addressLine = formattedAddress || '';
+        onPlacesResultSelected?.({
+          lng,
+          lat,
+          areaContext,
+          title,
+          address: addressLine,
+          placeTypes: resolved.properties?.types,
+          placeId: resolved.properties?.place_id || sug.id || '',
+        });
+        recordRecentPlace({
+          lng,
+          lat,
+          title,
+          subtitle: addressLine || areaContext,
+          placeId: resolved.properties?.place_id || sug.id || '',
+          placeTypes: resolved.properties?.types,
+          areaContext,
+        });
+        closeCityPicker();
+        setGlobalSearchValue('');
+        clearPlacesSearch();
+      } catch (e) {
+        console.error(CITY_SWITCHER_LOG_PREFIX, 'place details failed', e);
+      }
+    },
+    [clearPlacesSearch, closeCityPicker, onPlacesResultSelected, recordRecentPlace]
   );
 
   /** Runs when the user follows a city link in this tab (navigation is handled by the link `to`). */
@@ -884,31 +1390,44 @@ function CitySwitcherModal() {
         areaLabel: cityObj?.areaLabel,
       });
 
+      onCatalogCityPicked?.();
+      setGlobalSearchValue('');
+      clearPlacesSearch();
+
       recordRecentlyVisitedCity(nextSlug, cityObj?.areaLabel);
-
-      closeCityPicker();
-
-      // Best-effort reset: hide Mapbox's input + suggestions after picking.
-      const input = document.querySelector(CITY_PICKER_INPUT_SELECTOR);
-      if (input instanceof HTMLInputElement) {
-        input.value = '';
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      }
     },
-    [recordRecentlyVisitedCity, closeCityPicker]
+    [recordRecentlyVisitedCity, onCatalogCityPicked, clearPlacesSearch]
   );
 
   const contentScrollElRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
-  useCityPickerFocusAndRestore({ contentScrollElRef });
-  useCityPickerKeyboardTrap({ panelRef, closeCityPicker });
+  useCityPickerFocusAndRestore({ contentScrollElRef, isCityPickerOpen });
+  useCityPickerKeyboardTrap({ panelRef, closeCityPicker, isCityPickerOpen });
+
+  const trimmedGlobalSearch = globalSearchValue.trim();
+  const showPlaceSearchResults = trimmedGlobalSearch.length >= PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH;
+  const placeSuggestionList = placesSuggestions as PlacesSuggestionRow[];
+
+  const placeSearchResultsEnteredRef = useRef(false);
+  useEffect(() => {
+    if (!showPlaceSearchResults) {
+      placeSearchResultsEnteredRef.current = false;
+      return;
+    }
+    if (placeSearchResultsEnteredRef.current) return;
+    placeSearchResultsEnteredRef.current = true;
+    const el = contentScrollElRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [showPlaceSearchResults]);
 
   let contentStaggerIndex = 0;
 
-  return (
+  /** Portaled to `document.body` so `#ciclomapa { overflow: hidden }` does not clip this overlay. */
+  const modalTree = (
     <div
-      className="city-switcher-modal"
+      className={`city-switcher-modal fixed inset-0${isCityPickerOpen ? ' city-switcher-modal--open' : ''}`}
       role="dialog"
       aria-modal="true"
       data-testid="city-switcher-dialog"
@@ -917,94 +1436,408 @@ function CitySwitcherModal() {
         if (e.target === e.currentTarget) closeCityPicker();
       }}
     >
-      <div ref={panelRef} className="city-switcher-modal__panel" tabIndex={-1}>
-        <div className="city-switcher-modal__topBar">
-          <div className="city-switcher-modal__geocoderMount" aria-label="Buscar cidades" />
-          <div className="city-switcher-modal__headerRow">
-            <div className="city-switcher-modal__headerSpacer" aria-hidden="true" />
+      <div
+        ref={panelRef}
+        className="city-switcher-modal__panel relative z-10 bg-transparent pointer-events-auto"
+        tabIndex={-1}
+      >
+        <div className="city-switcher-modal__topControls">
+          <div className="city-switcher-modal__closeSlot">
             <Button
+              className="city-switcher-modal__closeBtn"
               onClick={closeCityPicker}
               type="text"
               shape="circle"
               aria-label="Fechar"
               data-testid="city-switcher-close"
             >
-              <HiOutlineXMarkIcon className="text-2xl city-switcher-modal__closeIcon" aria-hidden />
+              <HiOutlineXMarkIcon className="text-2xl text-white opacity-90" aria-hidden />
             </Button>
+          </div>
+          <div
+            className="city-switcher-modal__geocoderMount relative z-30 px-5"
+            aria-label="Buscar endereço ou local"
+          >
+            <div className="city-switcher-global-search w-full">
+              <Input
+                variant="borderless"
+                size="large"
+                allowClear
+                value={globalSearchValue}
+                onChange={(e) => {
+                  const s = e.target.value;
+                  setGlobalSearchValue(s);
+                  schedulePlacesSearch(s);
+                }}
+                prefix={<IconSearchTyped className="opacity-60" aria-hidden />}
+                placeholder={globalSearchPlaceholder}
+                aria-autocomplete="list"
+                aria-controls={
+                  showPlaceSearchResults ? 'city-switcher-place-results-list' : undefined
+                }
+                aria-expanded={showPlaceSearchResults}
+              />
+            </div>
           </div>
         </div>
 
         <div
           ref={contentScrollElRef}
-          className="city-switcher-modal__content"
-          aria-label="Lista de cidades"
+          className="city-switcher-modal__content relative z-0 px-4 pb-2.5"
+          aria-label={showPlaceSearchResults ? 'Resultados da busca' : 'Lista de cidades'}
         >
-          {recentCities.length > 0 && (
+          {showPlaceSearchResults ? (
             <section
-              className="city-switcher-modal__section"
-              aria-label="Recentemente visitadas"
-              data-testid="city-switcher-recent"
+              id="city-switcher-place-results"
+              className="city-switcher-modal__section city-switcher-modal__placeSearchSection mt-5"
+              aria-label="Locais encontrados"
+              data-testid="city-switcher-place-results"
+            >
+              {placesSearchLoading ? (
+                <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm opacity-75">
+                  Buscando…
+                </p>
+              ) : placeSuggestionList.length === 0 ? (
+                <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm opacity-75">
+                  Nenhum resultado
+                </p>
+              ) : (
+                <div
+                  id="city-switcher-place-results-list"
+                  className="city-switcher-modal__placeResultsList"
+                  role="list"
+                >
+                  {placeSuggestionList.map((s, i) => {
+                    const sugName =
+                      s.properties?.structured_formatting?.main_text ||
+                      s.properties?.name ||
+                      s.place_name ||
+                      '';
+                    const sugSecondary =
+                      s.properties?.structured_formatting?.secondary_text ||
+                      s.properties?.formatted_address ||
+                      '';
+                    const rowFav = isPlaceSearchRowFavorited(s, favorites);
+                    const rowPlaceId = placeSearchRowKey(s);
+                    return (
+                      <div
+                        key={s.id || s.properties?.place_id || `${s.place_name}-${i}`}
+                        className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
+                        style={{ '--city-content-stagger': i } as React.CSSProperties}
+                        role="listitem"
+                      >
+                        <div className="city-switcher-modal__placeSearchResultCard">
+                          <button
+                            type="button"
+                            className="city-switcher-modal__placeSearchCardPick"
+                            onClick={() => void handlePlaceSuggestionPick(s)}
+                          >
+                            <PlacesAutocompleteOptionLabel
+                              suggestion={s}
+                              rowClassName="city-switcher-modal__placeSearchRow"
+                              iconWrapperClassName="city-switcher-modal__placeSearchIconWrap"
+                              primaryClassName="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary"
+                              secondaryClassName="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary"
+                              iconClassName="city-switcher-modal__placeSearchIcon"
+                              iconMatchedClassName="city-switcher-modal__placeSearchIcon city-switcher-modal__placeSearchIcon--matched"
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            className="city-switcher-modal__favBtn city-switcher-modal__placeSearchCardFav"
+                            aria-label={
+                              rowFav ? `Remover ${sugName} dos favoritos` : `Favoritar ${sugName}`
+                            }
+                            aria-pressed={rowFav}
+                            onClick={() => {
+                              (async () => {
+                                try {
+                                  const { result: resolvedRaw } =
+                                    await geocodePlacesSuggestionToResult(s);
+                                  const resolved = resolvedRaw as GeocodedPlaceResult;
+                                  if (!resolved.center) return;
+                                  const [lng, lat] = resolved.center;
+                                  handleToggleFavorite({
+                                    lng,
+                                    lat,
+                                    title:
+                                      resolved.properties?.name || resolved.place_name || sugName,
+                                    subtitle:
+                                      resolved.properties?.formatted_address || sugSecondary,
+                                    placeTypes: resolved.properties?.types,
+                                    placeId: rowPlaceId,
+                                    areaContext: getAreaStringFromResultLike(resolved) || '',
+                                  });
+                                } catch {}
+                              })();
+                            }}
+                          >
+                            {rowFav ? (
+                              <HiHeartIcon
+                                className="city-switcher-modal__favIcon city-switcher-modal__favIcon--active"
+                                aria-hidden
+                              />
+                            ) : (
+                              <HiOutlineHeartIcon
+                                className="city-switcher-modal__favIcon"
+                                aria-hidden
+                              />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {!showPlaceSearchResults && favorites.length > 0 && (
+            <section
+              className="city-switcher-modal__section mt-5"
+              aria-label="Favoritos"
+              data-testid="city-switcher-favorites"
             >
               <div
-                className="city-switcher-modal__sectionTitleWrap city-switcher-modal__staggerEnter"
+                className="city-switcher-modal__staggerEnter"
                 style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
               >
-                <div className="city-switcher-modal__sectionTitle">
-                  <HiOutlineClockIcon
-                    className="city-switcher-modal__clockIcon"
+                <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
+                  {/* <HiHeartIcon
+                    className="h-4 w-4 flex-shrink-0 city-switcher-modal__favoriteHeart"
                     aria-hidden="true"
-                  />
-                  Recentes
+                  /> */}
+                  Favoritos
                 </div>
               </div>
-              <div className="city-switcher-modal__citiesGrid" role="list">
-                {recentCities.map((c) => (
-                  <CityPickerCityCard
-                    key={c.canonicalSlug}
-                    city={c}
-                    stagger={contentStaggerIndex++}
-                    to={`/${encodeURIComponent(c.canonicalSlug)}`}
-                    onActivate={() => onCityLinkActivate(c, 'recent')}
-                  />
+              <div
+                className={CITY_SWITCHER_CARD_GRID_CLASS}
+                role="list"
+                data-testid="city-switcher-favorites-list"
+              >
+                {favorites.map((fav) => (
+                  <div
+                    key={fav.id}
+                    className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
+                    style={
+                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
+                    }
+                    role="listitem"
+                  >
+                    <button
+                      type="button"
+                      className="city-switcher-modal__cityBtn city-switcher-modal__placeSearchBtn"
+                      onClick={() => {
+                        onPlacesResultSelected?.({
+                          lng: fav.lng,
+                          lat: fav.lat,
+                          areaContext: fav.areaContext || '',
+                          title: fav.title,
+                          address: fav.subtitle,
+                          placeTypes: fav.placeTypes,
+                          placeId: fav.placeId || '',
+                        });
+                        recordRecentPlace({
+                          lng: fav.lng,
+                          lat: fav.lat,
+                          title: fav.title,
+                          subtitle: fav.subtitle,
+                          placeId: fav.placeId,
+                          placeTypes: fav.placeTypes,
+                          areaContext: fav.areaContext,
+                        });
+                        closeCityPicker();
+                      }}
+                    >
+                      <div className="city-switcher-modal__placeSearchRow">
+                        <div
+                          className="city-switcher-modal__placeSearchIconWrap"
+                          aria-hidden="true"
+                        >
+                          <HiHeartIcon className="city-switcher-modal__placeSearchIcon city-switcher-modal__placeSearchIcon--matched city-switcher-modal__favoriteHeart h-[1.125rem] w-[1.125rem]" />
+                        </div>
+                        <div className="city-switcher-modal__cityNameWrap">
+                          <div className="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary">
+                            {fav.title}
+                          </div>
+                          {fav.subtitle ? (
+                            <div className="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary">
+                              {fav.subtitle}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
                 ))}
               </div>
             </section>
           )}
 
-          {topCitiesByCountry.map((group) => {
-            const cities = group.cities;
-            if (cities.length === 0) return null;
-            return (
-              <section
-                key={group.countryCode}
-                className="city-switcher-modal__section city-switcher-modal__section--countryGroup"
-                aria-label={group.countryLabel}
-                data-country-code={group.countryCode}
+          {!showPlaceSearchResults && recentItemsDisplayed.length > 0 && (
+            <section
+              className="city-switcher-modal__section mt-5"
+              aria-label="Recentes"
+              data-testid="city-switcher-recent"
+            >
+              <div
+                className="city-switcher-modal__staggerEnter"
+                style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
               >
-                <div
-                  className="city-switcher-modal__sectionTitleWrap city-switcher-modal__staggerEnter"
-                  style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
+                <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
+                  {/* <HiMiniClockIcon
+                    className="h-4 w-4 flex-shrink-0 opacity-75 text-white"
+                    aria-hidden="true"
+                  /> */}
+                  Recentes
+                </div>
+              </div>
+              <div
+                className={CITY_SWITCHER_CARD_GRID_CLASS}
+                role="list"
+                data-testid="city-switcher-recent-list"
+              >
+                {recentItemsDisplayed.map((item) => (
+                  <div
+                    key={item.id}
+                    className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
+                    style={
+                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
+                    }
+                    role="listitem"
+                  >
+                    {item.type === 'city' && item.citySlug ? (
+                      <Link
+                        to={`/${encodeURIComponent(item.citySlug)}`}
+                        className="city-switcher-modal__cityBtn city-switcher-modal__placeSearchBtn"
+                        onClick={() => {
+                          if (item.citySlug) {
+                            const def = getPredefinedCitySlugDefinition(item.citySlug);
+                            const areaLabel =
+                              def?.staticLocation?.areaLabel ||
+                              `${item.title}${item.subtitle ? `, ${item.subtitle}` : ''}`;
+                            recordRecentlyVisitedCity(item.citySlug, areaLabel);
+                          }
+                          onCatalogCityPicked?.();
+                          closeCityPicker();
+                        }}
+                      >
+                        <div className="city-switcher-modal__placeSearchRow">
+                          <div
+                            className="city-switcher-modal__placeSearchIconWrap"
+                            aria-hidden="true"
+                          >
+                            <HiMiniClockIcon className="city-switcher-modal__placeSearchIcon h-[1.125rem] w-[1.125rem]" />
+                          </div>
+                          <div className="city-switcher-modal__cityNameWrap">
+                            <div className="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary">
+                              {item.title}
+                            </div>
+                            {item.subtitle ? (
+                              <div className="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary">
+                                {item.subtitle}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className="city-switcher-modal__cityBtn city-switcher-modal__placeSearchBtn"
+                        onClick={() => {
+                          if (item.lng != null && item.lat != null) {
+                            onPlacesResultSelected?.({
+                              lng: item.lng,
+                              lat: item.lat,
+                              areaContext: item.areaContext || '',
+                              title: item.title,
+                              address: item.subtitle,
+                              placeTypes: item.placeTypes,
+                              placeId: item.placeId || '',
+                            });
+                            recordRecentPlace({
+                              lng: item.lng,
+                              lat: item.lat,
+                              title: item.title,
+                              subtitle: item.subtitle,
+                              placeId: item.placeId,
+                              placeTypes: item.placeTypes,
+                              areaContext: item.areaContext,
+                            });
+                          }
+                          closeCityPicker();
+                        }}
+                      >
+                        <div className="city-switcher-modal__placeSearchRow">
+                          <div
+                            className="city-switcher-modal__placeSearchIconWrap"
+                            aria-hidden="true"
+                          >
+                            <HiMiniClockIcon className="city-switcher-modal__placeSearchIcon h-[1.125rem] w-[1.125rem]" />
+                          </div>
+                          <div className="city-switcher-modal__cityNameWrap">
+                            <div className="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary">
+                              {item.title}
+                            </div>
+                            {item.subtitle ? (
+                              <div className="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary">
+                                {item.subtitle}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {!showPlaceSearchResults &&
+            topCitiesByCountry.map((group) => {
+              const cities = group.cities;
+              if (cities.length === 0) return null;
+              return (
+                <section
+                  key={group.countryCode}
+                  className="city-switcher-modal__section mt-5"
+                  aria-label={group.countryLabel}
+                  data-country-code={group.countryCode}
                 >
-                  <div className="city-switcher-modal__sectionTitle">{group.countryLabel}</div>
-                </div>
-                <div className="city-switcher-modal__citiesGrid" role="list">
-                  {cities.map((c) => (
-                    <CityPickerCityCard
-                      key={c.canonicalSlug}
-                      city={c}
-                      stagger={contentStaggerIndex++}
-                      to={`/${encodeURIComponent(c.canonicalSlug)}`}
-                      onActivate={() => onCityLinkActivate(c, 'top')}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+                  <div
+                    className="city-switcher-modal__staggerEnter"
+                    style={
+                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
+                    }
+                  >
+                    <div className="city-switcher-modal__sectionTitle px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
+                      {group.countryLabel}
+                    </div>
+                  </div>
+                  <div className={CITY_SWITCHER_CARD_GRID_CLASS} role="list">
+                    {cities.map((c) => (
+                      <CityPickerCityCard
+                        key={c.canonicalSlug}
+                        city={c}
+                        stagger={contentStaggerIndex++}
+                        to={`/${encodeURIComponent(c.canonicalSlug)}`}
+                        onActivate={() => onCityLinkActivate(c, 'top')}
+                        infraLayers={infraLayersForMiniPie}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
         </div>
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalTree, document.body) : null;
 }
 
 /** Clears module-level stats cache and in-flight preload promise (Jest only; no-op in production). */
@@ -1018,9 +1851,7 @@ export function resetCitySwitcherStatsCacheForTest(): void {
   }
   try {
     window.localStorage.removeItem(CITY_SWITCHER_STATS_KM_CACHE_KEY);
-  } catch {
-    // Ignore
-  }
+  } catch {}
 }
 
 /**

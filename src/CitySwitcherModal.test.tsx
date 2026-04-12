@@ -1,4 +1,4 @@
-import React, { useLayoutEffect } from 'react';
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
@@ -12,7 +12,27 @@ import CitySwitcherModal, {
   STATS_TOTALS_SUCCESS_TTL_MS,
 } from './CitySwitcherModal';
 
-const RECENT_KEY = 'ciclomapa_recent_cities_v1';
+jest.mock('./googlePlacesClient.js', () => {
+  const actual = jest.requireActual('./googlePlacesClient.js');
+  return {
+    getCityFromResultLike: actual.getCityFromResultLike,
+    getAreaStringFromResultLike: actual.getAreaStringFromResultLike,
+    ensureGooglePlacesReady: jest.fn().mockResolvedValue(undefined),
+    getGooglePlacesGeocoder: jest.fn().mockReturnValue({
+      search: jest.fn().mockResolvedValue([]),
+      getPlaceDetails: jest.fn().mockResolvedValue({
+        coordinates: [-46.6333, -23.5505],
+        formatted_address: 'Endereço de teste',
+        name: 'Local de teste',
+        types: ['establishment'],
+        address_components: [],
+      }),
+    }),
+  };
+});
+
+const RECENT_CITIES_STATS_KEY = 'ciclomapa_recent_cities_v1';
+const RECENT_ITEMS_KEY = 'ciclomapa_recent_items_v1';
 
 function cityLink(slug: string): HTMLElement {
   const el = document.querySelector(`a[data-city-slug="${slug}"]`);
@@ -36,20 +56,12 @@ beforeEach(() => {
 afterEach(() => {
   jest.restoreAllMocks();
   resetCitySwitcherStatsCacheForTest();
-  document.body.classList.remove('show-city-picker');
-  window.localStorage.removeItem(RECENT_KEY);
+  window.localStorage.removeItem(RECENT_CITIES_STATS_KEY);
+  window.localStorage.removeItem(RECENT_ITEMS_KEY);
 });
 
-/** Injects a dummy geocoder input so focus retries from CitySwitcherModal do not spin for seconds. */
-function CitySwitcherWithGeocoderStub() {
+function CitySwitcherTestHost() {
   const loc = useLocation();
-
-  useLayoutEffect(() => {
-    const mount = document.querySelector('.city-switcher-modal__geocoderMount');
-    if (mount && !mount.querySelector('input')) {
-      mount.appendChild(document.createElement('input'));
-    }
-  }, []);
 
   return (
     <>
@@ -60,11 +72,10 @@ function CitySwitcherWithGeocoderStub() {
 }
 
 function renderOpenPicker(initialPath = '/curitiba') {
-  document.body.classList.add('show-city-picker');
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
+    <MemoryRouter initialEntries={[initialPath, `${initialPath}?buscar`]}>
       <Routes>
-        <Route path="/:city" element={<CitySwitcherWithGeocoderStub />} />
+        <Route path="/:city" element={<CitySwitcherTestHost />} />
       </Routes>
     </MemoryRouter>
   );
@@ -86,18 +97,18 @@ it('close button removes show-city-picker from body', async () => {
   const user = userEvent.setup();
   renderOpenPicker();
 
-  expect(document.body.classList.contains('show-city-picker')).toBe(true);
+  expect(document.querySelector('.city-switcher-modal--open')).not.toBeNull();
   await user.click(screen.getByTestId('city-switcher-close'));
-  expect(document.body.classList.contains('show-city-picker')).toBe(false);
+  expect(document.querySelector('.city-switcher-modal--open')).toBeNull();
 });
 
 it('Escape closes the city picker', async () => {
   const user = userEvent.setup();
   renderOpenPicker();
 
-  expect(document.body.classList.contains('show-city-picker')).toBe(true);
+  expect(document.querySelector('.city-switcher-modal--open')).not.toBeNull();
   await user.keyboard('{Escape}');
-  expect(document.body.classList.contains('show-city-picker')).toBe(false);
+  expect(document.querySelector('.city-switcher-modal--open')).toBeNull();
 });
 
 it('clicking a top city navigates to that slug and closes the picker', async () => {
@@ -115,16 +126,19 @@ it('clicking a top city navigates to that slug and closes the picker', async () 
   await waitFor(() => {
     expect(screen.getByTestId('pathname')).toHaveTextContent('/sao-paulo');
   });
-  expect(document.body.classList.contains('show-city-picker')).toBe(false);
+  expect(document.querySelector('.city-switcher-modal--open')).toBeNull();
 });
 
-it('shows Recentes when localStorage has recent cities with catalog entries', async () => {
+it('shows Recentes when localStorage has recent city items (favoritesStore)', async () => {
   window.localStorage.setItem(
-    RECENT_KEY,
+    RECENT_ITEMS_KEY,
     JSON.stringify([
       {
-        slug: 'rio-de-janeiro',
-        areaLabel: 'Rio de Janeiro, Rio de Janeiro, Brasil',
+        id: 'city:rio-de-janeiro',
+        type: 'city',
+        title: 'Rio de Janeiro',
+        subtitle: 'Rio de Janeiro, Brasil',
+        citySlug: 'rio-de-janeiro',
         visitedAt: Date.now(),
       },
     ])
@@ -134,11 +148,10 @@ it('shows Recentes when localStorage has recent cities with catalog entries', as
 
   const recentSection = await screen.findByTestId('city-switcher-recent');
   await waitFor(() => {
-    expect(recentSection.querySelector('a[data-city-slug="rio-de-janeiro"]')).toBeInstanceOf(
-      HTMLAnchorElement
-    );
+    const link = recentSection.querySelector('a[href="/rio-de-janeiro"]');
+    expect(link).toBeInstanceOf(HTMLAnchorElement);
   });
-  expect(recentSection.contains(cityLink('rio-de-janeiro'))).toBe(true);
+  expect(recentSection).toHaveTextContent('Rio de Janeiro');
 });
 
 describe('city stats totals from Storage', () => {
@@ -161,6 +174,43 @@ describe('city stats totals from Storage', () => {
     await waitFor(() => {
       expectCityLinkTotalKm(cityLink('sao-paulo'), '18');
     });
+  });
+
+  it('renders a ciclovia/ciclofaixa ring chart next to the km total when those layers have length', async () => {
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) =>
+      id === 'sao-paulo'
+        ? Promise.resolve({
+            lengths: { ciclovia: 10, ciclofaixa: 5, ciclorrota: 3 },
+          })
+        : Promise.resolve(null)
+    );
+
+    renderOpenPicker('/curitiba');
+
+    await waitFor(() => {
+      const link = cityLink('sao-paulo');
+      expect(link.querySelector('[data-testid="city-switcher-mini-pie"]')).not.toBeNull();
+      expectCityLinkTotalKm(link, '18');
+    });
+  });
+
+  it('shows ring placeholder (not data chart) when only ciclorrota / calçada lengths exist', async () => {
+    (Storage.prototype.getCityStatsDoc as jest.Mock).mockImplementation((id: string) =>
+      id === 'sao-paulo'
+        ? Promise.resolve({
+            lengths: { ciclorrota: 10, 'calcada-compartilhada': 4 },
+          })
+        : Promise.resolve(null)
+    );
+
+    renderOpenPicker('/curitiba');
+
+    await waitFor(() => {
+      expectCityLinkTotalKm(cityLink('sao-paulo'), '14');
+    });
+    const link = cityLink('sao-paulo');
+    expect(link.querySelector('[data-testid="city-switcher-mini-pie"]')).toBeNull();
+    expect(link.querySelector('[data-testid="city-switcher-ring-placeholder"]')).not.toBeNull();
   });
 
   it('resolves totals when Firestore id matches a secondary slug candidate (area label), not only canonical slug', async () => {
@@ -239,11 +289,10 @@ describe('city stats totals from Storage', () => {
     (Storage.prototype.getCityStatsDoc as jest.Mock).mockClear();
 
     first.unmount();
-    document.body.classList.add('show-city-picker');
     render(
-      <MemoryRouter initialEntries={['/curitiba']}>
+      <MemoryRouter initialEntries={['/curitiba', '/curitiba?buscar']}>
         <Routes>
-          <Route path="/:city" element={<CitySwitcherWithGeocoderStub />} />
+          <Route path="/:city" element={<CitySwitcherTestHost />} />
         </Routes>
       </MemoryRouter>
     );

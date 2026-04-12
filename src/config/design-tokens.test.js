@@ -7,6 +7,7 @@ import {
   colors,
   ROUTE_COLORS,
   MAP_COLORS,
+  FAVORITE_COLORS,
   typography,
   motion,
 } from './design-tokens.js';
@@ -37,7 +38,7 @@ describe('design tokens', () => {
       expect(props['--spacing-topbar-height']).toMatch(/^\d+px$/);
       expect(props['--spacing-panel-width']).toMatch(/^\d+px$/);
       expect(props['--radius-md']).toMatch(/^\d+px$/);
-      expect(props['--focus-ring']).toMatch(/^[\d.]+px solid /);
+      expect(props).toHaveProperty('--focus-ring');
     });
 
     it('includes typography tokens', () => {
@@ -60,6 +61,18 @@ describe('design tokens', () => {
       expect(ROUTE_COLORS.DARK.UNSELECTED).toMatch(/^#[0-9a-fA-F]{6}$/);
       expect(ROUTE_COLORS.LIGHT.SELECTED).toMatch(/^#[0-9a-fA-F]{6}$/);
       expect(ROUTE_COLORS.LIGHT.UNSELECTED).toMatch(/^#[0-9a-fA-F]{6}$/);
+    });
+  });
+
+  describe('FAVORITE_COLORS', () => {
+    it('matches colors used for --color-favorite-* CSS vars', () => {
+      const props = getCssCustomProperties();
+      expect(FAVORITE_COLORS.ACCENT).toBe(colors.favoriteAccent);
+      expect(FAVORITE_COLORS.ACCENT_DARK).toBe(colors.favoriteAccentDark);
+      expect(props['--color-favorite-accent']).toBe(colors.favoriteAccent);
+      expect(props['--color-favorite-accent-dark']).toBe(colors.favoriteAccentDark);
+      expect(FAVORITE_COLORS.ACCENT).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(FAVORITE_COLORS.ACCENT_DARK).toMatch(/^#[0-9a-fA-F]{6}$/);
     });
   });
 
