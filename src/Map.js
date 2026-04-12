@@ -25,7 +25,8 @@ import {
   ROUTE_LINE_BORDER_WIDTH,
   ROUTE_LINE_BORDER_OPACITY,
   ROUTE_LINE_PADDING_WIDTH,
-  NEAR_DESTINATION_POI_RADIUS_KM,
+  NEAR_ROUTE_ENDPOINT_POI_RADIUS_KM,
+  ROUTE_ENDPOINT_VISIBLE_POI_ICONS,
   PMTILES_FILENAME,
   LOW_ZOOM_WIDTH_DIVISOR,
   ROUTES_ACTIVE_LOW_ZOOM_WIDTH_DIVISOR,
@@ -73,6 +74,9 @@ export function flyMapToCityFocus(map, centerLngLat, placeName) {
   });
 }
 
+/** GeoJSON source holding endpoint circles used alongside route-mode POI `within` filters */
+const ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID = 'route-endpoint-poi-zones';
+
 /** Geo sources for app data layers; basemap (e.g. composite) is everything else. */
 const CICLOMAPA_DATA_SOURCES = new Set([
   'osmdata',
@@ -84,11 +88,14 @@ const CICLOMAPA_DATA_SOURCES = new Set([
   'overlapping-cyclepaths-selected',
   'overlapping-cyclepaths-unselected',
   'boundaryLineSrc',
-  'destination-filter-circle',
+  ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID,
 ]);
 
 const isE2E =
   typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('e2e');
+
+/** Built-in `Map`; the React component class name `Map` shadows `window.Map` inside methods. */
+const JsMap = window.Map;
 
 class Map extends Component {
   map;
@@ -103,9 +110,12 @@ class Map extends Component {
   comments;
   debouncedMapStateSync;
   lastGeocodedPlaceName;
-  originalPOIFilters; // Store original POI filters to restore when routes are cleared
+  originalRouteEndpointPoiFilters; // POI layer filters before route-mode `within` is applied; restored when routes clear
   geolocateControl; // Reference to Mapbox GeolocateControl
   resizeObserver;
+
+  /** Basemap symbol layers with text: id → visibility from the loaded style (`none` or `visible`). Reset when the style changes. */
+  basemapTextLayerDefaultVisibility;
 
   constructor(props) {
     super(props);
@@ -333,13 +343,29 @@ class Map extends Component {
         : '';
   }
 
-  /** Hide map-supplied symbol layers that render text (street / place labels), not CicloMapa POIs. */
+  /**
+   * Clean mode: hide map-supplied symbol layers that render text (streets, places, POIs, etc.), not CicloMapa data.
+   * When clean mode is off, restore each layer’s original visibility from the style.
+   */
   applyCleanModeBasemapLabels() {
     const map = this.map;
     if (!map?.getStyle) return;
     const style = map.getStyle();
     const styleLayers = style?.layers;
     if (!styleLayers) return;
+
+    if (!this.basemapTextLayerDefaultVisibility) {
+      const defaults = new JsMap();
+      for (const layer of styleLayers) {
+        if (layer.type !== 'symbol') continue;
+        if (CICLOMAPA_DATA_SOURCES.has(layer.source)) continue;
+        const textField = layer.layout && layer.layout['text-field'];
+        if (textField === undefined || textField === '' || textField === false) continue;
+        const v = layer.layout && layer.layout.visibility;
+        defaults.set(layer.id, v === 'none' ? 'none' : 'visible');
+      }
+      this.basemapTextLayerDefaultVisibility = defaults;
+    }
 
     const hide = Boolean(this.props.cleanMode);
     for (const layer of styleLayers) {
@@ -348,8 +374,11 @@ class Map extends Component {
       const textField = layer.layout && layer.layout['text-field'];
       if (textField === undefined || textField === '' || textField === false) continue;
       if (!map.getLayer(layer.id)) continue;
+      const target = hide
+        ? 'none'
+        : (this.basemapTextLayerDefaultVisibility.get(layer.id) ?? 'visible');
       try {
-        map.setLayoutProperty(layer.id, 'visibility', hide ? 'none' : 'visible');
+        map.setLayoutProperty(layer.id, 'visibility', target);
       } catch {
         // ignore
       }
@@ -1668,7 +1697,7 @@ class Map extends Component {
       }
 
       // Reset stored filters when data changes
-      this.originalPOIFilters = null;
+      this.originalRouteEndpointPoiFilters = null;
 
       this.hideGeoJsonFromPmtiles(this.props.data);
 
@@ -1681,7 +1710,11 @@ class Map extends Component {
 
     if (this.props.style !== prevProps.style) {
       console.debug('new style', this.props.style);
+      this.basemapTextLayerDefaultVisibility = null;
       map.setStyle(this.props.style);
+      map.once('style.load', () => {
+        this.applyCleanModeBasemapLabels();
+      });
     }
 
     if (this.props.showSatellite !== prevProps.showSatellite) {
@@ -1710,10 +1743,13 @@ class Map extends Component {
     });
 
     const routesChanged = this.props.routes !== prevProps.routes;
-    const routesOrDestChanged = routesChanged || this.props.toPoint !== prevProps.toPoint;
+    const routesOrEndpointsChanged =
+      routesChanged ||
+      this.props.toPoint !== prevProps.toPoint ||
+      this.props.fromPoint !== prevProps.fromPoint;
 
-    // Single pass: layer toggles, route mode, and destination all affect visibility.
-    if (layersChanged || routesOrDestChanged) {
+    // Single pass: layer toggles, route mode, and from/to endpoints all affect visibility.
+    if (layersChanged || routesOrEndpointsChanged) {
       if (layersChanged) {
         console.debug('Layer visibility changed, updating...');
       }
@@ -2197,42 +2233,51 @@ class Map extends Component {
   }
 
   /**
-   * Filter POIs visible during route planning (only show bike parking and rental stations near destination)
-   * Uses Mapbox's native 'within' filter with a circle geometry
+   * During route mode, restrict certain POI layers to features within a radius of each route endpoint
+   * (Mapbox `within` on circle geometries around from / to).
    */
-  updateNearDestinationPOIs(hasRoutes, destinationCoords, source) {
+  updateRouteEndpointPoiFilters(hasRoutes, fromCoords, toCoords) {
     const map = this.map;
     if (!map) return;
 
-    const nearDestinationPOIs = ['poi-rental', 'poi-bikeparking'];
-    const CIRCLE_SOURCE_ID = 'destination-filter-circle';
+    if (hasRoutes && (fromCoords || toCoords)) {
+      const fromCircle = fromCoords
+        ? turfCircle(fromCoords, NEAR_ROUTE_ENDPOINT_POI_RADIUS_KM, {
+            units: 'kilometers',
+          })
+        : null;
+      const toCircle = toCoords
+        ? turfCircle(toCoords, NEAR_ROUTE_ENDPOINT_POI_RADIUS_KM, {
+            units: 'kilometers',
+          })
+        : null;
 
-    if (hasRoutes && destinationCoords) {
-      // Create circle geometry around destination
-      const circle = turfCircle(destinationCoords, NEAR_DESTINATION_POI_RADIUS_KM, {
-        units: 'kilometers',
-      });
+      const spatialFilter =
+        fromCircle && toCircle
+          ? ['any', ['within', fromCircle.geometry], ['within', toCircle.geometry]]
+          : ['within', (fromCircle || toCircle).geometry];
 
-      // Create or update temporary circle source
-      if (!map.getSource(CIRCLE_SOURCE_ID)) {
-        map.addSource(CIRCLE_SOURCE_ID, {
+      const zonesGeoJson =
+        fromCircle && toCircle
+          ? { type: 'FeatureCollection', features: [fromCircle, toCircle] }
+          : fromCircle || toCircle;
+
+      if (!map.getSource(ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID)) {
+        map.addSource(ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID, {
           type: 'geojson',
-          data: circle,
+          data: zonesGeoJson,
         });
       } else {
-        map.getSource(CIRCLE_SOURCE_ID).setData(circle);
+        map.getSource(ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID).setData(zonesGeoJson);
       }
 
-      // Get POI layers that should remain visible during routes
-      const nearDestinationPOILayers = this.props.layers.filter(
-        (l) => l.type === 'poi' && nearDestinationPOIs.includes(l.icon)
+      const routeEndpointPoiLayers = this.props.layers.filter(
+        (l) => l.type === 'poi' && ROUTE_ENDPOINT_VISIBLE_POI_ICONS.includes(l.icon)
       );
 
-      // Apply within filter to near-destination POI layers
-      nearDestinationPOILayers.forEach((layer) => {
+      routeEndpointPoiLayers.forEach((layer) => {
         const originalFilter = this.convertFilterToMapboxFilter(layer, 'osmdata');
-        // Combine original filter with within filter
-        const withinFilter = ['all', originalFilter, ['within', circle.geometry]];
+        const endpointWithinFilter = ['all', originalFilter, spatialFilter];
 
         // Only apply to GeoJSON source layers (not PMTiles)
         const layerId = layer.id;
@@ -2240,17 +2285,17 @@ class Map extends Component {
         const polygonLayerId = layerId + 'polygon';
 
         // Store original filter if not already stored
-        if (!this.originalPOIFilters) {
-          this.originalPOIFilters = {};
+        if (!this.originalRouteEndpointPoiFilters) {
+          this.originalRouteEndpointPoiFilters = {};
         }
-        if (!this.originalPOIFilters[circlesLayerId]) {
-          this.originalPOIFilters[circlesLayerId] = originalFilter;
+        if (!this.originalRouteEndpointPoiFilters[circlesLayerId]) {
+          this.originalRouteEndpointPoiFilters[circlesLayerId] = originalFilter;
         }
-        if (!this.originalPOIFilters[layerId]) {
-          this.originalPOIFilters[layerId] = originalFilter;
+        if (!this.originalRouteEndpointPoiFilters[layerId]) {
+          this.originalRouteEndpointPoiFilters[layerId] = originalFilter;
         }
-        if (!this.originalPOIFilters[polygonLayerId]) {
-          this.originalPOIFilters[polygonLayerId] = originalFilter;
+        if (!this.originalRouteEndpointPoiFilters[polygonLayerId]) {
+          this.originalRouteEndpointPoiFilters[polygonLayerId] = originalFilter;
         }
 
         // Apply within filter to all three layer types (circles, symbols, polygons)
@@ -2258,7 +2303,7 @@ class Map extends Component {
         [circlesLayerId, layerId, polygonLayerId].forEach((id) => {
           if (map.getLayer(id)) {
             try {
-              map.setFilter(id, withinFilter);
+              map.setFilter(id, endpointWithinFilter);
             } catch (e) {
               console.warn('Error setting within filter for', id, e);
             }
@@ -2267,21 +2312,21 @@ class Map extends Component {
       });
     } else {
       // Remove within filter and restore original filters when routes are cleared
-      if (this.originalPOIFilters) {
-        const nearDestinationPOILayers = this.props.layers.filter(
-          (l) => l.type === 'poi' && nearDestinationPOIs.includes(l.icon)
+      if (this.originalRouteEndpointPoiFilters) {
+        const routeEndpointPoiLayers = this.props.layers.filter(
+          (l) => l.type === 'poi' && ROUTE_ENDPOINT_VISIBLE_POI_ICONS.includes(l.icon)
         );
 
-        nearDestinationPOILayers.forEach((layer) => {
+        routeEndpointPoiLayers.forEach((layer) => {
           // Only restore GeoJSON source layers (not PMTiles)
           const layerId = layer.id;
           const circlesLayerId = layerId + 'circles';
           const polygonLayerId = layerId + 'polygon';
 
           [circlesLayerId, layerId, polygonLayerId].forEach((id) => {
-            if (map.getLayer(id) && this.originalPOIFilters[id]) {
+            if (map.getLayer(id) && this.originalRouteEndpointPoiFilters[id]) {
               try {
-                map.setFilter(id, this.originalPOIFilters[id]);
+                map.setFilter(id, this.originalRouteEndpointPoiFilters[id]);
               } catch (e) {
                 console.warn('Error restoring filter for', id, e);
               }
@@ -2289,12 +2334,11 @@ class Map extends Component {
           });
         });
 
-        this.originalPOIFilters = null;
+        this.originalRouteEndpointPoiFilters = null;
       }
 
-      // Remove circle source when routes are cleared
-      if (map.getSource(CIRCLE_SOURCE_ID)) {
-        map.removeSource(CIRCLE_SOURCE_ID);
+      if (map.getSource(ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID)) {
+        map.removeSource(ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID);
       }
     }
   }
@@ -2304,11 +2348,10 @@ class Map extends Component {
     if (!map) return;
 
     const hasRoutes = this.props.routes?.routes?.length > 0;
-    const nearDestinationPOIs = ['poi-rental', 'poi-bikeparking']; // POI types visible during routes
-    const destinationCoords = this.props.toPoint?.result?.center;
+    const fromCoords = this.props.fromPoint?.result?.center;
+    const toCoords = this.props.toPoint?.result?.center;
 
-    // Apply within filter for near-destination POIs when routes are active
-    this.updateNearDestinationPOIs(hasRoutes, destinationCoords, null);
+    this.updateRouteEndpointPoiFilters(hasRoutes, fromCoords, toCoords);
 
     // Update layer visibility
     this.props.layers.forEach((layer) => {
@@ -2342,12 +2385,12 @@ class Map extends Component {
           }
         });
       } else if (layer.type === 'poi') {
-        const isNearDestinationPOI = nearDestinationPOIs.includes(layer.icon);
+        const isRouteEndpointPoiIcon = ROUTE_ENDPOINT_VISIBLE_POI_ICONS.includes(layer.icon);
         const status = !hasRoutes
           ? layer.isActive
             ? 'visible'
             : 'none'
-          : isNearDestinationPOI && destinationCoords && layer.isActive
+          : isRouteEndpointPoiIcon && (fromCoords || toCoords) && layer.isActive
             ? 'visible'
             : 'none';
 
