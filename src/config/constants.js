@@ -38,7 +38,7 @@ export const OVERPASS_SERVERS = [
 export const AREA_ID_OVERRIDES = {
   'Vitória, Espirito Santo, Brasil': 3601825817,
   'Brasília, Distrito Federal, Brasil': 3602662005,
-  'København, Capital RegionDenmark, Denmark': 3613707878,
+  'København, Capital RegionDenmark, Denmark': 3602192363,
   'Comuna 1, Buenos Aires, Argentina': 3601224652,
   'Stockholm, Stockholm, Sweden': 3600398021,
   'Madri, Madrid, Espanha': 3605326784,
