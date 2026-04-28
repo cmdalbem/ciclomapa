@@ -108,15 +108,13 @@ class LayersPanel extends Component {
                 classNames={{ content: 'layers-panel-popover-content-inner' }}
                 content={
                   <div className="layers-panel-popover-content">
-                    {l.type === 'way' && (
-                      <div className="layers-panel-popover__figure">
-                        <img
-                          className="layers-panel-popover__img"
-                          alt=""
-                          src={'/' + slugify(l.name) + '.png'}
-                        />
-                      </div>
-                    )}
+                    <div className="layers-panel-popover__figure">
+                      <img
+                        className="layers-panel-popover__img"
+                        alt=""
+                        src={'/' + slugify(l.name) + '.jpg'}
+                      />
+                    </div>
 
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-2xl mb-0 tracking-tight">{l.displayName || l.name}</h3>
