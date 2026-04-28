@@ -61,6 +61,7 @@
   },
   {
     "name": "Bicicletários & paraciclos",
+    "displayName": "Bicicletários",
     "shortName": "Bicicletários",
     "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos. Sempre verifique a qualidade e segurança oferecida!",
     "filters": [["amenity", "bicycle_parking"]],
@@ -73,9 +74,9 @@
   },
   {
     "name": "Estações",
-    "displayName": "Estações de bike compartilhadas",
+    "displayName": "Estações",
     "shortName": "Estações",
-    "description": "Estações de compartilhamento de bicicletas (bike sharing) de diferentes operadoras.",
+    "description": "Estações de compartilhamento de bicicletas de diferentes operadoras.",
     "filters": [["amenity", "bicycle_rental"]],
     "type": "poi",
     "icon": "poi-rental",
@@ -122,7 +123,7 @@
   },
   {
     "name": "Calçada compartilhada",
-    "displayName": "Calçadas compartilhadas",
+    "displayName": "Calçadas",
     "shortName": "Calçadas",
     "description": "Calçadas com sinalização para circulação compartilhada de bicicletas. Lembre-se que pedestres possuem a prioridade.",
     "protectionLevel": "Alta",
