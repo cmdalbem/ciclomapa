@@ -2,14 +2,10 @@ import React, { Component } from 'react';
 import { Popover } from 'antd';
 
 import { HiEye as IconVisible, HiEyeOff as IconHidden } from 'react-icons/hi';
-import {
-  MdSignalCellularAlt2Bar as IconSignal2,
-  MdSignalCellularAlt as IconSignal3,
-  MdSignalCellularAlt1Bar as IconSignal1,
-} from 'react-icons/md';
 
 import { slugify } from './utils/utils.js';
 import InfrastructureBadge from './components/InfrastructureBadge';
+import { IconSignal1, IconSignal2, IconSignal3 } from './components/ProtectionSignalIcons';
 
 import './LayersPanel.css';
 
