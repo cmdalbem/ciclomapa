@@ -183,7 +183,7 @@ class LayersLegendModal extends Component {
           {/* Image/Icon */}
           <div className="flex-shrink-0">
             {layer.type === 'way' && (
-              <img className="w-full rounded-md" alt="" src={'/' + slugify(layer.name) + '.png'} />
+              <img className="w-full rounded-md" alt="" src={'/' + slugify(layer.name) + '.jpg'} />
             )}
 
             {layer.type === 'poi' && layer.icon && (
