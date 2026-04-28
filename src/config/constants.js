@@ -132,7 +132,8 @@ export const ROUTE_LINE_WIDTH = ROUTE_FIXED_WIDTH;
 export const ROUTE_LINE_PADDING_GAP_WIDTH = ROUTE_FIXED_WIDTH + ROUTE_LINE_PADDING_WIDTH - 3;
 export const ROUTE_LINE_GAP_WIDTH = ROUTE_FIXED_WIDTH - ROUTE_LINE_BORDER_WIDTH - 1;
 
-export const NEAR_DESTINATION_POI_RADIUS_KM = 0.6; // Radius in kilometers for showing POIs near destination during route planning
+export const NEAR_ROUTE_ENDPOINT_POI_RADIUS_KM = 0.4;
+export const ROUTE_ENDPOINT_VISIBLE_POI_ICONS = ['poi-rental', 'poi-bikeparking'];
 
 // At low zoom, line widths are scaled down by dividing lineWidth by these values.
 export const LOW_ZOOM_WIDTH_DIVISOR = 5;
