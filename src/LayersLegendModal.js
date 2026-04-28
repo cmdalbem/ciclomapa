@@ -4,6 +4,7 @@ import { Button } from 'antd';
 
 import { slugify } from './utils/utils.js';
 import InfrastructureBadge from './components/InfrastructureBadge';
+import { IconSignal1, IconSignal2, IconSignal3 } from './components/ProtectionSignalIcons';
 import { formatDistance, formatDuration } from './utils/routeUtils.js';
 import commentIcon from './img/icons/poi-comment-flat.png';
 import bikeparkingIcon from './img/icons/poi-bikeparking@2x.png';
@@ -11,11 +12,6 @@ import bikeshopIcon from './img/icons/poi-bikeshop@2x.png';
 import bikerentalIcon from './img/icons/poi-bikerental@2x.png';
 
 import { HiOutlineXMark } from 'react-icons/hi2';
-import {
-  MdSignalCellularAlt2Bar as IconSignal2,
-  MdSignalCellularAlt as IconSignal3,
-  MdSignalCellularAlt1Bar as IconSignal1,
-} from 'react-icons/md';
 
 import { handleModalKeyDown, setupModalFocus, restoreModalFocus } from './modalFocusTrap';
 

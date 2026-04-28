@@ -98,7 +98,7 @@ const InfrastructureBadge: React.FC<InfrastructureBadgeProps> = ({
 
   return (
     <span
-      className="rounded-full font-medium text-xs px-1.5 py-0.5 flex items-center gap-1 text-nowrap whitespace-nowrap shrink-0"
+      className="rounded-full font-medium text-xs px-1.5 py-0.5 flex items-center gap-1 whitespace-nowrap flex-shrink-0"
       style={{ color: textColor, backgroundColor }}
     >
       {children}
