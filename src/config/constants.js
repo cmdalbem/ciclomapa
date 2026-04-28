@@ -159,6 +159,7 @@ export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 12;
 //   la_es_pt.pmtiles → PREVIEW
 //   br_es_pt.pmtiles
 //   la.pmtiles
+//   de.pmtiles
 //   europe.pmtiles (???)
 const DEFAULT_PMTILES_FILENAME = 'la_es_pt.pmtiles';
 export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAULT_PMTILES_FILENAME;
