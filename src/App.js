@@ -63,6 +63,7 @@ class App extends Component {
   lastResolvedCitySlug = null;
   lastNotifiedCitySlugError = null;
   initialBareRootEntry = false;
+  _lastExplicitCityNavTimestamp = 0;
 
   constructor(props) {
     super(props);
@@ -113,6 +114,19 @@ class App extends Component {
     const citySlug = this.getCitySlugFromRoute();
     const hasExplicitLatLng = this.hasExplicitViewportInURL();
     const shouldStartFromGlobeView = Boolean(citySlug) && !hasExplicitLatLng;
+
+    // Derive the initial area from the URL slug (for catalog cities) so that a page
+    // load/refresh always reflects the slug rather than potentially stale localStorage.
+    // For unknown cities, componentDidMount will resolve via Nominatim.
+    let initialArea = prev.area || '';
+    if (citySlug) {
+      const normalizedSlug = decodeURIComponent(citySlug).trim().toLowerCase();
+      const canonicalSlug = getCanonicalCitySlug(normalizedSlug) || normalizedSlug;
+      const staticLocation = getPredefinedCityStaticLocation(canonicalSlug);
+      if (staticLocation?.areaLabel) {
+        initialArea = staticLocation.areaLabel;
+      }
+    }
 
     // On mobile, always use system theme preference since toggle isn't available
     // On desktop, use saved preference if available, otherwise fallback to system theme preference
@@ -171,7 +185,7 @@ class App extends Component {
     });
 
     return {
-      area: prev.area || '',
+      area: initialArea,
       showSatellite: ENABLE_SATELLITE_TOGGLE
         ? prev.showSatellite !== undefined
           ? prev.showSatellite
@@ -545,6 +559,7 @@ class App extends Component {
     if (this.lastResolvedCitySlug === citySlug) return;
 
     this.lastResolvedCitySlug = citySlug;
+    this._lastExplicitCityNavTimestamp = Date.now();
 
     try {
       const normalizedSlug = decodeURIComponent(citySlug).trim().toLowerCase();
@@ -1390,7 +1405,27 @@ class App extends Component {
     requestAnimationFrame(() => {
       const nextState = { ...newState };
       if (typeof nextState.area === 'string' && nextState.area.trim()) {
-        nextState.area = this.normalizeAreaLabelForDisplay(nextState.area);
+        const normalized = this.normalizeAreaLabelForDisplay(nextState.area);
+
+        // Guard against stale reverse-geocode results: the map's debouncedMapStateSync
+        // (1 s timer) can fire AFTER the user has already navigated to a new city via the
+        // city picker, overwriting state.area with the old city's name. That in turn causes
+        // syncRouteSlugWithArea to push the old slug back into the URL.
+        // Solution: ignore map-driven area updates that disagree with the current route slug
+        // within a 5-second grace window after an explicit city navigation.
+        const routeSlug = this.getCanonicalRouteCitySlug();
+        if (normalized && routeSlug) {
+          const candidateSlug = this.getCitySlugFromArea(normalized);
+          const timeSinceLastNav = Date.now() - this._lastExplicitCityNavTimestamp;
+          if (candidateSlug && candidateSlug !== routeSlug && timeSinceLastNav < 5000) {
+            // Stale geocode result — drop the area update to protect the current slug.
+            delete nextState.area;
+          } else {
+            nextState.area = normalized;
+          }
+        } else {
+          nextState.area = normalized;
+        }
       }
       this.setState(nextState);
     });
