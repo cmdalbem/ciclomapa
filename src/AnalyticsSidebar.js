@@ -248,10 +248,10 @@ class AnalyticsSidebar extends Component {
 
           {this.props.location && (
             <>
-              <div className="mt-3 text-3xl tracking-tighter leading-tight">
+              <div className="mt-3 text-3xl leading-none font-heading-display uppercase">
                 {this.props.location.split(',')[0]}
               </div>
-              <div className="mb-2 mt-0 text-xl tracking-tight opacity-50 leading-tight">
+              <div className="mb-2 mt-2 text-lg tracking-tight opacity-50 leading-tight">
                 {this.props.location.split(',')[1] && `${this.props.location.split(',')[1]}`}
               </div>
             </>
@@ -557,14 +557,12 @@ class AnalyticsSidebar extends Component {
           {this.props.downloadData && (
             <Section title="Download dados">
               <p className="text-xs opacity-50">
-                Baixe os dados da infraestrutura cicloviária desta cidade em formato GeoJSON para
-                uso em seus próprios projetos e análises.
+                Baixe os dados da infraestrutura cicloviária desta cidade para uso em seus próprios
+                projetos e análises.
               </p>
-              <Button onClick={this.props.downloadData} block>
-                <IconDownload className="inline-block mr-1" />
-                <span className="font-mono text-xs">
-                  {this.props.location.split(',')[0]}.geojson
-                </span>
+              <Button onClick={this.props.downloadData} size="small" className="opacity-70">
+                <IconDownload className="inline-block" />
+                {this.props.location.split(',')[0]}.geojson
               </Button>
             </Section>
           )}
