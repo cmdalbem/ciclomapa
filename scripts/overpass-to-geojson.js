@@ -31,14 +31,15 @@ const path = require('path');
 const { URL } = require('url');
 const osmtogeojson = require('osmtogeojson');
 
+const pkg = require('../package.json');
+
 const OVERPASS_SERVERS = [
-  'https://overpass.private.coffee/api/interpreter',
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
   'https://overpass-api.de/api/interpreter',
-  'https://overpass.osm.jp/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
 ];
 
 const DEFAULT_OVERPASS_ENDPOINT = OVERPASS_SERVERS[0];
+const DEFAULT_USER_AGENT = `${pkg.name}/${pkg.version} (+${pkg.homepage || 'https://ciclomapa.app'})`;
 
 // Area ID overrides (from constants.js)
 const AREA_ID_OVERRIDES = {
@@ -55,6 +56,8 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const config = {
     endpoint: DEFAULT_OVERPASS_ENDPOINT,
+    userAgent: process.env.CICLOMAPA_USER_AGENT || process.env.USER_AGENT || DEFAULT_USER_AGENT,
+    from: process.env.CICLOMAPA_FROM || process.env.FROM || undefined,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -78,6 +81,10 @@ function parseArgs() {
         .filter((s) => s);
     } else if (arg === '--include-poi') {
       config.includePoi = true;
+    } else if (arg === '--user-agent' && i + 1 < args.length) {
+      config.userAgent = args[++i];
+    } else if (arg === '--from' && i + 1 < args.length) {
+      config.from = args[++i];
     } else if (arg === '--help' || arg === '-h') {
       console.log(`
 Overpass Query to GeoJSON Converter
@@ -96,6 +103,8 @@ Optional Options:
   --include-layers    Comma-separated list of layer names to include
   --exclude-layers    Comma-separated list of layer names to exclude
   --include-poi        Include POI (Point of Interest) layers in the query
+  --user-agent <ua>   Override User-Agent header for HTTP requests
+  --from <email>      Add From header (recommended by Overpass etiquette)
   --help, -h          Show this help message
 
 Note: If no --endpoint is specified, the script will automatically try multiple
@@ -108,6 +117,7 @@ Examples:
   node scripts/overpass-to-geojson.js --area "Brazil" --output brazil.geojson --include-layers "Ciclovia,Ciclofaixa"
   node scripts/overpass-to-geojson.js --area "France" --exclude-layers "Proibido,Baixa velocidade"
   node scripts/overpass-to-geojson.js --area "Germany" --include-poi
+  node scripts/overpass-to-geojson.js --area "Portugal" --from "you@example.com"
             `);
       process.exit(0);
     }
@@ -420,7 +430,8 @@ async function resolveAreaToRelationId(areaName, spinner = null) {
         nominatimUrl,
         {
           headers: {
-            'User-Agent': 'CicloMapa Overpass Query Tool',
+            'User-Agent': DEFAULT_USER_AGENT,
+            Accept: 'application/json',
           },
         },
         (res) => {
@@ -469,7 +480,7 @@ async function resolveAreaToRelationId(areaName, spinner = null) {
 }
 
 // Execute Overpass query against a single endpoint
-function executeOverpassQuery(query, endpoint, spinner = null) {
+function executeOverpassQuery(query, endpoint, requestHeaders = {}, spinner = null) {
   return new Promise((resolve, reject) => {
     const url = new URL(endpoint);
     const options = {
@@ -478,8 +489,10 @@ function executeOverpassQuery(query, endpoint, spinner = null) {
       path: url.pathname,
       method: 'POST',
       headers: {
+        Accept: 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
         'Content-Length': Buffer.byteLength(query),
+        ...requestHeaders,
       },
     };
 
@@ -549,10 +562,15 @@ function executeOverpassQuery(query, endpoint, spinner = null) {
 }
 
 // Execute Overpass query with automatic fallback to multiple servers
-async function executeOverpassQueryWithFallback(query, endpoint, spinner = null) {
+async function executeOverpassQueryWithFallback(
+  query,
+  endpoint,
+  requestHeaders = {},
+  spinner = null
+) {
   // If a custom endpoint is provided, use only that one
   if (endpoint !== DEFAULT_OVERPASS_ENDPOINT) {
-    return executeOverpassQuery(query, endpoint, spinner);
+    return executeOverpassQuery(query, endpoint, requestHeaders, spinner);
   }
 
   // Otherwise, try servers in sequence until one succeeds
@@ -581,7 +599,7 @@ async function executeOverpassQueryWithFallback(query, endpoint, spinner = null)
         }
       }
 
-      const result = await executeOverpassQuery(query, server, spinner);
+      const result = await executeOverpassQuery(query, server, requestHeaders, spinner);
 
       // Stop spinner before printing success message
       if (spinner) spinner.stop();
@@ -676,9 +694,15 @@ async function main() {
     const querySpinner = new Spinner('Executing query...');
     querySpinner.start();
 
+    const requestHeaders = {
+      'User-Agent': config.userAgent,
+      ...(config.from ? { From: config.from } : {}),
+    };
+
     const osmData = await executeOverpassQueryWithFallback(
       trimmedQuery,
       config.endpoint,
+      requestHeaders,
       querySpinner
     );
 
