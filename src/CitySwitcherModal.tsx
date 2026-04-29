@@ -55,7 +55,7 @@ const CITY_SWITCHER_LOG_PREFIX = '[city-switcher]';
 const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 
 /** Persisted map: canonical city slug → summed km for that city only (layers in LENGTH_COUNTED_LAYER_IDS). */
-const CITY_SWITCHER_STATS_KM_CACHE_KEY = 'ciclomapa_city_switcher_stats_km_v2';
+const CITY_SWITCHER_STATS_KM_CACHE_KEY = 'ciclomapa_city_switcher_stats_km_v3';
 
 const CITY_PICKER_INPUT_SELECTOR =
   '.city-switcher-modal__geocoderMount .city-switcher-global-search input';
