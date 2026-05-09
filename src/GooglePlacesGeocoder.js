@@ -1,5 +1,5 @@
 import React from 'react';
-import { trackCall, API_TYPES } from './dev/geocodingTracker.js';
+import { trackCall, API_TYPES } from './dev/apiTracker.js';
 import {
   HiLocationMarker,
   HiHome,

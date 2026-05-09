@@ -14,7 +14,7 @@ import LayersBar from './LayersBar.js';
 import DirectionsPanel from './DirectionsPanel.js';
 import AnalyticsSidebar from './AnalyticsSidebar.js';
 import { IS_MOBILE, IS_PROD, ENABLE_SATELLITE_TOGGLE } from './config/constants.js';
-import GeocodingDebugOverlay from './dev/GeocodingDebugOverlay.jsx';
+import ApiDebugOverlay from './dev/ApiDebugOverlay.jsx';
 
 export default function AppLayout({
   state,
@@ -203,7 +203,7 @@ export default function AppLayout({
         scrollToSection={state.layersLegendScrollToSection}
       />
 
-      {state.debugMode && <GeocodingDebugOverlay />}
+      {state.debugMode && <ApiDebugOverlay />}
     </div>
   );
 }

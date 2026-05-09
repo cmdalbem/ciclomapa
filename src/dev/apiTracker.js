@@ -1,6 +1,6 @@
 /**
- * Lightweight singleton for tracking geocoding API calls across the app.
- * Feeds the GeocodingDebugOverlay component.
+ * Lightweight singleton for tracking external API calls across the app.
+ * Feeds the ApiDebugOverlay component.
  */
 
 const MAX_ENTRIES = 80;
@@ -26,19 +26,35 @@ export const API_COLORS = {
   [API_TYPES.MAPBOX_GEOCODING]: '#22c55e',
 };
 
+/**
+ * Known brand logos (favicon-sized PNGs from official CDNs).
+ * Only add a brand here if its logo renders clearly at ~12px.
+ */
+export const BRAND_LOGOS = {
+  google: 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_16dp.png',
+};
+
 /** Billing groups: each billed API with its constituent call types. */
 export const API_GROUPS = [
   {
     id: 'geocoding-api',
     label: 'Geocoding API',
+    brand: 'google',
     color: '#ef4444',
     types: [API_TYPES.GOOGLE_GEOCODING],
   },
   {
     id: 'places-api',
     label: 'Places API',
+    brand: 'google',
     color: '#f97316',
     types: [API_TYPES.GOOGLE_PREDICTIONS, API_TYPES.GOOGLE_PLACE_DETAILS],
+  },
+  {
+    id: 'mapbox-geocoding',
+    label: 'Mapbox Geocoding',
+    color: '#22c55e',
+    types: [API_TYPES.MAPBOX_GEOCODING],
   },
 ];
 
@@ -54,7 +70,7 @@ function _notify() {
 }
 
 /**
- * Record a geocoding API call.
+ * Record an API call.
  * @param {{ api: string, details: string }} opts
  */
 export function trackCall({ api, details = '' }) {

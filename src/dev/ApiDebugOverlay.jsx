@@ -4,9 +4,10 @@ import {
   API_GROUPS,
   API_LABELS,
   API_TYPES,
+  BRAND_LOGOS,
   reset,
   subscribe,
-} from './geocodingTracker.js';
+} from './apiTracker.js';
 
 const BADGE_SHORT = {
   [API_TYPES.GOOGLE_GEOCODING]: 'GEO',
@@ -19,6 +20,18 @@ function formatAge(timestamp) {
   const secs = Math.floor((Date.now() - timestamp) / 1000);
   if (secs < 60) return `${secs}s`;
   return `${Math.floor(secs / 60)}m${secs % 60}s`;
+}
+
+function BrandLogo({ brand }) {
+  const src = BRAND_LOGOS[brand];
+  if (!src) return null;
+  return (
+    <img
+      src={src}
+      alt={brand}
+      style={{ width: 11, height: 11, flexShrink: 0, imageRendering: 'auto' }}
+    />
+  );
 }
 
 function Badge({ api }) {
@@ -58,9 +71,21 @@ function GroupRow({ group, counts }) {
             flexShrink: 0,
           }}
         />
-        <span style={{ flex: 1, color: '#e4e4e7', fontWeight: 600, fontSize: 11 }}>
-          {group.label}
-        </span>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+          {group.brand && <BrandLogo brand={group.brand} />}
+          <span
+            style={{
+              color: '#e4e4e7',
+              fontWeight: 600,
+              fontSize: 11,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {group.label}
+          </span>
+        </div>
         <span
           style={{
             fontWeight: 700,
@@ -98,7 +123,7 @@ function GroupRow({ group, counts }) {
   );
 }
 
-export default function GeocodingDebugOverlay() {
+export default function ApiDebugOverlay() {
   const [collapsed, setCollapsed] = useState(false);
   const [snapshot, setSnapshot] = useState({ entries: [], counts: {} });
   const [flashIds, setFlashIds] = useState(new Set());
@@ -161,7 +186,7 @@ export default function GeocodingDebugOverlay() {
         }}
       >
         <span style={{ fontSize: 13 }}>📡</span>
-        <span style={{ fontWeight: 700, flex: 1 }}>Geocoding Debug</span>
+        <span style={{ fontWeight: 700, flex: 1 }}>API Debug</span>
         <span
           style={{
             background: totalCalls > 0 ? '#ef4444' : '#3f3f46',
@@ -197,7 +222,7 @@ export default function GeocodingDebugOverlay() {
 
       {!collapsed && (
         <div style={{ background: '#09090b', color: '#d4d4d8' }}>
-          {/* Billing groups */}
+          {/* API groups */}
           {API_GROUPS.map((group) => (
             <GroupRow key={group.id} group={group} counts={snapshot.counts} />
           ))}
