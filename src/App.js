@@ -44,7 +44,7 @@ import {
 } from './config/constants.js';
 import { maybeAutoOpenWelcomeAboutModal, shouldAutoOpenWelcomeAboutModal } from './AboutModal.js';
 import { readFavorites, toggleFavorite } from './favoritesStore';
-import { reverseGeocodePlace } from './googlePlacesClient.js';
+import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 
 // v5+ no longer ships global type scale in the old Less bundle; this restores baseline
 // margins for raw h1–p etc. (and complements Tailwind preflight). See antd/dist/reset.css.

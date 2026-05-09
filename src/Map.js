@@ -44,7 +44,7 @@ import { adjustColorBrightness } from './utils/utils.js';
 import debounce from 'lodash.debounce';
 import { getCurrentSunPosition } from './sunPositionUtils';
 import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/map/icons';
-import { reverseGeocodePlace } from './googlePlacesClient.js';
+import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 
 import './Map.css';
 
