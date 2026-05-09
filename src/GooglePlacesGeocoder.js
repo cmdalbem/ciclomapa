@@ -1,4 +1,5 @@
 import React from 'react';
+import { trackCall, API_TYPES } from './dev/geocodingTracker.js';
 import {
   HiLocationMarker,
   HiHome,
@@ -364,6 +365,8 @@ class GooglePlacesGeocoder {
       throw new Error('Google Places API not initialized');
     }
 
+    trackCall({ api: API_TYPES.GOOGLE_PREDICTIONS, details: query });
+
     const request = {
       input: query,
       language: options.language || this.language,
@@ -436,6 +439,8 @@ class GooglePlacesGeocoder {
       throw new Error('Google Places Service not initialized');
     }
 
+    trackCall({ api: API_TYPES.GOOGLE_PLACE_DETAILS, details: placeId });
+
     return new Promise((resolve, reject) => {
       const request = {
         placeId: placeId,
@@ -462,6 +467,11 @@ class GooglePlacesGeocoder {
     if (!this.geocoder) {
       throw new Error('Google Geocoder not initialized');
     }
+
+    trackCall({
+      api: API_TYPES.GOOGLE_GEOCODING,
+      details: `${lngLat[1].toFixed(4)}, ${lngLat[0].toFixed(4)}`,
+    });
 
     const request = {
       location: new window.google.maps.LatLng(lngLat[1], lngLat[0]),

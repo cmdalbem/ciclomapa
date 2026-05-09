@@ -3,6 +3,7 @@
  * Receives state and handlers from App to keep App.js focused on state and logic.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import AboutModal from './AboutModal.js';
 import LayersLegendModal from './LayersLegendModal.js';
 import Map from './Map.js';
@@ -13,6 +14,7 @@ import LayersBar from './LayersBar.js';
 import DirectionsPanel from './DirectionsPanel.js';
 import AnalyticsSidebar from './AnalyticsSidebar.js';
 import { IS_MOBILE, IS_PROD, ENABLE_SATELLITE_TOGGLE } from './config/constants.js';
+import GeocodingDebugOverlay from './dev/GeocodingDebugOverlay.jsx';
 
 export default function AppLayout({
   state,
@@ -200,6 +202,73 @@ export default function AppLayout({
         isDarkMode={state.isDarkMode}
         scrollToSection={state.layersLegendScrollToSection}
       />
+
+      {state.debugMode && <GeocodingDebugOverlay />}
     </div>
   );
 }
+
+AppLayout.propTypes = {
+  seoPageTitle: PropTypes.string,
+  cityCanonicalSlug: PropTypes.string,
+  directionsPanelRef: PropTypes.object,
+  state: PropTypes.shape({
+    hideUI: PropTypes.bool,
+    hideUIFromUrl: PropTypes.bool,
+    isSidebarOpen: PropTypes.bool,
+    isDirectionsPanelOpen: PropTypes.bool,
+    area: PropTypes.string,
+    dataUpdatedAt: PropTypes.string,
+    lat: PropTypes.number,
+    lng: PropTypes.number,
+    zoom: PropTypes.number,
+    embedMode: PropTypes.bool,
+    isDarkMode: PropTypes.bool,
+    loading: PropTypes.bool,
+    mapKey: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    debugMode: PropTypes.bool,
+    geoJson: PropTypes.object,
+    layers: PropTypes.array,
+    mapStyle: PropTypes.string,
+    showSatellite: PropTypes.bool,
+    toPoint: PropTypes.object,
+    fromPoint: PropTypes.object,
+    isTrackingUserLocation: PropTypes.bool,
+    globalSearchPin: PropTypes.object,
+    favorites: PropTypes.oneOfType([PropTypes.array, PropTypes.object]),
+    cleanMode: PropTypes.bool,
+    lengths: PropTypes.object,
+    airtableCityFields: PropTypes.object,
+    lengthCalculationStrategy: PropTypes.string,
+    map: PropTypes.object,
+    aboutModal: PropTypes.bool,
+    layersLegendModal: PropTypes.bool,
+    layersLegendScrollToSection: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  }).isRequired,
+  handlers: PropTypes.shape({
+    downloadData: PropTypes.func,
+    onMapMoved: PropTypes.func,
+    forceUpdate: PropTypes.func,
+    toggleSidebar: PropTypes.func,
+    openAboutModal: PropTypes.func,
+    toggleTheme: PropTypes.func,
+    updateLengths: PropTypes.func,
+    setMapRef: PropTypes.func,
+    onTrackingUserLocationChange: PropTypes.func,
+    clearGlobalSearchPin: PropTypes.func,
+    handleFavoritesChanged: PropTypes.func,
+    onLayersChange: PropTypes.func,
+    openLayersLegendModal: PropTypes.func,
+    handleGlobalSearchPlaceSelect: PropTypes.func,
+    setDirectionsPanelRef: PropTypes.func,
+    setFromPoint: PropTypes.func,
+    setToPoint: PropTypes.func,
+    clearRoutePoints: PropTypes.func,
+    onDirectionsPanelToggle: PropTypes.func,
+    setArea: PropTypes.func,
+    closeAboutModal: PropTypes.func,
+    openCityPicker: PropTypes.func,
+    closeLayersLegendModal: PropTypes.func,
+    onChangeStrategy: PropTypes.func,
+  }).isRequired,
+};
