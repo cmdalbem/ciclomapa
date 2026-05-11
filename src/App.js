@@ -129,13 +129,19 @@ class App extends Component {
       }
     }
 
+    const urlFlagEnabled = (raw) =>
+      Boolean(raw) && String(raw).toLowerCase() !== 'false' && String(raw) !== '0';
+
     // On mobile, always use system theme preference since toggle isn't available
     // On desktop, use saved preference if available, otherwise fallback to system theme preference
-    const isDarkMode = IS_MOBILE
-      ? getSystemThemePreference()
-      : prev.isDarkMode !== undefined
-        ? prev.isDarkMode
-        : getSystemThemePreference();
+    // ?dark=true in the URL always takes precedence over everything else
+    const isDarkMode = urlFlagEnabled(urlParams.dark)
+      ? true
+      : IS_MOBILE
+        ? getSystemThemePreference()
+        : prev.isDarkMode !== undefined
+          ? prev.isDarkMode
+          : getSystemThemePreference();
     console.log(
       'Theme preference:',
       isDarkMode ? 'dark' : 'light',
@@ -176,9 +182,6 @@ class App extends Component {
 
     const embedMode = urlParams.embed;
 
-    const urlFlagEnabled = (raw) =>
-      Boolean(raw) && String(raw).toLowerCase() !== 'false' && String(raw) !== '0';
-
     // Avoid first-paint flicker: decide welcome modal state before initial render.
     const shouldAutoOpenWelcomeModal = shouldAutoOpenWelcomeAboutModal({
       fromMount: true,
@@ -208,6 +211,7 @@ class App extends Component {
       hideUIFromUrl: urlFlagEnabled(urlParams.hideui),
       aboutModal: shouldAutoOpenWelcomeModal,
       cleanMode: urlFlagEnabled(urlParams.clean),
+      darkModeFromUrl: urlFlagEnabled(urlParams.dark),
       layersLegendModal: false,
       layersLegendScrollToSection: null,
       lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
@@ -369,7 +373,18 @@ class App extends Component {
   }
 
   getParamsFromURL() {
-    const possibleParams = ['z', 'lat', 'lng', 'embed', 'debug', 'from', 'to', 'clean', 'hideui'];
+    const possibleParams = [
+      'z',
+      'lat',
+      'lng',
+      'embed',
+      'debug',
+      'from',
+      'to',
+      'clean',
+      'hideui',
+      'dark',
+    ];
     const urlParams = new URLSearchParams(this.props.location.search);
     let paramsObj = {};
 
@@ -804,6 +819,12 @@ class App extends Component {
       currentParams.set('clean', 'true');
     } else {
       currentParams.delete('clean');
+    }
+
+    if (this.state.darkModeFromUrl) {
+      currentParams.set('dark', 'true');
+    } else {
+      currentParams.delete('dark');
     }
 
     if (this.state.hideUIFromUrl) {
