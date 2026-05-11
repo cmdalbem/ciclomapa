@@ -1,22 +1,22 @@
-// Aku & Kamu (Marsnev™) — bundled from author distribution (donationware); not on Google Fonts.
-// Optional: add ../fonts/aku-kamu.woff2 and list it before the otf line for smaller payloads.
+// Boldonse — bundled from local font asset.
 
 @font-face {
-  font-family: 'Aku Kamu';
+  font-family: 'Boldonse';
   src:
-    local('Aku & Kamu'),
-    local('Aku&Kamu'),
-    local('Aku Kamu'),
-    url('../fonts/aku-kamu.otf') format('opentype');
+    local('Boldonse Regular'),
+    local('Boldonse-Regular'),
+    local('Boldonse'),
+    url('../fonts/Boldonse-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 html {
-  --font-heading-display: 'Aku Kamu', 'IBM Plex Sans', sans-serif;
+  --font-heading-display: 'Boldonse', 'IBM Plex Sans', sans-serif;
 }
 
 .font-heading-display {
   font-family: var(--font-heading-display);
+  text-transform: uppercase;
 }

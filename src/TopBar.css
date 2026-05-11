@@ -9,21 +9,23 @@
 }
 
 /* Logo styling for light mode */
-.logo-svg {
-  transition: fill 0.3s ease;
+.logo-wordmark {
+  display: inline-block;
+  line-height: 1;
+  transition: color 0.3s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .logo-svg {
+  .logo-wordmark {
     transition: none;
   }
 }
 
-.theme-dark .logo-svg {
+.theme-dark .logo-wordmark {
   color: var(--color-logo-dark);
 }
 
-.theme-light .logo-svg {
+.theme-light .logo-wordmark {
   color: var(--color-logo-light);
 }
 
