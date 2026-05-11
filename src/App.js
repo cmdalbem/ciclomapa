@@ -211,7 +211,7 @@ class App extends Component {
           ? prev.showSatellite
           : false
         : false,
-      zoom: shouldStartFromGlobeView ? 1.8 : prev.zoom || urlParams.z || DEFAULT_ZOOM,
+      zoom: shouldStartFromGlobeView ? 1.8 : parseFloat(urlParams.z) || prev.zoom || DEFAULT_ZOOM,
       lat: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
       lng: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
       geoJson: null,
