@@ -61,6 +61,8 @@ class App extends Component {
   osmController = OSMController;
   currentOSMRequest = null;
   deferredCityFocus = null;
+  // Fly-to target from the `?flyto=lat,lng[,zoom]` URL param; consumed when the map mounts.
+  pendingFlyToTarget = null;
   lastResolvedCitySlug = null;
   lastNotifiedCitySlugError = null;
   initialBareRootEntry = false;
@@ -176,6 +178,20 @@ class App extends Component {
             center: [lng, lat],
             place_name: 'Destino carregado da URL',
           },
+        };
+      }
+    }
+
+    // `flyto=lat,lng[,zoom]` triggers a Mapbox flyTo animation from the initial
+    // viewport to this target as soon as the map is ready. The optional third
+    // value animates zoom too (if omitted, current zoom is preserved).
+    // Internally we convert to Mapbox's `[lng, lat]` center order.
+    if (urlParams.flyto) {
+      const [lat, lng, zoom] = urlParams.flyto.split(',').map(Number);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        this.pendingFlyToTarget = {
+          center: [lng, lat],
+          zoom: Number.isFinite(zoom) ? zoom : null,
         };
       }
     }
@@ -384,6 +400,7 @@ class App extends Component {
       'clean',
       'hideui',
       'dark',
+      'flyto',
     ];
     const urlParams = new URLSearchParams(this.props.location.search);
     let paramsObj = {};
@@ -736,6 +753,48 @@ class App extends Component {
     this.deferredCityFocus = null;
   }
 
+  // Applies the `?flyto=lat,lng[,zoom]` URL param by animating the camera
+  // from the current map center to the target with Mapbox's flyTo. We wait
+  // for the map's first `load` event and then add a short pause so the user
+  // perceives the origin before the camera starts moving.
+  //
+  // The URL param is intentionally NOT stripped, so refreshing the page
+  // replays the animation. To keep the replay faithful, `updateURL` freezes
+  // `lat`/`lng`/`z` writes while `flyto` is present (otherwise post-animation
+  // map moves would overwrite the origin with the destination, leaving
+  // nothing to fly from on the next load).
+  applyPendingFlyTo() {
+    if (!this.pendingFlyToTarget || !this.state.map) return;
+    const map = this.state.map;
+    const target = this.pendingFlyToTarget;
+    this.pendingFlyToTarget = null;
+
+    const doFly = () => {
+      try {
+        const flyOptions = {
+          center: target.center,
+          duration: 3000,
+          essential: true,
+        };
+        if (target.zoom !== null) {
+          flyOptions.zoom = target.zoom;
+        }
+        map.flyTo(flyOptions);
+      } catch (e) {
+        console.error('Failed to apply pending flyto:', e);
+      }
+    };
+
+    const FLYTO_INITIAL_PAUSE_MS = 700;
+    const scheduleFly = () => setTimeout(doFly, FLYTO_INITIAL_PAUSE_MS);
+
+    if (map.loaded()) {
+      scheduleFly();
+    } else {
+      map.once('load', scheduleFly);
+    }
+  }
+
   async reverseGeocodeURLPoints() {
     // Reverse geocode URL-loaded points to get proper place names
     if (
@@ -799,9 +858,17 @@ class App extends Component {
   updateURL() {
     const currentParams = new URLSearchParams(window.location.search);
 
-    currentParams.set('lat', this.state.lat.toFixed(7));
-    currentParams.set('lng', this.state.lng.toFixed(7));
-    currentParams.set('z', this.state.zoom.toFixed(2));
+    // While `flyto` is present, keep `lat`/`lng`/`z` frozen at the original
+    // values so refreshing the page replays the animation from the same origin.
+    // Map moves (including the flyTo itself and user pans/zooms afterwards)
+    // won't be reflected in the URL until `flyto` is removed.
+    const hasFlytoParam = currentParams.has('flyto');
+
+    if (!hasFlytoParam) {
+      currentParams.set('lat', this.state.lat.toFixed(7));
+      currentParams.set('lng', this.state.lng.toFixed(7));
+      currentParams.set('z', this.state.zoom.toFixed(2));
+    }
 
     if (this.state.debugMode) {
       currentParams.set('debug', 'true');
@@ -1231,6 +1298,7 @@ class App extends Component {
 
     if (this.state.map && this.state.map !== prevState.map) {
       this.applyDeferredCityFocus();
+      this.applyPendingFlyTo();
     }
 
     if (this.state.area !== prevState.area) {
