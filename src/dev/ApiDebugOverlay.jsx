@@ -4,7 +4,8 @@ import {
   API_GROUPS,
   API_LABELS,
   API_TYPES,
-  BRAND_LOGOS,
+  BRAND_LOGO_SVG,
+  BRAND_LOGO_URLS,
   reset,
   subscribe,
 } from './apiTracker.js';
@@ -13,7 +14,18 @@ const BADGE_SHORT = {
   [API_TYPES.GOOGLE_GEOCODING]: 'GEO',
   [API_TYPES.GOOGLE_PREDICTIONS]: 'PRED',
   [API_TYPES.GOOGLE_PLACE_DETAILS]: 'DETAIL',
-  [API_TYPES.MAPBOX_GEOCODING]: 'MB',
+  [API_TYPES.MAPBOX_GEOCODING]: 'GEO',
+  [API_TYPES.MAPBOX_DIRECTIONS]: 'DIR',
+  [API_TYPES.NOMINATIM_SEARCH]: 'NOM',
+  [API_TYPES.NOMINATIM_REVERSE]: 'REV',
+  [API_TYPES.OVERPASS]: 'OVP',
+  [API_TYPES.GRAPHHOPPER]: 'GH',
+  [API_TYPES.VALHALLA]: 'VAL',
+  [API_TYPES.ORS]: 'ORS',
+  [API_TYPES.AIRTABLE_READ]: 'AT-R',
+  [API_TYPES.AIRTABLE_WRITE]: 'AT-W',
+  [API_TYPES.FIREBASE_READ]: 'FB-R',
+  [API_TYPES.FIREBASE_WRITE]: 'FB-W',
 };
 
 function formatAge(timestamp) {
@@ -23,15 +35,28 @@ function formatAge(timestamp) {
 }
 
 function BrandLogo({ brand }) {
-  const src = BRAND_LOGOS[brand];
-  if (!src) return null;
-  return (
-    <img
-      src={src}
-      alt={brand}
-      style={{ width: 11, height: 11, flexShrink: 0, imageRendering: 'auto' }}
-    />
-  );
+  if (!brand) return null;
+
+  if (BRAND_LOGO_SVG[brand]) {
+    return (
+      <span
+        dangerouslySetInnerHTML={{ __html: BRAND_LOGO_SVG[brand] }}
+        style={{ width: 11, height: 11, flexShrink: 0, display: 'flex' }}
+      />
+    );
+  }
+
+  if (BRAND_LOGO_URLS[brand]) {
+    return (
+      <img
+        src={BRAND_LOGO_URLS[brand]}
+        alt={brand}
+        style={{ width: 11, height: 11, flexShrink: 0 }}
+      />
+    );
+  }
+
+  return null;
 }
 
 function Badge({ api }) {

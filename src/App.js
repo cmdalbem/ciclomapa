@@ -45,6 +45,7 @@ import {
 import { maybeAutoOpenWelcomeAboutModal, shouldAutoOpenWelcomeAboutModal } from './AboutModal.js';
 import { readFavorites, toggleFavorite } from './favoritesStore';
 import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
+import { API_TYPES, trackCall } from './dev/apiTracker.js';
 
 // v5+ no longer ships global type scale in the old Less bundle; this restores baseline
 // margins for raw h1–p etc. (and complements Tailwind preflight). See antd/dist/reset.css.
@@ -727,6 +728,10 @@ class App extends Component {
       this.state.fromPoint.result.place_name === 'Origem carregada da URL'
     ) {
       try {
+        trackCall({
+          api: API_TYPES.MAPBOX_GEOCODING,
+          details: `${this.state.fromPoint.result.center[1].toFixed(4)}, ${this.state.fromPoint.result.center[0].toFixed(4)}`,
+        });
         const response = await fetch(
           `https://api.mapbox.com/geocoding/v5/mapbox.places/${this.state.fromPoint.result.center[0]},${this.state.fromPoint.result.center[1]}.json?access_token=${MAPBOX_ACCESS_TOKEN}&language=pt-BR`
         );
@@ -750,6 +755,10 @@ class App extends Component {
 
     if (this.state.toPoint && this.state.toPoint.result.place_name === 'Destino carregado da URL') {
       try {
+        trackCall({
+          api: API_TYPES.MAPBOX_GEOCODING,
+          details: `${this.state.toPoint.result.center[1].toFixed(4)}, ${this.state.toPoint.result.center[0].toFixed(4)}`,
+        });
         const response = await fetch(
           `https://api.mapbox.com/geocoding/v5/mapbox.places/${this.state.toPoint.result.center[0]},${this.state.toPoint.result.center[1]}.json?access_token=${MAPBOX_ACCESS_TOKEN}&language=pt-BR`
         );

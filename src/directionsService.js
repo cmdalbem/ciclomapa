@@ -8,6 +8,7 @@ import {
   GRAPHHOPPER_BASE_URL,
   VALHALLA_BASE_URL,
 } from './config/constants.js';
+import { API_TYPES, trackCall } from './dev/apiTracker.js';
 
 // Abstract base class for directions providers
 class DirectionsProvider {
@@ -60,6 +61,11 @@ class MapboxDirectionsProvider extends DirectionsProvider {
     const fromCoords = this.normalizeCoordinates(from);
     const toCoords = this.normalizeCoordinates(to);
 
+    trackCall({
+      api: API_TYPES.MAPBOX_DIRECTIONS,
+      details: `${fromCoords[1].toFixed(4)},${fromCoords[0].toFixed(4)} → ${toCoords[1].toFixed(4)},${toCoords[0].toFixed(4)}`,
+    });
+
     try {
       const response = await this.client
         .getDirections({
@@ -101,6 +107,11 @@ class OpenRouteServiceProvider extends DirectionsProvider {
     if (!this.apiKey) {
       throw new Error('OpenRouteService API key is required');
     }
+
+    trackCall({
+      api: API_TYPES.ORS,
+      details: `${fromCoords[1].toFixed(4)},${fromCoords[0].toFixed(4)} → ${toCoords[1].toFixed(4)},${toCoords[0].toFixed(4)}`,
+    });
 
     try {
       // OpenRouteService expects API key as query parameter, not in Authorization header
@@ -174,6 +185,11 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
     if (!this.apiKey) {
       throw new Error('GraphHopper API key is required');
     }
+
+    trackCall({
+      api: API_TYPES.GRAPHHOPPER,
+      details: `${fromCoords[1].toFixed(4)},${fromCoords[0].toFixed(4)} → ${toCoords[1].toFixed(4)},${toCoords[0].toFixed(4)}`,
+    });
 
     try {
       const params = new URLSearchParams({
@@ -305,6 +321,11 @@ class ValhallaDirectionsProvider extends DirectionsProvider {
   async getDirections(from, to, options = {}) {
     const fromCoords = this.normalizeCoordinates(from);
     const toCoords = this.normalizeCoordinates(to);
+
+    trackCall({
+      api: API_TYPES.VALHALLA,
+      details: `${fromCoords[1].toFixed(4)},${fromCoords[0].toFixed(4)} → ${toCoords[1].toFixed(4)},${toCoords[0].toFixed(4)}`,
+    });
 
     try {
       const requestBody = {

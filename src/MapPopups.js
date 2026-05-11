@@ -10,6 +10,7 @@ import { formatTimeAgo } from './utils/utils.js';
 import { ENABLE_COMMENTS, IS_MOBILE } from './config/constants.js';
 import { getPlaceTypeIconElement } from './GooglePlacesGeocoder.js';
 import { isFavorite, isFavoriteById } from './favoritesStore';
+import { API_TYPES, trackCall } from './dev/apiTracker.js';
 
 /** POI address line from Overpass tags; Nominatim fallback (https://operations.osmfoundation.org/policies/nominatim/). */
 
@@ -162,6 +163,8 @@ export function formatNominatimReverseLine(data, opts = {}) {
 
 export async function reverseNominatimAddress(lat, lon, options = {}) {
   const { signal, acceptLanguage = 'pt-BR,pt,en', selectedAreaLabel } = options;
+
+  trackCall({ api: API_TYPES.NOMINATIM_REVERSE, details: `${lat.toFixed(4)}, ${lon.toFixed(4)}` });
 
   const url = new URL('https://nominatim.openstreetmap.org/reverse');
   url.searchParams.set('lat', String(lat));

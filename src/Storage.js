@@ -1,6 +1,7 @@
 import { get, set } from 'idb-keyval';
 
 import firebase from 'firebase';
+import { API_TYPES, trackCall } from './dev/apiTracker.js';
 
 // import { cleanUpInternalTags, gzipCompress } from './utils/geojsonUtils.js'
 import { cleanUpInternalTags } from './utils/geojsonUtils.js';
@@ -193,6 +194,8 @@ class Storage {
   }
 
   save(name, geoJson, lengths, options = {}) {
+    trackCall({ api: API_TYPES.FIREBASE_WRITE, details: name });
+
     return new Promise((resolve, reject) => {
       const now = new Date();
       const storageKey = this.normalizeStorageKey(options.storageKey || name);
@@ -368,6 +371,8 @@ class Storage {
   }
 
   async tryLoadNewFormat(slug) {
+    trackCall({ api: API_TYPES.FIREBASE_READ, details: slug });
+
     try {
       // Check if metadata document exists (indicates new format)
       const metadataDoc = await this.db

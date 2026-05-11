@@ -1,4 +1,5 @@
 import { removeAccents } from './utils/utils.js';
+import { API_TYPES, trackCall } from './dev/apiTracker.js';
 
 const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.REACT_APP_AIRTABLE_BASE_ID;
@@ -45,6 +46,8 @@ class AirtableDatabase {
       return;
     }
 
+    trackCall({ api: API_TYPES.AIRTABLE_READ, details: `${tableName}${view ? `/${view}` : ''}` });
+
     let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}?`;
     if (view) {
       queryUrl += `&view=${view}`;
@@ -85,6 +88,8 @@ class AirtableDatabase {
   }
 
   async post(tableName, data) {
+    trackCall({ api: API_TYPES.AIRTABLE_WRITE, details: tableName });
+
     let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}`;
 
     await fetch(queryUrl, {
