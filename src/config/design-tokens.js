@@ -17,6 +17,7 @@ export const colors = {
   routeUnselectedDark: '#999999',
   routeSelectedLight: '#EA9010',
   routeUnselectedLight: '#cac7c4',
+  // routeUnselectedLight: '#8F8A86',
   // Loader / progress
   loader1: '#059669',
   loader2: '#b4fad0',

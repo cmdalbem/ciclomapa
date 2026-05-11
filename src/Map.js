@@ -25,6 +25,8 @@ import {
   ROUTE_LINE_BORDER_WIDTH,
   ROUTE_LINE_BORDER_OPACITY,
   ROUTE_LINE_PADDING_WIDTH,
+  ROUTE_UNSELECTED_LIGHT_BORDER_WIDTH,
+  ROUTE_UNSELECTED_LIGHT_BORDER_OPACITY,
   NEAR_ROUTE_ENDPOINT_POI_RADIUS_KM,
   ROUTE_ENDPOINT_VISIBLE_POI_ICONS,
   PMTILES_FILENAME,
@@ -1368,6 +1370,8 @@ class Map extends Component {
     const suffix = layerType === 'top' ? '-selected' : 's-unselected';
 
     const layerUnderneathName = this.getLayerUnderneathName(map);
+    const isUnselected = layerType !== 'top';
+    const isLightMode = !this.props.isDarkMode;
 
     // 1. Padding layer
     map.addLayer(
@@ -1448,8 +1452,16 @@ class Map extends Component {
           //         this.props.isDarkMode ? '#ffffff' : '#1a1a1a', // On hover
           //         this.props.isDarkMode ? '#ffffff' : '#000000', // Default
           // ],
-          'line-width': ROUTE_LINE_BORDER_WIDTH,
-          'line-opacity': ROUTE_LINE_BORDER_OPACITY,
+          // Improve contrast for unselected alternative routes on the light basemap:
+          // enable a visible outline only for the unselected layer in light mode.
+          'line-width':
+            isUnselected && isLightMode
+              ? ROUTE_UNSELECTED_LIGHT_BORDER_WIDTH
+              : ROUTE_LINE_BORDER_WIDTH,
+          'line-opacity':
+            isUnselected && isLightMode
+              ? ROUTE_UNSELECTED_LIGHT_BORDER_OPACITY
+              : ROUTE_LINE_BORDER_OPACITY,
           'line-gap-width': ROUTE_LINE_GAP_WIDTH,
         },
         filter: ['==', '$type', 'LineString'],
