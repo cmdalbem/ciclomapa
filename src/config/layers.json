@@ -2,6 +2,7 @@
   {
     "name": "DEBUG - Inclusas",
     "onlyDebug": true,
+    "isActive": false,
     "description": "Vias inclusas no cálculo de total de kilometros da cidade.",
     "filters": [["ciclomapa:considered", "true"]],
     "style": {
@@ -15,6 +16,7 @@
   {
     "name": "DEBUG - Vias sem nome",
     "onlyDebug": true,
+    "isActive": false,
     "description": "Vias sem nome são problemáticas porque nosso algoritmo de detecção de vias duplicadas necessita que a via tenha nome para sabermos que os segmentos pertencem à mesma rua e portanto precisam ser comparados entre sim.",
     "filters": [["ciclomapa:unnamed", "true"]],
     "style": {
@@ -25,6 +27,7 @@
   {
     "name": "DEBUG - Falsos positivos",
     "onlyDebug": true,
+    "isActive": false,
     "description": "Vias originalmente detectadas como sendo duplicadas pelo nosso algoritmo porém filtradas depois por uma heurística para detectar faltos positivos.",
     "filters": [["ciclomapa:ignored", "true"]],
     "style": {
@@ -36,6 +39,7 @@
   {
     "name": "DEBUG - Lado A (azul)",
     "onlyDebug": true,
+    "isActive": false,
     "description": "Vias automaticamente detectadas como sendo duplicadas.",
     "filters": [["ciclomapa:side", "a"]],
     "style": {
@@ -49,6 +53,7 @@
   {
     "name": "DEBUG - Lado B (rosa)",
     "onlyDebug": true,
+    "isActive": false,
     "description": "Vias automaticamente detectadas como sendo duplicadas.",
     "filters": [["ciclomapa:side", "b"]],
     "style": {
