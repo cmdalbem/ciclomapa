@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 import { Space, Button, Popover, Dropdown } from 'antd';
 
@@ -25,6 +25,8 @@ import Logo from './components/Logo';
 
 import './TopBar.css';
 
+const LAST_UPDATE_LABEL_VISIBLE_MS = 6000;
+
 function TopBar(props) {
   const {
     title,
@@ -46,6 +48,17 @@ function TopBar(props) {
 
   const [editModal, setEditModal] = useState(false);
   const [hasDismissedEditModal, setHasDismissedEditModal] = useState(false);
+  const [showLastUpdate, setShowLastUpdate] = useState(false);
+
+  useEffect(() => {
+    if (loading || !lastUpdate) {
+      setShowLastUpdate(false);
+      return undefined;
+    }
+    setShowLastUpdate(true);
+    const timer = setTimeout(() => setShowLastUpdate(false), LAST_UPDATE_LABEL_VISIBLE_MS);
+    return () => clearTimeout(timer);
+  }, [title, lastUpdate, loading]);
 
   const openEditModal = useCallback(() => setEditModal(true), []);
   const closeEditModal = useCallback(() => setEditModal(false), []);
@@ -124,8 +137,8 @@ function TopBar(props) {
 
           {!embedMode && (
             <div className={`city-picker sm:text-center ${IS_MOBILE && 'w-full'}`}>
-              <div className={`flex flex-col items-center sm:mb-1`}>
-                <div className={`relative ${IS_MOBILE && 'w-full'} rounded-full overflow-hidden`}>
+              <div className="flex flex-col items-center sm:mb-1">
+                <div className={`relative z-10 ${IS_MOBILE && 'w-full'} rounded-full`}>
                   <Button
                     className="glass-bg"
                     block={IS_MOBILE}
@@ -182,7 +195,15 @@ function TopBar(props) {
                           </div>
                         }
                       >
-                        <div className="flex flex-center items-center gap-1 font-regular cursor text-xs mt-1 opacity-50 hover:opacity-100 transition-opacity duration-300">
+                        <div
+                          className={[
+                            'flex flex-center items-center gap-1 font-regular cursor text-xs transition-all transform  duration-700 ease-out',
+                            showLastUpdate
+                              ? 'opacity-50 translate-y-1.5 hover:opacity-100'
+                              : ' opacity-0 -translate-y-3 pointer-events-none',
+                          ].join(' ')}
+                          aria-hidden={!showLastUpdate}
+                        >
                           Atualizado há {timeSince(lastUpdate)}
                         </div>
                       </Popover>
