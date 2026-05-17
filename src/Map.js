@@ -149,10 +149,13 @@ class Map extends Component {
     // Track geojson feature IDs to hide from pmtiles layers
     this.geojsonFeatureIds = new Set();
 
-    // Create debounced map state sync function (only syncs if place name has been consistent for 3+ seconds)
-    this.debouncedMapStateSync = debounce((placeName) => {
+    // Create debounced map state sync function (only syncs if place name has been consistent for 1+ second).
+    // geocodeRequestTime is the timestamp of the reverseGeocode call that produced the placeName;
+    // it is forwarded to App.onMapMoved so that stale-geocode detection can compare against the
+    // navigation timestamp rather than the (later) resolution timestamp.
+    this.debouncedMapStateSync = debounce((placeName, geocodeRequestTime) => {
       console.debug('Syncing map state with consistent place:', placeName);
-      this.syncMapState(placeName);
+      this.syncMapState(placeName, geocodeRequestTime);
       document.querySelector('.city-picker span').setAttribute('style', 'opacity: 1');
     }, 1000);
   }
@@ -205,6 +208,9 @@ class Map extends Component {
 
     if (this.map.getZoom() > MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD) {
       const center = this.map.getCenter();
+      // Capture when this geocode request was initiated so App can distinguish stale
+      // (pre-navigation) results from fresh (post-navigation) ones.
+      const geocodeRequestTime = Date.now();
       this.reverseGeocode([center.lng, center.lat])
         .then((result) => {
           const currentPlaceName = result.place_name;
@@ -228,7 +234,7 @@ class Map extends Component {
               // Different place - cancel previous debounced call and start new timer
               this.debouncedMapStateSync.cancel();
               this.lastGeocodedPlaceName = currentPlaceName;
-              this.debouncedMapStateSync(currentPlaceName);
+              this.debouncedMapStateSync(currentPlaceName, geocodeRequestTime);
             }
           }
         })
@@ -241,7 +247,7 @@ class Map extends Component {
     }
   }
 
-  syncMapState(newArea) {
+  syncMapState(newArea, geocodeRequestTime) {
     const center = this.map.getCenter();
     const ret = {
       lat: center.lat,
@@ -251,6 +257,10 @@ class Map extends Component {
 
     if (newArea) {
       ret.area = newArea;
+      // Forward the request timestamp so App.onMapMoved can detect stale results.
+      if (geocodeRequestTime != null) {
+        ret._geocodeRequestTime = geocodeRequestTime;
+      }
     }
 
     this.props.onMapMoved(ret);

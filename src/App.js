@@ -541,9 +541,10 @@ class App extends Component {
   }
 
   syncRouteSlugWithArea(area) {
-    // Prevent a "bare root" entry ("/" with no params) from being rewritten
-    // into "/:citySlug" by our map-inferred area initialization.
-    if (this.initialBareRootEntry && !this.getCanonicalRouteCitySlug()) {
+    // Only suppress slug generation for bare-root visitors while the welcome modal is
+    // still open. Adding a slug while the modal is showing would silently flip it to
+    // "city mode". Once the user has dismissed the modal the URL should update freely.
+    if (this.initialBareRootEntry && !this.getCanonicalRouteCitySlug() && this.state.aboutModal) {
       return;
     }
 
@@ -555,13 +556,26 @@ class App extends Component {
 
     const hasRouteParams = this.state.fromPoint && this.state.toPoint;
     const nextPath = hasRouteParams ? `/${areaSlug}/routes` : `/${areaSlug}`;
-    const nextUrl = `${nextPath}${window.location.search || ''}`;
+
+    // Always embed the current viewport in the URL so that when componentDidUpdate
+    // detects the slug change, hasExplicitViewportInURL() returns true and
+    // resolveCitySlugToAreaAndViewport is not called (which would fly the map to the
+    // city centre, overriding the user's current position).
+    const params = new URLSearchParams(window.location.search);
+    if (Number.isFinite(this.state.lat) && Number.isFinite(this.state.lng)) {
+      params.set('lat', this.state.lat.toFixed(7));
+      params.set('lng', this.state.lng.toFixed(7));
+      params.set('z', this.state.zoom.toFixed(2));
+    }
+    const nextUrl = `${nextPath}${params.toString() ? '?' + params.toString() : ''}`;
 
     const navigate = this.props.router?.navigate;
     if (typeof navigate === 'function') {
-      navigate(nextUrl);
+      // Use replace so that continuous map panning across city boundaries does not
+      // flood the browser history stack with intermediate-city entries.
+      navigate(nextUrl, { replace: true });
     } else {
-      window.history.pushState(null, '', nextUrl);
+      window.history.replaceState(null, '', nextUrl);
     }
   }
 
@@ -1286,6 +1300,12 @@ class App extends Component {
     const currCitySlug = this.getCitySlugFromRoute();
     if (prevCitySlug !== currCitySlug) {
       this.lastResolvedCitySlug = null;
+      // Stamp the navigation timestamp immediately so that any in-flight stale geocodes
+      // from the previous city are suppressed regardless of which branch below runs.
+      // Without this, resolveCitySlugToAreaAndViewport might be skipped (e.g. when
+      // hasExplicitViewportInURL is true) and the timestamp would never be updated,
+      // letting stale geocodes overwrite the new city slug.
+      this._lastExplicitCityNavTimestamp = Date.now();
       if (currCitySlug) {
         const routeWasNormalized = this.normalizeCitySlugRouteIfNeeded();
         if (routeWasNormalized) return;
@@ -1505,17 +1525,17 @@ class App extends Component {
       if (typeof nextState.area === 'string' && nextState.area.trim()) {
         const normalized = this.normalizeAreaLabelForDisplay(nextState.area);
 
-        // Guard against stale reverse-geocode results: the map's debouncedMapStateSync
-        // (1 s timer) can fire AFTER the user has already navigated to a new city via the
-        // city picker, overwriting state.area with the old city's name. That in turn causes
-        // syncRouteSlugWithArea to push the old slug back into the URL.
-        // Solution: ignore map-driven area updates that disagree with the current route slug
-        // within a 5-second grace window after an explicit city navigation.
+        // Guard against stale reverse-geocode results: a geocode that was *requested before*
+        // an explicit city navigation (picker, direct URL) can resolve afterwards and overwrite
+        // the new slug.  We detect this by comparing the geocode's request timestamp
+        // (_geocodeRequestTime, set in Map.onMapMoveEnded) against the last navigation
+        // timestamp.  Geocodes requested after the navigation are always accepted.
         const routeSlug = this.getCanonicalRouteCitySlug();
         if (normalized && routeSlug) {
           const candidateSlug = this.getCitySlugFromArea(normalized);
-          const timeSinceLastNav = Date.now() - this._lastExplicitCityNavTimestamp;
-          if (candidateSlug && candidateSlug !== routeSlug && timeSinceLastNav < 5000) {
+          const geocodeRequestTime = nextState._geocodeRequestTime ?? Date.now();
+          const isStaleGeocode = geocodeRequestTime < this._lastExplicitCityNavTimestamp;
+          if (candidateSlug && candidateSlug !== routeSlug && isStaleGeocode) {
             // Stale geocode result — drop the area update to protect the current slug.
             delete nextState.area;
           } else {
@@ -1525,6 +1545,7 @@ class App extends Component {
           nextState.area = normalized;
         }
       }
+      delete nextState._geocodeRequestTime;
       this.setState(nextState);
     });
   }
