@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { useDirections } from './contexts/DirectionsContext';
 import { Button, Select } from 'antd';
 import { HiX as IconClose, HiOutlineArrowLeft as IconBack } from 'react-icons/hi';
-import { FaDirections as IconRoute } from 'react-icons/fa';
+// import { PiPersonSimpleBikeBold as IconRoute } from 'react-icons/pi';
 import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash } from 'react-icons/hi2';
 import { HiCog as IconCog } from 'react-icons/hi';
 import { HiInformationCircle as IconInfoCircle } from 'react-icons/hi';
@@ -34,6 +34,34 @@ import {
   PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
+
+const IconRoute = () => {
+  const clipPathId = React.useId().replace(/:/g, '');
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 17 17"
+      width="1em"
+      height="1em"
+      fill="none"
+      aria-hidden="true"
+    >
+      <g clipPath={`url(#${clipPathId})`}>
+        <path
+          fill="currentColor"
+          d="M8.5 2c-.676-.01-.676 1.01 0 1H10v1.266L7.197 6.6 6.223 4H6.5c.676.01.676-1.01 0-1h-2c-.676-.01-.676 1.01 0 1h.652l.891 2.375A3.45 3.45 0 0 0 4.5 6 3.51 3.51 0 0 0 1 9.5C1 11.427 2.573 13 4.5 13S8 11.427 8 9.5c0-.67-.2-1.291-.53-1.824l2.821-2.35.463 1.16C9.71 7.094 9 8.211 9 9.5c0 1.927 1.573 3.5 3.5 3.5S16 11.427 16 9.5 14.427 6 12.5 6c-.283 0-.554.043-.818.107L11 4.402V2.5a.5.5 0 0 0-.5-.5zm-4 5a2.48 2.48 0 0 1 1.555.553L4.18 9.115c-.511.427.128 1.195.64.77l1.875-1.563c.188.352.305.75.305 1.178C7 10.887 5.887 12 4.5 12A2.493 2.493 0 0 1 2 9.5C2 8.113 3.113 7 4.5 7m8 0C13.887 7 15 8.113 15 9.5S13.887 12 12.5 12A2.493 2.493 0 0 1 10 9.5c0-.877.447-1.642 1.125-2.088l.91 2.273c.246.624 1.18.25.93-.37l-.908-2.27C12.2 7.019 12.348 7 12.5 7"
+        />
+        <path stroke="currentColor" strokeDasharray="2 2" strokeLinecap="round" d="M.5 15.5h17" />
+      </g>
+      <defs>
+        <clipPath id={clipPathId}>
+          <path fill="currentColor" d="M0 0h17v17H0z" />
+        </clipPath>
+      </defs>
+    </svg>
+  );
+};
 
 class DirectionsPanel extends Component {
   constructor(props) {

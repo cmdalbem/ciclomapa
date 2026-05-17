@@ -280,10 +280,10 @@ body.theme-light {
 
 #layersPanelMobileButton,
 .directions-panel-button {
-  padding: 1rem;
+  padding: 15px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 99px;
-  font-size: 1.125rem;
+  font-size: 18px;
   position: fixed;
   bottom: 94px;
   left: 8px;
@@ -292,7 +292,7 @@ body.theme-light {
 }
 
 .directions-panel-button {
-  right: 8px;
+  right: 9px;
   left: auto;
   bottom: calc(32px + env(safe-area-inset-bottom, 0px));
 }
