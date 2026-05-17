@@ -1150,6 +1150,7 @@ class Map extends Component {
           source: 'commentsSrc',
           minzoom: MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
           layout: {
+            visibility: this.props.cleanMode ? 'none' : 'visible',
             'icon-image': this.props.isDarkMode ? 'commentIcon' : 'commentIcon--light',
             'icon-size': [
               'interpolate',
