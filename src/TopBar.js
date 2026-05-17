@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 import { Space, Button, Popover, Dropdown } from 'antd';
 
@@ -18,7 +19,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { timeSince, getOsmUrl } from './utils/utils.js';
 
-import { TOPBAR_HEIGHT, IS_MOBILE } from './config/constants.js';
+import { TOPBAR_HEIGHT, IS_MOBILE, IS_PROD } from './config/constants.js';
 
 import EditModal from './EditModal.js';
 import Logo from './components/Logo';
@@ -33,6 +34,7 @@ function TopBar(props) {
     lastUpdate,
     forceUpdate,
     embedMode,
+    debugMode,
     isDarkMode,
     toggleTheme,
     loading,
@@ -245,6 +247,12 @@ function TopBar(props) {
                   Sobre
                 </Button>
 
+                {!IS_PROD && debugMode && (
+                  <Button className="glass-bg" onClick={() => navigate('/dev/place-type-icons')}>
+                    Revisar ícones
+                  </Button>
+                )}
+
                 <Dropdown menu={collaborateMenu}>
                   <Button className="glass-bg">
                     <span> Colaborar </span>
@@ -280,3 +288,32 @@ function TopBar(props) {
 }
 
 export default TopBar;
+
+TopBar.propTypes = {
+  title: PropTypes.string.isRequired,
+  lastUpdate: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.string]),
+  forceUpdate: PropTypes.func.isRequired,
+  embedMode: PropTypes.bool,
+  debugMode: PropTypes.bool,
+  isDarkMode: PropTypes.bool,
+  toggleTheme: PropTypes.func.isRequired,
+  loading: PropTypes.bool,
+  lat: PropTypes.number,
+  lng: PropTypes.number,
+  z: PropTypes.number,
+  openAboutModal: PropTypes.func.isRequired,
+  isSidebarOpen: PropTypes.bool,
+  toggleSidebar: PropTypes.func.isRequired,
+};
+
+TopBar.defaultProps = {
+  lastUpdate: null,
+  embedMode: false,
+  debugMode: false,
+  isDarkMode: false,
+  loading: false,
+  lat: null,
+  lng: null,
+  z: null,
+  isSidebarOpen: false,
+};
