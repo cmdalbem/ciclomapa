@@ -18,16 +18,16 @@
 
   .ant-select .ant-select-selector {
     border-radius: var(--radius-md);
-    font-size: 14px;
+    font-size: var(--font-size-sm);
     background: var(--cm-panel-input-bg);
     border: none;
     color: var(--cm-panel-input-color);
-    height: 36px;
-    min-height: 36px;
+    height: calc(var(--spacing-panel) + var(--font-size-xs));
+    min-height: calc(var(--spacing-panel) + var(--font-size-xs));
   }
 
   .ant-input-prefix {
-    margin-right: 8px;
+    margin-right: var(--radius-md);
   }
 
   .ant-input:focus {
@@ -68,6 +68,7 @@
   --cm-panel-affix-bg: rgba(255, 255, 255, 0.1);
   --cm-panel-input-color: white;
   --cm-panel-placeholder-color: rgba(255, 255, 255, 0.6);
+  --cm-route-swap-cutout-r: var(--font-size-sm);
 }
 
 .theme-light {
@@ -84,8 +85,8 @@
   background-image: none;
   border: none;
   color: var(--cm-panel-input-color);
-  height: 36px;
-  min-height: 36px;
+  height: calc(var(--spacing-panel) + var(--font-size-xs));
+  min-height: calc(var(--spacing-panel) + var(--font-size-xs));
 }
 
 #directionsPanel.cm-panel .ant-input-affix-wrapper-focused {
@@ -113,9 +114,6 @@
 }
 
 /* Swap button between origin/destination + "cutout" masks so panel glass shows through. */
-:root {
-  --cm-route-swap-cutout-r: 14px;
-}
 
 /* Top input: hole at bottom-center */
 #directionsPanel .cm-route-points__input--from.ant-select {
@@ -156,8 +154,8 @@
   top: 50%;
   transform: translate(-50%, -50%);
   z-index: 2;
-  width: 36px;
-  height: 36px;
+  width: calc(var(--spacing-panel) + var(--font-size-xs));
+  height: calc(var(--spacing-panel) + var(--font-size-xs));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -165,8 +163,8 @@
 
 /* Custom marker styles */
 .origin-destination-marker {
-  width: 32px;
-  height: 32px;
+  width: calc(var(--spacing-panel) + var(--radius-md));
+  height: calc(var(--spacing-panel) + var(--radius-md));
   cursor: grab;
 }
 
@@ -211,13 +209,13 @@ body.theme-light #directionsPanelMobileButton.expanded {
 }
 
 body.theme-light {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--cm-panel-input-color);
 }
 
 /* Light theme clear button (variables set in .theme-light above) */
 .theme-light #directionsPanel.cm-panel .ant-select-clear {
-  width: 32px;
-  right: 8px;
+  width: calc(var(--spacing-panel) + var(--radius-md));
+  right: var(--radius-md);
   background: var(--cm-panel-input-bg);
   color: rgba(0, 0, 0, 0.45);
 }
@@ -239,38 +237,42 @@ body.theme-light {
   }
 }
 
-/* Mobile */
+/* Mobile: bottom sheet slides up from below */
 @media (min-width: 320px) and (max-width: 480px) {
   #directionsPanel {
-    z-index: 1;
-    left: 8px;
-    right: 8px;
-    top: 8px;
-    width: calc(100% - 16px);
+    z-index: 1000;
+    left: var(--radius-md);
+    right: var(--radius-md);
+    top: auto;
+    bottom: calc(var(--radius-md) + env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 2 * var(--radius-md));
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
     transition:
-      transform 0.3s ease-in-out,
-      opacity 0.3s ease-in-out;
-    transform: translateY(-100%);
+      transform var(--motion-duration-normal) ease-in-out,
+      opacity var(--motion-duration-normal) ease-in-out;
+    transform: translateY(calc(100% + 2 * var(--radius-md)));
     opacity: 0;
+    pointer-events: none;
   }
 
   #directionsPanel.directions-panel-open {
     transform: translateY(0);
     opacity: 1;
+    pointer-events: auto;
   }
 
   #directionsPanel .ant-input-affix-wrapper {
-    height: 44px;
-    font-size: 12px;
+    height: calc(var(--spacing-panel) + var(--font-size-xl));
+    font-size: var(--font-size-xs);
   }
 
   #directionsPanel .ant-input-affix-wrapper .ant-input {
-    font-size: 12px;
+    font-size: var(--font-size-xs);
   }
 
   #directionsPanel {
     overflow: scroll;
-    max-height: 190px;
+    /* max-height: 190px; */
   }
 
   #directionsPanelMobileButton {
@@ -283,10 +285,10 @@ body.theme-light {
   padding: 15px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 99px;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   position: fixed;
   bottom: 94px;
-  left: 8px;
+  left: var(--radius-md);
   cursor: pointer;
   z-index: 1;
 }
@@ -294,7 +296,7 @@ body.theme-light {
 .directions-panel-button {
   right: 9px;
   left: auto;
-  bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--spacing-panel) + var(--radius-md) + env(safe-area-inset-bottom, 0px));
 }
 
 #layersPanelMobileButton.collapsed,

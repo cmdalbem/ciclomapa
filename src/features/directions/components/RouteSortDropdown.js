@@ -20,13 +20,17 @@ export default function RouteSortDropdown({ currentKey, onChange, items }) {
       }}
       placement="bottomRight"
     >
-      <Button type="text" className="opacity-80 hover:opacity-100 sm:-ml-3 -mr-3 md:my-1">
-        <div className="flex items-center gap-1">
-          <span className="opacity-75">Ordenar por:</span>
+      <div className="flex items-center md:mb-1 mb-0 md:text-sm text-xs">
+        <span className="opacity-50">Ordenar por:</span>
+        <Button
+          type="text"
+          size="small"
+          className="opacity-80 hover:opacity-100 md:my-1 md:text-sm text-xs"
+        >
           <span className="font-medium">{current.label}</span>
           <IconCaretDown className="inline-block text-white opacity-60" />
-        </div>
-      </Button>
+        </Button>
+      </div>
     </Dropdown>
   );
 }

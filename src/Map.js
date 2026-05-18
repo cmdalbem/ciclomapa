@@ -1903,7 +1903,7 @@ class Map extends Component {
 
       if (routes.bbox) {
         const padding = IS_MOBILE
-          ? { top: 250, bottom: 50, left: 50, right: 50 }
+          ? { top: 32, bottom: 250, left: 32, right: 32 }
           : { top: 100, bottom: 100, left: 500, right: 100 };
         map.fitBounds(routes.bbox, { padding: padding, duration: 2000 });
       }

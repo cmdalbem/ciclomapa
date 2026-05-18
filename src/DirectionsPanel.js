@@ -938,8 +938,7 @@ class DirectionsPanel extends Component {
 
     return (
       <>
-        {
-          // IS_MOBILE &&
+        {(!IS_MOBILE || this.state.collapsed) && (
           <div
             id="directionsPanelMobileButton"
             className={`directions-panel-button ${this.state.collapsed ? 'collapsed' : 'expanded'}`}
@@ -947,7 +946,7 @@ class DirectionsPanel extends Component {
           >
             <IconRoute />
           </div>
-        }
+        )}
         <div
           id="directionsPanel"
           className={`
@@ -966,53 +965,53 @@ class DirectionsPanel extends Component {
           <div className="cm-panel__body p-4">
             <div
               id="directionsPanel--header"
-              className="cm-panel__header flex justify-between items-start h-6 md:mb-0 mb-2"
+              className="cm-panel__header flex justify-between items-start md:mb-0 mb-2"
             >
               {showResultsOnMobile ? (
-                <>
-                  {/* // Mobile results header with Back button */}
+                <div className="flex w-full items-center justify-between gap-2">
+                  <div className="flex items-center">
+                    <Button
+                      onClick={this.clearDirectionsOnly}
+                      type="text"
+                      size="small"
+                      className="text-white flex items-center flex-shrink-0 -ml-2"
+                      icon={<IconBack className="inline-block" />}
+                      aria-label="Voltar para origem e destino"
+                    />
+                  </div>
+                  <RouteSortDropdown
+                    currentKey={this.state.routeSortMode}
+                    onChange={(key) => this.handleRouteSortChange(key)}
+                  />
                   <Button
-                    onClick={this.clearDirectionsOnly}
+                    onClick={this.toggleCollapse}
                     type="text"
-                    size="small"
-                    className="text-white flex items-center"
-                    icon={
-                      <IconBack
-                        className="mr-1"
-                        style={{
-                          display: 'inline-block',
-                        }}
-                      />
-                    }
-                  >
-                    {/* Voltar */}
-                  </Button>
-                  {IS_MOBILE && (
-                    <>
-                      <RouteSortDropdown
-                        currentKey={this.state.routeSortMode}
-                        onChange={(key) => this.handleRouteSortChange(key)}
-                      />
-                      {/* <Button
-                                                onClick={this.toggleCollapse}
-                                                type="text" 
-                                                shape="circle"
-                                                icon={<IconClose style={{
-                                                    display: 'inline-block',
-                                                }}/>}
-                                            /> */}
-                    </>
-                  )}
-                </>
+                    shape="circle"
+                    icon={<IconClose />}
+                    aria-label="Fechar painel de rotas"
+                    className="flex-shrink-0 -mr-1"
+                  />
+                </div>
               ) : (
                 // Default header
                 <>
-                  <h3 className=" font-semibold flex items-center mb-0">
-                    {/* <IconRoute className="mr-2" /> */}
-                    Rotas
-                  </h3>
+                  <h3 className="font-semibold flex items-center mb-0">Planejar rota</h3>
 
-                  <div className="flex items-start gap-2 -mr-1" style={{ marginTop: '-5px' }}>
+                  <div
+                    className="flex items-start -mr-1 flex-shrink-0"
+                    style={{ marginTop: '-5px' }}
+                  >
+                    {/* {this.props.openLayersLegendModal && (
+                      <Button
+                        type="text"
+                        shape="circle"
+                        data-testid="directions-panel-legend-link"
+                        icon={<IconInfoCircle />}
+                        aria-label="Como interpretar o mapa e as rotas"
+                        onClick={() => this.props.openLayersLegendModal('routes-section')}
+                      />
+                    )} */}
+
                     {(directions || this.props.fromPoint || this.props.toPoint) && (
                       <Button
                         onClick={this.clearDirections}
@@ -1056,7 +1055,6 @@ class DirectionsPanel extends Component {
                 </>
               )}
             </div>
-
             {!showResultsOnMobile && (
               <div className="cm-route-points mt-3">
                 <div className="cm-route-points__inputs">
@@ -1093,7 +1091,7 @@ class DirectionsPanel extends Component {
             {directionsLoading && (
               <div
                 id="directionsPanel--results"
-                className="cm-panel__results directionsPanel--results md:mt-3 md:space-y-2 space-y-1"
+                className="cm-panel__results directionsPanel--results md:mt-3 md:space-y-2 space-y-2"
               >
                 {!IS_MOBILE && (
                   <div className="flex mb-2">
@@ -1127,14 +1125,12 @@ class DirectionsPanel extends Component {
                 ))}
               </div>
             )}
-
             {(directionsError || this.state.cityValidationError) && (
               <div className="mt-3 p-2 bg-red-600 bg-opacity-20 border border-red-500 rounded text-red-200 text-sm">
                 {directionsError && <div>Erro: {directionsError}</div>}
                 {this.state.cityValidationError && <div>{this.state.cityValidationError}</div>}
               </div>
             )}
-
             {directions && !directionsLoading && (
               <div id="directionsPanel--results" className="md:mt-3">
                 <div className="flex mb-2">
@@ -1154,19 +1150,20 @@ class DirectionsPanel extends Component {
                   onRouteClick={(routeIndex) => this.handleRouteClick(routeIndex)}
                 />
 
-                {/* Disclaimer */}
-                <div className="mt-2 text-gray-500 hover:text-white text-xs flex flex-col">
-                  <div
-                    className="cursor-pointer flex items-center mb-0"
-                    onClick={() =>
-                      this.props.openLayersLegendModal &&
-                      this.props.openLayersLegendModal('routes-section')
-                    }
-                  >
-                    <IconInfoCircle className="mr-1" />
-                    <span>Leia mais sobre os níveis de proteção das rotas</span>
+                {!IS_MOBILE && (
+                  <div className="mt-2 text-gray-500 hover:text-white text-xs flex flex-col">
+                    <div
+                      className="cursor-pointer flex items-center mb-0"
+                      onClick={() =>
+                        this.props.openLayersLegendModal &&
+                        this.props.openLayersLegendModal('routes-section')
+                      }
+                    >
+                      <IconInfoCircle className="mr-1" />
+                      <span>Leia mais sobre os níveis de proteção das rotas</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
