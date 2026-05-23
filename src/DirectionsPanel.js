@@ -955,7 +955,11 @@ class DirectionsPanel extends Component {
                           IS_MOBILE
                             ? this.state.collapsed
                               ? ''
-                              : 'directions-panel-open'
+                              : `directions-panel-open ${
+                                  showResultsOnMobile
+                                    ? 'directions-panel-open--results'
+                                    : 'directions-panel-open--planning'
+                                }`
                             : this.state.collapsed
                               ? 'hidden'
                               : ''
