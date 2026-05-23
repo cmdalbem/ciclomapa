@@ -110,3 +110,17 @@ body.theme-dark .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group {
 .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate) {
   margin: 0 8px 74px 0;
 }
+
+@media (max-width: 480px) {
+  /* Above open panel: planning form vs route results (heights differ) */
+  #ciclomapa:has(#directionsPanel.directions-panel-open--planning)
+    .mapboxgl-ctrl-bottom-right
+    .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate) {
+    transform: translateY(-86px);
+  }
+  #ciclomapa:has(#directionsPanel.directions-panel-open--results)
+    .mapboxgl-ctrl-bottom-right
+    .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate) {
+    transform: translateY(-172px);
+  }
+}
