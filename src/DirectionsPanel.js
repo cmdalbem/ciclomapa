@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { useDirections } from './contexts/DirectionsContext';
 import { Button, Select } from 'antd';
 import { HiX as IconClose, HiOutlineArrowLeft as IconBack } from 'react-icons/hi';
@@ -1005,7 +1006,7 @@ class DirectionsPanel extends Component {
                     className="flex items-start -mr-1 flex-shrink-0"
                     style={{ marginTop: '-5px' }}
                   >
-                    {/* {this.props.openLayersLegendModal && (
+                    {this.props.openLayersLegendModal && (
                       <Button
                         type="text"
                         shape="circle"
@@ -1014,7 +1015,7 @@ class DirectionsPanel extends Component {
                         aria-label="Como interpretar o mapa e as rotas"
                         onClick={() => this.props.openLayersLegendModal('routes-section')}
                       />
-                    )} */}
+                    )}
 
                     {(directions || this.props.fromPoint || this.props.toPoint) && (
                       <Button
@@ -1176,6 +1177,10 @@ class DirectionsPanel extends Component {
     );
   }
 }
+
+DirectionsPanel.propTypes = {
+  openLayersLegendModal: PropTypes.func,
+};
 
 // Wrapper component to use the directions context with the class component
 const DirectionsPanelWrapper = React.forwardRef((props, ref) => {
