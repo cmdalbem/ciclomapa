@@ -56,6 +56,7 @@ export default function AppLayout({
                 isSidebarOpen={state.isSidebarOpen}
                 toggleSidebar={handlers.toggleSidebar}
                 embedMode={state.embedMode}
+                debugMode={state.debugMode}
                 openAboutModal={handlers.openAboutModal}
                 isDarkMode={state.isDarkMode}
                 toggleTheme={handlers.toggleTheme}
@@ -155,6 +156,7 @@ export default function AppLayout({
           onLayersChange={handlers.onLayersChange}
           embedMode={state.embedMode}
           isDarkMode={state.isDarkMode}
+          openLayersLegendModal={handlers.openLayersLegendModal}
         />
       </aside>
 
