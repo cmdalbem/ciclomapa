@@ -50,8 +50,8 @@ import { API_TYPES, trackCall } from './dev/apiTracker.js';
 // v5+ no longer ships global type scale in the old Less bundle; this restores baseline
 // margins for raw h1–p etc. (and complements Tailwind preflight). See antd/dist/reset.css.
 import 'antd/dist/reset.css';
-import './styles/App.less';
 import './styles/theme-tailwind-overrides.css';
+import './styles/App.less';
 
 const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 

@@ -8,7 +8,7 @@ CicloMapa uses **BEM (Block Element Modifier)** with the prefix **`cm-`** (Ciclo
 - **Element**: part of a block (e.g. `cm-panel__header`, `cm-panel__input`). Use `block__element`.
 - **Modifier**: variant or state (e.g. `cm-panel--collapsed`, `cm-panel--dark`). Use `block--modifier` or `block__element--modifier`.
 
-Use the `cm-` prefix for all BEM classes so they don’t conflict with Tailwind (used via CDN) or Ant Design.
+Use the `cm-` prefix for all BEM classes so they don’t conflict with Tailwind (build-time, purged) or Ant Design.
 
 **CSS strategy**: We do **not** use CSS modules. Component styles are global; each component has its own stylesheet (e.g. `DirectionsPanel.css`) or shares `src/styles/`. BEM with the `cm-` prefix avoids clashes. **Style ownership**: classes under a block (e.g. `.cm-panel`, `.cm-panel__header`) belong to that component; don’t reuse another component’s BEM block for new styles. For new components, add a new block (e.g. `cm-myfeature`) and keep styles in a dedicated CSS file next to the component.
 
@@ -26,7 +26,7 @@ The **DirectionsPanel** is the pilot: `#directionsPanel` uses BEM-style classes 
 
 ## Other styles
 
-- **Tailwind**: Used for layout and utilities only (e.g. `flex`, `rounded-full`, `px-1`). Loaded via **CDN** in `public/index.html` (Tailwind v2: `unpkg.com/tailwindcss@^2/dist/tailwind.min.css`). Prefer BEM for component-specific, semantic styles. Note: `package-lock.json` may list Tailwind v3 as a transitive dependency—the app’s styles come from the CDN build (v2). To switch to build-time Tailwind, add PostCSS + a Tailwind config and remove the CDN link.
+- **Tailwind**: Used for layout and utilities only (e.g. `flex`, `rounded-full`, `px-1`). Built via PostCSS in `src/styles/theme-tailwind-overrides.css` (purged; see `tailwind.config.js`, including `safelist` for MapPopups HTML strings). Prefer BEM for component-specific, semantic styles. Extra utilities not in the default theme live in `App.less` (e.g. `text-xxs`).
 - **Ant Design**: Theme (`ConfigProvider`) in `src/config/antdTheme.js` via `AntdAppShell` with locale `antd/locale/pt_BR` and `dayjs` `pt-br`; `antd/dist/reset.css` imported in `App.js` for baseline typography. Production builds use `babel-plugin-import` for `antd/es/*` (disabled under Jest). Component-level CSS where needed.
 - **Global/base**: `App.less` (with design tokens for focus, loader, gradient).
 
