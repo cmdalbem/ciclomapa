@@ -67,6 +67,33 @@ module.exports = {
                 ];
             }
 
+            // CRA's default webpack config runs Babel on most node_modules packages.
+            // mapbox-gl shares code between the main thread and its Web Worker; transpiling
+            // it injects helpers (e.g. _createClass) that exist only in the main bundle, so the
+            // worker throws ReferenceError for minified names like "a" / "o" in production.
+            // https://docs.mapbox.com/mapbox-gl-js/guides/install/#transpiling
+            const mapboxGlPath = /[\\/]node_modules[\\/]mapbox-gl[\\/]/;
+            const oneOfRule = webpackConfig.module.rules.find((rule) => rule.oneOf)?.oneOf;
+            if (oneOfRule) {
+                for (const rule of oneOfRule) {
+                    const isNodeModulesBabelRule =
+                        rule.loader &&
+                        String(rule.loader).includes('babel-loader') &&
+                        !rule.include &&
+                        rule.test &&
+                        String(rule.test).includes('mjs');
+                    if (!isNodeModulesBabelRule) continue;
+
+                    if (Array.isArray(rule.exclude)) {
+                        rule.exclude.push(mapboxGlPath);
+                    } else if (rule.exclude) {
+                        rule.exclude = [rule.exclude, mapboxGlPath];
+                    } else {
+                        rule.exclude = mapboxGlPath;
+                    }
+                }
+            }
+
             return webpackConfig;
         }
     },
