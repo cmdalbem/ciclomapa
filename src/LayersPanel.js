@@ -1,14 +1,11 @@
 import React, { Component } from 'react';
-import { Popover, Collapse, Tag, List, Flex, Space, Typography } from 'antd';
+import PropTypes from 'prop-types';
+import { Popover, Button, Flex, Typography } from 'antd';
 
-import {
-  HiEye as IconVisible,
-  HiEyeOff as IconHidden,
-  HiInformationCircle as IconInfoCircle,
-} from 'react-icons/hi';
+import { HiEye as IconVisible, HiEyeOff as IconHidden } from 'react-icons/hi';
 
-import { slugify } from './utils/utils.js';
 import InfrastructureBadge from './components/InfrastructureBadge';
+import { getLayerLegendImageSrc } from './utils/utils.js';
 import { IconSignal1, IconSignal2, IconSignal3 } from './components/ProtectionSignalIcons';
 
 import './LayersPanel.css';
@@ -20,7 +17,7 @@ import bikeparkingIcon from './img/icons/poi-bikeparking@2x.png';
 import bikeshopIcon from './img/icons/poi-bikeshop@2x.png';
 import bikerentalIcon from './img/icons/poi-bikerental@2x.png';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 const getInfrastructureFromLayerName = (layerName) => {
   const name = layerName.toLowerCase();
@@ -31,71 +28,32 @@ const getInfrastructureFromLayerName = (layerName) => {
   return null;
 };
 
-/** @returns {Array<[string, string]>} Pairs for one OR-branch (see Map.convertFilterToMapboxFilter). */
-const getOsmFilterPairs = (branch) => {
-  if (!branch || !branch.length) return [];
-  if (typeof branch[0] === 'string') {
-    return [[branch[0], String(branch[1])]];
-  }
-  return branch.map((pair) => [pair[0], String(pair[1])]);
-};
-
-const codeFont = {
-  fontFamily: 'var(--ant-font-family-code)',
-  fontSize: 12,
-  wordBreak: 'break-all',
-};
-
-const OsmFilterBranch = ({ branch, relationLabel }) => {
-  const pairs = getOsmFilterPairs(branch);
-  if (pairs.length === 0) return null;
-  return (
-    <List.Item style={{ border: 'none', padding: '4px 0' }}>
-      <Flex wrap="wrap" gap={4} align="center" style={{ width: '100%' }}>
-        {pairs.map(([k, v], j) => (
-          <span key={`${k}-${j}-${v}`} style={{ display: 'inline-flex', alignItems: 'center' }}>
-            {j > 0 && (
-              <Text type="secondary" style={{ fontSize: 12, marginRight: 4, userSelect: 'none' }}>
-                e
-              </Text>
-            )}
-            <Tag
-              variant="outlined"
-              style={{ maxWidth: '100%', marginInlineEnd: 0 }}
-              title={`${k}=${v}`}
-            >
-              <Space
-                size={4}
-                wrap
-                split={
-                  <Text type="secondary" style={{ ...codeFont, flexShrink: 0 }} aria-hidden>
-                    =
-                  </Text>
-                }
-              >
-                <Text type="secondary" style={codeFont}>
-                  {k}
-                </Text>
-                <Text style={codeFont}>{v}</Text>
-              </Space>
-            </Tag>
-          </span>
-        ))}
-        {relationLabel && (
-          <Text type="secondary" style={{ fontSize: 12, userSelect: 'none' }}>
-            {relationLabel}
-          </Text>
-        )}
-      </Flex>
-    </List.Item>
-  );
-};
-
 const iconsMap = {
   'poi-comment': commentIcon,
   'poi-bikeparking': bikeparkingIcon,
   'poi-bikeshop': bikeshopIcon,
   'poi-rental': bikerentalIcon,
+};
+
+const VIAS_CICLAVEIS_LAYER_NAMES = new Set([
+  'Ciclovia',
+  'Calçada compartilhada',
+  'Ciclofaixa',
+  'Ciclorrota',
+]);
+
+const OUTRAS_VIAS_LAYER_NAMES = new Set(['Baixa velocidade', 'Trilha', 'Proibido']);
+
+/** @returns {string | null} LayersLegendModal section id */
+const getLegendSectionForLayer = (layer) => {
+  if (layer.type === 'poi') return 'pontos-section';
+  if (layer.type === 'way' && VIAS_CICLAVEIS_LAYER_NAMES.has(layer.name)) {
+    return 'vias-ciclaveis-section';
+  }
+  if (layer.type === 'way' && OUTRAS_VIAS_LAYER_NAMES.has(layer.name)) {
+    return 'outras-vias-section';
+  }
+  return null;
 };
 
 class LayersPanel extends Component {
@@ -120,6 +78,78 @@ class LayersPanel extends Component {
     });
   }
 
+  openLegend(sectionId = null) {
+    const { openLayersLegendModal } = this.props;
+    if (openLayersLegendModal) {
+      openLayersLegendModal(sectionId);
+    }
+  }
+
+  renderPopoverContent(layer) {
+    const { embedMode, openLayersLegendModal, isDarkMode } = this.props;
+    const sectionId = getLegendSectionForLayer(layer);
+
+    return (
+      <div className="flex flex-col gap-3 max-w-full box-border">
+        {layer.type === 'way' ? (
+          <div
+            className="rounded-lg overflow-hidden"
+            style={{ background: 'var(--ant-color-fill-tertiary)' }}
+          >
+            <img
+              className="block w-full h-auto"
+              alt=""
+              src={getLayerLegendImageSrc(layer.name)}
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+        ) : layer.icon ? (
+          <div>
+            <img
+              className="block h-8 w-8 object-contain opacity-90"
+              src={iconsMap[layer.icon]}
+              alt=""
+            />
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-1 min-w-0">
+          <Flex align="center" gap="small" wrap="wrap">
+            <span className="text-lg font-heading-display mt-2 mb-1">
+              {layer.displayName || layer.name}
+            </span>
+            {layer.protectionLevel && layer.style && (
+              <InfrastructureBadge
+                infrastructure={getInfrastructureFromLayerName(layer.name)}
+                isDarkMode={isDarkMode}
+              >
+                {layer.protectionLevel === 'Alta' && <IconSignal3 />}
+                {layer.protectionLevel === 'Média' && <IconSignal2 />}
+                {layer.protectionLevel === 'Baixa' && <IconSignal1 />}
+                {layer.protectionLevel} proteção
+              </InfrastructureBadge>
+            )}
+          </Flex>
+
+          <Text className=" leading-normal !mb-0">{layer.description}</Text>
+        </div>
+
+        {!embedMode && openLayersLegendModal && sectionId && (
+          <Button
+            data-testid="layers-panel-popover-full-legend"
+            onClick={(e) => {
+              e.stopPropagation();
+              this.openLegend(sectionId);
+            }}
+          >
+            Leia mais
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   render() {
     const { layers, embedMode } = this.props;
 
@@ -129,26 +159,11 @@ class LayersPanel extends Component {
 
     return (
       <>
-        {/* {
-                    IS_MOBILE &&
-                        <div
-                            id="layersPanelMobileButton"
-                            className={`
-                                p-4 border border-white border-opacity-20 rounded-full text-lg fixed
-                                ${this.state.collapsed ? 'collapsed' : 'expanded'}`}
-                            onClick={this.toggleMobileCollapse}
-                            style={{
-                                bottom: 30,
-                                left: 8,
-                            }}
-                        >
-                            <IconLayers/>
-                        </div>
-                } */}
         <div
           id="layersPanel"
           className={`
-                        fixed text-white p-2 rounded-xl
+                        fixed text-white rounded-xl
+                        p-2
                         ${IS_MOBILE && 'bg-black rounded-xl border border-white border-opacity-20 shadow-lg divide-y divide-white divide-opacity-10'}
                         ${IS_MOBILE && this.state.collapsed ? 'hidden ' : ''}
                         ${embedMode ? 'pointer-events-none ' : 'cursor-pointer '}
@@ -167,102 +182,12 @@ class LayersPanel extends Component {
               <Popover
                 placement="left"
                 key={l.name}
+                destroyOnHidden={IS_MOBILE}
                 styles={{
                   container: { maxHeight: 'min(85vh, 560px)', overflow: 'auto' },
                   content: { maxWidth: 'min(360px, calc(100vw - 24px))' },
                 }}
-                content={
-                  <div style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
-                    <div
-                      style={{
-                        marginBottom: 12,
-                        borderRadius: 8,
-                        overflow: 'hidden',
-                        background: 'var(--ant-color-fill-tertiary)',
-                      }}
-                    >
-                      <img
-                        style={{ display: 'block', width: '100%', height: 'auto' }}
-                        alt=""
-                        src={'/' + slugify(l.name) + '.jpg'}
-                      />
-                    </div>
-
-                    <Flex align="center" gap="small" wrap="wrap" style={{ marginBottom: 4 }}>
-                      <Title level={4} style={{ margin: 0, fontSize: 22, lineHeight: 1.25 }}>
-                        {l.displayName || l.name}
-                      </Title>
-                      {l.protectionLevel && l.style && (
-                        <InfrastructureBadge
-                          infrastructure={getInfrastructureFromLayerName(l.name)}
-                          isDarkMode={this.props.isDarkMode}
-                        >
-                          {l.protectionLevel === 'Alta' && <IconSignal3 />}
-                          {l.protectionLevel === 'Média' && <IconSignal2 />}
-                          {l.protectionLevel === 'Baixa' && <IconSignal1 />}
-                          {l.protectionLevel} proteção
-                        </InfrastructureBadge>
-                      )}
-                    </Flex>
-
-                    <Text>{l.description}</Text>
-
-                    {l.filters && l.filters.length > 0 && (
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        style={{ marginTop: 12 }}
-                      >
-                        <Collapse
-                          bordered={false}
-                          size="small"
-                          styles={{
-                            header: {
-                              padding: '4px 0',
-                              minHeight: 'auto',
-                            },
-                            body: {
-                              overflowY: 'auto',
-                              padding: '4px 8px 8px 8px',
-                            },
-                          }}
-                          items={[
-                            {
-                              key: 'osm',
-                              label: 'Ver tags OSM',
-                              children: (
-                                <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                                  <List
-                                    size="small"
-                                    dataSource={l.filters}
-                                    rowKey={(_, index) => `osm-f-${l.id}-${index}`}
-                                    split={false}
-                                    renderItem={(branch, index) => (
-                                      <OsmFilterBranch
-                                        branch={branch}
-                                        relationLabel={index < l.filters.length - 1 ? 'ou' : null}
-                                      />
-                                    )}
-                                    style={{ margin: 0, padding: 0 }}
-                                  />
-                                  <Text type="secondary" style={{ fontSize: 12 }}>
-                                    <IconInfoCircle
-                                      aria-hidden="true"
-                                      style={{ marginRight: 4, display: 'inline-block' }}
-                                    />
-                                    Esta camada é construída a partir de dados colaborativos do
-                                    OpenStreetMap. As tags acima mostram os critérios que usamos
-                                    para reconhecer esta categoria no mapa.
-                                  </Text>
-                                </Space>
-                              ),
-                            },
-                          ]}
-                        />
-                      </div>
-                    )}
-                  </div>
-                }
+                content={this.renderPopoverContent(l)}
               >
                 <div
                   className="flex rounded-md items-center justify-between px-2 py-1 hover:bg-black hover:bg-opacity-70"
@@ -313,5 +238,14 @@ class LayersPanel extends Component {
     );
   }
 }
+
+LayersPanel.propTypes = {
+  layers: PropTypes.array,
+  lengths: PropTypes.object,
+  onLayersChange: PropTypes.func.isRequired,
+  embedMode: PropTypes.bool,
+  isDarkMode: PropTypes.bool,
+  openLayersLegendModal: PropTypes.func,
+};
 
 export default LayersPanel;

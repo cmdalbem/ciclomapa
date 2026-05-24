@@ -2,10 +2,10 @@ import React, { Component } from 'react';
 
 import { Button } from 'antd';
 
-import { slugify } from './utils/utils.js';
 import InfrastructureBadge from './components/InfrastructureBadge';
+import { getLayerLegendImageSrc } from './utils/utils.js';
+import LayerOsmFilters from './components/LayerOsmFilters';
 import { IconSignal1, IconSignal2, IconSignal3 } from './components/ProtectionSignalIcons';
-import { formatDistance, formatDuration } from './utils/routeUtils.js';
 import commentIcon from './img/icons/poi-comment-flat.png';
 import bikeparkingIcon from './img/icons/poi-bikeparking@2x.png';
 import bikeshopIcon from './img/icons/poi-bikeshop@2x.png';
@@ -13,7 +13,13 @@ import bikerentalIcon from './img/icons/poi-bikerental@2x.png';
 
 import { HiOutlineXMark } from 'react-icons/hi2';
 
-import { handleModalKeyDown, setupModalFocus, restoreModalFocus } from './modalFocusTrap';
+import { IS_MOBILE } from './config/constants.js';
+import {
+  getModalFocusRestoreRef,
+  handleModalKeyDown,
+  setupModalFocus,
+  restoreModalFocus,
+} from './modalFocusTrap';
 
 const getInfrastructureFromLayerName = (layerName) => {
   const name = layerName.toLowerCase();
@@ -39,7 +45,6 @@ class LayersLegendModal extends Component {
     };
     this.observer = null;
     this.modalRef = React.createRef();
-    this.previousActiveElementRef = { current: null };
   }
 
   componentDidMount() {
@@ -50,7 +55,7 @@ class LayersLegendModal extends Component {
 
   componentDidUpdate(prevProps) {
     if (this.props.visible && !prevProps.visible) {
-      setupModalFocus(this.modalRef, this.previousActiveElementRef);
+      setupModalFocus(this.modalRef, getModalFocusRestoreRef(this));
       this._boundKeyDown = (e) => handleModalKeyDown(e, this.modalRef, this.props.onClose);
       document.addEventListener('keydown', this._boundKeyDown);
       this.setupScrollspy();
@@ -63,8 +68,19 @@ class LayersLegendModal extends Component {
 
     if (!this.props.visible && prevProps.visible) {
       document.removeEventListener('keydown', this._boundKeyDown);
-      restoreModalFocus(this.previousActiveElementRef);
+      restoreModalFocus(getModalFocusRestoreRef(this));
       this.cleanupScrollspy();
+    }
+
+    if (
+      this.props.visible &&
+      prevProps.visible &&
+      this.props.scrollToSection &&
+      this.props.scrollToSection !== prevProps.scrollToSection
+    ) {
+      setTimeout(() => {
+        this.scrollToSection(this.props.scrollToSection);
+      }, 100);
     }
   }
 
@@ -84,6 +100,7 @@ class LayersLegendModal extends Component {
       const scrollContainer = document.getElementById('layers-legend-scroll');
       if (!scrollContainer) return;
 
+      const tabsSticky = scrollContainer.querySelector('[data-legend-sticky-header]');
       const sections = [
         'pontos-section',
         'vias-ciclaveis-section',
@@ -91,9 +108,10 @@ class LayersLegendModal extends Component {
         'routes-section',
       ];
 
+      const stickyTop = tabsSticky?.offsetHeight ?? 48;
       const options = {
         root: scrollContainer,
-        rootMargin: '-140px 0px -66% 0px', // Trigger when section is near top, accounting for sticky header
+        rootMargin: `-${stickyTop}px 0px -66% 0px`,
         threshold: 0,
       };
 
@@ -124,18 +142,24 @@ class LayersLegendModal extends Component {
   scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);
     const scrollContainer = document.getElementById('layers-legend-scroll');
-    if (element && scrollContainer) {
-      // Account for sticky header height (approximately 140px)
-      const offset = 140;
-      scrollContainer.scrollTo({
-        top: element.offsetTop - offset,
-        behavior: 'smooth',
-      });
-    }
+    if (!element || !scrollContainer) return;
+
+    const tabsSticky = scrollContainer.querySelector('[data-legend-sticky-header]');
+    const stickyTop = tabsSticky?.getBoundingClientRect().height ?? 48;
+    const padding = 8;
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    const scrollTop =
+      scrollContainer.scrollTop + (elementRect.top - containerRect.top) - stickyTop - padding;
+
+    scrollContainer.scrollTo({
+      top: Math.max(0, scrollTop),
+      behavior: 'smooth',
+    });
   };
 
   render() {
-    const { visible, onClose, layers } = this.props;
+    const { onClose, layers } = this.props;
 
     if (!layers) return null;
 
@@ -157,7 +181,9 @@ class LayersLegendModal extends Component {
         (l.name === 'Baixa velocidade' || l.name === 'Trilha' || l.name === 'Proibido')
     );
 
-    const categoryContainerClasses = 'gap-4 grid grid-cols-1 md:grid-cols-2';
+    const categoryContainerClasses = 'grid grid-cols-1 items-stretch gap-4 md:grid-cols-2';
+    const sectionHeadingClass = 'text-2xl mt-8 mb-4 font-heading-display';
+    const layerTitleClass = 'text-lg font-semibold leading-snug text-white mb-0 pr-1';
 
     const legendNavTabClass = (sectionId) => {
       const active = this.state.activeSection === sectionId;
@@ -170,25 +196,45 @@ class LayersLegendModal extends Component {
       }`;
     };
 
+    const { visible } = this.props;
+    const deferLegendImage = IS_MOBILE && !visible;
+
     const renderLayer = (layer) => (
       <div
         key={layer.id}
-        className="rounded-xl border border-white border-opacity-10 bg-gray-900 bg-opacity-80 p-4"
+        className="flex h-full min-h-0 flex-col rounded-xl border border-white border-opacity-10 bg-gray-900 bg-opacity-80 p-4"
       >
-        <div className={`flex gap-4 ${layer.type === 'poi' ? 'md:flex-col flex-row' : 'flex-col'}`}>
+        <div
+          className={`flex min-h-0 flex-1 gap-4 ${layer.type === 'poi' ? 'md:flex-col flex-row' : 'flex-col'}`}
+        >
           {/* Image/Icon */}
           <div className="flex-shrink-0">
-            {layer.type === 'way' && (
-              <img className="w-full rounded-md" alt="" src={'/' + slugify(layer.name) + '.jpg'} />
-            )}
+            {layer.type === 'way' &&
+              (deferLegendImage ? (
+                <div
+                  className="w-full rounded-md"
+                  style={{
+                    aspectRatio: '16 / 10',
+                    background: 'var(--ant-color-fill-tertiary)',
+                  }}
+                  aria-hidden
+                />
+              ) : (
+                <img
+                  className="w-full rounded-md"
+                  alt=""
+                  src={getLayerLegendImageSrc(layer.name)}
+                  loading={IS_MOBILE ? 'lazy' : undefined}
+                  decoding="async"
+                />
+              ))}
 
             {layer.type === 'poi' && layer.icon && (
               <img className="h-7 w-7 opacity-90" src={iconsMap[layer.icon]} alt="" />
             )}
           </div>
 
-          {/* Text content */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             {layer.type === 'way' && layer.style && (
               <div
                 className="w-full h-1 my-3 rounded flex-shrink-0"
@@ -203,10 +249,8 @@ class LayersLegendModal extends Component {
                 }}
               />
             )}
-            <div className="flex justify-between gap-3 items-start">
-              <h3 className="text-base font-semibold leading-snug text-white mb-0 pr-1">
-                {layer.displayName || layer.name}
-              </h3>
+            <div className="flex justify-between gap-2 items-start">
+              <h3 className={layerTitleClass}>{layer.displayName || layer.name}</h3>
               {layer.protectionLevel && layer.style && (
                 <InfrastructureBadge
                   infrastructure={getInfrastructureFromLayerName(layer.name)}
@@ -219,9 +263,11 @@ class LayersLegendModal extends Component {
                 </InfrastructureBadge>
               )}
             </div>
-            <p className="text-sm text-gray-400 leading-relaxed mb-0 mt-2">{layer.description}</p>
+            <p className="mb-0 mt-2 text-sm leading-normal text-gray-400">{layer.description}</p>
           </div>
         </div>
+
+        <LayerOsmFilters layer={layer} className="mt-auto shrink-0 pt-3" />
       </div>
     );
 
@@ -252,7 +298,7 @@ class LayersLegendModal extends Component {
         >
           <div className="max-w-2xl mx-auto">
             {/* Sticky Header */}
-            <div className="sticky top-0 z-20 px-3 pt-4 pb-3 bg-gray-800">
+            <div className="sticky top-0 z-20 px-3 pt-4 pb-3 bg-gray-800" data-legend-sticky-header>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold tracking-tight text-white my-0 md:text-2xl">
                   Legenda
@@ -325,7 +371,7 @@ class LayersLegendModal extends Component {
                 {/* Vias cicláveis */}
                 {viasCiclaveisLayers.length > 0 && (
                   <div id="vias-ciclaveis-section">
-                    <h3 className="text-xl mb-4 pl-2">Vias cicláveis</h3>
+                    <h3 className={sectionHeadingClass}>Vias cicláveis</h3>
                     <div className={categoryContainerClasses}>
                       {viasCiclaveisLayers.map(renderLayer)}
                     </div>
@@ -335,7 +381,7 @@ class LayersLegendModal extends Component {
                 {/* Pontos de Interesse */}
                 {pontosLayers.length > 0 && (
                   <div id="pontos-section">
-                    <h3 className="text-xl mb-4 pl-2">Pontos de interesse</h3>
+                    <h3 className={sectionHeadingClass}>Pontos de interesse</h3>
                     <div className={categoryContainerClasses}>
                       {pontosLayers.map(renderLayer)}
                       <div className="rounded-xl border border-white border-opacity-10 bg-gray-900 bg-opacity-80 p-4">
@@ -344,10 +390,8 @@ class LayersLegendModal extends Component {
                             <img className="h-7 w-7 opacity-90" src={commentIcon} alt="" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-base font-semibold leading-snug text-white mb-0 pr-1">
-                              Comentários da comunidade
-                            </h3>
-                            <p className="text-sm text-gray-400 leading-relaxed mb-0 mt-2">
+                            <h3 className={layerTitleClass}>Comentários da comunidade</h3>
+                            <p className="text-sm text-gray-400 leading-normal mb-0 mt-2">
                               Enviados por quem usa o CicloMapa, servem para relatar problemas,
                               sugestões ou observações sobre o local para auxiliar parceiros
                               editores do OpenStreetMap.
@@ -362,7 +406,7 @@ class LayersLegendModal extends Component {
                 {/* Outras vias */}
                 {outrasViasLayers.length > 0 && (
                   <div id="outras-vias-section">
-                    <h3 className="text-xl mb-4 pl-2">Outras vias</h3>
+                    <h3 className={sectionHeadingClass}>Outras vias</h3>
                     <div className={categoryContainerClasses}>
                       {outrasViasLayers.map(renderLayer)}
                     </div>
@@ -373,11 +417,17 @@ class LayersLegendModal extends Component {
               {/* Route Coverage & Protection Scores Section */}
               <div id="routes-section" className="space-y-8 mb-10">
                 <div>
-                  <h3 className="text-xl mb-4 pl-2">Rotas</h3>
-                  <p className="text-sm md:text-base text-gray-300 leading-relaxed mb-0 max-w-prose">
+                  <h3 className={sectionHeadingClass}>Rotas</h3>
+                  <p className="text-sm md:text-base text-gray-300 leading-normal max-w-prose">
                     Quando você calcula uma rota, analisamos quantos quilômetros dela estão cobertos
                     por cada tipo de infraestrutura cicloviária. Cada tipo tem um peso diferente na
                     nota final, refletindo o nível de proteção e segurança oferecido.
+                  </p>
+                  <p className="text-sm md:text-base text-gray-300 leading-normal max-w-prose">
+                    <strong>Lembre-se:</strong> as rotas são sugestões automáticas; sempre verifique
+                    as condições das vias, sinalização e segurança antes de pedalar. As notas ajudam
+                    a comparar opções, mas não substituem seu julgamento sobre a segurança real do
+                    trajeto.
                   </p>
                 </div>
 
@@ -463,168 +513,6 @@ class LayersLegendModal extends Component {
                     </table>
                   </div>
                 </div>
-
-                {/* Visual Examples */}
-                <p className="text-sm font-medium text-gray-400 mb-4">Alguns exemplos</p>
-
-                {/* <div className="rounded-xl border border-white border-opacity-10 bg-gray-900 bg-opacity-80 p-4 md:p-5"> */}
-                <div>
-                  <div className="space-y-6">
-                    {/* Example 1: Perfect route */}
-                    <div>
-                      <div className="rounded-lg p-4 border border-white border-opacity-10 bg-gray-900 bg-opacity-80">
-                        <div className="flex justify-between gap-3">
-                          <div className="flex items-start min-w-0">
-                            <div
-                              className="flex items-center mr-3 bg-green-600 px-2 py-2 rounded-md text-xs md:text-sm leading-none font-mono text-center flex-shrink-0"
-                              style={{ color: 'white' }}
-                            >
-                              100
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-sm font-medium text-white mb-2">
-                                Rota 100% protegida
-                              </span>
-                              <div className="flex flex-wrap gap-2">
-                                <InfrastructureBadge
-                                  infrastructure="ciclovia"
-                                  isDarkMode={this.props.isDarkMode}
-                                >
-                                  100% ciclovia
-                                </InfrastructureBadge>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end flex-shrink-0 text-right">
-                            <span className="text-sm font-medium text-gray-200 mb-1">
-                              {formatDuration(480)}
-                            </span>
-                            <span className="text-xs text-gray-500">{formatDistance(2500)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 font-mono leading-relaxed mt-3 mb-0">
-                        100×1.0 = <strong className="text-gray-400">100</strong>
-                      </p>
-                    </div>
-
-                    {/* Example 2: Mixed route */}
-                    <div>
-                      <div className="rounded-lg p-4 border border-white border-opacity-10 bg-gray-900 bg-opacity-80">
-                        <div className="flex justify-between gap-3">
-                          <div className="flex items-start min-w-0">
-                            <div
-                              className="flex items-center mr-3 bg-yellow-600 px-2 py-2 rounded-md text-xs md:text-sm leading-none font-mono text-center flex-shrink-0"
-                              style={{ color: 'white' }}
-                            >
-                              55
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-sm font-medium text-white mb-2">
-                                Rota mista
-                              </span>
-                              <div className="flex flex-wrap gap-2">
-                                <InfrastructureBadge
-                                  infrastructure="ciclovia"
-                                  isDarkMode={this.props.isDarkMode}
-                                >
-                                  40% ciclovia
-                                </InfrastructureBadge>
-                                <InfrastructureBadge
-                                  infrastructure="ciclofaixa"
-                                  isDarkMode={this.props.isDarkMode}
-                                >
-                                  15% ciclofaixa
-                                </InfrastructureBadge>
-                                <InfrastructureBadge
-                                  infrastructure="ciclorrota"
-                                  isDarkMode={this.props.isDarkMode}
-                                >
-                                  15% ciclorrota
-                                </InfrastructureBadge>
-                                <InfrastructureBadge
-                                  infrastructure="rua"
-                                  isDarkMode={this.props.isDarkMode}
-                                >
-                                  30% rua
-                                </InfrastructureBadge>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end flex-shrink-0 text-right">
-                            <span className="text-sm font-medium text-gray-200 mb-1">
-                              {formatDuration(720)}
-                            </span>
-                            <span className="text-xs text-gray-500">{formatDistance(3800)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 font-mono leading-relaxed mt-3 mb-0">
-                        40×1.0 + 15×0.6 + 15×0.4 + 30×0 ={' '}
-                        <strong className="text-gray-400">55</strong>
-                      </p>
-                    </div>
-
-                    {/* Example 3: Low protection route */}
-                    <div>
-                      <div className="rounded-lg p-4 border border-white border-opacity-10 bg-gray-900 bg-opacity-80">
-                        <div className="flex justify-between gap-3">
-                          <div className="flex items-start min-w-0">
-                            <div
-                              className="flex items-center mr-3 bg-red-600 px-2 py-2 rounded-md text-xs md:text-sm leading-none font-mono text-center flex-shrink-0"
-                              style={{ color: 'white' }}
-                            >
-                              32
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-sm font-medium text-white mb-2">
-                                Rota menos protegida
-                              </span>
-                              <div className="flex flex-wrap gap-2">
-                                <InfrastructureBadge
-                                  infrastructure="ciclorrota"
-                                  isDarkMode={this.props.isDarkMode}
-                                >
-                                  80% ciclorrota
-                                </InfrastructureBadge>
-                                <InfrastructureBadge
-                                  infrastructure="rua"
-                                  isDarkMode={this.props.isDarkMode}
-                                >
-                                  20% rua
-                                </InfrastructureBadge>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end flex-shrink-0 text-right">
-                            <span className="text-sm font-medium text-gray-200 mb-1">
-                              {formatDuration(900)}
-                            </span>
-                            <span className="text-xs text-gray-500">{formatDistance(4200)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 font-mono leading-relaxed mt-3 mb-0">
-                        80×0.4 + 20×0 = <strong className="text-gray-400">32</strong>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Disclaimer */}
-                <p className="text-sm text-gray-400 leading-relaxed mt-2 mb-0 border-t border-white border-opacity-10 pt-8">
-                  <strong className="font-semibold text-gray-300">Lembre-se:</strong> as rotas são
-                  sugestões automáticas; sempre verifique as condições das vias, sinalização e
-                  segurança antes de pedalar. As notas ajudam a comparar opções, mas não substituem
-                  seu julgamento sobre a segurança real do trajeto.
-                </p>
-              </div>
-
-              {/* Footer button */}
-              <div className="flex justify-center pb-8">
-                <Button className="w-full" type="primary" size="large" onClick={onClose}>
-                  Entendi
-                </Button>
               </div>
             </div>
           </div>

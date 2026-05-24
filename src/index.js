@@ -17,6 +17,17 @@ if (process.env.NODE_ENV === 'production') {
   console.debug = () => {};
 }
 
+// Inter font: non-blocking (preconnect hints in public/index.html)
+(function loadInterFont() {
+  if (document.getElementById('ciclomapa-inter-font')) return;
+  const link = document.createElement('link');
+  link.id = 'ciclomapa-inter-font';
+  link.rel = 'stylesheet';
+  link.href =
+    'https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,500..700;1,500..700&display=swap';
+  document.head.appendChild(link);
+})();
+
 // Expose design tokens as CSS custom properties
 const tokens = getCssCustomProperties();
 Object.entries(tokens).forEach(([key, value]) => {
@@ -93,48 +104,46 @@ root.render(
   </Router>
 );
 
-// If a deploy happens while the PWA is "sleeping" on mobile, it's common to end up with
-// an old HTML shell referencing new/removed chunk files, resulting in a black screen.
-// This forces a clean reload once the updated service worker takes control.
+// --- Service Worker update lifecycle ---
+// On update, activate the new SW immediately; controllerchange handler reloads once.
 let hasReloadedForSwUpdate = false;
 if ('serviceWorker' in navigator) {
-  // On first service-worker install there is no previous controller yet.
-  // Reloading in that case creates the "auto refresh on first visit" symptom.
-  // We only want to reload for SW updates (when there *was* a controller).
-  const hadServiceWorkerControllerOnLoad = Boolean(navigator.serviceWorker.controller);
+  const hadControllerOnLoad = Boolean(navigator.serviceWorker.controller);
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (hasReloadedForSwUpdate) return;
-    if (!hadServiceWorkerControllerOnLoad) return;
+    if (!hadControllerOnLoad) return;
     hasReloadedForSwUpdate = true;
     window.location.reload();
   });
 }
 
-// Last-resort guard: if a JS chunk fails to load (typically after an update), reload.
+// --- Chunk-load error recovery with infinite-reload guard ---
+const CHUNK_RELOAD_KEY = 'ciclomapa-chunk-fail-reloads';
+
+function reloadForChunkError() {
+  const count = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0);
+  if (count >= 2) return;
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, String(count + 1));
+  window.location.reload();
+}
+
+window.addEventListener('load', () => sessionStorage.removeItem(CHUNK_RELOAD_KEY));
+
 window.addEventListener('error', (event) => {
-  const message = event?.message || '';
-  if (
-    typeof message === 'string' &&
-    message.includes('Loading chunk') &&
-    message.includes('failed')
-  ) {
-    window.location.reload();
+  const msg = event?.message || '';
+  if (typeof msg === 'string' && msg.includes('Loading chunk') && msg.includes('failed')) {
+    reloadForChunkError();
   }
 });
 window.addEventListener('unhandledrejection', (event) => {
-  const message = event?.reason?.message || '';
-  if (
-    typeof message === 'string' &&
-    message.includes('Loading chunk') &&
-    message.includes('failed')
-  ) {
-    window.location.reload();
+  const msg = event?.reason?.message || '';
+  if (typeof msg === 'string' && msg.includes('Loading chunk') && msg.includes('failed')) {
+    reloadForChunkError();
   }
 });
 
-// Register service worker for PWA/TWA (production only).
-// On update, activate the new SW immediately; controllerchange handler above reloads once.
+// Register service worker (production only).
 serviceWorkerRegistration.register({
   onUpdate: (registration) => {
     const waiting = registration?.waiting;

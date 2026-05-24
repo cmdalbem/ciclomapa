@@ -1,7 +1,9 @@
 import { createRef } from 'react';
 import {
   getFocusableElements,
+  getModalFocusRestoreRef,
   handleModalKeyDown,
+  isElementFocusRestorable,
   restoreModalFocus,
   setupModalFocus,
 } from './modalFocusTrap';
@@ -95,6 +97,30 @@ describe('handleModalKeyDown', () => {
     expect(document.activeElement).toBe(last);
 
     document.body.removeChild(root);
+  });
+});
+
+describe('getModalFocusRestoreRef', () => {
+  it('returns a stable ref per owner without attaching it to the owner object', () => {
+    const owner = {};
+    const refA = getModalFocusRestoreRef(owner);
+    const refB = getModalFocusRestoreRef(owner);
+    expect(refA).toBe(refB);
+    expect(Object.keys(owner)).toEqual([]);
+  });
+});
+
+describe('isElementFocusRestorable', () => {
+  it('accepts connected same-document focusable elements', () => {
+    const button = document.createElement('button');
+    document.body.appendChild(button);
+    expect(isElementFocusRestorable(button)).toBe(true);
+    document.body.removeChild(button);
+  });
+
+  it('rejects disconnected elements', () => {
+    const button = document.createElement('button');
+    expect(isElementFocusRestorable(button)).toBe(false);
   });
 });
 

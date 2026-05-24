@@ -31,7 +31,7 @@ UI smoke: start the dev server (`yarn start`), then in another terminal run `yar
 yarn e2e:apis
 ```
 
-Overpass is shared infrastructure and can be slow or return 5xx; the spec retries mirrors and rounds. Optional provider tests **skip** if the corresponding API key is not in the environment (so CI can run only public checks unless you add secrets).
+Overpass is shared infrastructure and can be slow or return 5xx; the spec retries mirrors and rounds. If a provider is down (connection errors or HTTP 5xx/429 on all Overpass mirrors, etc.), the matching test **skips** so CI is not blocked by third-party outages. Auth/config problems (401, 403, invalid key) still **fail** the test. Skips emit **`[api-smoke] WARNING`** in the log, Playwright **warning** annotations, and **GitHub Actions warnings** on the job — see `e2e/apiSmokeWarnings.ts`. Optional provider tests **skip** if the corresponding API key is not in the environment (so CI can run only public checks unless you add secrets).
 
 ## Mocks
 

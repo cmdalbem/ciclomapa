@@ -15,10 +15,6 @@
 
 #layersPanel:hover {
   backdrop-filter: blur(8px) opacity(1);
-
-  /* .layer-panel-name {
-        text-shadow: -1px -1px 0 #ececec, 1px -1px 0 #ececec, -1px 1px 0 #ececec, 1px 1px 0 #ececec;
-    } */
 }
 
 /* Mobile */

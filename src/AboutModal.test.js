@@ -2,13 +2,48 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import AboutModal from './AboutModal.js';
+import AboutModal, {
+  scheduleAfterFirstPaint,
+  shouldAutoOpenWelcomeAboutModal,
+  shouldDeferMapBootUntilAfterPaint,
+} from './AboutModal.js';
 
 const noop = () => {};
+
+const WELCOME_SEEN_STORAGE_KEY = 'ciclomapa_welcomeSeen:v3';
 
 function renderAbout(ui) {
   return render(<MemoryRouter>{ui}</MemoryRouter>);
 }
+
+describe('welcome map boot', () => {
+  beforeEach(() => {
+    window.localStorage.removeItem(WELCOME_SEEN_STORAGE_KEY);
+  });
+
+  it('shouldDeferMapBootUntilAfterPaint matches first-visit welcome auto-open', () => {
+    const options = { fromMount: true, embedMode: false };
+    expect(shouldDeferMapBootUntilAfterPaint(options)).toBe(
+      shouldAutoOpenWelcomeAboutModal(options)
+    );
+    window.localStorage.setItem(WELCOME_SEEN_STORAGE_KEY, '1');
+    expect(shouldDeferMapBootUntilAfterPaint(options)).toBe(false);
+  });
+
+  it('scheduleAfterFirstPaint runs after two animation frames', () => {
+    let rafCount = 0;
+    jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      rafCount += 1;
+      cb(0);
+      return rafCount;
+    });
+    const fn = jest.fn();
+    scheduleAfterFirstPaint(fn);
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(rafCount).toBe(2);
+    window.requestAnimationFrame.mockRestore();
+  });
+});
 
 it('renders when visible and exposes primary actions', () => {
   renderAbout(
