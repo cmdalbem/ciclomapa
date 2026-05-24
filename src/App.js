@@ -330,9 +330,13 @@ class App extends Component {
   }
 
   openLayersLegendModal(scrollToSection = null) {
+    const sectionId =
+      typeof scrollToSection === 'string' || typeof scrollToSection === 'number'
+        ? scrollToSection
+        : null;
     this.setState({
       layersLegendModal: true,
-      layersLegendScrollToSection: scrollToSection,
+      layersLegendScrollToSection: sectionId,
     });
   }
 

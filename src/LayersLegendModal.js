@@ -2,8 +2,8 @@ import React, { Component } from 'react';
 
 import { Button } from 'antd';
 
-import { slugify } from './utils/utils.js';
 import InfrastructureBadge from './components/InfrastructureBadge';
+import { getLayerLegendImageSrc } from './utils/utils.js';
 import LayerOsmFilters from './components/LayerOsmFilters';
 import { IconSignal1, IconSignal2, IconSignal3 } from './components/ProtectionSignalIcons';
 import commentIcon from './img/icons/poi-comment-flat.png';
@@ -13,7 +13,13 @@ import bikerentalIcon from './img/icons/poi-bikerental@2x.png';
 
 import { HiOutlineXMark } from 'react-icons/hi2';
 
-import { handleModalKeyDown, setupModalFocus, restoreModalFocus } from './modalFocusTrap';
+import { IS_MOBILE } from './config/constants.js';
+import {
+  getModalFocusRestoreRef,
+  handleModalKeyDown,
+  setupModalFocus,
+  restoreModalFocus,
+} from './modalFocusTrap';
 
 const getInfrastructureFromLayerName = (layerName) => {
   const name = layerName.toLowerCase();
@@ -39,7 +45,6 @@ class LayersLegendModal extends Component {
     };
     this.observer = null;
     this.modalRef = React.createRef();
-    this.previousActiveElementRef = { current: null };
   }
 
   componentDidMount() {
@@ -50,7 +55,7 @@ class LayersLegendModal extends Component {
 
   componentDidUpdate(prevProps) {
     if (this.props.visible && !prevProps.visible) {
-      setupModalFocus(this.modalRef, this.previousActiveElementRef);
+      setupModalFocus(this.modalRef, getModalFocusRestoreRef(this));
       this._boundKeyDown = (e) => handleModalKeyDown(e, this.modalRef, this.props.onClose);
       document.addEventListener('keydown', this._boundKeyDown);
       this.setupScrollspy();
@@ -63,12 +68,13 @@ class LayersLegendModal extends Component {
 
     if (!this.props.visible && prevProps.visible) {
       document.removeEventListener('keydown', this._boundKeyDown);
-      restoreModalFocus(this.previousActiveElementRef);
+      restoreModalFocus(getModalFocusRestoreRef(this));
       this.cleanupScrollspy();
     }
 
     if (
       this.props.visible &&
+      prevProps.visible &&
       this.props.scrollToSection &&
       this.props.scrollToSection !== prevProps.scrollToSection
     ) {
@@ -153,7 +159,7 @@ class LayersLegendModal extends Component {
   };
 
   render() {
-    const { visible, onClose, layers } = this.props;
+    const { onClose, layers } = this.props;
 
     if (!layers) return null;
 
@@ -190,6 +196,9 @@ class LayersLegendModal extends Component {
       }`;
     };
 
+    const { visible } = this.props;
+    const deferLegendImage = IS_MOBILE && !visible;
+
     const renderLayer = (layer) => (
       <div
         key={layer.id}
@@ -200,9 +209,25 @@ class LayersLegendModal extends Component {
         >
           {/* Image/Icon */}
           <div className="flex-shrink-0">
-            {layer.type === 'way' && (
-              <img className="w-full rounded-md" alt="" src={'/' + slugify(layer.name) + '.jpg'} />
-            )}
+            {layer.type === 'way' &&
+              (deferLegendImage ? (
+                <div
+                  className="w-full rounded-md"
+                  style={{
+                    aspectRatio: '16 / 10',
+                    background: 'var(--ant-color-fill-tertiary)',
+                  }}
+                  aria-hidden
+                />
+              ) : (
+                <img
+                  className="w-full rounded-md"
+                  alt=""
+                  src={getLayerLegendImageSrc(layer.name)}
+                  loading={IS_MOBILE ? 'lazy' : undefined}
+                  decoding="async"
+                />
+              ))}
 
             {layer.type === 'poi' && layer.icon && (
               <img className="h-7 w-7 opacity-90" src={iconsMap[layer.icon]} alt="" />

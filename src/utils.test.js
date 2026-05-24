@@ -1,5 +1,6 @@
 import {
   slugify,
+  getLayerLegendImageSrc,
   hexToRgba,
   adjustColorBrightness,
   sizeOf,
@@ -7,6 +8,13 @@ import {
   getOsmUrl,
   formatTimeAgo,
 } from './utils/utils.js';
+
+describe('getLayerLegendImageSrc', () => {
+  it('slugifies layer name into a public JPG path', () => {
+    expect(getLayerLegendImageSrc('Ciclovia')).toBe('/ciclovia.jpg');
+    expect(getLayerLegendImageSrc('Calçada compartilhada')).toBe('/calcada-compartilhada.jpg');
+  });
+});
 
 describe('slugify', () => {
   it('lowercases and replaces spaces with hyphens', () => {
