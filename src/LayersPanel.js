@@ -4,8 +4,8 @@ import { Popover, Button, Flex, Typography } from 'antd';
 
 import { HiEye as IconVisible, HiEyeOff as IconHidden } from 'react-icons/hi';
 
-import { slugify } from './utils/utils.js';
 import InfrastructureBadge from './components/InfrastructureBadge';
+import { getLayerLegendImageSrc } from './utils/utils.js';
 import { IconSignal1, IconSignal2, IconSignal3 } from './components/ProtectionSignalIcons';
 
 import './LayersPanel.css';
@@ -96,7 +96,13 @@ class LayersPanel extends Component {
             className="rounded-lg overflow-hidden"
             style={{ background: 'var(--ant-color-fill-tertiary)' }}
           >
-            <img className="block w-full h-auto" alt="" src={'/' + slugify(layer.name) + '.jpg'} />
+            <img
+              className="block w-full h-auto"
+              alt=""
+              src={getLayerLegendImageSrc(layer.name)}
+              loading="eager"
+              decoding="async"
+            />
           </div>
         ) : layer.icon ? (
           <div>
@@ -176,6 +182,7 @@ class LayersPanel extends Component {
               <Popover
                 placement="left"
                 key={l.name}
+                destroyOnHidden={IS_MOBILE}
                 styles={{
                   container: { maxHeight: 'min(85vh, 560px)', overflow: 'auto' },
                   content: { maxWidth: 'min(360px, calc(100vw - 24px))' },
