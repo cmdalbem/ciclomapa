@@ -42,7 +42,12 @@ import {
   ENABLE_SATELLITE_TOGGLE,
   MAX_RECENT_CITIES,
 } from './config/constants.js';
-import { maybeAutoOpenWelcomeAboutModal, shouldAutoOpenWelcomeAboutModal } from './AboutModal.js';
+import {
+  maybeAutoOpenWelcomeAboutModal,
+  scheduleAfterFirstPaint,
+  shouldAutoOpenWelcomeAboutModal,
+  shouldDeferMapBootUntilAfterPaint,
+} from './AboutModal.js';
 import { readFavorites, toggleFavorite } from './favoritesStore';
 import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
@@ -57,7 +62,7 @@ const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 
 class App extends Component {
   geoJson;
-  storage = new Storage();
+  _storage = null;
   osmController = OSMController;
   currentOSMRequest = null;
   deferredCityFocus = null;
@@ -67,6 +72,15 @@ class App extends Component {
   lastNotifiedCitySlugError = null;
   initialBareRootEntry = false;
   _lastExplicitCityNavTimestamp = 0;
+  _welcomeMapBootScheduled = false;
+  _unmounted = false;
+
+  getStorage() {
+    if (!this._storage) {
+      this._storage = new Storage();
+    }
+    return this._storage;
+  }
 
   constructor(props) {
     super(props);
@@ -106,7 +120,9 @@ class App extends Component {
       !initialHasCitySlug;
 
     this.state = this.buildInitialState();
-    this.updateData();
+    if (this.state.mapBootReady) {
+      this.updateData();
+    }
   }
 
   buildInitialState() {
@@ -203,6 +219,10 @@ class App extends Component {
       fromMount: true,
       embedMode,
     });
+    const deferMapBootForWelcome = shouldDeferMapBootUntilAfterPaint({
+      fromMount: true,
+      embedMode,
+    });
 
     return {
       area: initialArea,
@@ -226,6 +246,7 @@ class App extends Component {
       hideUI: shouldAutoOpenWelcomeModal,
       hideUIFromUrl: urlFlagEnabled(urlParams.hideui),
       aboutModal: shouldAutoOpenWelcomeModal,
+      mapBootReady: !deferMapBootForWelcome,
       cleanMode: urlFlagEnabled(urlParams.clean),
       darkModeFromUrl: urlFlagEnabled(urlParams.dark),
       layersLegendModal: false,
@@ -1102,7 +1123,7 @@ class App extends Component {
 
           if (SAVE_TO_FIREBASE) {
             const storageKey = this.getStorageKeyForArea(areaName);
-            this.storage
+            this.getStorage()
               .save(areaName, newData.geoJson, lengths, { storageKey })
               .then(() => {
                 if (!IS_PROD) {
@@ -1180,7 +1201,7 @@ class App extends Component {
       } else {
         // Try to retrieve this area's geojson data from the database
         const storageKey = this.getStorageKeyForArea(this.state.area);
-        this.storage
+        this.getStorage()
           .load(this.state.area, { storageKey })
           .then((data) => {
             if (data) {
@@ -1446,7 +1467,27 @@ class App extends Component {
     this.calculateLengths();
   };
 
+  scheduleWelcomeMapBootAfterPaint() {
+    if (this._welcomeMapBootScheduled || this.state.mapBootReady) return;
+    this._welcomeMapBootScheduled = true;
+    scheduleAfterFirstPaint(() => {
+      if (this._unmounted) return;
+      this.startDeferredMapBoot();
+    });
+  }
+
+  startDeferredMapBoot() {
+    if (this.state.mapBootReady) return;
+    this.setState({ mapBootReady: true }, () => {
+      this.updateData();
+    });
+  }
+
   componentDidMount() {
+    if (!this.state.mapBootReady) {
+      this.scheduleWelcomeMapBootAfterPaint();
+    }
+
     updateDocumentMeta(this.state.area, this.getPreferredCanonicalSlugForMeta(this.state.area));
 
     // Initialize theme
@@ -1492,6 +1533,8 @@ class App extends Component {
   }
 
   componentWillUnmount() {
+    this._unmounted = true;
+
     // Clean up theme change listener
     if (this.themeChangeListener && window.matchMedia) {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');

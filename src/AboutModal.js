@@ -64,6 +64,17 @@ export function maybeAutoOpenWelcomeAboutModal(options) {
   openAboutModal();
 }
 
+/** First-visit welcome: paint modal before Mapbox + geo data boot. */
+export function shouldDeferMapBootUntilAfterPaint(options) {
+  return shouldAutoOpenWelcomeAboutModal(options);
+}
+
+export function scheduleAfterFirstPaint(callback) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(callback);
+  });
+}
+
 /**
  * @param {string | undefined} canonicalSlug
  * @returns {{ canonicalSlug: string; primary: string; fullLabel: string } | null}

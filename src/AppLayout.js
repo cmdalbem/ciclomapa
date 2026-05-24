@@ -64,37 +64,39 @@ export default function AppLayout({
               />
             </header>
           )}
-          <Map
-            key={state.mapKey}
-            ref={(map) => {
-              if (!IS_PROD && state.debugMode) {
-                window.map = map;
-              }
-            }}
-            data={state.geoJson}
-            layers={state.layers}
-            style={state.mapStyle}
-            zoom={state.zoom}
-            lat={state.lat}
-            lng={state.lng}
-            showSatellite={ENABLE_SATELLITE_TOGGLE ? state.showSatellite : false}
-            location={state.area}
-            onMapMoved={handlers.onMapMoved}
-            updateLengths={handlers.updateLengths}
-            embedMode={state.embedMode}
-            debugMode={state.debugMode}
-            isDarkMode={state.isDarkMode}
-            setMapRef={handlers.setMapRef}
-            directionsPanelRef={directionsPanelRef}
-            toPoint={state.toPoint}
-            isTrackingUserLocation={state.isTrackingUserLocation}
-            onTrackingUserLocationChange={handlers.onTrackingUserLocationChange}
-            globalSearchPin={state.globalSearchPin}
-            onGlobalSearchPinDismiss={handlers.clearGlobalSearchPin}
-            favorites={state.favorites}
-            onFavoritesChanged={handlers.handleFavoritesChanged}
-            cleanMode={state.cleanMode}
-          />
+          {state.mapBootReady ? (
+            <Map
+              key={state.mapKey}
+              ref={(map) => {
+                if (!IS_PROD && state.debugMode) {
+                  window.map = map;
+                }
+              }}
+              data={state.geoJson}
+              layers={state.layers}
+              style={state.mapStyle}
+              zoom={state.zoom}
+              lat={state.lat}
+              lng={state.lng}
+              showSatellite={ENABLE_SATELLITE_TOGGLE ? state.showSatellite : false}
+              location={state.area}
+              onMapMoved={handlers.onMapMoved}
+              updateLengths={handlers.updateLengths}
+              embedMode={state.embedMode}
+              debugMode={state.debugMode}
+              isDarkMode={state.isDarkMode}
+              setMapRef={handlers.setMapRef}
+              directionsPanelRef={directionsPanelRef}
+              toPoint={state.toPoint}
+              isTrackingUserLocation={state.isTrackingUserLocation}
+              onTrackingUserLocationChange={handlers.onTrackingUserLocationChange}
+              globalSearchPin={state.globalSearchPin}
+              onGlobalSearchPinDismiss={handlers.clearGlobalSearchPin}
+              favorites={state.favorites}
+              onFavoritesChanged={handlers.handleFavoritesChanged}
+              cleanMode={state.cleanMode}
+            />
+          ) : null}
 
           {!IS_MOBILE && !state.embedMode && (
             <aside
@@ -244,6 +246,7 @@ AppLayout.propTypes = {
     lengthCalculationStrategy: PropTypes.string,
     map: PropTypes.object,
     aboutModal: PropTypes.bool,
+    mapBootReady: PropTypes.bool,
     layersLegendModal: PropTypes.bool,
     layersLegendScrollToSection: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   }).isRequired,
