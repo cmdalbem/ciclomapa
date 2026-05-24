@@ -177,8 +177,8 @@ class LayersPanel extends Component {
                 placement="left"
                 key={l.name}
                 styles={{
-                  container: { maxHeight: 'min(70vh, 420px)', overflow: 'auto' },
-                  content: { maxWidth: 'min(300px, calc(100vw - 24px))' },
+                  container: { maxHeight: 'min(85vh, 560px)', overflow: 'auto' },
+                  content: { maxWidth: 'min(360px, calc(100vw - 24px))' },
                 }}
                 content={this.renderPopoverContent(l)}
               >
