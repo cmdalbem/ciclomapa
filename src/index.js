@@ -18,6 +18,17 @@ if (process.env.NODE_ENV === 'production') {
   console.debug = () => {};
 }
 
+// Inter font: non-blocking (preconnect hints in public/index.html)
+(function loadInterFont() {
+  if (document.getElementById('ciclomapa-inter-font')) return;
+  const link = document.createElement('link');
+  link.id = 'ciclomapa-inter-font';
+  link.rel = 'stylesheet';
+  link.href =
+    'https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,500..700;1,500..700&display=swap';
+  document.head.appendChild(link);
+})();
+
 // Expose design tokens as CSS custom properties
 const tokens = getCssCustomProperties();
 Object.entries(tokens).forEach(([key, value]) => {

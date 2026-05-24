@@ -1,5 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /*
- * Theme helpers for Tailwind (CDN) and non-Ant surfaces.
+ * Theme helpers for Tailwind utilities and non-Ant surfaces.
  * Ant Design v6 light/dark uses ConfigProvider (see src/config/antdTheme.js).
  */
 
