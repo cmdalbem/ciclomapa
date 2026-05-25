@@ -203,12 +203,13 @@ class DirectionsPanel extends Component {
 
     // Calculate directions only when both points exist and either:
     // 1. Points changed, or
-    // 2. GeoJson just became available
+    // 2. GeoJson reference changed (initial load OR area auto-switched and new
+    //    city's data finished loading)
     const shouldCalculateDirections =
       this.props.fromPoint &&
       this.props.toPoint &&
       this.props.geoJson &&
-      (pointsChanged || (this.props.geoJson && !prevProps.geoJson));
+      (pointsChanged || this.props.geoJson !== prevProps.geoJson);
 
     if (shouldCalculateDirections) {
       console.debug('Conditions met for directions calculation');
@@ -402,19 +403,36 @@ class DirectionsPanel extends Component {
       this.props.onToPointChange(result);
     }
 
-    // Optionally change app area to match the first point's city
-    const isFirstPoint =
-      (type === 'from' && !this.props.toPoint) || (type === 'to' && !this.props.fromPoint);
-    if (
-      ENABLE_AUTO_AREA_CHANGE_ON_POINT &&
-      isFirstPoint &&
-      typeof this.props.onAreaChange === 'function'
-    ) {
-      const areaStr = getAreaStringFromResultLike(result.result || result);
-      if (areaStr && this.props.area !== areaStr) {
-        this.props.onAreaChange(areaStr);
-      }
-    }
+    this.maybeAutoSwitchAreaForPoint(type, result);
+  }
+
+  /**
+   * When a from/to point lands in a city different from the currently loaded
+   * area, switch the app area to that city. Without this, the route is
+   * calculated against the wrong city's cyclepath data and shows 0% coverage.
+   *
+   * Assumes `validateSameCity` has already passed, so if the other point
+   * exists we know both points share the same city.
+   */
+  maybeAutoSwitchAreaForPoint(type, newPointLike) {
+    if (!ENABLE_AUTO_AREA_CHANGE_ON_POINT) return;
+    if (typeof this.props.onAreaChange !== 'function') return;
+    if (!this.props.area) return;
+
+    const resultLike = newPointLike && (newPointLike.result || newPointLike);
+    const newCity = getCityFromResultLike(resultLike);
+    if (!newCity) return;
+
+    const appCity = this.props.area.split(',')[0].trim();
+    if (appCity === newCity) return;
+
+    const areaStr = getAreaStringFromResultLike(resultLike);
+    if (!areaStr || areaStr === this.props.area) return;
+
+    console.debug(
+      `Auto-switching area from "${this.props.area}" to "${areaStr}" to match ${type} point`
+    );
+    this.props.onAreaChange(areaStr, { keepRoutePoints: true });
   }
 
   addMarker(type, coordinates) {
@@ -776,6 +794,8 @@ class DirectionsPanel extends Component {
         }
         this.props.onToPointChange(newPoint);
       }
+
+      this.maybeAutoSwitchAreaForPoint(type, newPoint);
     } catch (error) {
       console.error('Reverse geocoding error:', error);
       this.setState({

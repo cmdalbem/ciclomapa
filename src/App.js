@@ -1356,7 +1356,11 @@ class App extends Component {
         city_name: this.state.area,
       });
 
-      this.directionsPanel.clearDirections();
+      if (this._preserveRoutePointsOnAreaChange) {
+        this._preserveRoutePointsOnAreaChange = false;
+      } else {
+        this.directionsPanel.clearDirections();
+      }
 
       this.recordRecentlyVisitedCity(this.state.area);
 
@@ -1621,9 +1625,13 @@ class App extends Component {
     this.setState({ fromPoint: null, toPoint: null });
   };
 
-  setArea(newArea) {
+  setArea(newArea, options = {}) {
     const normalizedArea = this.normalizeAreaLabelForDisplay(newArea);
     if (normalizedArea && normalizedArea !== this.state.area) {
+      // Transient flag consumed once in componentDidUpdate's area-change branch
+      // so that programmatic area switches (e.g. auto-switching to match a
+      // selected route point) don't wipe out the user's from/to points.
+      this._preserveRoutePointsOnAreaChange = options.keepRoutePoints === true;
       this.setState({ area: normalizedArea });
     }
   }
