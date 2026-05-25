@@ -92,6 +92,10 @@ export const MAX_RECENT_ITEMS_STORED = 10;
 export const MAX_RECENT_ITEMS_DISPLAY = IS_MOBILE ? 3 : 5;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
 export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = true;
+// Auto-fill the route panel's origin with the user's current location when
+// they open it. Mobile-only by default; flip to `true` to also enable on
+// desktop (will require a one-time permission prompt for new users).
+export const ENABLE_AUTOFILL_ORIGIN_ON_PANEL_OPEN = IS_MOBILE;
 export const ENABLE_COMMENTS = true;
 export const ENABLE_SATELLITE_TOGGLE = false;
 

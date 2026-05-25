@@ -43,6 +43,42 @@ export function getCityFromResultLike(resultLike) {
   );
 }
 
+/**
+ * Builds a short, "street-only" label from a reverse-geocode result.
+ *
+ * Used for the "fill origin with my current location" flow, where the full
+ * formatted address (street, number, neighborhood, city, state, CEP, country)
+ * is noisy. Returns e.g. "Rua das Flores, 123" or, when there is no street
+ * number, just "Rua das Flores". Falls back to the first comma-separated
+ * segment of the formatted address when no `route` is available.
+ */
+export function getShortAddressFromResultLike(resultLike) {
+  const props =
+    resultLike && (resultLike.properties || (resultLike.result && resultLike.result.properties));
+  const addressComponents = props && props.address_components;
+  const findComp = (type) =>
+    Array.isArray(addressComponents)
+      ? addressComponents.find((c) => (c.types || []).includes(type))
+      : null;
+
+  const route = findComp('route');
+  const streetNumber = findComp('street_number');
+  const premise = findComp('premise');
+
+  if (route && route.long_name) {
+    return streetNumber && streetNumber.long_name
+      ? `${route.long_name}, ${streetNumber.long_name}`
+      : route.long_name;
+  }
+  if (premise && premise.long_name) return premise.long_name;
+
+  const fallbackSource =
+    (resultLike && (resultLike.place_name || resultLike.formatted_address)) ||
+    (resultLike && resultLike.result && resultLike.result.place_name) ||
+    '';
+  return fallbackSource.split(',')[0].trim();
+}
+
 export function getAreaStringFromResultLike(resultLike) {
   const props =
     resultLike && (resultLike.properties || (resultLike.result && resultLike.result.properties));

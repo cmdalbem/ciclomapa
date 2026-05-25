@@ -50,6 +50,8 @@ import {
 } from './AboutModal.js';
 import { readFavorites, toggleFavorite } from './favoritesStore';
 import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
+import userLocationCache from './features/geolocation/userLocationCache.js';
+import { ensureGooglePlacesReady } from './googlePlacesClient.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 
 // v5+ no longer ships global type scale in the old Less bundle; this restores baseline
@@ -1378,7 +1380,7 @@ class App extends Component {
         });
       }
 
-      document.querySelector('.city-picker span').setAttribute('style', 'opacity: 1');
+      document.querySelector('.city-picker span')?.setAttribute('style', 'opacity: 1');
 
       // Only redo the query if we need new data
       // if (!doesAContainsB(largestBoundsYet, newBounds)) {
@@ -1523,6 +1525,12 @@ class App extends Component {
     });
 
     this.reverseGeocodeURLPoints();
+
+    // Warm up the things the route panel's "fill origin with my location"
+    // depends on. Geolocation only warms up if permission was already granted,
+    // so we don't pop a surprise prompt before the user asks for it.
+    userLocationCache.warmUpIfAlreadyGranted();
+    ensureGooglePlacesReady();
 
     const citySlug = this.getCitySlugFromRoute();
     if (citySlug) {

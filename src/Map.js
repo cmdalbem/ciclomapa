@@ -47,6 +47,7 @@ import debounce from 'lodash.debounce';
 import { getCurrentSunPosition } from './sunPositionUtils';
 import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/map/icons';
 import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
+import userLocationCache from './features/geolocation/userLocationCache.js';
 
 import './Map.css';
 
@@ -156,7 +157,7 @@ class Map extends Component {
     this.debouncedMapStateSync = debounce((placeName, geocodeRequestTime) => {
       console.debug('Syncing map state with consistent place:', placeName);
       this.syncMapState(placeName, geocodeRequestTime);
-      document.querySelector('.city-picker span').setAttribute('style', 'opacity: 1');
+      document.querySelector('.city-picker span')?.setAttribute('style', 'opacity: 1');
     }, 1000);
   }
 
@@ -229,7 +230,7 @@ class Map extends Component {
                 'Different place detected, cancelling previous sync and starting new timer'
               );
 
-              document.querySelector('.city-picker span').setAttribute('style', 'opacity: 0.5');
+              document.querySelector('.city-picker span')?.setAttribute('style', 'opacity: 0.5');
 
               // Different place - cancel previous debounced call and start new timer
               this.debouncedMapStateSync.cancel();
@@ -2673,6 +2674,10 @@ class Map extends Component {
 
       geolocate.on('geolocate', (result) => {
         console.debug('geolocate', result);
+        userLocationCache.set(
+          { lng: result.coords.longitude, lat: result.coords.latitude },
+          { accuracy: result.coords.accuracy, source: 'mapbox-geolocate' }
+        );
         this.reverseGeocode([result.coords.longitude, result.coords.latitude])
           .then((geocodeResult) => {
             // this.syncMapState(geocodeResult.place_name);

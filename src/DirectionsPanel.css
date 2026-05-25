@@ -215,7 +215,8 @@ body.theme-light {
 /* Light theme clear button (variables set in .theme-light above) */
 .theme-light #directionsPanel.cm-panel .ant-select-clear {
   width: calc(var(--spacing-panel) + var(--radius-md));
-  right: var(--radius-md);
+  height: calc(var(--spacing-panel) + var(--radius-md));
+  /* right: var(--radius-md); */
   background: var(--cm-panel-input-bg);
   color: rgba(0, 0, 0, 0.45);
 }
