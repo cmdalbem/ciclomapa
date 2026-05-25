@@ -14,6 +14,9 @@ import { IS_PROD, DISABLE_LOCAL_STORAGE } from './config/constants.js';
 
 const DEFAULT_CITIES_COLLECTION = IS_PROD ? 'cities' : 'cities-dev';
 
+/** Firestore allows enablePersistence only once per app instance. */
+let firestorePersistenceInitStarted = false;
+
 const firebaseConfig = {
   apiKey: 'AIzaSyDUbMY3UuyJ9vVVBblhUR9L1B3TV6a3eRU',
   authDomain: 'ciclomapa-app.firebaseapp.com',
@@ -42,13 +45,16 @@ class Storage {
     }
 
     this.db = firebase.firestore();
-    this.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn('[Firestore] Persistence unavailable: multiple tabs open');
-      } else if (err.code === 'unimplemented') {
-        console.warn('[Firestore] Persistence not supported by this browser');
-      }
-    });
+    if (!firestorePersistenceInitStarted) {
+      firestorePersistenceInitStarted = true;
+      void this.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          console.warn('[Firestore] Persistence unavailable: multiple tabs open');
+        } else if (err.code === 'unimplemented') {
+          console.warn('[Firestore] Persistence not supported by this browser');
+        }
+      });
+    }
   }
 
   /**
