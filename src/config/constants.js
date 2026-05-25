@@ -91,7 +91,7 @@ export const MAX_RECENT_CITIES = IS_MOBILE ? 3 : 6;
 export const MAX_RECENT_ITEMS_STORED = 10;
 export const MAX_RECENT_ITEMS_DISPLAY = IS_MOBILE ? 3 : 5;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
-export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = false;
+export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = true;
 export const ENABLE_COMMENTS = true;
 export const ENABLE_SATELLITE_TOGGLE = false;
 
