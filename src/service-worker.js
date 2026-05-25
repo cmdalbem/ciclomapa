@@ -59,16 +59,6 @@ registerRoute(
   })
 );
 
-// StaleWhileRevalidate: Google Fonts
-registerRoute(
-  ({ url }) =>
-    url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
-  new StaleWhileRevalidate({
-    cacheName: 'google-fonts',
-    plugins: [new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 365 * 24 * 60 * 60 })],
-  })
-);
-
 // Listen for skipWaiting message (sent from update banner in index.js)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {

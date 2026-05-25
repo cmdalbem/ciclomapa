@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "@craco/craco": "^7.1.0",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource/boldonse": "^5.2.4",
     "@mapbox/mapbox-sdk": "^0.16.2",
     "@turf/bbox": "^7.2.0",
     "@turf/circle": "^7.2.0",

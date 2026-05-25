@@ -8,7 +8,7 @@ const BRAND_TOKEN = {
   colorLink: 'black',
   colorLinkHover: '#444444',
   borderRadius: 8,
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Inter', system-ui, sans-serif",
 };
 
 const DARK_EXTRA = {
