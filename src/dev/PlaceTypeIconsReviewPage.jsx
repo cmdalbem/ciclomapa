@@ -85,7 +85,7 @@ export default function PlaceTypeIconsReviewPage() {
           boxSizing: 'border-box',
           padding: 24,
           background: '#f5f5f5',
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: "'Inter', system-ui, sans-serif",
         }}
       >
         <Typography.Title level={2} style={{ marginTop: 0 }}>

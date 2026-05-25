@@ -7,6 +7,9 @@ import { getCssCustomProperties } from './config/design-tokens.js';
 import { IS_PROD } from './config/constants.js';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
+// Self-hosted fonts (non-blocking: loaded with the JS entry, not render-blocking <link> in HTML).
+import './styles/fonts.less';
+
 // Dev-only screen: lazy so its module (and helpers under ./dev/) stay out of the initial
 // bundle; the rest of the app still loads App and friends eagerly on every visit.
 const PlaceTypeIconsReviewPage = React.lazy(() =>
@@ -17,17 +20,6 @@ const PlaceTypeIconsReviewPage = React.lazy(() =>
 if (process.env.NODE_ENV === 'production') {
   console.debug = () => {};
 }
-
-// Inter font: non-blocking (preconnect hints in public/index.html)
-(function loadInterFont() {
-  if (document.getElementById('ciclomapa-inter-font')) return;
-  const link = document.createElement('link');
-  link.id = 'ciclomapa-inter-font';
-  link.rel = 'stylesheet';
-  link.href =
-    'https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,500..700;1,500..700&display=swap';
-  document.head.appendChild(link);
-})();
 
 // Expose design tokens as CSS custom properties
 const tokens = getCssCustomProperties();
