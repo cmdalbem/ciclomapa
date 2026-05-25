@@ -17,9 +17,10 @@ import {
   HYBRID_MAX_RESULTS,
   ENABLE_MAP_CLICK_TO_SET_POINTS,
   ENABLE_AUTO_AREA_CHANGE_ON_POINT,
+  ENABLE_AUTOFILL_ORIGIN_ON_PANEL_OPEN,
 } from './config/constants.js';
 import DirectionsManager from './DirectionsManager.js';
-
+import userLocationCache from './features/geolocation/userLocationCache.js';
 import LocationSearchInput from './features/directions/components/LocationSearchInput.js';
 import RouteSortDropdown from './features/directions/components/RouteSortDropdown.js';
 import RoutesList from './features/directions/components/RoutesList.js';
@@ -28,6 +29,7 @@ import {
   getAreaStringFromResultLike,
   getCityFromResultLike,
   getGooglePlacesGeocoder,
+  getShortAddressFromResultLike,
 } from './googlePlacesClient.js';
 import {
   geocodePlacesSuggestionToResult,
@@ -35,6 +37,9 @@ import {
   PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
+
+// How fresh a cached position must be to skip the navigator round trip.
+const GEOLOC_CACHE_FRESH_MS = 120_000;
 
 const IconRoute = () => {
   const clipPathId = React.useId().replace(/:/g, '');
@@ -82,6 +87,7 @@ class DirectionsPanel extends Component {
       fromSearchLoading: false,
       toSearchLoading: false,
       cityValidationError: null,
+      fromGeolocating: false,
     };
 
     this.fromMarker = null;
@@ -89,6 +95,9 @@ class DirectionsPanel extends Component {
     this.blurTimeout = null;
     this.geocodersInitialized = false;
     this.isDraggingMarker = false;
+    // Monotonic id; lets us discard a slow geolocation response if the user
+    // typed in the origin field or selected something in the meantime.
+    this.geolocationRequestId = 0;
 
     this.toggleCollapse = this.toggleCollapse.bind(this);
     this.clearDirections = this.clearDirections.bind(this);
@@ -105,6 +114,7 @@ class DirectionsPanel extends Component {
     this.handleSelect = this.handleSelect.bind(this);
     this.handleGeolocation = this.handleGeolocation.bind(this);
     this.handleClearInput = this.handleClearInput.bind(this);
+    this.handleManualInputChange = this.handleManualInputChange.bind(this);
     this.calculateDirections = this.calculateDirections.bind(this);
     this.swapOriginDestination = this.swapOriginDestination.bind(this);
     this.handleProviderChange = this.handleProviderChange.bind(this);
@@ -295,6 +305,10 @@ class DirectionsPanel extends Component {
   async handleSelect(result, inputType) {
     console.debug(`${inputType} point selected:`, result);
 
+    if (inputType === 'from') {
+      this.cancelActiveGeolocation();
+    }
+
     try {
       const { result: resolved } = await geocodePlacesSuggestionToResult(result);
 
@@ -330,7 +344,10 @@ class DirectionsPanel extends Component {
   handleClearInput(inputType) {
     console.debug(`Clearing ${inputType} input`);
 
-    // Clear the input value
+    if (inputType === 'from') {
+      this.cancelActiveGeolocation();
+    }
+
     this.setState({
       [`${inputType}SearchValue`]: '',
       [`${inputType}Suggestions`]: [],
@@ -348,37 +365,10 @@ class DirectionsPanel extends Component {
   }
 
   handleGeolocation(inputType, isAutoTriggered = false) {
-    if (!navigator.geolocation) {
-      console.error('Geolocation is not supported by this browser');
-      return;
-    }
-
-    console.debug(
-      `Getting current location for ${inputType}${isAutoTriggered ? ' (auto-triggered)' : ''}`
-    );
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const coordinates = {
-          lng: position.coords.longitude,
-          lat: position.coords.latitude,
-        };
-
-        console.debug('Current location:', coordinates);
-
-        // Set the point and perform reverse geocoding
-        this.reverseGeocode(coordinates, inputType, isAutoTriggered);
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        // You could show a user-friendly error message here
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000, // 5 minutes
-      }
-    );
+    // Only the origin input has a GPS button, but keep the parameter for
+    // symmetry with the existing call sites.
+    if (inputType !== 'from') return;
+    this.fillOriginFromGeolocation({ isAutoTriggered });
   }
 
   handleGeocoderResult(result, type, fromAutocomplete = false) {
@@ -514,18 +504,86 @@ class DirectionsPanel extends Component {
       this.props.onDirectionsPanelToggle(!newCollapsedState);
     }
 
-    // On mobile, when opening the panel (collapsed -> expanded), auto-trigger geolocation
-    if (IS_MOBILE && newCollapsedState === false) {
+    // When opening the panel, auto-fill the origin with the user's location.
+    // Gated by a constant so we can keep mobile-only behavior easily.
+    if (ENABLE_AUTOFILL_ORIGIN_ON_PANEL_OPEN && newCollapsedState === false) {
       this.autoTriggerGeolocation();
     }
   }
 
   autoTriggerGeolocation() {
-    if (!this.props.fromPoint) {
-      setTimeout(() => {
-        this.handleGeolocation('from', true);
-      }, 100);
+    if (this.props.fromPoint) return;
+    this.fillOriginFromGeolocation({ isAutoTriggered: true });
+  }
+
+  /**
+   * Increments the active request id, invalidating any in-flight response so
+   * it can't overwrite the input. Call this whenever the user touches the
+   * origin field by hand (typing, clearing, selecting a suggestion).
+   */
+  cancelActiveGeolocation() {
+    this.geolocationRequestId += 1;
+    if (this.state.fromGeolocating) {
+      this.setState({ fromGeolocating: false });
     }
+  }
+
+  isStaleGeolocationRequest(requestId) {
+    return this.geolocationRequestId !== requestId;
+  }
+
+  handleManualInputChange(inputType, value) {
+    if (inputType === 'from') {
+      // User is taking over the origin field; abandon any pending auto-fill
+      // so a late geolocation response can't clobber their input.
+      this.cancelActiveGeolocation();
+    }
+    this.setState({ [`${inputType}SearchValue`]: value });
+  }
+
+  /**
+   * Unified entry point for "fill the origin with the user's location" used by
+   * both the panel-open auto-trigger and the GPS button in the input.
+   *
+   * The input stays empty with a spinner until reverse geocode resolves; only
+   * then do we commit a `fromPoint`. That avoids a "Localização atual" flash
+   * and the route never has to recalculate against a placeholder address.
+   */
+  async fillOriginFromGeolocation({ isAutoTriggered = false } = {}) {
+    if (!navigator.geolocation) {
+      console.error('Geolocation is not supported by this browser');
+      return;
+    }
+
+    this.geolocationRequestId += 1;
+    const requestId = this.geolocationRequestId;
+
+    this.setState({ fromSearchValue: '', fromGeolocating: true });
+
+    let coords = null;
+    const cached = userLocationCache.get(GEOLOC_CACHE_FRESH_MS);
+    if (cached) {
+      console.debug('Using cached user location:', cached.source, cached.coords);
+      coords = cached.coords;
+    } else {
+      let cacheEntry = await userLocationCache.requestUpdate({ highAccuracy: false });
+      if (this.isStaleGeolocationRequest(requestId)) return;
+
+      if (!cacheEntry) {
+        // Low accuracy failed (often a Permissions issue). Try high accuracy.
+        cacheEntry = await userLocationCache.requestUpdate({ highAccuracy: true });
+        if (this.isStaleGeolocationRequest(requestId)) return;
+      }
+
+      if (!cacheEntry) {
+        this.setState({ fromGeolocating: false });
+        return;
+      }
+
+      coords = cacheEntry.coords;
+    }
+
+    this.reverseGeocode(coords, 'from', isAutoTriggered, requestId, { simplifyAddress: true });
   }
 
   async calculateDirections(fromCoords, toCoords, provider) {
@@ -727,61 +785,78 @@ class DirectionsPanel extends Component {
     this.reverseGeocode(coordinates, type);
   }
 
-  async reverseGeocode(coordinates, type, isAutoTriggered = false) {
+  async reverseGeocode(
+    coordinates,
+    type,
+    isAutoTriggered = false,
+    requestId = null,
+    { simplifyAddress = false } = {}
+  ) {
     if (!coordinates) return;
 
     const lngLat = [coordinates.lng, coordinates.lat];
     console.debug(`Reverse geocoding for ${type} point:`, lngLat);
 
+    const isCancelled = () =>
+      type === 'from' && requestId !== null && this.isStaleGeolocationRequest(requestId);
+
     try {
       await ensureGooglePlacesReady();
+      if (isCancelled()) return;
+
       const result = await getGooglePlacesGeocoder().reverseGeocode(lngLat, {
         language: 'pt-BR',
       });
+      if (isCancelled()) return;
 
       console.debug('Reverse geocode result:', result);
 
-      // On mobile, when auto-triggered geolocation happens on first panel open,
-      // check if the user's current city matches the app's current city
-      if (IS_MOBILE && isAutoTriggered && type === 'from' && this.props.area) {
+      // When the auto-triggered fix landed in a different city than the one
+      // the app is showing, surface a visible message and bail before
+      // committing the origin.
+      if (isAutoTriggered && type === 'from' && this.props.area) {
         const appCity = this.props.area.split(',')[0].trim();
         const geolocationCity = getCityFromResultLike(result);
 
         if (geolocationCity && appCity && geolocationCity !== appCity) {
           console.debug(
-            `Ignoring geolocation result: user is in ${geolocationCity} but app is showing ${appCity}`
+            `Geolocation in ${geolocationCity} but app is showing ${appCity}; not autofilling.`
           );
-          // Clear the search input value since we're ignoring the result
           this.setState({
-            [`${type}SearchValue`]: '',
+            fromSearchValue: '',
+            fromGeolocating: false,
+            cityValidationError: `Você está em ${geolocationCity}; defina a origem manualmente em ${appCity}.`,
           });
           return;
         }
       }
 
-      const address = result.place_name || 'Nova posição';
+      const address =
+        (simplifyAddress && getShortAddressFromResultLike(result)) ||
+        result.place_name ||
+        'Nova posição';
 
-      // Update the search input value
       this.setState({
         [`${type}SearchValue`]: address,
+        ...(type === 'from' ? { fromGeolocating: false } : {}),
       });
 
       const newPoint = {
         result: {
           center: lngLat,
-          place_name: address,
           ...result,
+          // Keep `place_name` last so the spread above can't reintroduce the
+          // full formatted_address when we asked for the short version.
+          place_name: address,
         },
       };
 
-      // Update route state via hook
       if (type === 'from') {
         if (!this.validateSameCity('from', newPoint.result)) {
           return;
         }
         this.props.onFromPointChange(newPoint);
 
-        // Auto-focus to destination if it's not set yet
         if (!this.props.toPoint) {
           setTimeout(() => {
             this.setState({ focusedInput: 'to' });
@@ -797,9 +872,11 @@ class DirectionsPanel extends Component {
 
       this.maybeAutoSwitchAreaForPoint(type, newPoint);
     } catch (error) {
+      if (isCancelled()) return;
       console.error('Reverse geocoding error:', error);
       this.setState({
         [`${type}SearchValue`]: 'Nova posição',
+        ...(type === 'from' ? { fromGeolocating: false } : {}),
       });
     }
   }
@@ -1023,7 +1100,7 @@ class DirectionsPanel extends Component {
                   <h3 className="font-semibold flex items-center mb-0">Planejar rota</h3>
 
                   <div
-                    className="flex items-start -mr-1 flex-shrink-0"
+                    className="flex items-start -mr-1 flex-shrink-0 opacity-50"
                     style={{ marginTop: '-5px' }}
                   >
                     {this.props.openLayersLegendModal && (

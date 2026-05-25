@@ -1,5 +1,6 @@
 import React from 'react';
-import { AutoComplete, Button, Input } from 'antd';
+import { AutoComplete, Button, Input, Spin } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
 import { MdGpsFixed as IconGPS } from 'react-icons/md';
 import { HiSearch as IconSearch } from 'react-icons/hi';
 
@@ -12,12 +13,17 @@ export default function LocationSearchInput({ inputType, parentComponent, classN
 
   const isFrom = inputType === 'from';
   const placeholder = isFrom ? 'Origem' : 'Destino';
-  const showGeolocation = isFrom; // Only show GPS button for origin
+  const showGeolocation = isFrom;
+  const isGeolocating = isFrom && state.fromGeolocating;
 
   return (
     <AutoComplete
       value={state[`${inputType}SearchValue`]}
-      onChange={(value) => parentComponent.setState({ [`${inputType}SearchValue`]: value })}
+      onChange={(value) =>
+        handlers.handleManualInputChange
+          ? handlers.handleManualInputChange(inputType, value)
+          : parentComponent.setState({ [`${inputType}SearchValue`]: value })
+      }
       onSearch={(value) => handlers.handleSearch(value, inputType)}
       options={state[`${inputType}Suggestions`].map((suggestion) => ({
         value: suggestion.place_name,
@@ -53,7 +59,15 @@ export default function LocationSearchInput({ inputType, parentComponent, classN
           />
         }
         suffix={
-          showGeolocation && (
+          showGeolocation &&
+          (isGeolocating ? (
+            <Spin
+              size="small"
+              className="text-white mr-1"
+              indicator={<LoadingOutlined spin />}
+              aria-label="Buscando localização atual"
+            />
+          ) : (
             <Button
               type="text"
               shape="circle"
@@ -69,9 +83,9 @@ export default function LocationSearchInput({ inputType, parentComponent, classN
               className="text-white border-0"
               title="Usar localização atual"
               aria-label="Usar localização atual"
-              size="small"
+              // size="small"
             />
-          )
+          ))
         }
         onFocus={() => handlers.handleInputFocus(inputType)}
         onBlur={() => handlers.handleInputBlur(inputType)}
