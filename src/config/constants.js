@@ -50,7 +50,13 @@ export const MOBILE_MAX_WIDTH = '480px';
 export const IS_MOBILE =
   window.matchMedia && window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH})`).matches;
 
-export { TOPBAR_HEIGHT, ROUTE_COLORS, MAP_COLORS, FAVORITE_COLORS } from './design-tokens.js';
+export {
+  TOPBAR_HEIGHT,
+  ROUTE_COLORS,
+  MAP_COLORS,
+  FAVORITE_COLORS,
+  INFRASTRUCTURE_BADGE_TOKENS,
+} from './design-tokens.js';
 
 /*
  * Routing
@@ -64,6 +70,18 @@ export const HYBRID_MAX_RESULTS = IS_MOBILE
   ? HYBRID_MAX_RESULTS_MOBILE
   : HYBRID_MAX_RESULTS_DESKTOP;
 export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
+
+/**
+ * Route score weights by infrastructure type (keys match `coverageByType` labels where
+ * applicable; higher = better). `Rua` is uncovered mileage (implicit in breakdowns, weight 0).
+ */
+export const ROUTE_INFRASTRUCTURE_QUALITY_WEIGHTS = Object.freeze({
+  Ciclovia: 1.0,
+  'Calçada compartilhada': 1.0,
+  Ciclofaixa: 0.8,
+  Ciclorrota: 0.4,
+  Rua: 0,
+});
 
 /*
  * City picker

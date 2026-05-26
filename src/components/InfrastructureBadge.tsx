@@ -1,7 +1,7 @@
 import React from 'react';
 import { hexToRgba, adjustColorBrightness } from '../utils/utils.js';
 import * as layersDefinitions from '../config/layers.json';
-import { ROUTE_COLORS } from '../config/constants.js';
+import { INFRASTRUCTURE_BADGE_TOKENS, ROUTE_COLORS } from '../config/constants.js';
 
 export interface InfrastructureBadgeProps {
   children?: React.ReactNode;
@@ -20,86 +20,87 @@ export function normalizeLayersDefinitions(input: unknown): LayerDefinition[] {
   return [];
 }
 
-const getLayerColors = (isDarkMode: boolean): Record<string, string> => {
-  const layers = normalizeLayersDefinitions(layersDefinitions);
-  const colors: Record<string, string> = {};
+export function getInfrastructureBadgeColors(
+  infrastructure: string | undefined,
+  isDarkMode: boolean,
+  layerColors: Record<string, string> = {}
+) {
+  if (!infrastructure) {
+    return null;
+  }
 
-  layers.forEach((layer) => {
-    const resolvedLineColor =
-      (isDarkMode ? layer.style?.lineColorDark : undefined) ?? layer.style?.lineColor;
+  const theme = isDarkMode ? 'dark' : 'light';
 
-    if (resolvedLineColor) {
-      if (layer.name === 'Ciclovia') colors.ciclovia = resolvedLineColor;
-      else if (layer.name === 'Ciclofaixa') colors.ciclofaixa = resolvedLineColor;
-      else if (layer.name === 'Ciclorrota') colors.ciclorrota = resolvedLineColor;
-      else if (layer.name === 'Calçada compartilhada') colors.calçada = resolvedLineColor;
-    }
-  });
+  if (infrastructure === 'neutral') {
+    const { text, background } = INFRASTRUCTURE_BADGE_TOKENS.neutral[theme];
+    return { textColor: text, backgroundColor: background };
+  }
 
-  return colors;
-};
+  const brightnessDelta =
+    INFRASTRUCTURE_BADGE_TOKENS.layerBrightnessAdjust[
+      infrastructure as keyof typeof INFRASTRUCTURE_BADGE_TOKENS.layerBrightnessAdjust
+    ];
+  const badgeColor = layerColors[infrastructure];
+  if (!badgeColor || brightnessDelta === undefined) {
+    return null;
+  }
+
+  const bgHex = adjustColorBrightness(badgeColor, isDarkMode ? -brightnessDelta : brightnessDelta);
+  const normalized = bgHex.startsWith('#') ? bgHex.slice(1) : bgHex;
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  const channel = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  const bgLuminance = 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  const ratio = (textLuminance: number) => {
+    const lighter = Math.max(bgLuminance, textLuminance);
+    const darker = Math.min(bgLuminance, textLuminance);
+    return (lighter + 0.05) / (darker + 0.05);
+  };
+  const candidates = [
+    { color: 'rgba(0, 0, 0, 0.9)', ratio: ratio(0) },
+    { color: 'rgba(255, 255, 255, 0.9)', ratio: ratio(1) },
+  ].sort((a, b) => b.ratio - a.ratio);
+  const aaCompliant = candidates.filter((c) => c.ratio >= 4.5);
+
+  return {
+    textColor: (aaCompliant[0] ?? candidates[0]).color,
+    backgroundColor: hexToRgba(bgHex, 1),
+  };
+}
 
 const InfrastructureBadge: React.FC<InfrastructureBadgeProps> = ({
   children,
   infrastructure,
   isDarkMode = false,
 }) => {
-  const layerColors = getLayerColors(isDarkMode);
-
-  let textColor: string | undefined;
-  let backgroundColor: string | undefined;
-
-  const getInvertedTextColor = (hex: string): string => {
-    // Choose black/white text based on background luminance for contrast.
-    const normalized = hex.startsWith('#') ? hex.slice(1) : hex;
-    const r = parseInt(normalized.slice(0, 2), 16);
-    const g = parseInt(normalized.slice(2, 4), 16);
-    const b = parseInt(normalized.slice(4, 6), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-    // Light background -> black text, dark background -> white text.
-    return luminance > 0.35 ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)';
+  const layers = normalizeLayersDefinitions(layersDefinitions);
+  const layerColors: Record<string, string> = {
+    rua: isDarkMode ? ROUTE_COLORS.DARK.SELECTED : ROUTE_COLORS.LIGHT.SELECTED,
   };
+  layers.forEach((layer) => {
+    const resolvedLineColor =
+      (isDarkMode ? layer.style?.lineColorDark : undefined) ?? layer.style?.lineColor;
+    if (!resolvedLineColor) return;
+    if (layer.name === 'Ciclovia') layerColors.ciclovia = resolvedLineColor;
+    else if (layer.name === 'Ciclofaixa') layerColors.ciclofaixa = resolvedLineColor;
+    else if (layer.name === 'Ciclorrota') layerColors.ciclorrota = resolvedLineColor;
+    else if (layer.name === 'Calçada compartilhada') layerColors.calçada = resolvedLineColor;
+  });
 
-  if (infrastructure === 'neutral') {
-    textColor = isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgb(55, 65, 81)';
-    backgroundColor = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(17, 24, 39, 0.06)';
-  } else if (infrastructure === 'rua') {
-    const routeColor = isDarkMode ? ROUTE_COLORS.DARK.SELECTED : ROUTE_COLORS.LIGHT.SELECTED;
-    // Light mode: use solid black for AA contrast on the semi-transparent orange bg.
-    textColor = isDarkMode ? 'white' : 'rgb(0, 0, 0)';
-    backgroundColor = hexToRgba(routeColor, isDarkMode ? 0.9 : 0.2);
-  } else if (infrastructure) {
-    const badgeColor = layerColors[infrastructure];
-    if (badgeColor) {
-      if (infrastructure === 'ciclovia') {
-        const bgHex = adjustColorBrightness(badgeColor, -0.22);
-        backgroundColor = hexToRgba(bgHex, 1);
-        textColor = getInvertedTextColor(bgHex);
-      } else if (infrastructure === 'calçada') {
-        const bgHex = adjustColorBrightness(badgeColor, 0);
-        backgroundColor = hexToRgba(bgHex, 1);
-        textColor = getInvertedTextColor(bgHex);
-      } else if (infrastructure === 'ciclofaixa') {
-        const bgHex = adjustColorBrightness(badgeColor, 0.18);
-        backgroundColor = hexToRgba(bgHex, 1);
-        textColor = getInvertedTextColor(bgHex);
-      } else if (infrastructure === 'ciclorrota') {
-        const bgHex = adjustColorBrightness(badgeColor, -0.08);
-        backgroundColor = hexToRgba(bgHex, 1);
-        textColor = getInvertedTextColor(bgHex);
-      }
-    }
-  }
+  const colors = getInfrastructureBadgeColors(infrastructure, isDarkMode, layerColors);
 
-  if (!textColor || !backgroundColor) {
+  if (!colors) {
     return null;
   }
 
   return (
     <span
       className="rounded-full font-medium text-xs px-1.5 py-0.5 flex items-center gap-1 whitespace-nowrap flex-shrink-0"
-      style={{ color: textColor, backgroundColor }}
+      style={{ color: colors.textColor, backgroundColor: colors.backgroundColor }}
     >
       {children}
     </span>

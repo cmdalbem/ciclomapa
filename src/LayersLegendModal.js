@@ -13,7 +13,11 @@ import bikerentalIcon from './img/icons/poi-bikerental@2x.png';
 
 import { HiOutlineXMark } from 'react-icons/hi2';
 
-import { IS_MOBILE } from './config/constants.js';
+import {
+  IS_MOBILE,
+  ROUTE_COLORS,
+  ROUTE_INFRASTRUCTURE_QUALITY_WEIGHTS,
+} from './config/constants.js';
 import {
   getModalFocusRestoreRef,
   handleModalKeyDown,
@@ -450,18 +454,25 @@ class LayersLegendModal extends Component {
                       </thead>
                       <tbody>
                         {[
-                          { name: 'Ciclovia', weight: 1.0, protection: 'Alta' },
+                          { name: 'Ciclovia', protection: 'Alta' },
                           {
                             name: 'Calçada compartilhada',
                             displayName: 'Calçadas',
-                            weight: 0.8,
                             protection: 'Alta',
                           },
-                          { name: 'Ciclofaixa', weight: 0.6, protection: 'Média' },
-                          { name: 'Ciclorrota', weight: 0.4, protection: 'Baixa' },
+                          { name: 'Ciclofaixa', protection: 'Média' },
+                          { name: 'Ciclorrota', protection: 'Baixa' },
+                          { name: 'Rua', infrastructure: 'rua', protection: 'Nenhuma' },
                         ].map((infra) => {
+                          const weight = ROUTE_INFRASTRUCTURE_QUALITY_WEIGHTS[infra.name];
                           const layer = viasCiclaveisLayers.find((l) => l.name === infra.name);
-                          const color = layer?.style?.lineColor || '#999';
+                          const routeLineColor = this.props.isDarkMode
+                            ? ROUTE_COLORS.DARK.SELECTED
+                            : ROUTE_COLORS.LIGHT.SELECTED;
+                          const color =
+                            layer?.style?.lineColor ??
+                            (infra.infrastructure === 'rua' ? routeLineColor : '#999');
+                          const showLineSwatch = Boolean(layer || infra.infrastructure === 'rua');
                           return (
                             <tr
                               key={infra.name}
@@ -469,17 +480,19 @@ class LayersLegendModal extends Component {
                             >
                               <td className="py-3 align-middle">
                                 <div className="flex items-center gap-3">
-                                  {layer && (
+                                  {showLineSwatch && (
                                     <div
                                       className="w-5 h-1 rounded flex-shrink-0"
                                       style={{
                                         background:
-                                          layer.style?.lineStyle === 'solid'
+                                          layer?.style?.lineStyle === 'solid'
                                             ? color
-                                            : `repeating-linear-gradient(90deg, ${color}, ${color} 4px, transparent 3px, transparent 6px)`,
-                                        borderColor: layer.style?.borderColor,
-                                        borderStyle: layer.style?.borderStyle,
-                                        borderWidth: layer.style?.borderWidth ? 1 : 0,
+                                            : layer
+                                              ? `repeating-linear-gradient(90deg, ${color}, ${color} 4px, transparent 3px, transparent 6px)`
+                                              : color,
+                                        borderColor: layer?.style?.borderColor,
+                                        borderStyle: layer?.style?.borderStyle,
+                                        borderWidth: layer?.style?.borderWidth ? 1 : 0,
                                       }}
                                     />
                                   )}
@@ -489,9 +502,12 @@ class LayersLegendModal extends Component {
                                 </div>
                               </td>
                               <td className="py-3 px-3 inline-block">
-                                {layer && (
+                                {(layer || infra.infrastructure) && (
                                   <InfrastructureBadge
-                                    infrastructure={getInfrastructureFromLayerName(layer.name)}
+                                    infrastructure={
+                                      infra.infrastructure ||
+                                      getInfrastructureFromLayerName(layer.name)
+                                    }
                                     isDarkMode={this.props.isDarkMode}
                                   >
                                     {infra.protection === 'Alta' && <IconSignal3 />}
@@ -503,7 +519,7 @@ class LayersLegendModal extends Component {
                               </td>
                               <td className="py-3 pl-3 align-middle">
                                 <span className="font-mono text-sm text-gray-400 tabular-nums">
-                                  {infra.weight.toFixed(1)}
+                                  {weight.toFixed(1)}
                                 </span>
                               </td>
                             </tr>

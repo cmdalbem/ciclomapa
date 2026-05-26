@@ -1,7 +1,10 @@
 // Shared utilities for route calculations and formatting
 
 import React from 'react';
-import { MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY } from '../config/constants.js';
+import {
+  MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY,
+  ROUTE_INFRASTRUCTURE_QUALITY_WEIGHTS,
+} from '../config/constants.js';
 import InfrastructureBadge from '../components/InfrastructureBadge';
 
 /** Unicode thin space (U+2009) between a numeric value and the km unit (typographic convention). */
@@ -38,21 +41,13 @@ export const getRouteScore = (routeCoverageData, index) => {
 
   const coverageByType = route.coverageByType;
 
-  // Infrastructure quality weights (higher = better)
-  const qualityWeights = {
-    Ciclovia: 1.0,
-    'Calçada compartilhada': 0.8,
-    Ciclofaixa: 0.6,
-    Ciclorrota: 0.4,
-  };
-
   // Calculate weighted score
   let weightedScore = 0;
   let totalCoverage = 0;
 
   Object.keys(coverageByType).forEach((type) => {
     const percentage = coverageByType[type];
-    const weight = qualityWeights[type] || 0;
+    const weight = ROUTE_INFRASTRUCTURE_QUALITY_WEIGHTS[type] || 0;
     weightedScore += percentage * weight;
     totalCoverage += percentage;
   });

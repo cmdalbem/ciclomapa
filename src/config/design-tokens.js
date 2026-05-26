@@ -95,7 +95,7 @@ export const layout = {
   progressBarHeight: 4,
 };
 
-/** For JS consumers that need route colors by theme (e.g. Map.js, InfrastructureBadge.js) */
+/** For JS consumers that need route colors by theme (e.g. Map.js, infrastructure badges). */
 export const ROUTE_COLORS = {
   DARK: {
     SELECTED: colors.routeSelectedDark,
@@ -112,6 +112,32 @@ export const FAVORITE_COLORS = {
   ACCENT: colors.favoriteAccent,
   ACCENT_DARK: colors.favoriteAccentDark,
 };
+
+/**
+ * Infrastructure badge palette — route breakdown, legend, and panel tags.
+ * Base hues: cycle types from layers.json (`lineColor` / `lineColorDark`), rua from
+ * `ROUTE_COLORS.SELECTED`. `layerBrightnessAdjust` shifts each base for the badge fill (light
+ * mode); the same delta is negated in dark mode. Text color uses WCAG 2.x AA in InfrastructureBadge.
+ */
+export const INFRASTRUCTURE_BADGE_TOKENS = Object.freeze({
+  neutral: Object.freeze({
+    light: Object.freeze({
+      text: 'rgb(55, 65, 81)',
+      background: 'rgba(17, 24, 39, 0.06)',
+    }),
+    dark: Object.freeze({
+      text: 'rgba(255, 255, 255, 0.8)',
+      background: 'rgba(255, 255, 255, 0.08)',
+    }),
+  }),
+  layerBrightnessAdjust: Object.freeze({
+    ciclovia: -0.22,
+    calçada: 0,
+    ciclofaixa: 0.4,
+    ciclorrota: 0.7,
+    rua: 0.6,
+  }),
+});
 
 /** For JS consumers that need map paint colors (Map.js). */
 export const MAP_COLORS = {
