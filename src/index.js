@@ -5,6 +5,7 @@ import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { getCssCustomProperties } from './config/design-tokens.js';
 import { IS_PROD } from './config/constants.js';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // Dev-only screen: lazy so its module (and helpers under ./dev/) stay out of the initial
 // bundle; the rest of the app still loads App and friends eagerly on every visit.
@@ -90,6 +91,7 @@ function AppRoutes() {
 root.render(
   <Router>
     <AppRoutes />
+    <SpeedInsights />
   </Router>
 );
 

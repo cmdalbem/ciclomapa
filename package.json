@@ -14,6 +14,7 @@
     "@turf/distance": "^7.2.0",
     "@turf/length": "^7.2.0",
     "@turf/line-overlap": "^7.2.0",
+    "@vercel/speed-insights": "^2.0.0",
     "antd": "^6.3.4",
     "aws-sdk": "^2.1692.0",
     "craco-less": "^3.0.1",
