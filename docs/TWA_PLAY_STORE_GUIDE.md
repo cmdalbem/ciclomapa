@@ -22,7 +22,7 @@ bubblewrap init
 
 When prompted:
 
-- **Application ID**: `br.org.ciclomapa.app` (or your chosen package name)
+- **Application ID**: `app.ciclomapa` (reverse-DNS of `ciclomapa.app`; permanent once published)
 - **Application Name**: CicloMapa
 - **Launcher Name**: CicloMapa
 - **Start URL**: `https://ciclomapa.app/`
@@ -45,7 +45,7 @@ TWA requires your site to declare the link between the web app and the Android a
 
 2. **Create** `public/.well-known/assetlinks.json` (copy from `assetlinks.json.template`):
    - Replace `REPLACE_WITH_YOUR_SHA256_FINGERPRINT` with your app signing SHA-256 (colon-separated, e.g. `AB:CD:EF:...`).
-   - Replace `br.org.ciclomapa.app` if you chose a different package name.
+   - Replace `app.ciclomapa` if you chose a different package name.
    - Save as `assetlinks.json` (remove the `.template` suffix). **Only the `.template` is committed** — the real file is the last step (you need the fingerprint first).
    - `react-scripts build` copies `public/.well-known/` into the build output, so it will be served at `https://ciclomapa.app/.well-known/assetlinks.json`.
 
@@ -83,36 +83,49 @@ This produces an AAB (Android App Bundle) for Play Store upload.
 
 ### 2.2 Play Console Setup
 
-1. **Create app** in [Google Play Console](https://play.google.com/console).
+> Store listing copy (PT-BR) and the Data Safety field-by-field mapping live in
+> [`docs/PLAY_STORE_LISTING.md`](./PLAY_STORE_LISTING.md). The steps below are the
+> click-path in the Play Console (the part only the account owner can do).
 
-2. **App signing**
-   - Use Play App Signing (recommended).
-   - Upload your upload key or let Google generate it.
+These steps all happen in the [Google Play Console](https://play.google.com/console)
+web UI with the developer account (one-time **US$25** registration fee if it's a new account).
 
-3. **Store listing**
-   - Short description (80 chars)
-   - Full description (4000 chars)
-   - Screenshots: at least 2 phone screenshots (min 320px, max 3840px)
-   - Feature graphic: 1024×500 px
-   - App icon: 512×512 px (use `icon-512.png`)
+1. **Create app**
+   - **All apps → Create app.**
+   - App name: `CicloMapa` · Default language: `Português (Brasil)` · Type: **App** · **Free**.
+   - Accept the Developer Program / US export declarations.
 
-4. **Content rating**
-   - Complete the questionnaire (likely “Everyone” for a map app).
+2. **App signing** (Setup → App integrity → App signing)
+   - Use **Play App Signing** (recommended; Google holds the app signing key).
+   - You upload an **upload key**; the simplest path is to let **Bubblewrap generate the
+     keystore** (Part 1.3) and upload the AAB — Play enrolls you automatically on first upload.
+   - After the app exists, copy the **SHA-256 of the _app signing_ certificate** from this
+     page → that's the fingerprint for `assetlinks.json` (Part 1.2). ⚠️ Use the **app signing**
+     cert, not the upload cert, or TWA verification fails.
 
-5. **Data safety**
-   - Declare data collection (e.g. location if used, analytics).
-   - GTM/Analytics, Mapbox, Firestore, etc. may collect data — document each.
+3. **Store listing** (Grow → Store presence → Main store listing)
+   - Paste short/full description and graphics from `docs/PLAY_STORE_LISTING.md`.
+   - App icon: **512×512** → `public/icon-512.png`.
+   - Feature graphic **1024×500** and ≥2 phone screenshots still need to be produced.
 
-6. **Privacy policy**
-   - Required. Host at e.g. `https://ciclomapa.app/privacidade` or similar.
-   - Link it in the store listing and in the app if you have an About/Privacy screen.
+4. **Content rating** (Policy → App content → Content rating)
+   - Complete the IARC questionnaire (expected **Livre / Everyone** for a map app).
 
-7. **Target audience**
-   - Set age groups and regions (e.g. Brazil).
+5. **Data safety** (Policy → App content → Data safety)
+   - Fill exactly as mapped in `docs/PLAY_STORE_LISTING.md` §3.
+   - Confirm the ⚠️ items there (PostHog session replay, GA data-sharing, IP handling)
+     before submitting — they can flip "Shared" to Yes.
 
-8. **Upload AAB**
-   - Use the AAB from `bubblewrap build`.
-   - Fill in release notes.
+6. **Privacy policy** (Policy → App content → Privacy policy)
+   - URL: `https://ciclomapa.app/privacidade` (already live and linked in-app). ✓
+
+7. **Target audience & ads** (Policy → App content)
+   - Target age: 13+ (not a children's app). Primary region: Brazil + Latin America.
+   - Ads: **No** (the app shows no ads).
+
+8. **Create a release** (Release → Testing → Internal testing, then Production)
+   - Start with **Internal testing** to validate the TWA on real devices before going live.
+   - Upload the **AAB** from `bubblewrap build`, add release notes (see listing doc), roll out.
 
 ### 2.3 Testing Before Release
 
