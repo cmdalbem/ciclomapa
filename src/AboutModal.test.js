@@ -47,7 +47,13 @@ describe('welcome map boot', () => {
 
 it('renders when visible and exposes primary actions', () => {
   renderAbout(
-    <AboutModal visible={true} onClose={noop} openLayersLegendModal={noop} openCityPicker={noop} />
+    <AboutModal
+      visible={true}
+      onClose={noop}
+      openLayersLegendModal={noop}
+      openPrivacyPolicyModal={noop}
+      openCityPicker={noop}
+    />
   );
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   expect(screen.getByTestId('about-modal-title')).toBeInTheDocument();
@@ -67,6 +73,7 @@ it('Ver cidades calls openCityPicker', async () => {
       visible={true}
       onClose={noop}
       openLayersLegendModal={noop}
+      openPrivacyPolicyModal={noop}
       openCityPicker={openCityPicker}
     />
   );
@@ -87,6 +94,7 @@ it('hides Ver cidades in embed mode', () => {
       visible={true}
       onClose={noop}
       openLayersLegendModal={noop}
+      openPrivacyPolicyModal={noop}
       openCityPicker={noop}
       embedMode
     />
@@ -104,6 +112,7 @@ it('close button calls onClose when clicked', async () => {
       visible={true}
       onClose={onClose}
       openLayersLegendModal={noop}
+      openPrivacyPolicyModal={noop}
       openCityPicker={noop}
     />
   );
@@ -129,6 +138,7 @@ it('shows metric skeletons while mapDataLoading', () => {
       visible={true}
       onClose={noop}
       openLayersLegendModal={noop}
+      openPrivacyPolicyModal={noop}
       openCityPicker={noop}
       cityCanonicalSlug="sao-paulo"
       layers={layers}
@@ -158,6 +168,7 @@ it('shows metric skeletons when geoJson is not in app state yet (loading flag ca
       visible={true}
       onClose={noop}
       openLayersLegendModal={noop}
+      openPrivacyPolicyModal={noop}
       openCityPicker={noop}
       cityCanonicalSlug="sao-paulo"
       layers={layers}
@@ -194,6 +205,7 @@ it('shows city contextual block when cityCanonicalSlug is a known catalog slug',
       visible={true}
       onClose={noop}
       openLayersLegendModal={noop}
+      openPrivacyPolicyModal={noop}
       openCityPicker={noop}
       cityCanonicalSlug="sao-paulo"
       layers={layers}
@@ -230,6 +242,7 @@ it.skip('shows PNB in summary when Airtable fields include pnb_total (re-enable 
       visible={true}
       onClose={noop}
       openLayersLegendModal={noop}
+      openPrivacyPolicyModal={noop}
       openCityPicker={noop}
       cityCanonicalSlug="sao-paulo"
       layers={layers}

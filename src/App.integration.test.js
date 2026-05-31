@@ -19,6 +19,7 @@ function MinimalAppWithModal() {
         visible={modalOpen}
         onClose={() => setModalOpen(false)}
         openLayersLegendModal={() => {}}
+        openPrivacyPolicyModal={() => {}}
         openCityPicker={() => {}}
       />
     </div>

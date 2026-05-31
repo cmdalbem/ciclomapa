@@ -39,6 +39,7 @@ it('has no critical a11y violations when AboutModal is open', async () => {
         visible={true}
         onClose={noop}
         openLayersLegendModal={noop}
+        openPrivacyPolicyModal={noop}
         openCityPicker={noop}
       />
     </Router>
@@ -57,6 +58,7 @@ it('AboutModal closes on Escape key', async () => {
         visible={false}
         onClose={onClose}
         openLayersLegendModal={noop}
+        openPrivacyPolicyModal={noop}
         openCityPicker={noop}
       />
     </Router>
@@ -67,6 +69,7 @@ it('AboutModal closes on Escape key', async () => {
         visible={true}
         onClose={onClose}
         openLayersLegendModal={noop}
+        openPrivacyPolicyModal={noop}
         openCityPicker={noop}
       />
     </Router>

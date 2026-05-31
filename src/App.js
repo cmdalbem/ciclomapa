@@ -21,6 +21,7 @@ import {
   getPredefinedCitySlugDefinition,
   getPredefinedCityStaticLocation,
 } from './config/citySlugCatalog.js';
+import { isPrivacyPolicyLocation, PRIVACY_POLICY_PATH } from './config/routes.js';
 import { flyMapToCityFocus } from './Map.js';
 import { DirectionsProvider } from './contexts/DirectionsContext';
 import {
@@ -99,6 +100,9 @@ class App extends Component {
     this.openCityPicker = this.openCityPicker.bind(this);
     this.openLayersLegendModal = this.openLayersLegendModal.bind(this);
     this.closeLayersLegendModal = this.closeLayersLegendModal.bind(this);
+    this.openPrivacyPolicyModal = this.openPrivacyPolicyModal.bind(this);
+    this.closePrivacyPolicyModal = this.closePrivacyPolicyModal.bind(this);
+    this.syncPrivacyPolicyFromRoute = this.syncPrivacyPolicyFromRoute.bind(this);
     this.onChangeStrategy = this.onChangeStrategy.bind(this);
     this.setMapRef = this.setMapRef.bind(this);
     this.toggleTheme = this.toggleTheme.bind(this);
@@ -226,6 +230,9 @@ class App extends Component {
       embedMode,
     });
 
+    const isPrivacyPolicyRoute =
+      typeof window !== 'undefined' && isPrivacyPolicyLocation(window.location.pathname);
+
     return {
       area: initialArea,
       showSatellite: ENABLE_SATELLITE_TOGGLE
@@ -245,9 +252,10 @@ class App extends Component {
       isTrackingUserLocation: IS_MOBILE && prev.isTrackingUserLocation === true ? true : false,
       embedMode,
       isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : DEFAULT_SIDEBAR_OPEN,
-      hideUI: shouldAutoOpenWelcomeModal,
+      hideUI: shouldAutoOpenWelcomeModal || isPrivacyPolicyRoute,
       hideUIFromUrl: urlFlagEnabled(urlParams.hideui),
-      aboutModal: shouldAutoOpenWelcomeModal,
+      aboutModal: shouldAutoOpenWelcomeModal && !isPrivacyPolicyRoute,
+      privacyPolicyModal: isPrivacyPolicyRoute,
       mapBootReady: !deferMapBootForWelcome,
       cleanMode: urlFlagEnabled(urlParams.clean),
       darkModeFromUrl: urlFlagEnabled(urlParams.dark),
@@ -368,6 +376,51 @@ class App extends Component {
       layersLegendModal: false,
       layersLegendScrollToSection: null,
     });
+  }
+
+  openPrivacyPolicyModal() {
+    const navigate = this.props.router?.navigate;
+    if (typeof navigate === 'function') {
+      navigate(PRIVACY_POLICY_PATH);
+      return;
+    }
+    this.setState({ privacyPolicyModal: true, hideUI: true });
+  }
+
+  closePrivacyPolicyModal() {
+    const navigate = this.props.router?.navigate;
+    const onPrivacyRoute = isPrivacyPolicyLocation(this.props.location?.pathname);
+
+    if (onPrivacyRoute && typeof navigate === 'function') {
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        const citySlug = this.getCanonicalRouteCitySlug();
+        navigate(citySlug ? `/${citySlug}` : '/');
+      }
+    }
+
+    this.setState((prev) => ({
+      privacyPolicyModal: false,
+      hideUI: prev.aboutModal,
+    }));
+  }
+
+  syncPrivacyPolicyFromRoute() {
+    const onPrivacyRoute = isPrivacyPolicyLocation(this.props.location?.pathname);
+    if (onPrivacyRoute === this.state.privacyPolicyModal) return;
+
+    this.setState((prev) => ({
+      privacyPolicyModal: onPrivacyRoute,
+      hideUI: onPrivacyRoute || prev.aboutModal,
+      aboutModal: onPrivacyRoute ? false : prev.aboutModal,
+    }));
+
+    if (onPrivacyRoute) {
+      document.title = 'Aviso de Privacidade — CicloMapa';
+    } else {
+      updateDocumentMeta(this.state.area, this.getPreferredCanonicalSlugForMeta(this.state.area));
+    }
   }
 
   initLayers(prevLayersStates, isDarkMode, isDebugMode) {
@@ -568,6 +621,10 @@ class App extends Component {
   }
 
   syncRouteSlugWithArea(area) {
+    if (isPrivacyPolicyLocation(this.props.location?.pathname) || this.state.privacyPolicyModal) {
+      return;
+    }
+
     // Only suppress slug generation for bare-root visitors while the welcome modal is
     // still open. Adding a slug while the modal is showing would silently flip it to
     // "city mode". Once the user has dismissed the modal the URL should update freely.
@@ -1320,6 +1377,7 @@ class App extends Component {
   componentDidUpdate(prevProps, prevState) {
     if (this.props.location !== prevProps.location) {
       this.onRouteChanged();
+      this.syncPrivacyPolicyFromRoute();
     }
 
     const prevCityParam = prevProps.router?.params?.city;
@@ -1542,6 +1600,7 @@ class App extends Component {
     }
 
     this.loadAirtableMetadata();
+    this.syncPrivacyPolicyFromRoute();
   }
 
   componentWillUnmount() {
@@ -1734,6 +1793,8 @@ class App extends Component {
       closeAboutModal: this.closeAboutModal,
       openCityPicker: this.openCityPicker,
       closeLayersLegendModal: this.closeLayersLegendModal,
+      openPrivacyPolicyModal: this.openPrivacyPolicyModal,
+      closePrivacyPolicyModal: this.closePrivacyPolicyModal,
       clearGlobalSearchPin: this.clearGlobalSearchPin,
       handleGlobalSearchPlaceSelect: this.handleGlobalSearchPlaceSelect,
       handleFavoritesChanged: this.handleFavoritesChanged,
