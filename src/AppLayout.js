@@ -6,6 +6,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import AboutModal from './AboutModal.js';
 import LayersLegendModal from './LayersLegendModal.js';
+import PrivacyPolicyModal from './PrivacyPolicy.jsx';
 import Map from './Map.js';
 import CitySwitcherModal from './CitySwitcherModal';
 import TopBar from './TopBar.js';
@@ -189,6 +190,7 @@ export default function AppLayout({
         visible={state.aboutModal}
         onClose={handlers.closeAboutModal}
         openLayersLegendModal={handlers.openLayersLegendModal}
+        openPrivacyPolicyModal={handlers.openPrivacyPolicyModal}
         openCityPicker={handlers.openCityPicker}
         embedMode={state.embedMode}
         isDarkMode={state.isDarkMode}
@@ -205,6 +207,11 @@ export default function AppLayout({
         layers={state.layers}
         isDarkMode={state.isDarkMode}
         scrollToSection={state.layersLegendScrollToSection}
+      />
+
+      <PrivacyPolicyModal
+        visible={state.privacyPolicyModal}
+        onClose={handlers.closePrivacyPolicyModal}
       />
 
       {state.debugMode && <ApiDebugOverlay />}
@@ -249,6 +256,7 @@ AppLayout.propTypes = {
     mapBootReady: PropTypes.bool,
     layersLegendModal: PropTypes.bool,
     layersLegendScrollToSection: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    privacyPolicyModal: PropTypes.bool,
   }).isRequired,
   handlers: PropTypes.shape({
     downloadData: PropTypes.func,
@@ -274,6 +282,8 @@ AppLayout.propTypes = {
     closeAboutModal: PropTypes.func,
     openCityPicker: PropTypes.func,
     closeLayersLegendModal: PropTypes.func,
+    openPrivacyPolicyModal: PropTypes.func,
+    closePrivacyPolicyModal: PropTypes.func,
     onChangeStrategy: PropTypes.func,
   }).isRequired,
 };

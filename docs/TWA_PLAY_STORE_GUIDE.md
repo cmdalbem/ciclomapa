@@ -78,7 +78,7 @@ This produces an AAB (Android App Bundle) for Play Store upload.
 | manifest.json with name, icons, start_url, display | ✓      |
 | Service worker registered in production            | ✓      |
 | assetlinks.json on production                      | ⬜     |
-| Privacy policy URL                                 | ⬜     |
+| Privacy policy URL (`/privacidade`)                | ✓      |
 | App signing key generated                          | ⬜     |
 
 ### 2.2 Play Console Setup

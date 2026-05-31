@@ -5,6 +5,7 @@ import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { getCssCustomProperties } from './config/design-tokens.js';
 import { IS_PROD } from './config/constants.js';
+import { PRIVACY_POLICY_PATH } from './config/routes.js';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // Self-hosted fonts (non-blocking: loaded with the JS entry, not render-blocking <link> in HTML).
@@ -73,6 +74,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<App ref={appRef} />} />
+      <Route path={PRIVACY_POLICY_PATH} element={<App ref={appRef} />} />
       <Route path="/routes" element={<App ref={appRef} />} />
       <Route path="/:city/routes" element={<App ref={appRef} />} />
       <Route path="/:city" element={<App ref={appRef} />} />

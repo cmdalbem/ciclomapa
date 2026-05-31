@@ -118,6 +118,7 @@ function AboutModal({
   visible,
   onClose,
   openLayersLegendModal,
+  openPrivacyPolicyModal,
   openCityPicker,
   embedMode = false,
   isDarkMode = true,
@@ -130,7 +131,6 @@ function AboutModal({
 }) {
   const modalRef = useRef(null);
   const previousActiveElementRef = useRef(null);
-
   const cityContext = useMemo(() => getCityAboutContext(cityCanonicalSlug), [cityCanonicalSlug]);
 
   const handleClose = () => {
@@ -593,6 +593,15 @@ function AboutModal({
                 </Tooltip>
               </nav>
             </div>
+            <div className="mt-4 flex w-full">
+              <button
+                type="button"
+                onClick={() => dismissAndThen(openPrivacyPolicyModal)}
+                className="text-xs text-current opacity-50 hover:opacity-100 focus-visible:opacity-100 underline decoration-dotted outline-none transition-opacity duration-200"
+              >
+                Aviso de Privacidade
+              </button>
+            </div>
           </footer>
         </div>
       </div>
@@ -605,6 +614,7 @@ AboutModal.propTypes = {
   visible: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   openLayersLegendModal: PropTypes.func.isRequired,
+  openPrivacyPolicyModal: PropTypes.func.isRequired,
   openCityPicker: PropTypes.func.isRequired,
   embedMode: PropTypes.bool,
   isDarkMode: PropTypes.bool,
