@@ -6,7 +6,7 @@ This document describes how to package CicloMapa as a Trusted Web Activity (TWA)
 
 - **Production site live** at https://ciclomapa.app (TWA loads the real site)
 - **PWA readiness** (manifest, icons, service worker) — completed in this branch
-- **Node.js 22** and **Java 11+** (for Bubblewrap)
+- **Node.js 22** and **JDK 17+** (required by current Bubblewrap)
 - **Android Studio** or **Android SDK** (for signing and building)
 
 ---
@@ -16,7 +16,7 @@ This document describes how to package CicloMapa as a Trusted Web Activity (TWA)
 ### 1.1 Install Bubblewrap
 
 ```bash
-npm install -g @bubblewrap/cli
+yarn global add @bubblewrap/cli
 bubblewrap init
 ```
 
@@ -46,13 +46,14 @@ TWA requires your site to declare the link between the web app and the Android a
 2. **Create** `public/.well-known/assetlinks.json` (copy from `assetlinks.json.template`):
    - Replace `REPLACE_WITH_YOUR_SHA256_FINGERPRINT` with your app signing SHA-256 (colon-separated, e.g. `AB:CD:EF:...`).
    - Replace `br.org.ciclomapa.app` if you chose a different package name.
-   - Rename/copy to `assetlinks.json` (remove `.template`).
-   - This will be served at `https://ciclomapa.app/.well-known/assetlinks.json`.
+   - Save as `assetlinks.json` (remove the `.template` suffix). **Only the `.template` is committed** — the real file is the last step (you need the fingerprint first).
+   - `react-scripts build` copies `public/.well-known/` into the build output, so it will be served at `https://ciclomapa.app/.well-known/assetlinks.json`.
 
-3. **Serve** `assetlinks.json` with:
-   - `Content-Type: application/json`
-   - HTTPS
-   - No redirects
+3. **Hosting (Vercel) — important gotcha:**
+   - The site uses a **SPA catch-all rewrite**, so any path that is _not_ a real file (including `.well-known/assetlinks.json` before you create it) returns `index.html` with HTTP **200** and `Content-Type: text/html`. This looks like the file exists but it does **not** — TWA verification will fail.
+   - Vercel serves real static files _before_ the rewrite, so once the actual `assetlinks.json` exists in `public/.well-known/`, it is served correctly.
+   - `vercel.json` pins `Content-Type: application/json` for that path. Do **not** add a redirect on it.
+   - Sanity check after deploy: `curl -sI https://ciclomapa.app/.well-known/assetlinks.json` should show `content-type: application/json` (not `text/html`).
 
 4. **Verify** at: https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://ciclomapa.app&relation=delegate_permission/common.handle_all_urls
 
@@ -126,19 +127,19 @@ This produces an AAB (Android App Bundle) for Play Store upload.
 
 ### Files Changed
 
-| File                               | Change                                                                           |
-| ---------------------------------- | -------------------------------------------------------------------------------- |
-| `public/manifest.json`             | start_url `/`, scope, theme/background colors, icon entries (192, 512, maskable) |
-| `public/icon-192.png`              | New — PWA icon                                                                   |
-| `public/icon-512.png`              | New — PWA icon                                                                   |
-| `public/icon-maskable-192.png`     | Not used                                                                         |
-| `public/icon-maskable-512.png`     | Not used                                                                         |
-| `public/favicon.ico`               | New — Favicon (from logo)                                                        |
-| `src/service-worker.js`            | New — Workbox service worker (precache, routing)                                 |
-| `src/index.js`                     | `serviceWorkerRegistration.register()` (enables PWA service worker)              |
-| `src/serviceWorkerRegistration.js` | Renamed — service worker registration helper (was `src/serviceWorker.js`)        |
-| `scripts/generate-pwa-icons.js`    | New — Icon generation from logo                                                  |
-| `package.json`                     | `generate-pwa-icons` script, sharp, to-ico devDependencies                       |
+| File                                          | Change                                                                          |
+| --------------------------------------------- | ------------------------------------------------------------------------------- |
+| `public/manifest.json`                        | start_url `/`, scope, theme/background colors, icon entries (favicon, 192, 512) |
+| `public/icon-192.png`                         | New — PWA icon                                                                  |
+| `public/icon-512.png`                         | New — PWA icon (also used as the 512×512 Play Store icon)                       |
+| `public/favicon.ico` / `favicon.svg`          | New — favicons generated from `favicon-dark.png` / `favicon-light.png`          |
+| `public/.well-known/assetlinks.json.template` | New — Digital Asset Links template (real file created at submission)            |
+| `vercel.json`                                 | New — pins `Content-Type: application/json` for `/.well-known/assetlinks.json`  |
+| `src/service-worker.js`                       | New — Workbox service worker (precache, routing)                                |
+| `src/index.js`                                | `serviceWorkerRegistration.register()` (enables PWA service worker)             |
+| `src/serviceWorkerRegistration.js`            | Renamed — service worker registration helper (was `src/serviceWorker.js`)       |
+| `scripts/generate-pwa-icons.js`               | New — Icon generation from `icon.png` + favicon sources                         |
+| `package.json`                                | `generate-pwa-icons` script, sharp, to-ico devDependencies                      |
 
 ### Regenerating Icons
 
