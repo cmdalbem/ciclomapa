@@ -150,9 +150,11 @@ test.describe('Public APIs (OSM / shared routing)', () => {
 
   test('Valhalla (openstreetmap.de) returns bicycle routes', async ({ request }, testInfo) => {
     const body = {
+      // `radius` lets Valhalla snap to a nearby street edge instead of failing
+      // with NoSegment when a coordinate isn't exactly on a digitized edge.
       locations: [
-        { lat: -30.0346, lon: -51.2177 },
-        { lat: -30.05, lon: -51.23 },
+        { lat: -30.0346, lon: -51.2177, radius: 100 },
+        { lat: -30.05, lon: -51.23, radius: 100 },
       ],
       costing: 'bicycle',
       format: 'osrm',
