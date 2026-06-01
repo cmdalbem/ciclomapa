@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.ciclomapa",
+      "sha256_cert_fingerprints": [
+        "E1:28:91:B9:D6:CB:06:37:85:2F:C0:75:9A:CD:55:09:8A:DE:91:8A:AE:FF:EA:BD:9A:09:A0:54:C8:5A:14:83",
+        "C8:57:0D:F3:8D:C9:D5:5C:3D:7F:55:F6:86:A0:89:10:1A:61:9E:B7:1F:0E:B3:21:F7:91:D1:B8:F1:7E:61:F7"
+      ]
+    }
+  }
+]
