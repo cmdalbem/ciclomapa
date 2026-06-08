@@ -11,6 +11,7 @@ import {
   HiChatAlt as IconComment,
   HiSun as IconSun,
   HiMoon as IconMoon,
+  HiSearch as IconSearch,
 } from 'react-icons/hi';
 
 import { IconContext } from 'react-icons';
@@ -147,14 +148,12 @@ function TopBar(props) {
                     size={IS_MOBILE ? 'large' : 'middle'}
                     onClick={showCityPicker}
                   >
-                    <h2 className="flex items-center justify-between gap-1 m-0 sm:w-auto w-full">
+                    <h2 className="flex items-center gap-1 m-0 sm:w-auto w-full min-w-0">
+                      <IconSearch className="opacity-60 flex-shrink-0 -ml-1" aria-hidden />
+
                       <span>
-                        <span className="font-bold">{city},</span>
-
-                        {state}
+                        {city}, {state}
                       </span>
-
-                      <IconCaret className="text-green-300" style={{ marginRight: '-2px' }} />
                     </h2>
                   </Button>
                   {loading && (
