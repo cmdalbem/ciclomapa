@@ -35,11 +35,11 @@ export default function AppLayout({
         .join(' ')}
     >
       <h1 className="sr-only">{seoPageTitle}</h1>
-      {!IS_PROD && (
+      {/* {!IS_PROD && (
         <div className="fixed bottom-0 left-0 right-0 z-10 flex text-white opacity-20 items-center justify-center text-center text-xs py-1">
           Você está em um <b className="ml-1">ambiente de teste</b>, pode futricar à vontade! ;)
         </div>
-      )}
+      )} */}
 
       <div className="flex">
         <main className="relative w-full" id="main-map" aria-label="Mapa">
