@@ -13,6 +13,11 @@ describe('getLayerLegendImageSrc', () => {
   it('slugifies layer name into a public JPG path', () => {
     expect(getLayerLegendImageSrc('Ciclovia')).toBe('/ciclovia.jpg');
     expect(getLayerLegendImageSrc('Calçada compartilhada')).toBe('/calcada-compartilhada.jpg');
+    expect(getLayerLegendImageSrc('Bicicletários & paraciclos')).toBe(
+      '/bicicletarios-and-paraciclos.jpg'
+    );
+    expect(getLayerLegendImageSrc('Lojas & oficinas')).toBe('/lojas-and-oficinas.jpg');
+    expect(getLayerLegendImageSrc('Estações')).toBe('/estaces.jpg');
   });
 });
 

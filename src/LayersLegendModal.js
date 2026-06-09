@@ -7,9 +7,6 @@ import { getLayerLegendImageSrc } from './utils/utils.js';
 import LayerOsmFilters from './components/LayerOsmFilters';
 import { IconSignal1, IconSignal2, IconSignal3 } from './components/ProtectionSignalIcons';
 import commentIcon from './img/icons/poi-comment-flat.png';
-import bikeparkingIcon from './img/icons/poi-bikeparking@2x.png';
-import bikeshopIcon from './img/icons/poi-bikeshop@2x.png';
-import bikerentalIcon from './img/icons/poi-bikerental@2x.png';
 
 import { HiOutlineXMark } from 'react-icons/hi2';
 
@@ -32,13 +29,6 @@ const getInfrastructureFromLayerName = (layerName) => {
   if (name.includes('ciclofaixa')) return 'ciclofaixa';
   if (name.includes('ciclorrota')) return 'ciclorrota';
   return null;
-};
-
-const iconsMap = {
-  'poi-comment': commentIcon,
-  'poi-bikeparking': bikeparkingIcon,
-  'poi-bikeshop': bikeshopIcon,
-  'poi-rental': bikerentalIcon,
 };
 
 class LayersLegendModal extends Component {
@@ -208,33 +198,25 @@ class LayersLegendModal extends Component {
         key={layer.id}
         className="flex h-full min-h-0 flex-col rounded-xl border border-white border-opacity-10 bg-gray-900 bg-opacity-80 p-4"
       >
-        <div
-          className={`flex min-h-0 flex-1 gap-4 ${layer.type === 'poi' ? 'md:flex-col flex-row' : 'flex-col'}`}
-        >
-          {/* Image/Icon */}
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="flex-shrink-0">
-            {layer.type === 'way' &&
-              (deferLegendImage ? (
-                <div
-                  className="w-full rounded-md"
-                  style={{
-                    aspectRatio: '16 / 10',
-                    background: 'var(--ant-color-fill-tertiary)',
-                  }}
-                  aria-hidden
-                />
-              ) : (
-                <img
-                  className="w-full rounded-md"
-                  alt=""
-                  src={getLayerLegendImageSrc(layer.name)}
-                  loading={IS_MOBILE ? 'lazy' : undefined}
-                  decoding="async"
-                />
-              ))}
-
-            {layer.type === 'poi' && layer.icon && (
-              <img className="h-7 w-7 opacity-90" src={iconsMap[layer.icon]} alt="" />
+            {deferLegendImage ? (
+              <div
+                className="w-full rounded-md"
+                style={{
+                  aspectRatio: '16 / 10',
+                  background: 'var(--ant-color-fill-tertiary)',
+                }}
+                aria-hidden
+              />
+            ) : (
+              <img
+                className="w-full rounded-md"
+                alt=""
+                src={getLayerLegendImageSrc(layer.name)}
+                loading={IS_MOBILE ? 'lazy' : undefined}
+                decoding="async"
+              />
             )}
           </div>
 

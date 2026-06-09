@@ -84,7 +84,7 @@ const minimalLayersForLegend = [
 ];
 
 // Mobile defers legend JPGs until open (`IS_MOBILE && !visible`); jsdom is desktop-width so IS_MOBILE is false here.
-it('LayersLegendModal loads way layer photos when closed on desktop', () => {
+it('LayersLegendModal loads layer photos when closed on desktop', () => {
   const { container } = render(
     <LayersLegendModal visible={false} onClose={noop} layers={minimalLayersForLegend} />
   );

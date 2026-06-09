@@ -91,28 +91,18 @@ class LayersPanel extends Component {
 
     return (
       <div className="flex flex-col gap-3 max-w-full box-border">
-        {layer.type === 'way' ? (
-          <div
-            className="rounded-lg overflow-hidden"
-            style={{ background: 'var(--ant-color-fill-tertiary)' }}
-          >
-            <img
-              className="block w-full h-auto"
-              alt=""
-              src={getLayerLegendImageSrc(layer.name)}
-              loading="eager"
-              decoding="async"
-            />
-          </div>
-        ) : layer.icon ? (
-          <div>
-            <img
-              className="block h-8 w-8 object-contain opacity-90"
-              src={iconsMap[layer.icon]}
-              alt=""
-            />
-          </div>
-        ) : null}
+        <div
+          className="rounded-lg overflow-hidden"
+          style={{ background: 'var(--ant-color-fill-tertiary)' }}
+        >
+          <img
+            className="block w-full h-auto"
+            alt=""
+            src={getLayerLegendImageSrc(layer.name)}
+            loading="eager"
+            decoding="async"
+          />
+        </div>
 
         <div className="flex flex-col gap-1 min-w-0">
           <Flex align="center" gap="small" wrap="wrap">
