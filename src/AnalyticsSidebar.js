@@ -486,7 +486,10 @@ class AnalyticsSidebar extends Component {
                             placement="left"
                             arrow={{ pointAtCenter: true }}
                             content={
-                              <div style={{ width: 320 }}>
+                              <div
+                                className="flex flex-col gap-3 leading-normal"
+                                style={{ width: 320 }}
+                              >
                                 <h3 className="text-lg flex items-center gap-1">
                                   <IconVerified className="inline-block text-green-300 text-xl" />{' '}
                                   Dado Oficial da Prefeitura
@@ -641,7 +644,7 @@ const ViaDataRow = ({ layer, length, rawTotal, effectiveTotal, included, onToggl
     pctOfEffective !== null && (rawTotal <= 0 || Math.abs(pctOfRaw - pctOfEffective) >= 0.05);
 
   const popoverContent = (
-    <div>
+    <div className="flex flex-col gap-2 leading-normal">
       {/* <div className="font-semibold mb-1"></div> */}
       <h3 className="text-lg">{layer.displayName || layer.name}</h3>
       <div>
@@ -790,7 +793,7 @@ const Section = (props) => (
             arrow={{ pointAtCenter: true }}
             key={props.title}
             content={
-              <div style={{ width: 320 }}>
+              <div className="flex flex-col gap-3 leading-normal" style={{ width: 320 }}>
                 <h3 className="text-lg">{props.title}</h3>
 
                 {props.description}
