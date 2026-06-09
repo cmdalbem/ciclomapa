@@ -212,6 +212,57 @@ function predictionMatchesExcludedAdminRegionTypes(types, excludedList) {
   return t.some((x) => excludedList.includes(x));
 }
 
+/** Specific addresses and POIs — global search should drop a pin and show the details popup. */
+const POI_OR_ADDRESS_PLACE_TYPES = new Set([
+  'street_address',
+  'route',
+  'intersection',
+  'establishment',
+  'point_of_interest',
+  'premise',
+  'subpremise',
+  'airport',
+  'subway_station',
+  'train_station',
+  'bus_station',
+  'transit_station',
+  'park',
+  'natural_feature',
+  'floor',
+  'room',
+]);
+
+/** City-sized and larger admin regions — browse/jump only; no pin or POI-style popup. */
+const AREA_BROWSE_PLACE_TYPES = new Set([
+  'locality',
+  'administrative_area_level_3',
+  'administrative_area_level_2',
+  'administrative_area_level_1',
+  'administrative_area_level_4',
+  'administrative_area_level_5',
+  'country',
+  'continent',
+]);
+
+/**
+ * True for city-sized-or-larger geographic/administrative search results
+ * where the map should fly to the area without a POI pin or details popup.
+ * Finer areas (bairro, CEP, etc.) are not included.
+ *
+ * @param {string[] | null | undefined} types — Google Places `types` array
+ */
+export function isAreaBrowsePlaceResult(types) {
+  const set = new Set(types || []);
+  if (set.size === 0) return false;
+  for (const t of POI_OR_ADDRESS_PLACE_TYPES) {
+    if (set.has(t)) return false;
+  }
+  for (const t of AREA_BROWSE_PLACE_TYPES) {
+    if (set.has(t)) return true;
+  }
+  return false;
+}
+
 /** True when this is a bare city / admin_level_3 result (no street, POI, bairro, CEP, etc.). */
 function isLocalityOnlyCityPrediction(types) {
   const t = types || [];

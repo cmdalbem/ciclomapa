@@ -23,6 +23,7 @@ import {
 } from './config/citySlugCatalog.js';
 import { isPrivacyPolicyLocation, PRIVACY_POLICY_PATH } from './config/routes.js';
 import { flyMapToCityFocus } from './Map.js';
+import { isAreaBrowsePlaceResult } from './GooglePlacesGeocoder.js';
 import { DirectionsProvider } from './contexts/DirectionsContext';
 import {
   DEFAULT_LAT,
@@ -1716,7 +1717,9 @@ class App extends Component {
     placeTypes,
     placeId,
   }) => {
-    const zoom = 16;
+    const types = Array.isArray(placeTypes) ? placeTypes : [];
+    const isAreaBrowse = isAreaBrowsePlaceResult(types);
+    const zoom = isAreaBrowse ? DEFAULT_ZOOM : 16;
     let rawArea = areaContext != null ? String(areaContext).trim() : '';
     if (!rawArea) {
       try {
@@ -1731,32 +1734,39 @@ class App extends Component {
     }
     const normalizedArea = this.normalizeAreaLabelForDisplay(rawArea);
 
-    this.setState(
-      {
-        area: normalizedArea || this.state.area,
-        lat,
+    const nextState = {
+      area: normalizedArea || this.state.area,
+      lat,
+      lng,
+      zoom,
+      globalSearchPin: null,
+    };
+
+    if (!isAreaBrowse) {
+      nextState.globalSearchPin = {
         lng,
-        zoom,
-        globalSearchPin: {
-          lng,
-          lat,
-          title: title || '',
-          address: address || '',
-          placeTypes: Array.isArray(placeTypes) ? placeTypes : [],
-          placeId: placeId != null ? String(placeId) : '',
-          areaContext: rawArea || '',
-        },
-      },
-      () => {
-        if (this.state.map) {
-          this.state.map.flyTo({
-            center: [lng, lat],
-            zoom,
-            duration: 1500,
-          });
-        }
+        lat,
+        title: title || '',
+        address: address || '',
+        placeTypes: types,
+        placeId: placeId != null ? String(placeId) : '',
+        areaContext: rawArea || '',
+      };
+    }
+
+    this.setState(nextState, () => {
+      if (!this.state.map) return;
+      if (isAreaBrowse) {
+        const placeName = title || normalizedArea || rawArea || '';
+        this.deferOrApplyCityFocus({ lat, lng, placeName });
+        return;
       }
-    );
+      this.state.map.flyTo({
+        center: [lng, lat],
+        zoom,
+        duration: 1500,
+      });
+    });
   };
 
   forceMapReinitialization() {
