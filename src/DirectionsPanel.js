@@ -783,9 +783,7 @@ class DirectionsPanel extends Component {
 
       console.debug('Reverse geocode result:', result);
 
-      // When the auto-triggered fix landed in a different city than the one
-      // the app is showing, surface a visible message and bail before
-      // committing the origin.
+      // When auto-triggered input fill lands in a different city than the current user's
       if (isAutoTriggered && type === 'from' && this.props.area) {
         const appCity = this.props.area.split(',')[0].trim();
         const geolocationCity = getCityFromResultLike(result);
@@ -797,7 +795,6 @@ class DirectionsPanel extends Component {
           this.setState({
             fromSearchValue: '',
             fromGeolocating: false,
-            cityValidationError: `Você está em ${geolocationCity}; defina a origem manualmente em ${appCity}.`,
           });
           return;
         }
