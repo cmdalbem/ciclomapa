@@ -51,6 +51,7 @@ export default function AppLayout({
                 lat={state.lat}
                 lng={state.lng}
                 z={state.zoom}
+                getViewport={handlers.getMapViewport}
                 downloadData={handlers.downloadData}
                 onMapMoved={handlers.onMapMoved}
                 forceUpdate={handlers.forceUpdate}
@@ -83,6 +84,7 @@ export default function AppLayout({
               showSatellite={ENABLE_SATELLITE_TOGGLE ? state.showSatellite : false}
               location={state.area}
               onMapMoved={handlers.onMapMoved}
+              onMapPositionChange={handlers.onMapPositionChange}
               updateLengths={handlers.updateLengths}
               embedMode={state.embedMode}
               debugMode={state.debugMode}
@@ -131,11 +133,13 @@ export default function AppLayout({
       </div>
 
       <CitySwitcherModal
-        mapCenter={
-          typeof state.lat === 'number' && typeof state.lng === 'number'
-            ? { lat: state.lat, lng: state.lng }
-            : null
-        }
+        mapCenter={(() => {
+          const vp =
+            typeof handlers.getMapViewport === 'function' ? handlers.getMapViewport() : null;
+          const lat = vp && Number.isFinite(vp.lat) ? vp.lat : state.lat;
+          const lng = vp && Number.isFinite(vp.lng) ? vp.lng : state.lng;
+          return typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null;
+        })()}
         onPlacesResultSelected={handlers.handleGlobalSearchPlaceSelect}
         onCatalogCityPicked={handlers.clearGlobalSearchPin}
         onFavoritesChanged={handlers.handleFavoritesChanged}
@@ -263,6 +267,8 @@ AppLayout.propTypes = {
   handlers: PropTypes.shape({
     downloadData: PropTypes.func,
     onMapMoved: PropTypes.func,
+    onMapPositionChange: PropTypes.func,
+    getMapViewport: PropTypes.func,
     forceUpdate: PropTypes.func,
     cancelDataLoad: PropTypes.func,
     toggleSidebar: PropTypes.func,
