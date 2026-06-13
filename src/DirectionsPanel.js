@@ -1171,7 +1171,7 @@ class DirectionsPanel extends Component {
                       />
                     )}
 
-                    {(directions || this.props.fromPoint || this.props.toPoint) && (
+                    {/* {(directions || this.props.fromPoint || this.props.toPoint) && (
                       <Button
                         onClick={this.clearDirections}
                         type="text"
@@ -1179,7 +1179,7 @@ class DirectionsPanel extends Component {
                         icon={<IconTrash />}
                         aria-label="Limpar rotas"
                       />
-                    )}
+                    )} */}
 
                     {!IS_MOBILE && this.props.debugMode && (
                       <Popover
