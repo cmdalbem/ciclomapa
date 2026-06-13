@@ -126,7 +126,7 @@ class Map extends Component {
 
     // Bind functions that'll be used as callbacks with Mapbox
     this.onMapMoveEnded = this.onMapMoveEnded.bind(this);
-    this.debouncedOnMapMoveEnded = debounce(this.onMapMoveEnded, 300);
+    this.debouncedOnMapMoveEnded = debounce(this.onMapMoveEnded, 600);
     this.newComment = this.newComment.bind(this);
     this.initCommentsLayer = this.initCommentsLayer.bind(this);
     this.afterCommentCreate = this.afterCommentCreate.bind(this);
