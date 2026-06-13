@@ -182,6 +182,7 @@ export default function AppLayout({
             debugMode={state.debugMode}
             onAreaChange={handlers.setArea}
             openLayersLegendModal={handlers.openLayersLegendModal}
+            favorites={state.favorites}
           />
         </aside>
       )}

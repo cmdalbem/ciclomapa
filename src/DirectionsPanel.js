@@ -32,9 +32,11 @@ import {
   getGooglePlacesGeocoder,
   getShortAddressFromResultLike,
 } from './googlePlacesClient.js';
+import { filterFavoritesByQuery, filterFavoritesForArea } from './favoritesStore';
 import {
   geocodePlacesSuggestionToResult,
   getDirectionsPanelPlacesSearchOptions,
+  favoriteToDirectionsSuggestion,
   PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
@@ -198,6 +200,16 @@ class DirectionsPanel extends Component {
       this.syncMarkersWithProps();
     }
 
+    const favoritesContextChanged =
+      this.props.favorites !== prevProps.favorites || this.props.area !== prevProps.area;
+    if (favoritesContextChanged && this.state.focusedInput) {
+      const focusedInput = this.state.focusedInput;
+      const currentValue = this.state[`${focusedInput}SearchValue`] || '';
+      if (currentValue.trim().length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
+        this.setFavoriteSuggestions(focusedInput, currentValue);
+      }
+    }
+
     // Calculate directions only when both points exist and either:
     // 1. Points changed, or
     // 2. GeoJson reference changed (initial load OR area auto-switched and new
@@ -263,10 +275,13 @@ class DirectionsPanel extends Component {
   }
 
   async handleSearch(value, inputType) {
-    if (!value || value.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
-      this.setState({ [`${inputType}Suggestions`]: [] });
+    const trimmed = (value ?? '').trim();
+    if (!trimmed || trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
+      this.setFavoriteSuggestions(inputType, trimmed);
       return;
     }
+
+    this.setState({ [`${inputType}Suggestions`]: [] });
 
     this.setState({ [`${inputType}SearchLoading`]: true });
 
@@ -289,11 +304,49 @@ class DirectionsPanel extends Component {
     }
   }
 
+  setFavoriteSuggestions(inputType, query = '') {
+    const areaFavorites = filterFavoritesForArea(this.props.favorites || [], this.props.area);
+    const filtered = filterFavoritesByQuery(areaFavorites, query);
+    const suggestions = filtered.map((favorite) =>
+      favoriteToDirectionsSuggestion(favorite, { area: this.props.area })
+    );
+
+    this.setState({
+      [`${inputType}Suggestions`]: suggestions,
+      [`${inputType}SearchLoading`]: false,
+    });
+  }
+
   async handleSelect(result, inputType) {
     console.debug(`${inputType} point selected:`, result);
 
     if (inputType === 'from') {
       this.cancelActiveGeolocation();
+    }
+
+    if (result?.isFavorite && result.center) {
+      const committed = applyDirectionsInputLabelToResult(result, {
+        area: this.props.area,
+      });
+
+      if (!this.validateSameCity(inputType, committed)) {
+        return;
+      }
+
+      this.handleGeocoderResult({ result: committed }, inputType, true);
+
+      this.setState({
+        [`${inputType}Suggestions`]: [],
+        [`${inputType}SearchValue`]: committed.place_name,
+      });
+
+      if (inputType === 'from' && !this.props.toPoint) {
+        setTimeout(() => {
+          this.setState({ focusedInput: 'to' });
+          console.debug('Auto-focused destination input after origin selection');
+        }, 500);
+      }
+      return;
     }
 
     try {
@@ -901,6 +954,11 @@ class DirectionsPanel extends Component {
   handleInputFocus(inputType) {
     console.debug(`Input focused: ${inputType}`);
     this.setState({ focusedInput: inputType });
+
+    const currentValue = this.state[`${inputType}SearchValue`] || '';
+    if (currentValue.trim().length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
+      this.setFavoriteSuggestions(inputType, currentValue);
+    }
 
     // Notify parent that user is setting route points
     if (this.props.onRouteModeChange) {

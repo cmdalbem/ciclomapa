@@ -47,6 +47,53 @@ function makeCityId(slug: string): string {
   return `city:${slug}`;
 }
 
+/** First segment of an app area string (e.g. "São Paulo" from "São Paulo, SP, Brasil"). */
+export function getAreaCityLabel(area: string | null | undefined): string | null {
+  if (!area) return null;
+  const city = area.split(',')[0]?.trim();
+  return city || null;
+}
+
+function normalizeCityLabel(label: string | null | undefined): string | null {
+  if (!label) return null;
+  const trimmed = label.trim();
+  return trimmed ? trimmed.toLowerCase() : null;
+}
+
+/** Whether a favorite belongs to the same city as the currently loaded map area. */
+export function favoriteMatchesArea(
+  favorite: FavoriteItem,
+  area: string | null | undefined
+): boolean {
+  const currentCity = normalizeCityLabel(getAreaCityLabel(area));
+  if (!currentCity) return false;
+
+  const favoriteCity = normalizeCityLabel(getAreaCityLabel(favorite.areaContext));
+  return favoriteCity === currentCity;
+}
+
+export function filterFavoritesForArea(
+  favorites: FavoriteItem[],
+  area: string | null | undefined
+): FavoriteItem[] {
+  if (!Array.isArray(favorites) || !area) return [];
+  return favorites.filter((favorite) => favoriteMatchesArea(favorite, area));
+}
+
+export function filterFavoritesByQuery(
+  favorites: FavoriteItem[],
+  query: string | null | undefined
+): FavoriteItem[] {
+  const trimmed = (query ?? '').trim().toLowerCase();
+  if (!trimmed) return favorites;
+
+  return favorites.filter((favorite) => {
+    const title = favorite.title?.toLowerCase() || '';
+    const subtitle = favorite.subtitle?.toLowerCase() || '';
+    return title.includes(trimmed) || subtitle.includes(trimmed);
+  });
+}
+
 // --- Favorites ---
 
 export function readFavorites(): FavoriteItem[] {

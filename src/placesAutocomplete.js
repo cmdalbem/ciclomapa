@@ -2,6 +2,7 @@ import { SUPPORTED_COUNTRY_CODES } from './config/constants.js';
 import {
   ensureGooglePlacesReady,
   applyDirectionsInputLabelToResult,
+  getDirectionsInputLabelFromResultLike,
   getGooglePlacesGeocoder,
 } from './googlePlacesClient.js';
 
@@ -79,6 +80,47 @@ export function getDirectionsPanelPlacesSearchOptions(map) {
     proximity: map ? [map.getCenter().lng, map.getCenter().lat] : null,
     exclude: { bareCity: true },
   };
+}
+
+/**
+ * Maps a persisted favorite to an autocomplete suggestion for DirectionsPanel.
+ * Coordinates are included so selection skips the Place Details API call.
+ *
+ * @param {import('./favoritesStore').FavoriteItem} favorite
+ * @param {{ area?: string }} [options]
+ */
+export function favoriteToDirectionsSuggestion(favorite, { area } = {}) {
+  const cityLabel = favorite.areaContext?.split(',')[0]?.trim();
+  const addressComponents = cityLabel
+    ? [{ long_name: cityLabel, short_name: cityLabel, types: ['locality', 'political'] }]
+    : undefined;
+
+  const suggestion = {
+    id: `favorite:${favorite.id}`,
+    isFavorite: true,
+    place_name: favorite.title,
+    center: [favorite.lng, favorite.lat],
+    geometry: {
+      type: 'Point',
+      coordinates: [favorite.lng, favorite.lat],
+    },
+    properties: {
+      place_id: favorite.placeId,
+      types: favorite.placeTypes || [],
+      name: favorite.title,
+      formatted_address: favorite.subtitle,
+      structured_formatting: {
+        main_text: favorite.title,
+        secondary_text: favorite.subtitle,
+      },
+      address_components: addressComponents,
+      favoriteId: favorite.id,
+    },
+  };
+
+  const commitLabel = getDirectionsInputLabelFromResultLike(suggestion, { area }) || favorite.title;
+
+  return { ...suggestion, commitLabel };
 }
 
 /**
