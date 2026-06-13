@@ -160,24 +160,24 @@
 /* Top input: hole at bottom-center */
 #directionsPanel .cm-route-points__input--from.ant-select {
   -webkit-mask: radial-gradient(
-      var(--cm-route-swap-cutout-r) at 80% calc(100% + 5px),
+      var(--cm-route-swap-cutout-r) at 100% calc(100% + 5px),
       #0000 98%,
       #000
     )
     0 0 / 100% 100% no-repeat;
-  mask: radial-gradient(var(--cm-route-swap-cutout-r) at 80% calc(100% + 5px), #0000 98%, #000) 0
+  mask: radial-gradient(var(--cm-route-swap-cutout-r) at 100% calc(100% + 5px), #0000 98%, #000) 0
     0 / 100% 100% no-repeat;
 }
 
 /* Bottom input: hole at top-center */
 #directionsPanel .cm-route-points__input--to.ant-select {
   -webkit-mask: radial-gradient(
-      var(--cm-route-swap-cutout-r) at 80% calc(0% - 5px),
+      var(--cm-route-swap-cutout-r) at 100% calc(0% - 5px),
       #0000 98%,
       #000
     )
     0 0 / 100% 100% no-repeat;
-  mask: radial-gradient(var(--cm-route-swap-cutout-r) at 80% calc(0% - 5px), #0000 98%, #000) 0 0 /
+  mask: radial-gradient(var(--cm-route-swap-cutout-r) at 100% calc(0% - 5px), #0000 98%, #000) 0 0 /
     100% 100% no-repeat;
 }
 
@@ -192,7 +192,7 @@
 
 #directionsPanel .cm-route-points__swap {
   position: absolute;
-  left: 80%;
+  left: 100%;
   top: 50%;
   transform: translate(-50%, -50%);
   z-index: 2;
