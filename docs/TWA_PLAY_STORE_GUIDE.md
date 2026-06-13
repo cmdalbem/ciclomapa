@@ -31,6 +31,11 @@ When prompted:
 - **Theme Color**: `#1c1717`
 - **Background Color**: `#1a1a1a`
 
+Bubblewrap reads `display` from the live web manifest. CicloMapa uses **`standalone`**
+(not `fullscreen`). Standalone hides the browser chrome but keeps the Android system
+navigation bar (back, home, recents) visible. **`fullscreen` hides that bar** and is a
+common source of “I can't go back” reports on installed Android builds.
+
 ### 1.2 Digital Asset Links (Required for TWA)
 
 TWA requires your site to declare the link between the web app and the Android app.
@@ -66,20 +71,34 @@ bubblewrap build
 
 This produces an AAB (Android App Bundle) for Play Store upload.
 
+### 1.4 Updating the TWA after manifest changes
+
+When `public/manifest.json` changes (e.g. `display`, icons, theme colors), deploy the site
+first, then refresh the Android shell:
+
+```bash
+cd <bubblewrap-output-directory>
+bubblewrap update   # pulls the live manifest from https://ciclomapa.app
+bubblewrap build
+```
+
+Upload the new AAB to Play Console. Existing installs pick up the change after users
+update the app from the store (PWA “Add to Home Screen” installs may need a reinstall).
+
 ---
 
 ## Part 2: Play Store Submission Checklist
 
 ### 2.1 Before Submission
 
-| Item                                               | Status |
-| -------------------------------------------------- | ------ |
-| PWA installable on Chrome Android                  | ✓      |
-| manifest.json with name, icons, start_url, display | ✓      |
-| Service worker registered in production            | ✓      |
-| assetlinks.json on production                      | ⬜     |
-| Privacy policy URL (`/privacidade`)                | ✓      |
-| App signing key generated                          | ⬜     |
+| Item                                                             | Status |
+| ---------------------------------------------------------------- | ------ |
+| PWA installable on Chrome Android                                | ✓      |
+| manifest.json with name, icons, start_url, `display: standalone` | ✓      |
+| Service worker registered in production                          | ✓      |
+| assetlinks.json on production                                    | ⬜     |
+| Privacy policy URL (`/privacidade`)                              | ✓      |
+| App signing key generated                                        | ⬜     |
 
 ### 2.2 Play Console Setup
 
@@ -130,7 +149,9 @@ web UI with the developer account (one-time **US$25** registration fee if it's a
 ### 2.3 Testing Before Release
 
 - Install the TWA on a real Android device.
-- Confirm the app opens https://ciclomapa.app in fullscreen.
+- Confirm the app opens https://ciclomapa.app in **standalone** mode (no browser address bar).
+- Confirm the **Android system navigation bar** (back, home, recents) stays visible — do not
+  ship with `display: fullscreen` in the manifest.
 - Test geolocation, external links, file export.
 - Run **Pre-launch report** in Play Console and fix any issues.
 
@@ -140,19 +161,19 @@ web UI with the developer account (one-time **US$25** registration fee if it's a
 
 ### Files Changed
 
-| File                                          | Change                                                                          |
-| --------------------------------------------- | ------------------------------------------------------------------------------- |
-| `public/manifest.json`                        | start_url `/`, scope, theme/background colors, icon entries (favicon, 192, 512) |
-| `public/icon-192.png`                         | New — PWA icon                                                                  |
-| `public/icon-512.png`                         | New — PWA icon (also used as the 512×512 Play Store icon)                       |
-| `public/favicon.ico` / `favicon.svg`          | New — favicons generated from `favicon-dark.png` / `favicon-light.png`          |
-| `public/.well-known/assetlinks.json.template` | New — Digital Asset Links template (real file created at submission)            |
-| `vercel.json`                                 | New — pins `Content-Type: application/json` for `/.well-known/assetlinks.json`  |
-| `src/service-worker.js`                       | New — Workbox service worker (precache, routing)                                |
-| `src/index.js`                                | `serviceWorkerRegistration.register()` (enables PWA service worker)             |
-| `src/serviceWorkerRegistration.js`            | Renamed — service worker registration helper (was `src/serviceWorker.js`)       |
-| `scripts/generate-pwa-icons.js`               | New — Icon generation from `icon.png` + favicon sources                         |
-| `package.json`                                | `generate-pwa-icons` script, sharp, to-ico devDependencies                      |
+| File                                          | Change                                                                                                 |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `public/manifest.json`                        | start_url `/`, scope, `display: standalone`, theme/background colors, icon entries (favicon, 192, 512) |
+| `public/icon-192.png`                         | New — PWA icon                                                                                         |
+| `public/icon-512.png`                         | New — PWA icon (also used as the 512×512 Play Store icon)                                              |
+| `public/favicon.ico` / `favicon.svg`          | New — favicons generated from `favicon-dark.png` / `favicon-light.png`                                 |
+| `public/.well-known/assetlinks.json.template` | New — Digital Asset Links template (real file created at submission)                                   |
+| `vercel.json`                                 | New — pins `Content-Type: application/json` for `/.well-known/assetlinks.json`                         |
+| `src/service-worker.js`                       | New — Workbox service worker (precache, routing)                                                       |
+| `src/index.js`                                | `serviceWorkerRegistration.register()` (enables PWA service worker)                                    |
+| `src/serviceWorkerRegistration.js`            | Renamed — service worker registration helper (was `src/serviceWorker.js`)                              |
+| `scripts/generate-pwa-icons.js`               | New — Icon generation from `icon.png` + favicon sources                                                |
+| `package.json`                                | `generate-pwa-icons` script, sharp, to-ico devDependencies                                             |
 
 ### Regenerating Icons
 
@@ -181,6 +202,10 @@ yarn generate-pwa-icons
 
 6. **Geolocation**
    - Works in TWA. Ensure the site requests permission appropriately on first use.
+
+7. **Manifest `display` mode**
+   - Use **`standalone`**, not **`fullscreen`**, on Android. Fullscreen hides the system
+     navigation bar; users may think the app is broken or trapped.
 
 ---
 

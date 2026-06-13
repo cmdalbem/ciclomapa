@@ -88,6 +88,17 @@ Primeira versão do CicloMapa na Play Store!
 Pedale com mais segurança. Envie sugestões e ajude a melhorar o mapa da sua cidade.
 ```
 
+### Notas da versão / release notes (correção — barra de navegação Android, máx. 500 caracteres)
+
+Use after deploying `display: standalone` in `public/manifest.json` and shipping a new AAB
+(`bubblewrap update` → `bubblewrap build`):
+
+```
+Correção na versão instalada para Android: os botões de navegação do sistema (voltar, início, apps recentes) voltam a ficar visíveis ao abrir o app.
+
+Requer atualização pela Play Store. Se você instalou pelo atalho do Chrome, remova e adicione de novo à tela inicial.
+```
+
 ---
 
 ## 2. Listing assets checklist
