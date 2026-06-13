@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, Dropdown } from 'antd';
 import { HiChevronDown as IconCaretDown } from 'react-icons/hi';
 
 export default function RouteSortDropdown({ currentKey, onChange, items }) {
+  const [open, setOpen] = useState(false);
+
   const defaultItems = [
     { key: 'score', label: 'Proteção' },
     { key: 'fastest', label: 'Tempo' },
@@ -14,9 +16,15 @@ export default function RouteSortDropdown({ currentKey, onChange, items }) {
 
   return (
     <Dropdown
+      open={open}
+      onOpenChange={setOpen}
+      trigger={['click']}
       menu={{
         items: effectiveItems,
-        onClick: ({ key }) => onChange(key),
+        onClick: ({ key }) => {
+          onChange(key);
+          setOpen(false);
+        },
       }}
       placement="bottomRight"
     >
