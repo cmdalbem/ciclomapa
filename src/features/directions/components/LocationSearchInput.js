@@ -29,15 +29,40 @@ function FavoriteAutocompleteOptionLabel({ suggestion }) {
   );
 }
 
-function buildSuggestionOption(suggestion) {
-  const label = suggestion.isFavorite ? (
-    <FavoriteAutocompleteOptionLabel suggestion={suggestion} />
-  ) : (
-    <PlacesAutocompleteOptionLabel
-      suggestion={suggestion}
-      rowClassName="flex min-w-0 items-center gap-3 py-1"
-    />
+function CurrentLocationAutocompleteOptionLabel({ suggestion }) {
+  const mainText =
+    suggestion?.properties?.structured_formatting?.main_text || suggestion?.place_name || '';
+  const secondaryText = suggestion?.properties?.structured_formatting?.secondary_text;
+
+  return (
+    <div className="flex min-w-0 items-center gap-3 py-1">
+      <span className="flex-shrink-0 text-lg leading-none opacity-70" aria-hidden="true">
+        <IconGPS className="inline-block h-[1.125rem] w-[1.125rem]" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="text-sm font-medium truncate">{mainText}</span>
+        {secondaryText ? (
+          <span className="text-xs text-gray-400 truncate">{secondaryText}</span>
+        ) : null}
+      </div>
+    </div>
   );
+}
+
+function buildSuggestionOption(suggestion) {
+  let label;
+  if (suggestion.isCurrentLocation) {
+    label = <CurrentLocationAutocompleteOptionLabel suggestion={suggestion} />;
+  } else if (suggestion.isFavorite) {
+    label = <FavoriteAutocompleteOptionLabel suggestion={suggestion} />;
+  } else {
+    label = (
+      <PlacesAutocompleteOptionLabel
+        suggestion={suggestion}
+        rowClassName="flex min-w-0 items-center gap-3 py-1"
+      />
+    );
+  }
 
   return {
     value: suggestion.isFavorite
@@ -50,14 +75,18 @@ function buildSuggestionOption(suggestion) {
 }
 
 function buildAutocompleteOptions(suggestions) {
+  const currentLocation = suggestions.filter((suggestion) => suggestion.isCurrentLocation);
   const favorites = suggestions.filter((suggestion) => suggestion.isFavorite);
-  const places = suggestions.filter((suggestion) => !suggestion.isFavorite);
+  const places = suggestions.filter(
+    (suggestion) => !suggestion.isFavorite && !suggestion.isCurrentLocation
+  );
+
+  const options = currentLocation.map(buildSuggestionOption);
 
   if (favorites.length > 0 && places.length === 0) {
-    return favorites.map(buildSuggestionOption);
+    return [...options, ...favorites.map(buildSuggestionOption)];
   }
 
-  const options = [];
   if (favorites.length > 0) {
     options.push({
       label: 'Favoritos',
@@ -77,8 +106,7 @@ export default function LocationSearchInput({ inputType, parentComponent, classN
 
   const isFrom = inputType === 'from';
   const placeholder = isFrom ? 'Origem' : 'Destino';
-  const showGeolocation = isFrom;
-  const isGeolocating = isFrom && state.fromGeolocating;
+  const isGeolocating = state.geolocatingInput === inputType;
   const searchValue = state[`${inputType}SearchValue`];
   const hasPoint = Boolean(parentComponent.props[`${inputType}Point`]);
   const showClear = Boolean(searchValue) || hasPoint;
@@ -88,7 +116,7 @@ export default function LocationSearchInput({ inputType, parentComponent, classN
     state.focusedInput === inputType &&
     query.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH &&
     suggestions.length > 0;
-  const showSuffix = showClear || showGeolocation;
+  const showSuffix = showClear || isGeolocating;
 
   const inputSuffix = showSuffix ? (
     <div className="cm-route-points__input-actions">
@@ -104,25 +132,14 @@ export default function LocationSearchInput({ inputType, parentComponent, classN
           aria-label={`Limpar ${placeholder.toLowerCase()}`}
         />
       )}
-      {showGeolocation &&
-        (isGeolocating ? (
-          <Spin
-            size="small"
-            className="cm-route-points__input-action cm-route-points__input-action--loading"
-            indicator={<LoadingOutlined spin />}
-            aria-label="Buscando localização atual"
-          />
-        ) : (
-          <Button
-            type="text"
-            shape="circle"
-            icon={<IconGPS className="cm-route-points__input-action-icon" />}
-            onClick={() => handlers.handleGeolocation(inputType)}
-            className="cm-route-points__input-action cm-route-points__input-action--gps"
-            title="Usar localização atual"
-            aria-label="Usar localização atual"
-          />
-        ))}
+      {isGeolocating && (
+        <Spin
+          size="small"
+          className="cm-route-points__input-action cm-route-points__input-action--loading"
+          indicator={<LoadingOutlined spin />}
+          aria-label="Buscando localização atual"
+        />
+      )}
     </div>
   ) : null;
 

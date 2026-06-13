@@ -95,3 +95,26 @@ describe('favoriteToDirectionsSuggestion', () => {
     ).toBe('Sesc Pompeia - Rua Clélia - Água Branca');
   });
 });
+
+describe('getDirectionsCurrentLocationSuggestion', () => {
+  it('returns a selectable current-location row for the origin dropdown', () => {
+    const { getDirectionsCurrentLocationSuggestion } = require('./placesAutocomplete.js');
+    const suggestion = getDirectionsCurrentLocationSuggestion('from');
+
+    expect(suggestion.isCurrentLocation).toBe(true);
+    expect(suggestion.place_name).toBe('Usar localização atual');
+    expect(suggestion.properties.structured_formatting.secondary_text).toBe(
+      'Definir origem pelo GPS'
+    );
+  });
+
+  it('uses destination copy for the destination dropdown', () => {
+    const { getDirectionsCurrentLocationSuggestion } = require('./placesAutocomplete.js');
+    const suggestion = getDirectionsCurrentLocationSuggestion('to');
+
+    expect(suggestion.id).toBe('current-location:to');
+    expect(suggestion.properties.structured_formatting.secondary_text).toBe(
+      'Definir destino pelo GPS'
+    );
+  });
+});

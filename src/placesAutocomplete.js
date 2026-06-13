@@ -123,6 +123,24 @@ export function favoriteToDirectionsSuggestion(favorite, { area } = {}) {
   return { ...suggestion, commitLabel };
 }
 
+export const DIRECTIONS_CURRENT_LOCATION_SUGGESTION_ID = 'current-location';
+
+/** Autocomplete row for filling an input from the device GPS (DirectionsPanel). */
+export function getDirectionsCurrentLocationSuggestion(inputType = 'from') {
+  const isFrom = inputType === 'from';
+  return {
+    id: `${DIRECTIONS_CURRENT_LOCATION_SUGGESTION_ID}:${inputType}`,
+    isCurrentLocation: true,
+    place_name: 'Usar localização atual',
+    properties: {
+      structured_formatting: {
+        main_text: 'Usar localização atual',
+        secondary_text: isFrom ? 'Definir origem pelo GPS' : 'Definir destino pelo GPS',
+      },
+    },
+  };
+}
+
 /**
  * Options for CitySwitcherModal global search: cities stay visible unless caller overrides `exclude`.
  *
@@ -148,6 +166,10 @@ export function getCitySwitcherPlacesSearchOptions(mapCenter, placesAutocomplete
 export async function geocodePlacesSuggestionToResult(suggestion, { area } = {}) {
   if (!suggestion) {
     throw new Error('geocodePlacesSuggestionToResult: missing suggestion');
+  }
+
+  if (suggestion.isCurrentLocation) {
+    return { result: suggestion };
   }
 
   if (suggestion.properties?.place_id && !suggestion.center) {
