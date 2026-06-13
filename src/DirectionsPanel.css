@@ -103,6 +103,48 @@
   color: var(--cm-panel-placeholder-color);
 }
 
+#directionsPanel.cm-panel .cm-route-points__input-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: -2px;
+}
+
+#directionsPanel.cm-panel .cm-route-points__input-action.ant-btn {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  color: var(--cm-panel-input-color);
+  opacity: 0.45;
+}
+
+#directionsPanel.cm-panel .cm-route-points__input-action.ant-btn:hover,
+#directionsPanel.cm-panel .cm-route-points__input-action.ant-btn:focus-visible {
+  opacity: 0.85;
+  color: var(--cm-panel-input-color);
+  background: transparent;
+}
+
+#directionsPanel.cm-panel .cm-route-points__input-action--loading.ant-spin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  opacity: 0.7;
+  color: var(--cm-panel-input-color);
+}
+
+#directionsPanel.cm-panel .cm-route-points__input-action-icon {
+  display: inline-block;
+  font-size: 14px;
+}
+
 .cm-route-points {
   position: relative;
 }
@@ -210,19 +252,6 @@ body.theme-light #directionsPanelMobileButton.expanded {
 
 body.theme-light {
   color: var(--cm-panel-input-color);
-}
-
-/* Light theme clear button (variables set in .theme-light above) */
-.theme-light #directionsPanel.cm-panel .ant-select-clear {
-  width: calc(var(--spacing-panel) + var(--radius-md));
-  height: calc(var(--spacing-panel) + var(--radius-md));
-  /* right: var(--radius-md); */
-  background: var(--cm-panel-input-bg);
-  color: rgba(0, 0, 0, 0.45);
-}
-
-.theme-light #directionsPanel.cm-panel .ant-select-clear:hover {
-  color: rgba(0, 0, 0, 0.7);
 }
 
 @media (prefers-reduced-motion: reduce) {
