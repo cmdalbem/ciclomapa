@@ -2610,7 +2610,7 @@ class Map extends Component {
         container: this.mapContainer,
         style: this.props.style,
         // projection: 'globe',
-        preserveDrawingBuffer: true,
+        // preserveDrawingBuffer: true,
         // style: MAP_STYLES.LIGHT,
         // config: {
         //     basemap: {
