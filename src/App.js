@@ -96,6 +96,7 @@ class App extends Component {
     this.onLayersChange = this.onLayersChange.bind(this);
     this.downloadData = this.downloadData.bind(this);
     this.forceUpdate = this.forceUpdate.bind(this);
+    this.cancelDataLoad = this.cancelDataLoad.bind(this);
     this.toggleSidebar = this.toggleSidebar.bind(this);
     this.openAboutModal = this.openAboutModal.bind(this);
     this.closeAboutModal = this.closeAboutModal.bind(this);
@@ -1058,6 +1059,20 @@ class App extends Component {
     this.updateData(true);
   }
 
+  abortCurrentOSMRequest() {
+    if (!this.currentOSMRequest) {
+      return;
+    }
+    this.currentOSMRequest.abort();
+    this.currentOSMRequest = null;
+  }
+
+  cancelDataLoad() {
+    this.abortCurrentOSMRequest();
+    this.setState({ loading: false });
+    appNotification.destroy();
+  }
+
   geoJsonDiff(oldData, newData) {
     console.debug('oldData', oldData);
     console.debug('newData', newData);
@@ -1144,8 +1159,7 @@ class App extends Component {
       //     description: 'Previous OSM request was cancelled to start a new one.',
       //     duration: 2
       // });
-      this.currentOSMRequest.abort();
-      this.currentOSMRequest = null;
+      this.abortCurrentOSMRequest();
     }
 
     if (!backgroundUpdate) {
@@ -1627,8 +1641,7 @@ class App extends Component {
       //     description: 'OSM request was cancelled due to component unmount.',
       //     duration: 2
       // });
-      this.currentOSMRequest.abort();
-      this.currentOSMRequest = null;
+      this.abortCurrentOSMRequest();
     }
 
     // Cancel any pending debounced URL updates
@@ -1786,6 +1799,7 @@ class App extends Component {
       downloadData: this.downloadData,
       onMapMoved: this.onMapMoved,
       forceUpdate: this.forceUpdate,
+      cancelDataLoad: this.cancelDataLoad,
       toggleSidebar: this.toggleSidebar,
       openAboutModal: this.openAboutModal,
       toggleTheme: this.toggleTheme,

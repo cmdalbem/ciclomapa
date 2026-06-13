@@ -62,6 +62,7 @@ export default function AppLayout({
                 isDarkMode={state.isDarkMode}
                 toggleTheme={handlers.toggleTheme}
                 loading={state.loading}
+                cancelDataLoad={handlers.cancelDataLoad}
               />
             </header>
           )}
@@ -263,6 +264,7 @@ AppLayout.propTypes = {
     downloadData: PropTypes.func,
     onMapMoved: PropTypes.func,
     forceUpdate: PropTypes.func,
+    cancelDataLoad: PropTypes.func,
     toggleSidebar: PropTypes.func,
     openAboutModal: PropTypes.func,
     toggleTheme: PropTypes.func,

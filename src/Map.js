@@ -2933,7 +2933,6 @@ class Map extends Component {
     await this.initLayers();
     this.initMapControls();
     this.setRealisticLighting();
-    this.updateBoundaryMask();
     if (this.props.globalSearchPin) {
       this.applyGlobalSearchPin(this.props.globalSearchPin);
     }

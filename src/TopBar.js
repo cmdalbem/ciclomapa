@@ -39,6 +39,7 @@ function TopBar(props) {
     isDarkMode,
     toggleTheme,
     loading,
+    cancelDataLoad,
     lat,
     lng,
     z,
@@ -52,6 +53,7 @@ function TopBar(props) {
   const [editModal, setEditModal] = useState(false);
   const [hasDismissedEditModal, setHasDismissedEditModal] = useState(false);
   const [showLastUpdate, setShowLastUpdate] = useState(false);
+  const [isCityPickerHovered, setIsCityPickerHovered] = useState(false);
 
   useEffect(() => {
     if (loading || !lastUpdate) {
@@ -88,6 +90,8 @@ function TopBar(props) {
     },
     [hasDismissedEditModal, newComment, openEditModal]
   );
+
+  const showLastUpdateLabel = showLastUpdate || (!IS_MOBILE && isCityPickerHovered);
 
   const parts = title.split(',');
   const city = parts[0];
@@ -139,7 +143,11 @@ function TopBar(props) {
           )}
 
           {!embedMode && (
-            <div className={`city-picker sm:text-center ${IS_MOBILE && 'w-full'}`}>
+            <div
+              className={`city-picker sm:text-center ${IS_MOBILE && 'w-full'}`}
+              onMouseEnter={() => !IS_MOBILE && setIsCityPickerHovered(true)}
+              onMouseLeave={() => !IS_MOBILE && setIsCityPickerHovered(false)}
+            >
               <div className="flex flex-col items-center sm:mb-1">
                 <div className={`relative z-10 ${IS_MOBILE && 'w-full'} rounded-full`}>
                   <Button
@@ -199,19 +207,27 @@ function TopBar(props) {
                         <div
                           className={[
                             'flex flex-center items-center gap-1 font-regular cursor text-xs transition-all transform  duration-700 ease-out',
-                            showLastUpdate
+                            showLastUpdateLabel
                               ? 'opacity-50 translate-y-1.5 hover:opacity-100'
                               : ' opacity-0 -translate-y-3 pointer-events-none',
                           ].join(' ')}
-                          aria-hidden={!showLastUpdate}
+                          aria-hidden={!showLastUpdateLabel}
                         >
                           Atualizado há {timeSince(lastUpdate)}
                         </div>
                       </Popover>
                     )
                   ) : (
-                    <div className="flex flex-center items-center gap-1 font-regular cursor text-xs mt-1 opacity-50 hover:opacity-100 transition-opacity duration-300">
+                    <div className="flex flex-center items-center gap-1 font-regular text-xs mt-1 opacity-50 hover:opacity-100 transition-opacity duration-300">
                       Acessando dados do OpenStreetMap...
+                      <Button
+                        type="link"
+                        size="small"
+                        className="text-xs p-0 h-auto min-h-0 text-inherit opacity-70 hover:opacity-100"
+                        onClick={cancelDataLoad}
+                      >
+                        Cancelar
+                      </Button>
                     </div>
                   ))}
               </div>
@@ -297,6 +313,7 @@ TopBar.propTypes = {
   isDarkMode: PropTypes.bool,
   toggleTheme: PropTypes.func.isRequired,
   loading: PropTypes.bool,
+  cancelDataLoad: PropTypes.func,
   lat: PropTypes.number,
   lng: PropTypes.number,
   z: PropTypes.number,
@@ -311,6 +328,7 @@ TopBar.defaultProps = {
   debugMode: false,
   isDarkMode: false,
   loading: false,
+  cancelDataLoad: () => {},
   lat: null,
   lng: null,
   z: null,
