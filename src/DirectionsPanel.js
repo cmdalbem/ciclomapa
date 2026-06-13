@@ -26,6 +26,7 @@ import RouteSortDropdown from './features/directions/components/RouteSortDropdow
 import RoutesList from './features/directions/components/RoutesList.js';
 import {
   ensureGooglePlacesReady,
+  applyDirectionsInputLabelToResult,
   getAreaStringFromResultLike,
   getCityFromResultLike,
   getGooglePlacesGeocoder,
@@ -93,6 +94,20 @@ class DirectionsPanel extends Component {
     this.toggleSettings = this.toggleSettings.bind(this);
     this.handleRouteSortChange = this.handleRouteSortChange.bind(this);
     this.getSortedRoutes = this.getSortedRoutes.bind(this);
+    this.getInputDisplayValue = this.getInputDisplayValue.bind(this);
+  }
+
+  getInputDisplayValue(resultLike, { simplifyAddress = false } = {}) {
+    if (!resultLike) return '';
+
+    const normalized = applyDirectionsInputLabelToResult(resultLike, { area: this.props.area });
+    const result = normalized?.result || normalized;
+
+    if (simplifyAddress) {
+      return getShortAddressFromResultLike(normalized) || result?.place_name || '';
+    }
+
+    return result?.place_name || '';
   }
 
   validateSameCity(type, newResultLike) {
@@ -132,10 +147,10 @@ class DirectionsPanel extends Component {
       this.props.fromPoint.result &&
       this.props.fromPoint.result.place_name
     ) {
-      this.setState({ fromSearchValue: this.props.fromPoint.result.place_name });
+      this.setState({ fromSearchValue: this.getInputDisplayValue(this.props.fromPoint) });
     }
     if (this.props.toPoint && this.props.toPoint.result && this.props.toPoint.result.place_name) {
-      this.setState({ toSearchValue: this.props.toPoint.result.place_name });
+      this.setState({ toSearchValue: this.getInputDisplayValue(this.props.toPoint) });
     }
 
     // Auto-expand the panel when route points are loaded from URL
@@ -222,7 +237,7 @@ class DirectionsPanel extends Component {
 
       // Update search input value if place_name exists
       if (fromPoint.result.place_name) {
-        this.setState({ fromSearchValue: fromPoint.result.place_name });
+        this.setState({ fromSearchValue: this.getInputDisplayValue(fromPoint) });
       }
     } else {
       this.removeMarker('from');
@@ -239,7 +254,7 @@ class DirectionsPanel extends Component {
 
       // Update search input value if place_name exists
       if (toPoint.result.place_name) {
-        this.setState({ toSearchValue: toPoint.result.place_name });
+        this.setState({ toSearchValue: this.getInputDisplayValue(toPoint) });
       }
     } else {
       this.removeMarker('to');
@@ -282,7 +297,9 @@ class DirectionsPanel extends Component {
     }
 
     try {
-      const { result: resolved } = await geocodePlacesSuggestionToResult(result);
+      const { result: resolved } = await geocodePlacesSuggestionToResult(result, {
+        area: this.props.area,
+      });
 
       if (!this.validateSameCity(inputType, resolved)) {
         return;
@@ -291,7 +308,7 @@ class DirectionsPanel extends Component {
 
       this.setState({
         [`${inputType}Suggestions`]: [],
-        [`${inputType}SearchValue`]: resolved.place_name,
+        [`${inputType}SearchValue`]: this.getInputDisplayValue(resolved),
       });
 
       // Auto-focus to destination input if origin is selected and no destination is set
@@ -304,11 +321,12 @@ class DirectionsPanel extends Component {
     } catch (error) {
       console.error('Error getting place details:', error);
       if (this.validateSameCity(inputType, result)) {
-        this.handleGeocoderResult({ result }, inputType);
+        const committed = applyDirectionsInputLabelToResult(result, { area: this.props.area });
+        this.handleGeocoderResult({ result: committed }, inputType);
       }
       this.setState({
         [`${inputType}Suggestions`]: [],
-        [`${inputType}SearchValue`]: result.place_name,
+        [`${inputType}SearchValue`]: this.getInputDisplayValue(result),
       });
     }
   }
@@ -641,8 +659,8 @@ class DirectionsPanel extends Component {
 
     // Update the search input values
     this.setState({
-      fromSearchValue: toPoint.result.place_name,
-      toSearchValue: fromPoint.result.place_name,
+      fromSearchValue: this.getInputDisplayValue(toPoint),
+      toSearchValue: this.getInputDisplayValue(fromPoint),
     });
   }
 
@@ -801,24 +819,25 @@ class DirectionsPanel extends Component {
       }
 
       const address =
-        (simplifyAddress && getShortAddressFromResultLike(result)) ||
+        this.getInputDisplayValue(result, { simplifyAddress }) ||
         result.place_name ||
         'Nova posição';
+
+      const newPoint = {
+        result: applyDirectionsInputLabelToResult(
+          {
+            center: lngLat,
+            ...result,
+            place_name: address,
+          },
+          { area: this.props.area }
+        ),
+      };
 
       this.setState({
         [`${type}SearchValue`]: address,
         ...(type === 'from' ? { fromGeolocating: false } : {}),
       });
-
-      const newPoint = {
-        result: {
-          center: lngLat,
-          ...result,
-          // Keep `place_name` last so the spread above can't reintroduce the
-          // full formatted_address when we asked for the short version.
-          place_name: address,
-        },
-      };
 
       if (type === 'from') {
         if (!this.validateSameCity('from', newPoint.result)) {

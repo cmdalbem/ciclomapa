@@ -1,5 +1,9 @@
 import { SUPPORTED_COUNTRY_CODES } from './config/constants.js';
-import { ensureGooglePlacesReady, getGooglePlacesGeocoder } from './googlePlacesClient.js';
+import {
+  ensureGooglePlacesReady,
+  applyDirectionsInputLabelToResult,
+  getGooglePlacesGeocoder,
+} from './googlePlacesClient.js';
 
 /** Same threshold as DirectionsPanel origin/destination search. */
 export const PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH = 3;
@@ -99,7 +103,7 @@ export function getCitySwitcherPlacesSearchOptions(mapCenter, placesAutocomplete
   };
 }
 
-export async function geocodePlacesSuggestionToResult(suggestion) {
+export async function geocodePlacesSuggestionToResult(suggestion, { area } = {}) {
   if (!suggestion) {
     throw new Error('geocodePlacesSuggestionToResult: missing suggestion');
   }
@@ -121,8 +125,8 @@ export async function geocodePlacesSuggestionToResult(suggestion) {
         address_components: details.address_components,
       },
     };
-    return { result: completeResult };
+    return { result: applyDirectionsInputLabelToResult(completeResult, { area }) };
   }
 
-  return { result: suggestion };
+  return { result: applyDirectionsInputLabelToResult(suggestion, { area }) };
 }

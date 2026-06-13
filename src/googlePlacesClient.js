@@ -25,22 +25,25 @@ export async function ensureGooglePlacesReady() {
   return googlePlacesGeocoder;
 }
 
+function unwrapResultLike(resultLike) {
+  const result = resultLike?.result || resultLike;
+  const props = result?.properties || resultLike?.properties || {};
+  return { result, props, addressComponents: props.address_components };
+}
+
+function findAddressComponent(addressComponents, type) {
+  return Array.isArray(addressComponents)
+    ? addressComponents.find((component) => (component.types || []).includes(type))
+    : null;
+}
+
 /** City / area strings from Google Places result shapes (DirectionsPanel + city search). */
 export function getCityFromResultLike(resultLike) {
-  const props =
-    resultLike && (resultLike.properties || (resultLike.result && resultLike.result.properties));
-  const addressComponents = props && props.address_components;
-  if (!addressComponents || !Array.isArray(addressComponents)) return null;
-  const findComp = (type) => addressComponents.find((c) => (c.types || []).includes(type));
-  const locality = findComp('locality');
-  const admin2 = findComp('administrative_area_level_2');
-  const sublocality = findComp('sublocality');
-  return (
-    (locality && locality.long_name) ||
-    (admin2 && admin2.long_name) ||
-    (sublocality && sublocality.long_name) ||
-    null
-  );
+  const { addressComponents } = unwrapResultLike(resultLike);
+  const locality = findAddressComponent(addressComponents, 'locality');
+  const admin2 = findAddressComponent(addressComponents, 'administrative_area_level_2');
+  const sublocality = findAddressComponent(addressComponents, 'sublocality');
+  return locality?.long_name || admin2?.long_name || sublocality?.long_name || null;
 }
 
 /**
@@ -53,47 +56,146 @@ export function getCityFromResultLike(resultLike) {
  * segment of the formatted address when no `route` is available.
  */
 export function getShortAddressFromResultLike(resultLike) {
-  const props =
-    resultLike && (resultLike.properties || (resultLike.result && resultLike.result.properties));
-  const addressComponents = props && props.address_components;
-  const findComp = (type) =>
-    Array.isArray(addressComponents)
-      ? addressComponents.find((c) => (c.types || []).includes(type))
-      : null;
+  const { result, addressComponents } = unwrapResultLike(resultLike);
+  const route = findAddressComponent(addressComponents, 'route');
+  const streetNumber = findAddressComponent(addressComponents, 'street_number');
+  const premise = findAddressComponent(addressComponents, 'premise');
 
-  const route = findComp('route');
-  const streetNumber = findComp('street_number');
-  const premise = findComp('premise');
-
-  if (route && route.long_name) {
-    return streetNumber && streetNumber.long_name
+  if (route?.long_name) {
+    return streetNumber?.long_name
       ? `${route.long_name}, ${streetNumber.long_name}`
       : route.long_name;
   }
-  if (premise && premise.long_name) return premise.long_name;
+  if (premise?.long_name) return premise.long_name;
 
   const fallbackSource =
-    (resultLike && (resultLike.place_name || resultLike.formatted_address)) ||
-    (resultLike && resultLike.result && resultLike.result.place_name) ||
-    '';
+    result?.place_name || resultLike?.place_name || resultLike?.formatted_address || '';
   return fallbackSource.split(',')[0].trim();
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function parseAreaHint(area) {
+  if (!area) return { city: null, state: null };
+  const parts = area
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return {
+    city: parts[0] || null,
+    state: parts[1] || null,
+  };
+}
+
+function getLocationHintsFromResultLike(resultLike, area) {
+  const { addressComponents } = unwrapResultLike(resultLike);
+  const stateComp = findAddressComponent(addressComponents, 'administrative_area_level_1');
+  const areaHint = parseAreaHint(area);
+
+  return {
+    city: getCityFromResultLike(resultLike) || areaHint.city,
+    state: stateComp?.long_name || areaHint.state,
+    stateShort: stateComp?.short_name || (areaHint.state?.length <= 3 ? areaHint.state : null),
+  };
+}
+
+function stripCityStateSuffix(text, hints = {}) {
+  if (!text) return '';
+
+  let trimmed = String(text).trim();
+  const { city, state, stateShort } = hints;
+
+  if (city && stateShort) {
+    const cityStateShort = new RegExp(
+      `,\\s*${escapeRegExp(city)}\\s*-\\s*${escapeRegExp(stateShort)}(?:\\s*,.*)?$`,
+      'i'
+    );
+    trimmed = trimmed.replace(cityStateShort, '');
+  }
+
+  if (city && state) {
+    const cityStateLong = new RegExp(
+      `,\\s*${escapeRegExp(city)}\\s*,\\s*${escapeRegExp(state)}(?:\\s*,.*)?$`,
+      'i'
+    );
+    trimmed = trimmed.replace(cityStateLong, '');
+  }
+
+  if (city) {
+    const cityOnly = new RegExp(`,\\s*${escapeRegExp(city)}\\s*$`, 'i');
+    trimmed = trimmed.replace(cityOnly, '');
+  }
+
+  // Fallback for Google BR formatting when hints are incomplete.
+  trimmed = trimmed.replace(/,\s*[^,]+?\s*-\s*[A-Z]{2}\s*$/i, '');
+
+  return trimmed.trim();
+}
+
+function combineStructuredLabel(mainText, secondaryText, hints) {
+  const localSecondary = stripCityStateSuffix(secondaryText, hints);
+  if (!localSecondary) return mainText;
+  if (localSecondary.startsWith(mainText)) return localSecondary;
+  return `${mainText} - ${localSecondary}`;
+}
+
+/**
+ * Human-friendly label for directions inputs: keeps local place detail but
+ * drops city, state, and country (redundant while routing within the map area).
+ */
+export function getDirectionsInputLabelFromResultLike(resultLike, { area } = {}) {
+  const { result, props } = unwrapResultLike(resultLike);
+  if (!result) return '';
+
+  const hints = getLocationHintsFromResultLike(resultLike, area);
+  const { main_text: mainText, secondary_text: secondaryText } = props.structured_formatting || {};
+
+  if (mainText) {
+    return combineStructuredLabel(mainText, secondaryText, hints);
+  }
+
+  const fallbackSource = result.place_name || props.formatted_address || result.text || '';
+  return stripCityStateSuffix(fallbackSource, hints) || fallbackSource;
+}
+
+/**
+ * Applies {@link getDirectionsInputLabelFromResultLike} to a geocoder result and
+ * writes the short label back onto `place_name` so route points and inputs stay
+ * consistent (favorites, Places search, reverse geocode).
+ */
+export function applyDirectionsInputLabelToResult(resultLike, { area } = {}) {
+  const isWrapped = Boolean(resultLike?.result);
+  const result = isWrapped ? resultLike.result : resultLike;
+  if (!result) return resultLike;
+
+  const displayLabel =
+    getDirectionsInputLabelFromResultLike(resultLike, { area }) || result.place_name || '';
+
+  const normalized = {
+    ...result,
+    place_name: displayLabel,
+    text: displayLabel,
+    properties: {
+      ...(result.properties || {}),
+      structured_formatting: {
+        main_text: displayLabel,
+        secondary_text: '',
+      },
+    },
+  };
+
+  return isWrapped ? { ...resultLike, result: normalized } : normalized;
+}
+
 export function getAreaStringFromResultLike(resultLike) {
-  const props =
-    resultLike && (resultLike.properties || (resultLike.result && resultLike.result.properties));
-  const addressComponents = props && props.address_components;
-  if (!addressComponents || !Array.isArray(addressComponents)) return null;
-  const findComp = (type) => addressComponents.find((c) => (c.types || []).includes(type));
+  const { addressComponents } = unwrapResultLike(resultLike);
   const city = getCityFromResultLike(resultLike);
-  const state =
-    (findComp('administrative_area_level_1') &&
-      (findComp('administrative_area_level_1').long_name ||
-        findComp('administrative_area_level_1').short_name)) ||
-    null;
-  const country =
-    (findComp('country') && (findComp('country').long_name || findComp('country').short_name)) ||
-    null;
+  const stateComp = findAddressComponent(addressComponents, 'administrative_area_level_1');
+  const countryComp = findAddressComponent(addressComponents, 'country');
+  const state = stateComp?.long_name || stateComp?.short_name || null;
+  const country = countryComp?.long_name || countryComp?.short_name || null;
   const parts = [city, state, country].filter(Boolean);
   return parts.length ? parts.join(', ') : null;
 }
