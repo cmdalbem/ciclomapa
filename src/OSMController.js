@@ -10,37 +10,12 @@ import {
   OVERPASS_SERVERS,
   AREA_ID_OVERRIDES,
   BLACKLISTED_CITIES_FOR_EXTRA_LAYERS,
+  ENABLE_BOUNDARY_LAYER,
 } from './config/constants.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 import { slugify } from './utils/utils.js';
 
 import * as layersDefinitions from './config/layers.json';
-
-// Helper function to parse area name into city, state, country components
-function parseAreaName(areaName) {
-  // Split by comma and clean up whitespace
-  const parts = areaName.split(',').map((part) => part.trim());
-
-  if (parts.length >= 3) {
-    return {
-      city: parts[0],
-      state: parts[1],
-      country: parts[2],
-    };
-  } else if (parts.length === 2) {
-    return {
-      city: parts[0],
-      state: parts[1],
-      country: parts[1], // Use state as country if no country specified
-    };
-  } else {
-    return {
-      city: parts[0],
-      state: parts[0], // Use city as state if only one part
-      country: parts[0], // Use city as country if only one part
-    };
-  }
-}
 
 class OSMController {
   static async searchNominatim(query, options = {}) {
@@ -149,7 +124,6 @@ class OSMController {
   static getQuery(constraints) {
     const bbox = constraints.bbox;
     const areaId = constraints.areaId;
-    const areaName = constraints.areaName;
 
     const isBlacklisted = areaId && BLACKLISTED_CITIES_FOR_EXTRA_LAYERS.includes(areaId);
     const extraLayersToExclude = ['Baixa velocidade', 'Trilha', 'Proibido'];
@@ -181,32 +155,13 @@ class OSMController {
       )
       .join('');
 
-    const boundaryQuery = areaName
-      ? (() => {
-          const { city, state, country } = parseAreaName(areaName);
-          return `
-                (
-                    rel
-                    ["boundary"="administrative"]
-                    ["admin_level"~"^(6|7|8|9|10)$"]
-                    ["name"="${city}"]
-                    ["is_in:state"="${state}"]
-                    ["is_in:country"="${country}"];
-                    rel
-                    ["boundary"="administrative"]
-                    ["admin_level"~"^(6|7|8|9|10)$"]
-                    ["name"="${city}"]
-                    ["is_in:country"="${country}"];
-                    rel
-                    ["boundary"="administrative"]
-                    ["admin_level"~"^(6|7|8|9|10)$"]
-                    ["name"="${city}"];
-                );
-                map_to_area ->.cityArea;
+    const boundaryQuery =
+      !bbox && ENABLE_BOUNDARY_LAYER
+        ? `
+                rel(area.a)["boundary"="administrative"]["admin_level"~"^(6|7|8|9|10)$"];
                 out geom;
-            `;
-        })()
-      : '';
+            `
+        : '';
 
     return `
             [out:json][timeout:500];

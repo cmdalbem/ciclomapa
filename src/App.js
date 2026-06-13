@@ -42,6 +42,7 @@ import {
   MAPBOX_ACCESS_TOKEN,
   DEFAULT_SIDEBAR_OPEN,
   ENABLE_SATELLITE_TOGGLE,
+  ENABLE_BOUNDARY_LAYER,
   MAX_RECENT_CITIES,
 } from './config/constants.js';
 import {
@@ -1265,8 +1266,13 @@ class App extends Component {
           .load(this.state.area, { storageKey })
           .then((data) => {
             if (data) {
-              if (!this.isDataFresh(data.updatedAt)) {
-                // If data is not fresh, fetch fresh data from OSM assync
+              const hasBoundaryFeature = ENABLE_BOUNDARY_LAYER
+                ? data.geoJson?.features?.some((f) => f.properties?.boundary === 'administrative')
+                : true;
+
+              if (!this.isDataFresh(data.updatedAt) || !hasBoundaryFeature) {
+                // Re-fetch when stale, or when cached GeoJSON lacks city boundary
+                // (older saves / PMTiles export scripts only stored cyclepath ways).
                 this.getDataFromOSM({ backgroundUpdate: true });
               }
 

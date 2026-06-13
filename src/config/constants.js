@@ -97,6 +97,7 @@ export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = true;
 // desktop (will require a one-time permission prompt for new users).
 export const ENABLE_AUTOFILL_ORIGIN_ON_PANEL_OPEN = IS_MOBILE;
 export const ENABLE_COMMENTS = true;
+export const ENABLE_BOUNDARY_LAYER = false;
 export const ENABLE_SATELLITE_TOGGLE = false;
 
 export const SUPPORTED_COUNTRIES = Object.freeze([
