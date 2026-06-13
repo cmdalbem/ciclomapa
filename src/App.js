@@ -93,6 +93,8 @@ class App extends Component {
     this.onMapStyleChange = this.onMapStyleChange.bind(this);
     this.onMapShowSatelliteChanged = this.onMapShowSatelliteChanged.bind(this);
     this.onMapMoved = this.onMapMoved.bind(this);
+    this.onMapPositionChange = this.onMapPositionChange.bind(this);
+    this.getMapViewport = this.getMapViewport.bind(this);
     this.onLayersChange = this.onLayersChange.bind(this);
     this.downloadData = this.downloadData.bind(this);
     this.forceUpdate = this.forceUpdate.bind(this);
@@ -129,6 +131,16 @@ class App extends Component {
       !initialHasCitySlug;
 
     this.state = this.buildInitialState();
+
+    // Live map position lives OUTSIDE React state. Panning/zooming updates this
+    // imperative holder (and the URL) without re-rendering the heavy map subtree.
+    // Seeded from the initial state so the URL/persistence work before the map exists.
+    this.mapPosition = {
+      lat: this.state.lat,
+      lng: this.state.lng,
+      zoom: this.state.zoom,
+    };
+
     if (this.state.mapBootReady) {
       this.updateData();
     }
@@ -454,12 +466,13 @@ class App extends Component {
       layersStates[l.id] = l.isActive;
     });
 
+    const viewport = this.getCurrentViewport();
     const state = {
       area: this.state.area,
       showSatellite: this.state.showSatellite,
-      zoom: this.state.zoom,
-      lng: this.state.lng,
-      lat: this.state.lat,
+      zoom: viewport.zoom,
+      lng: viewport.lng,
+      lat: viewport.lat,
       isSidebarOpen: this.state.isSidebarOpen,
       layersStates: layersStates,
       isDarkMode: this.state.isDarkMode,
@@ -649,10 +662,11 @@ class App extends Component {
     // resolveCitySlugToAreaAndViewport is not called (which would fly the map to the
     // city centre, overriding the user's current position).
     const params = new URLSearchParams(window.location.search);
-    if (Number.isFinite(this.state.lat) && Number.isFinite(this.state.lng)) {
-      params.set('lat', this.state.lat.toFixed(7));
-      params.set('lng', this.state.lng.toFixed(7));
-      params.set('z', this.state.zoom.toFixed(2));
+    const viewport = this.getCurrentViewport();
+    if (Number.isFinite(viewport.lat) && Number.isFinite(viewport.lng)) {
+      params.set('lat', viewport.lat.toFixed(7));
+      params.set('lng', viewport.lng.toFixed(7));
+      params.set('z', viewport.zoom.toFixed(2));
     }
     const nextUrl = `${nextPath}${params.toString() ? '?' + params.toString() : ''}`;
 
@@ -805,8 +819,9 @@ class App extends Component {
         }),
         () => {
           this.lastNotifiedCitySlugError = null;
-          const latUse = resolvedLat !== null ? resolvedLat : this.state.lat;
-          const lngUse = resolvedLng !== null ? resolvedLng : this.state.lng;
+          const fallbackViewport = this.getCurrentViewport();
+          const latUse = resolvedLat !== null ? resolvedLat : fallbackViewport.lat;
+          const lngUse = resolvedLng !== null ? resolvedLng : fallbackViewport.lng;
           this.deferOrApplyCityFocus({ lat: latUse, lng: lngUse, placeName: area });
         }
       );
@@ -966,9 +981,10 @@ class App extends Component {
     const hasFlytoParam = currentParams.has('flyto');
 
     if (!hasFlytoParam) {
-      currentParams.set('lat', this.state.lat.toFixed(7));
-      currentParams.set('lng', this.state.lng.toFixed(7));
-      currentParams.set('z', this.state.zoom.toFixed(2));
+      const viewport = this.getCurrentViewport();
+      currentParams.set('lat', viewport.lat.toFixed(7));
+      currentParams.set('lng', viewport.lng.toFixed(7));
+      currentParams.set('z', viewport.zoom.toFixed(2));
     }
 
     if (this.state.debugMode) {
@@ -1655,8 +1671,45 @@ class App extends Component {
     // this.setState(this.getParamsFromURL());
   }
 
+  // High-frequency position updates from pan/zoom. Intentionally NOT setState:
+  // position is only needed for the URL + persistence, not for rendering, so we
+  // keep it in an imperative holder and update the URL directly. This avoids the
+  // full App/Map re-render that made panning janky.
+  onMapPositionChange(pos) {
+    if (pos && Number.isFinite(pos.lat) && Number.isFinite(pos.lng)) {
+      this.mapPosition = { lat: pos.lat, lng: pos.lng, zoom: pos.zoom };
+    }
+    this.debouncedUpdateURL();
+  }
+
+  // Single source of truth for the current viewport. Prefers the live map (always
+  // accurate), falling back to the imperative holder / state before the map mounts.
+  getCurrentViewport() {
+    const map = this.state.map;
+    if (map && typeof map.getCenter === 'function') {
+      const c = map.getCenter();
+      return { lat: c.lat, lng: c.lng, zoom: map.getZoom() };
+    }
+    return {
+      lat: this.mapPosition?.lat ?? this.state.lat,
+      lng: this.mapPosition?.lng ?? this.state.lng,
+      zoom: this.mapPosition?.zoom ?? this.state.zoom,
+    };
+  }
+
+  // Exposed to render-time consumers (TopBar OSM link, EditModal, CitySwitcher) so
+  // they read the live viewport without us having to re-render on every pan.
+  getMapViewport() {
+    return this.getCurrentViewport();
+  }
+
   onMapMoved(newState) {
-    // Update App state to reflect map position for URL updates
+    // Area/city change path (rare): this DOES go through setState because `area`
+    // is rendered and drives data loading. Keep the imperative position holder in
+    // sync so URL/persistence stay correct even before the next pan.
+    if (newState && Number.isFinite(newState.lat) && Number.isFinite(newState.lng)) {
+      this.mapPosition = { lat: newState.lat, lng: newState.lng, zoom: newState.zoom };
+    }
     // This does NOT control the map - the map manages its own position
     requestAnimationFrame(() => {
       const nextState = { ...newState };
@@ -1798,6 +1851,8 @@ class App extends Component {
     const handlers = {
       downloadData: this.downloadData,
       onMapMoved: this.onMapMoved,
+      onMapPositionChange: this.onMapPositionChange,
+      getMapViewport: this.getMapViewport,
       forceUpdate: this.forceUpdate,
       cancelDataLoad: this.cancelDataLoad,
       toggleSidebar: this.toggleSidebar,

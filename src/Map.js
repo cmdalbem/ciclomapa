@@ -228,7 +228,11 @@ class Map extends Component {
               // console.debug('Same place detected, not triggering debounced sync...');
             } else {
               console.debug(
-                'Different place detected, cancelling previous sync and starting new timer'
+                'Different place detected (current: ' +
+                  currentPlaceName +
+                  ', last: ' +
+                  this.lastGeocodedPlaceName +
+                  '), cancelling previous sync and starting new timer'
               );
 
               document.querySelector('.city-picker span')?.setAttribute('style', 'opacity: 0.5');
@@ -263,9 +267,19 @@ class Map extends Component {
       if (geocodeRequestTime != null) {
         ret._geocodeRequestTime = geocodeRequestTime;
       }
+      // Area/city changes are rare and must flow through React state (city picker,
+      // data loading), so they go through the regular onMapMoved -> setState path.
+      this.props.onMapMoved(ret);
+    } else {
+      // Position-only sync (pan/zoom) is high-frequency. Route it through a
+      // dedicated callback that updates the URL WITHOUT triggering a React
+      // re-render of the heavy map subtree (see App.onMapPositionChange).
+      if (this.props.onMapPositionChange) {
+        this.props.onMapPositionChange(ret);
+      } else {
+        this.props.onMapMoved(ret);
+      }
     }
-
-    this.props.onMapMoved(ret);
   }
 
   convertFilterToMapboxFilter(l, sourceId = null) {

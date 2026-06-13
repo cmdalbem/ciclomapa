@@ -43,12 +43,20 @@ function TopBar(props) {
     lat,
     lng,
     z,
+    getViewport,
     openAboutModal,
     isSidebarOpen,
     toggleSidebar,
   } = props;
 
   const navigate = useNavigate();
+
+  // Prefer the live viewport (read at render time) over the lat/lng/z props, which
+  // App no longer updates on every pan. Falls back to props before the map mounts.
+  const liveViewport = typeof getViewport === 'function' ? getViewport() : null;
+  const currentLat = liveViewport && Number.isFinite(liveViewport.lat) ? liveViewport.lat : lat;
+  const currentLng = liveViewport && Number.isFinite(liveViewport.lng) ? liveViewport.lng : lng;
+  const currentZoom = liveViewport && Number.isFinite(liveViewport.zoom) ? liveViewport.zoom : z;
 
   const [editModal, setEditModal] = useState(false);
   const [hasDismissedEditModal, setHasDismissedEditModal] = useState(false);
@@ -116,7 +124,7 @@ function TopBar(props) {
             className="inline-block w-full hover:text-white"
             target="_blank"
             rel="noopener noreferrer"
-            href={getOsmUrl(lat, lng, z)}
+            href={getOsmUrl(currentLat, currentLng, currentZoom)}
           >
             Editar mapa
           </a>
@@ -292,9 +300,9 @@ function TopBar(props) {
 
       <EditModal
         open={editModal}
-        lat={lat}
-        lng={lng}
-        z={z}
+        lat={currentLat}
+        lng={currentLng}
+        z={currentZoom}
         onClose={closeEditModal}
         onCheckboxChange={onEditModalCheckboxChange}
       />
@@ -317,6 +325,7 @@ TopBar.propTypes = {
   lat: PropTypes.number,
   lng: PropTypes.number,
   z: PropTypes.number,
+  getViewport: PropTypes.func,
   openAboutModal: PropTypes.func.isRequired,
   isSidebarOpen: PropTypes.bool,
   toggleSidebar: PropTypes.func.isRequired,
