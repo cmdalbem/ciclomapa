@@ -420,7 +420,7 @@ class Map extends Component {
         minzoom: MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
         maxzoom: l.zoomThreshold,
         paint: {
-          'circle-radius': ['interpolate', ['exponential', 1.5], ['zoom'], 12, 1, 15, 4],
+          'circle-radius': ['interpolate', ['exponential', 1.5], ['zoom'], 12, 2, 15, 4],
           'circle-color': adjustColorBrightness(
             l.style.textColor,
             this.props.isDarkMode ? 0.2 : 0.2
