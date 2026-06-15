@@ -197,7 +197,7 @@ class LayersBar extends Component {
   }) {
     const baseClasses =
       'cm-layersbar__pill flex items-center space-x-2 px-3 py-2 rounded-full text-xs transition-all duration-200 glass-bg flex-shrink-0';
-    const activeClasses = isActive ? 'text-white bg-black bg-opacity-50' : 'text-gray-500';
+    const activeClasses = isActive ? 'text-white bg-opacity-50' : 'text-gray-500';
     const animationClasses = isAnimated
       ? isCategoryPill
         ? isExpanding
