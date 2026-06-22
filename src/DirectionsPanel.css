@@ -301,7 +301,8 @@ body.theme-light {
   }
 
   #directionsPanel {
-    overflow: scroll;
+    overflow-x: hidden;
+    overflow-y: auto;
     /* max-height: 190px; */
   }
 
