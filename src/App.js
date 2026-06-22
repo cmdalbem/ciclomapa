@@ -1651,6 +1651,11 @@ class App extends Component {
 
     this.loadAirtableMetadata();
     this.syncPrivacyPolicyFromRoute();
+
+    // Safety net for the GTM `mapReady` trigger: the map normally signals readiness
+    // on its first idle, but if the map never mounts or fails (WebGL error, very slow
+    // device), we still let deferred analytics (PostHog) load so we don't lose tracking.
+    this._mapReadyFallbackTimer = setTimeout(() => Analytics.signalMapReady(), 15000);
   }
 
   componentWillUnmount() {
@@ -1676,6 +1681,10 @@ class App extends Component {
     // Cancel any pending debounced URL updates
     if (this.debouncedUpdateURL) {
       this.debouncedUpdateURL.cancel();
+    }
+
+    if (this._mapReadyFallbackTimer) {
+      clearTimeout(this._mapReadyFallbackTimer);
     }
   }
 
