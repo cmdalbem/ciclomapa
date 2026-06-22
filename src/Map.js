@@ -1368,16 +1368,22 @@ class Map extends Component {
     });
   }
 
+  // Resolves once the style can accept sources/layers — immediately if the style is
+  // already loaded, otherwise on the next `styledata`. Shared by data-source setup
+  // and post-style-load initialization so the isStyleLoaded()/styledata dance lives
+  // in one place instead of being re-implemented per call site.
+  awaitStyleReady() {
+    return new Promise((resolve) => {
+      if (this.map.isStyleLoaded()) {
+        resolve();
+      } else {
+        this.map.once('styledata', resolve);
+      }
+    });
+  }
+
   async initializeDataSources() {
-    if (!this.map.isStyleLoaded()) {
-      await new Promise((resolve) => {
-        if (this.map.isStyleLoaded()) {
-          resolve();
-        } else {
-          this.map.once('styledata', resolve);
-        }
-      });
-    }
+    await this.awaitStyleReady();
 
     if (!this.map.getSource('osmdata') && USE_GEOJSON_SOURCE) {
       this.map.addSource('osmdata', {
@@ -2667,6 +2673,13 @@ class Map extends Component {
       this.props.setMapRef(this.map);
     }
 
+    // Once the map has finished its initial render and tile loading, tell GTM
+    // (via dataLayer) that the map is ready. This is the trigger GTM uses to
+    // load deferred tags like PostHog, keeping them off the boot critical path.
+    this.map.once('idle', () => {
+      Analytics.signalMapReady();
+    });
+
     this.popups = new MapPopups(
       this.map,
       this.props.debugMode,
@@ -2928,13 +2941,8 @@ class Map extends Component {
     const styleLoadHandler = () => {
       console.debug('style.load');
 
-      // If style data is ready, initialize immediately
-      if (this.map.isStyleLoaded()) {
-        handleStyleReady();
-      } else {
-        // Wait for style data to be ready
-        this.map.once('styledata', handleStyleReady);
-      }
+      // Initialize as soon as the style data is ready (now or on next styledata).
+      this.awaitStyleReady().then(handleStyleReady);
 
       // Clean up the style.load listener
       this.map.off('style.load', styleLoadHandler);
