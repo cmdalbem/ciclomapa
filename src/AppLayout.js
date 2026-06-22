@@ -138,7 +138,7 @@ export default function AppLayout({
             typeof handlers.getMapViewport === 'function' ? handlers.getMapViewport() : null;
           const lat = vp && Number.isFinite(vp.lat) ? vp.lat : state.lat;
           const lng = vp && Number.isFinite(vp.lng) ? vp.lng : state.lng;
-          return typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null;
+          return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
         })()}
         onPlacesResultSelected={handlers.handleGlobalSearchPlaceSelect}
         onCatalogCityPicked={handlers.clearGlobalSearchPin}
