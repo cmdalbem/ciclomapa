@@ -55,7 +55,7 @@ class LayersLegendModal extends Component {
       this.setupScrollspy();
       if (this.props.scrollToSection) {
         setTimeout(() => {
-          this.scrollToSection(this.props.scrollToSection);
+          this.scrollToSection(this.props.scrollToSection, { instant: true });
         }, 100);
       }
     }
@@ -64,6 +64,10 @@ class LayersLegendModal extends Component {
       document.removeEventListener('keydown', this._boundKeyDown);
       restoreModalFocus(getModalFocusRestoreRef(this));
       this.cleanupScrollspy();
+      const scrollContainer = document.getElementById('layers-legend-scroll');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = 0;
+      }
     }
 
     if (
@@ -73,7 +77,7 @@ class LayersLegendModal extends Component {
       this.props.scrollToSection !== prevProps.scrollToSection
     ) {
       setTimeout(() => {
-        this.scrollToSection(this.props.scrollToSection);
+        this.scrollToSection(this.props.scrollToSection, { instant: true });
       }, 100);
     }
   }
@@ -133,7 +137,7 @@ class LayersLegendModal extends Component {
     }
   };
 
-  scrollToSection = (sectionId) => {
+  scrollToSection = (sectionId, { instant = false } = {}) => {
     const element = document.getElementById(sectionId);
     const scrollContainer = document.getElementById('layers-legend-scroll');
     if (!element || !scrollContainer) return;
@@ -145,9 +149,15 @@ class LayersLegendModal extends Component {
     const elementRect = element.getBoundingClientRect();
     const scrollTop =
       scrollContainer.scrollTop + (elementRect.top - containerRect.top) - stickyTop - padding;
+    const targetTop = Math.max(0, scrollTop);
+
+    if (instant) {
+      scrollContainer.scrollTop = targetTop;
+      return;
+    }
 
     scrollContainer.scrollTo({
-      top: Math.max(0, scrollTop),
+      top: targetTop,
       behavior: 'smooth',
     });
   };
