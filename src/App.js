@@ -1463,7 +1463,7 @@ class App extends Component {
       if (this._preserveRoutePointsOnAreaChange) {
         this._preserveRoutePointsOnAreaChange = false;
       } else {
-        this.directionsPanel.clearDirections();
+        this.directionsPanel?.clearDirections();
       }
 
       this.recordRecentlyVisitedCity(this.state.area);

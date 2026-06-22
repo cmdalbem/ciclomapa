@@ -2,20 +2,21 @@
  * Layout component for the main app shell: header, main (map), asides, modals.
  * Receives state and handlers from App to keep App.js focused on state and logic.
  */
-import React from 'react';
+import React, { Suspense } from 'react';
 import PropTypes from 'prop-types';
 import AboutModal from './AboutModal.js';
-import LayersLegendModal from './LayersLegendModal.js';
 import PrivacyPolicyModal from './PrivacyPolicy.jsx';
 import Map from './Map.js';
-import CitySwitcherModal from './CitySwitcherModal';
 import TopBar from './TopBar.js';
 import LayersPanel from './LayersPanel.js';
 import LayersBar from './LayersBar.js';
-import DirectionsPanel from './DirectionsPanel.js';
-import AnalyticsSidebar from './AnalyticsSidebar.js';
 import { IS_MOBILE, IS_PROD, ENABLE_SATELLITE_TOGGLE } from './config/constants.js';
 import ApiDebugOverlay from './dev/ApiDebugOverlay.jsx';
+
+const AnalyticsSidebar = React.lazy(() => import('./AnalyticsSidebar.js'));
+const DirectionsPanel = React.lazy(() => import('./DirectionsPanel.js'));
+const CitySwitcherModal = React.lazy(() => import('./CitySwitcherModal'));
+const LayersLegendModal = React.lazy(() => import('./LayersLegendModal.js'));
 
 export default function AppLayout({
   state,
@@ -114,36 +115,40 @@ export default function AppLayout({
                 .filter(Boolean)
                 .join(' ')}
             >
-              <AnalyticsSidebar
-                layers={state.layers}
-                lengths={state.lengths}
-                open={state.isSidebarOpen}
-                location={state.area}
-                cityMetadata={state.airtableCityFields}
-                lengthCalculationStrategy={state.lengthCalculationStrategy}
-                debugMode={state.debugMode}
-                isDarkMode={state.isDarkMode}
-                toggle={handlers.toggleSidebar}
-                onChangeStrategy={handlers.onChangeStrategy}
-                downloadData={handlers.downloadData}
-              />
+              <Suspense fallback={null}>
+                <AnalyticsSidebar
+                  layers={state.layers}
+                  lengths={state.lengths}
+                  open={state.isSidebarOpen}
+                  location={state.area}
+                  cityMetadata={state.airtableCityFields}
+                  lengthCalculationStrategy={state.lengthCalculationStrategy}
+                  debugMode={state.debugMode}
+                  isDarkMode={state.isDarkMode}
+                  toggle={handlers.toggleSidebar}
+                  onChangeStrategy={handlers.onChangeStrategy}
+                  downloadData={handlers.downloadData}
+                />
+              </Suspense>
             </aside>
           )}
         </main>
       </div>
 
-      <CitySwitcherModal
-        mapCenter={(() => {
-          const vp =
-            typeof handlers.getMapViewport === 'function' ? handlers.getMapViewport() : null;
-          const lat = vp && Number.isFinite(vp.lat) ? vp.lat : state.lat;
-          const lng = vp && Number.isFinite(vp.lng) ? vp.lng : state.lng;
-          return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
-        })()}
-        onPlacesResultSelected={handlers.handleGlobalSearchPlaceSelect}
-        onCatalogCityPicked={handlers.clearGlobalSearchPin}
-        onFavoritesChanged={handlers.handleFavoritesChanged}
-      />
+      <Suspense fallback={null}>
+        <CitySwitcherModal
+          mapCenter={(() => {
+            const vp =
+              typeof handlers.getMapViewport === 'function' ? handlers.getMapViewport() : null;
+            const lat = vp && Number.isFinite(vp.lat) ? vp.lat : state.lat;
+            const lng = vp && Number.isFinite(vp.lng) ? vp.lng : state.lng;
+            return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+          })()}
+          onPlacesResultSelected={handlers.handleGlobalSearchPlaceSelect}
+          onCatalogCityPicked={handlers.clearGlobalSearchPin}
+          onFavoritesChanged={handlers.handleFavoritesChanged}
+        />
+      </Suspense>
 
       {!(IS_MOBILE && state.isDirectionsPanelOpen) && (
         <nav aria-label="Camadas do mapa">
@@ -170,25 +175,27 @@ export default function AppLayout({
 
       {!state.embedMode && (
         <aside aria-label="Painel de rotas">
-          <DirectionsPanel
-            ref={handlers.setDirectionsPanelRef}
-            embedMode={state.embedMode}
-            map={state.map}
-            geoJson={state.geoJson}
-            layers={state.layers}
-            area={state.area}
-            fromPoint={state.fromPoint}
-            toPoint={state.toPoint}
-            onFromPointChange={handlers.setFromPoint}
-            onToPointChange={handlers.setToPoint}
-            onClearRoutePoints={handlers.clearRoutePoints}
-            onDirectionsPanelToggle={handlers.onDirectionsPanelToggle}
-            isDarkMode={state.isDarkMode}
-            debugMode={state.debugMode}
-            onAreaChange={handlers.setArea}
-            openLayersLegendModal={handlers.openLayersLegendModal}
-            favorites={state.favorites}
-          />
+          <Suspense fallback={null}>
+            <DirectionsPanel
+              ref={handlers.setDirectionsPanelRef}
+              embedMode={state.embedMode}
+              map={state.map}
+              geoJson={state.geoJson}
+              layers={state.layers}
+              area={state.area}
+              fromPoint={state.fromPoint}
+              toPoint={state.toPoint}
+              onFromPointChange={handlers.setFromPoint}
+              onToPointChange={handlers.setToPoint}
+              onClearRoutePoints={handlers.clearRoutePoints}
+              onDirectionsPanelToggle={handlers.onDirectionsPanelToggle}
+              isDarkMode={state.isDarkMode}
+              debugMode={state.debugMode}
+              onAreaChange={handlers.setArea}
+              openLayersLegendModal={handlers.openLayersLegendModal}
+              favorites={state.favorites}
+            />
+          </Suspense>
         </aside>
       )}
 
@@ -207,13 +214,15 @@ export default function AppLayout({
         mapHasGeoJson={state.geoJson != null}
       />
 
-      <LayersLegendModal
-        visible={state.layersLegendModal}
-        onClose={handlers.closeLayersLegendModal}
-        layers={state.layers}
-        isDarkMode={state.isDarkMode}
-        scrollToSection={state.layersLegendScrollToSection}
-      />
+      <Suspense fallback={null}>
+        <LayersLegendModal
+          visible={state.layersLegendModal}
+          onClose={handlers.closeLayersLegendModal}
+          layers={state.layers}
+          isDarkMode={state.isDarkMode}
+          scrollToSection={state.layersLegendScrollToSection}
+        />
+      </Suspense>
 
       <PrivacyPolicyModal
         visible={state.privacyPolicyModal}
