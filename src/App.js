@@ -1690,10 +1690,12 @@ class App extends Component {
       const c = map.getCenter();
       return { lat: c.lat, lng: c.lng, zoom: map.getZoom() };
     }
+    // Map not mounted: prefer state so state-driven viewport changes (city switch,
+    // URL params) take precedence over a potentially stale imperative holder.
     return {
-      lat: this.mapPosition?.lat ?? this.state.lat,
-      lng: this.mapPosition?.lng ?? this.state.lng,
-      zoom: this.mapPosition?.zoom ?? this.state.zoom,
+      lat: this.state.lat,
+      lng: this.state.lng,
+      zoom: this.state.zoom,
     };
   }
 
