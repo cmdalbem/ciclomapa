@@ -6,7 +6,7 @@ import skmeans from 'skmeans';
 import turfLength from '@turf/length';
 import turfDistance from '@turf/distance';
 import turfLineOverlap from '@turf/line-overlap';
-import { LENGTH_COUNTED_LAYER_IDS } from '../config/constants.js';
+import { IS_MOBILE, LENGTH_COUNTED_LAYER_IDS } from '../config/constants.js';
 
 // 0 = all segments have exactly the same angle
 const MIN_AVG_ANGLE_TRESHOLD = 20;
@@ -319,6 +319,11 @@ function detectDoubleWayBikePaths(l, segments) {
 }
 
 export function calculateLayersLengths(geoJson, layers, strategy) {
+  // Skipped on mobile (heavy); callers treat an empty result as "no fresh lengths".
+  if (IS_MOBILE) {
+    return {};
+  }
+
   let lengths = {};
   const geoJsonWithTypes = computeTypologies(geoJson, layers);
 

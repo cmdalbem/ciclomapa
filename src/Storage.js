@@ -206,49 +206,63 @@ class Storage {
     });
   }
 
-  save(name, geoJson, lengths, options = {}) {
+  async resolveLengthsForSave(slug, lengths) {
+    if (Object.keys(lengths).length > 0) {
+      return lengths;
+    }
+
+    try {
+      const metadataDoc = await this.db
+        .collection(DEFAULT_CITIES_COLLECTION)
+        .doc(`${slug}_metadata`)
+        .get();
+      const existing = metadataDoc.exists ? metadataDoc.data()?.lengths : null;
+      if (existing && Object.keys(existing).length > 0) {
+        console.debug(`[Storage] Preserving existing metadata lengths for ${slug}`);
+        return existing;
+      }
+    } catch (error) {
+      console.debug(`[Storage] Could not read metadata lengths for ${slug}:`, error);
+    }
+
+    const statsDoc = await this.getCityStatsDoc(slug);
+    const existing = statsDoc?.lengths;
+    if (existing && Object.keys(existing).length > 0) {
+      console.debug(`[Storage] Preserving existing stats lengths for ${slug}`);
+      return existing;
+    }
+
+    return lengths;
+  }
+
+  async save(name, geoJson, lengths, options = {}) {
     trackCall({ api: API_TYPES.FIREBASE_WRITE, details: name });
 
-    return new Promise((resolve, reject) => {
-      const now = new Date();
-      const storageKey = this.normalizeStorageKey(options.storageKey || name);
+    const now = new Date();
+    const storageKey = this.normalizeStorageKey(options.storageKey || name);
 
-      // Save to Local Storage
-      set(storageKey, {
-        geoJson: geoJson,
-        updatedAt: now,
-      });
-
-      // Save to Firestore using new chunked format
-      try {
-        console.debug(`[Firebase] Saving GeoJSON ${name} using new chunked format...`);
-
-        // Save calculated lengths first
-        this.saveStatsToFirestore(storageKey, lengths)
-          .then(() => {
-            console.debug(`[Firebase] Lengths for ${name} saved successfully.`);
-          })
-          .catch((error) => {
-            console.error('[Firebase] Error saving lengths: ', error);
-            reject(error);
-            return;
-          });
-
-        // Save GeoJSON data using new chunking strategy
-        this.saveWithChunking(name, geoJson, lengths, storageKey)
-          .then(() => {
-            console.debug(`[Firebase] GeoJSON ${name} saved successfully using new format.`);
-            resolve();
-          })
-          .catch((error) => {
-            console.error(`[Firebase] Error saving GeoJSON ${name}: `, error);
-            reject(error);
-          });
-      } catch (e) {
-        console.error(e);
-        reject(e);
-      }
+    // Save to Local Storage
+    set(storageKey, {
+      geoJson: geoJson,
+      updatedAt: now,
     });
+
+    try {
+      console.debug(`[Firebase] Saving GeoJSON ${name} using new chunked format...`);
+
+      const lengthsForMetadata = await this.resolveLengthsForSave(storageKey, lengths);
+
+      if (Object.keys(lengths).length > 0) {
+        await this.saveStatsToFirestore(storageKey, lengths);
+        console.debug(`[Firebase] Lengths for ${name} saved successfully.`);
+      }
+
+      await this.saveWithChunking(name, geoJson, lengthsForMetadata, storageKey);
+      console.debug(`[Firebase] GeoJSON ${name} saved successfully using new format.`);
+    } catch (error) {
+      console.error(`[Firebase] Error saving GeoJSON ${name}: `, error);
+      throw error;
+    }
   }
 
   printPOIsStats(geoJson) {

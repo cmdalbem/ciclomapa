@@ -1206,16 +1206,20 @@ class App extends Component {
           throw new Error('New data is not healthy.');
         } else {
           // Since this is a heavy operation we only do it when syncing with new OSM data
-          const lengths = calculateLayersLengths(
+          const computedLengths = calculateLayersLengths(
             newData.geoJson,
             this.state.layers,
             this.state.lengthCalculationStrategy
           );
+          const lengths =
+            Object.keys(computedLengths).length === 0
+              ? this.state.lengths || computedLengths
+              : computedLengths;
 
           if (SAVE_TO_FIREBASE) {
             const storageKey = this.getStorageKeyForArea(areaName);
             this.getStorage()
-              .save(areaName, newData.geoJson, lengths, { storageKey })
+              .save(areaName, newData.geoJson, computedLengths, { storageKey })
               .then(() => {
                 if (!IS_PROD) {
                   appNotification.success({
@@ -1308,11 +1312,14 @@ class App extends Component {
 
               if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
                 console.debug('Recalculating lengths...');
-                data.lengths = calculateLayersLengths(
+                const computedLengths = calculateLayersLengths(
                   data.geoJson,
                   this.state.layers,
                   this.state.lengthCalculationStrategy
                 );
+                if (Object.keys(computedLengths).length > 0) {
+                  data.lengths = computedLengths;
+                }
               }
 
               this.setState({
@@ -1531,13 +1538,17 @@ class App extends Component {
       // @todo olha a gambiarra!
       // Deep clone geoJson data to force Mapbox to update the data layers
       const clone = JSON.parse(JSON.stringify(this.state.geoJson));
+      const computedLengths = calculateLayersLengths(
+        clone,
+        this.state.layers,
+        this.state.lengthCalculationStrategy
+      );
       this.setState({
         geoJson: clone,
-        lengths: calculateLayersLengths(
-          clone,
-          this.state.layers,
-          this.state.lengthCalculationStrategy
-        ),
+        lengths:
+          Object.keys(computedLengths).length === 0
+            ? this.state.lengths || computedLengths
+            : computedLengths,
       });
     }
 
@@ -1555,13 +1566,15 @@ class App extends Component {
   }
 
   calculateLengths() {
-    this.setState({
-      lengths: calculateLayersLengths(
-        this.state.geoJson,
-        this.state.layers,
-        this.state.lengthCalculationStrategy
-      ),
-    });
+    const computedLengths = calculateLayersLengths(
+      this.state.geoJson,
+      this.state.layers,
+      this.state.lengthCalculationStrategy
+    );
+    if (Object.keys(computedLengths).length === 0) {
+      return;
+    }
+    this.setState({ lengths: computedLengths });
   }
 
   updateLengths = () => {
