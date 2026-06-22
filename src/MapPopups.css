@@ -87,18 +87,15 @@
 }
 
 .popup-big .poi-popup-address-skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  display: block;
   width: 100%;
-  padding-top: 0.05em;
 }
 
 .popup-big .poi-popup-address-skeleton__line {
   display: block;
-  height: 0.55em;
-  min-height: 7px;
-  max-height: 10px;
+  width: 70%;
+  height: 1em;
+  min-height: 12px;
   border-radius: 4px;
   animation: poi-popup-address-skeleton-pulse 1.15s ease-in-out infinite;
 }
@@ -109,10 +106,6 @@
 
 .theme-dark .popup-big .poi-popup-address-skeleton__line {
   background: rgba(255, 255, 255, 0.12);
-}
-
-.popup-big .poi-popup-address-skeleton__line--a {
-  width: 58%;
 }
 
 @keyframes poi-popup-address-skeleton-pulse {

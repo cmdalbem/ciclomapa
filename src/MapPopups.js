@@ -551,8 +551,7 @@ class MapPopups {
     const addressInner = addressFromOsm
       ? escapeHtml(addressFromOsm)
       : `<span class="poi-popup-address-skeleton" aria-hidden="true">
-              <span class="poi-popup-address-skeleton__line poi-popup-address-skeleton__line--a"></span>
-              <span class="poi-popup-address-skeleton__line poi-popup-address-skeleton__line--b"></span>
+              <span class="poi-popup-address-skeleton__line"></span>
             </span>`;
 
     let html = `
