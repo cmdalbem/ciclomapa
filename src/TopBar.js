@@ -92,11 +92,30 @@ function TopBar(props) {
       if (e.key === 'comment') {
         newComment();
       }
-      if (!hasDismissedEditModal && e.key === 'edit') {
-        openEditModal();
+      if (e.key === 'edit') {
+        if (hasDismissedEditModal) {
+          // Read the viewport at click time so the OSM editor opens at the
+          // current pan/zoom (TopBar doesn't re-render on pan, so render-time
+          // values can be stale).
+          const vp = typeof getViewport === 'function' ? getViewport() : null;
+          const editLat = vp ? vp.lat : currentLat;
+          const editLng = vp ? vp.lng : currentLng;
+          const editZoom = vp ? vp.zoom : currentZoom;
+          window.open(getOsmUrl(editLat, editLng, editZoom), '_blank', 'noopener,noreferrer');
+        } else {
+          openEditModal();
+        }
       }
     },
-    [hasDismissedEditModal, newComment, openEditModal]
+    [
+      hasDismissedEditModal,
+      newComment,
+      openEditModal,
+      getViewport,
+      currentLat,
+      currentLng,
+      currentZoom,
+    ]
   );
 
   const showLastUpdateLabel = showLastUpdate || (!IS_MOBILE && isCityPickerHovered);
@@ -119,18 +138,7 @@ function TopBar(props) {
       {
         key: 'edit',
         icon: <IconEdit />,
-        label: hasDismissedEditModal ? (
-          <a
-            className="inline-block w-full hover:text-white"
-            target="_blank"
-            rel="noopener noreferrer"
-            href={getOsmUrl(currentLat, currentLng, currentZoom)}
-          >
-            Editar mapa
-          </a>
-        ) : (
-          'Editar mapa'
-        ),
+        label: 'Editar mapa',
       },
     ],
     onClick: handleMenuClick,
