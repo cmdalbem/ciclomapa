@@ -132,15 +132,6 @@ class App extends Component {
 
     this.state = this.buildInitialState();
 
-    // Live map position lives OUTSIDE React state. Panning/zooming updates this
-    // imperative holder (and the URL) without re-rendering the heavy map subtree.
-    // Seeded from the initial state so the URL/persistence work before the map exists.
-    this.mapPosition = {
-      lat: this.state.lat,
-      lng: this.state.lng,
-      zoom: this.state.zoom,
-    };
-
     if (this.state.mapBootReady) {
       this.updateData();
     }
@@ -1524,6 +1515,8 @@ class App extends Component {
       }
     }
 
+    // Fires for state-driven viewport changes only (city switch, URL params, route points).
+    // Pan/zoom bypasses state entirely and calls debouncedUpdateURL() via onMapPositionChange.
     if (
       this.state.zoom !== prevState.zoom ||
       this.state.lat !== prevState.lat ||
@@ -1694,26 +1687,24 @@ class App extends Component {
   }
 
   // High-frequency position updates from pan/zoom. Intentionally NOT setState:
-  // position is only needed for the URL + persistence, not for rendering, so we
-  // keep it in an imperative holder and update the URL directly. This avoids the
-  // full App/Map re-render that made panning janky.
-  onMapPositionChange(pos) {
-    if (pos && Number.isFinite(pos.lat) && Number.isFinite(pos.lng)) {
-      this.mapPosition = { lat: pos.lat, lng: pos.lng, zoom: pos.zoom };
-    }
+  // position is only needed for the URL + persistence, not for rendering, and
+  // updateURL reads the live position straight off the map (see getCurrentViewport),
+  // so we just update the URL directly. This avoids the full App/Map re-render
+  // that made panning janky.
+  onMapPositionChange() {
     this.debouncedUpdateURL();
   }
 
   // Single source of truth for the current viewport. Prefers the live map (always
-  // accurate), falling back to the imperative holder / state before the map mounts.
+  // accurate), falling back to state before the map mounts.
   getCurrentViewport() {
     const map = this.state.map;
     if (map && typeof map.getCenter === 'function') {
       const c = map.getCenter();
       return { lat: c.lat, lng: c.lng, zoom: map.getZoom() };
     }
-    // Map not mounted: prefer state so state-driven viewport changes (city switch,
-    // URL params) take precedence over a potentially stale imperative holder.
+    // Map not mounted: state-driven viewport changes (city switch, URL params,
+    // async slug resolution) are the only source of truth until then.
     return {
       lat: this.state.lat,
       lng: this.state.lng,
@@ -1729,11 +1720,7 @@ class App extends Component {
 
   onMapMoved(newState) {
     // Area/city change path (rare): this DOES go through setState because `area`
-    // is rendered and drives data loading. Keep the imperative position holder in
-    // sync so URL/persistence stay correct even before the next pan.
-    if (newState && Number.isFinite(newState.lat) && Number.isFinite(newState.lng)) {
-      this.mapPosition = { lat: newState.lat, lng: newState.lng, zoom: newState.zoom };
-    }
+    // is rendered and drives data loading.
     // This does NOT control the map - the map manages its own position
     requestAnimationFrame(() => {
       const nextState = { ...newState };
