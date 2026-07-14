@@ -42,6 +42,30 @@ Create a `.env` file in the project root (or set these in your environment) for 
 - `REACT_APP_MAPBOX_ACCESS_TOKEN` — Mapbox map tiles and geocoding
 - `REACT_APP_OPENROUTESERVICE_API_KEY` — Route calculations (OpenRouteService)
 - `REACT_APP_GOOGLE_PLACES_API_KEY` — Place autocomplete in the directions panel (optional)
+- `REACT_APP_PMTILES_URL` / `REACT_APP_PMTILES_FILENAME` — Vector tile archive served from S3 (see `.env.example`)
+
+### PMtiles data pipeline
+
+Generation already lives in `scripts/`:
+
+1. **`scripts/overpass-to-geojson.js`** — fetch one area from Overpass → GeoJSON (`yarn overpass -- --area "Brazil"`)
+2. **`scripts/generate-pmtiles.js`** — combine multiple areas into one `.pmtiles` via tippecanoe (`yarn generate-pmtiles -- --areas "Brazil" --output br.pmtiles`). By default excludes **Baixa velocidade**, **Trilha**, and **Proibido** (same as the app's non-PMTiles layers).
+
+To **batch the main regional builds and upload to S3**, use the thin wrapper on top of those scripts:
+
+```bash
+yarn pmtiles:list              # show regional builds (scripts/pmtiles-builds.json)
+yarn pmtiles:sync:dry-run      # preview generate + upload steps
+yarn pmtiles:sync --build br   # runs generate-pmtiles for Brazil, then uploads to S3
+```
+
+Or generate locally without S3:
+
+```bash
+yarn generate-pmtiles -- --areas "Latin America,es_pt" --output la_es_pt.pmtiles
+```
+
+For S3 upload from CI, set AWS secrets and run `.github/workflows/pmtiles.yml`. See `.env.example` for `AWS_*` and optional `CICLOMAPA_FROM`. Each sync run prints a before/after report (S3 vs new build) and saves JSON under `.pmtiles-work/reports/`.
 
 To clone the repository and install everything:
 
