@@ -441,7 +441,6 @@ class Map extends Component {
         filter: filters,
         description: l.description,
         type: 'circle',
-        minzoom: MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD,
         maxzoom: l.zoomThreshold,
         paint: {
           'circle-radius': ['interpolate', ['exponential', 1.5], ['zoom'], 12, 2, 15, 4],
