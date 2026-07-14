@@ -196,7 +196,7 @@ export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 12;
 //   la.pmtiles
 //   de.pmtiles
 //   europe.pmtiles (???)
-const DEFAULT_PMTILES_FILENAME = 'la_es_pt.pmtiles';
+const DEFAULT_PMTILES_FILENAME = 'brazil-spain-poi.pmtiles';
 export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAULT_PMTILES_FILENAME;
 
 /*
@@ -231,7 +231,6 @@ export const DISABLE_LOCAL_STORAGE = true;
 const URL_PARAMS = new URLSearchParams(window.location.search);
 export const FORCE_RECALCULATE_LENGTHS_ALWAYS = URL_PARAMS.get('debug') === 'true';
 
-export const USE_GEOJSON_SOURCE = false;
 export const USE_PMTILES_SOURCE = true;
 
 // Providers
