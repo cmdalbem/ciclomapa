@@ -140,10 +140,6 @@ class App extends Component {
       !initialHasCitySlug;
 
     this.state = this.buildInitialState();
-
-    if (this.state.mapBootReady) {
-      this.updateData();
-    }
   }
 
   buildInitialState() {
@@ -1682,9 +1678,7 @@ class App extends Component {
 
   startDeferredMapBoot() {
     if (this.state.mapBootReady) return;
-    this.setState({ mapBootReady: true }, () => {
-      this.updateData();
-    });
+    this.setState({ mapBootReady: true });
   }
 
   componentDidMount() {
