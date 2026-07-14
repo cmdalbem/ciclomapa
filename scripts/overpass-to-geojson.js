@@ -36,6 +36,7 @@ const pkg = require('../package.json');
 const OVERPASS_SERVERS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 
 const DEFAULT_OVERPASS_ENDPOINT = OVERPASS_SERVERS[0];

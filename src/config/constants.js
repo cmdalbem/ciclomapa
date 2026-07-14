@@ -31,6 +31,7 @@ export const CITY_SWITCHER_MINI_CHART_LAYER_IDS = ['ciclovia', 'ciclofaixa'];
 export const OVERPASS_SERVERS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 
 export const AREA_ID_OVERRIDES = {

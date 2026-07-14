@@ -18,17 +18,16 @@ import {
   withApiOutageSkip,
 } from './apiSmokeWarnings';
 
-const NOMINATIM_UA =
-  'CicloMapa-E2E/1.0 (https://ciclomapa.app; contact: contato@ciclomapa.org.br)';
+const NOMINATIM_UA = 'CicloMapa-E2E/1.0 (https://ciclomapa.app; contact: contato@ciclomapa.org.br)';
 
 /**
  * Curated mirrors for smoke tests (TLS + reachability). The app uses a longer list in
  * src/config/constants.js including instances that block automation or have cert issues.
  */
 const OVERPASS_SERVERS = [
-  'https://overpass.openstreetmap.fr/api/interpreter',
   'https://overpass-api.de/api/interpreter',
   'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 
 const OVERPASS_SMOKE_QUERY = '[out:json][timeout:45];node(1);out;';
