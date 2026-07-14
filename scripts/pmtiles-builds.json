@@ -1,0 +1,67 @@
+{
+  "builds": [
+    {
+      "id": "br",
+      "output": "br.pmtiles",
+      "areas": ["Brazil"],
+      "description": "Production — Brazil only"
+    },
+    {
+      "id": "la",
+      "output": "la.pmtiles",
+      "areas": ["Latin America"],
+      "description": "Latin America only (excludes Brazil)"
+    },
+    {
+      "id": "la_es_pt",
+      "output": "la_es_pt.pmtiles",
+      "areas": ["Latin America", "es_pt"],
+      "description": "Preview default — Latin America + Spain + Portugal"
+    },
+    {
+      "id": "br_es_pt",
+      "output": "br_es_pt.pmtiles",
+      "areas": ["Brazil", "es_pt"],
+      "description": "Brazil + Spain + Portugal"
+    },
+    {
+      "id": "de",
+      "output": "de.pmtiles",
+      "areas": ["Germany"],
+      "description": "Germany"
+    },
+    {
+      "id": "europe",
+      "output": "europe.pmtiles",
+      "areas": ["europe"],
+      "description": "Western/Northern Europe bundle (see AREA_ALIASES in generate-pmtiles.js)"
+    },
+    {
+      "id": "colombia",
+      "output": "colombia.pmtiles",
+      "areas": ["Colombia"],
+      "description": "Test build — Colombia"
+    },
+    {
+      "id": "barcelona-poi",
+      "output": "barcelona-poi.pmtiles",
+      "areas": ["Barcelona"],
+      "includePoi": true,
+      "description": "Barcelona city — cycle layers + POIs (non-standard)"
+    },
+    {
+      "id": "spain-poi",
+      "output": "spain-poi.pmtiles",
+      "areas": ["Spain"],
+      "includePoi": true,
+      "description": "Spain — cycle layers + POIs (non-standard)"
+    },
+    {
+      "id": "brazil-poi",
+      "output": "brazil-poi.pmtiles",
+      "areas": ["Brazil"],
+      "includePoi": true,
+      "description": "Brazil — cycle layers + POIs (non-standard)"
+    }
+  ]
+}
