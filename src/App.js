@@ -73,6 +73,10 @@ class App extends Component {
   _storage = null;
   osmController = OSMController;
   currentOSMRequest = null;
+  // Tracks which area's GeoJSON is currently loaded/in-flight, so ensureCityDataLoaded()
+  // can avoid redundant Firestore/Overpass hits when data is deferred (see updateData()).
+  _geoJsonLoadedArea = null;
+  _geoJsonLoadingArea = null;
   deferredCityFocus = null;
   // Fly-to target from the `?flyto=lat,lng[,zoom]` URL param; consumed when the map mounts.
   pendingFlyToTarget = null;
@@ -95,6 +99,7 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.updateData = this.updateData.bind(this);
+    this.ensureCityDataLoaded = this.ensureCityDataLoaded.bind(this);
     this.onMapStyleChange = this.onMapStyleChange.bind(this);
     this.onMapShowSatelliteChanged = this.onMapShowSatelliteChanged.bind(this);
     this.onMapMoved = this.onMapMoved.bind(this);
@@ -352,6 +357,9 @@ class App extends Component {
 
   toggleSidebar(state) {
     this.setState({ isSidebarOpen: state });
+    if (state) {
+      this.ensureCityDataLoaded();
+    }
   }
 
   openAboutModal() {
@@ -1252,6 +1260,11 @@ class App extends Component {
             lengths: lengths,
           });
 
+          this._geoJsonLoadedArea = areaName;
+          if (this._geoJsonLoadingArea === areaName) {
+            this._geoJsonLoadingArea = null;
+          }
+
           appNotification.destroy();
 
           // notification.success({
@@ -1269,6 +1282,10 @@ class App extends Component {
         this.setState({
           loading: false,
         });
+
+        if (this._geoJsonLoadingArea === areaName) {
+          this._geoJsonLoadingArea = null;
+        }
 
         appNotification.destroy();
 
@@ -1313,7 +1330,7 @@ class App extends Component {
         const storageKey = this.getStorageKeyForArea(area);
         const cacheLoadToken = startDataLoad('geojson-cache', 'GeoJSON (cache)', { area });
         this.getStorage()
-          .load(this.state.area, { storageKey })
+          .load(area, { storageKey })
           .then((data) => {
             if (data) {
               finishDataLoad('geojson-cache', {
@@ -1348,10 +1365,13 @@ class App extends Component {
                 lengths: data.lengths,
                 dataUpdatedAt: new Date(data.updatedAt),
               });
+
+              this._geoJsonLoadedArea = area;
+              if (this._geoJsonLoadingArea === area) {
+                this._geoJsonLoadingArea = null;
+              }
             } else {
-              console.debug(
-                `Couldn't find previously saved data for area ${this.state.area}, hitting OSM...`
-              );
+              console.debug(`Couldn't find previously saved data for area ${area}, hitting OSM...`);
 
               finishDataLoad('geojson-cache', {
                 token: cacheLoadToken,
@@ -1369,7 +1389,11 @@ class App extends Component {
           })
           .catch((e) => {
             console.error(e);
-            finishDataLoad('geojson-cache', { token: cacheLoadToken, error: e, meta: { area } });
+            finishDataLoad('geojson-cache', { error: e, meta: { area } });
+
+            if (this._geoJsonLoadingArea === area) {
+              this._geoJsonLoadingArea = null;
+            }
             // notification['error']({
             //     message: 'Erro',
             //     description:
@@ -1380,6 +1404,19 @@ class App extends Component {
     } else {
       this.setState({ loading: false });
     }
+  }
+
+  // Map rendering runs entirely off the regional PMTiles, so per-city GeoJSON is only
+  // needed by routing coverage, analytics/km stats, and the GeoJSON export. Call this
+  // right before any of those features are used instead of loading eagerly on every
+  // city change.
+  ensureCityDataLoaded() {
+    const area = this.state.area;
+    if (!area || this._geoJsonLoadedArea === area || this._geoJsonLoadingArea === area) {
+      return;
+    }
+    this._geoJsonLoadingArea = area;
+    this.updateData();
   }
 
   onMapStyleChange(newMapStyle) {
@@ -1425,6 +1462,17 @@ class App extends Component {
   }
 
   downloadData() {
+    if (!this.state.geoJson) {
+      // Data is loaded on-demand (see ensureCityDataLoaded); if the user clicks
+      // download before it's ready, kick off the load and ask them to retry shortly.
+      this.ensureCityDataLoaded();
+      appNotification.info({
+        title: 'Só um momento',
+        description: 'Ainda estamos carregando os dados desta cidade. Tente novamente em breve.',
+      });
+      return;
+    }
+
     Analytics.event('purchase', {
       items: [
         {
@@ -1496,7 +1544,18 @@ class App extends Component {
 
       this.recordRecentlyVisitedCity(this.state.area);
 
-      this.updateData();
+      // Map rendering is driven entirely by PMTiles, so per-city GeoJSON is no longer
+      // fetched eagerly on every city change (see ensureCityDataLoaded). Just clear out
+      // the previous city's data/in-flight tracking; Analytics/Routing/Export will
+      // (re)request it on demand. If one of those panels is already open, though, it
+      // needs data for the *new* city right away.
+      this.abortCurrentOSMRequest();
+      this._geoJsonLoadedArea = null;
+      this._geoJsonLoadingArea = null;
+      this.setState({ geoJson: null, lengths: {}, dataUpdatedAt: null });
+      if (this.state.isSidebarOpen || this.state.isDirectionsPanelOpen) {
+        this.ensureCityDataLoaded();
+      }
 
       if (Array.isArray(this.state.airtableMetadataRecords)) {
         this.syncAirtableCityFields();
@@ -1510,7 +1569,9 @@ class App extends Component {
         });
       }
 
-      document.querySelector('.city-picker span')?.setAttribute('style', 'opacity: 1');
+      if (!IS_MOBILE) {
+        document.querySelector('.city-picker span')?.setAttribute('style', 'opacity: 1');
+      }
 
       // Only redo the query if we need new data
       // if (!doesAContainsB(largestBoundsYet, newBounds)) {
@@ -1799,6 +1860,9 @@ class App extends Component {
 
   onDirectionsPanelToggle(isOpen) {
     this._isDirectionsPanelOpen = isOpen;
+    if (isOpen) {
+      this.ensureCityDataLoaded();
+    }
   }
 
   setFromPoint = (point) => {
