@@ -339,8 +339,10 @@ a {
   }
 }
 
+// Mobile: opaque panels without blur (backdrop-filter is costly on phones).
+// Desktop (≥480px): original translucent glass with blur.
 .glass-bg {
-  // backdrop-filter: blur(32px);
+  // no blur on mobile
 }
 
 .cm-favorite-heart {
@@ -365,6 +367,25 @@ body.theme-dark .cm-favorite-heart {
     --glass-bg-opacity: 0.8;
     background: rgba(23, 23, 23, var(--glass-bg-opacity));
     border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+@media (min-width: 480px) {
+  .glass-bg {
+    backdrop-filter: blur(32px);
+  }
+
+  .theme-light {
+    .glass-bg {
+      --glass-bg-opacity: 0.5;
+      background: rgba(255, 255, 255, var(--glass-bg-opacity));
+    }
+  }
+
+  .theme-dark {
+    .glass-bg {
+      --glass-bg-opacity: 0.2;
+    }
   }
 }
 

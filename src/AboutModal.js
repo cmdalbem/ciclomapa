@@ -231,7 +231,6 @@ function AboutModal({
             visible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
           ].join(' ')}
           style={{
-            '--glass-bg-opacity': '0.6',
             maxHeight: 'calc(100vh - max(1rem, env(safe-area-inset-top)))',
             paddingBottom: 'max(1.75rem, env(safe-area-inset-bottom))',
             WebkitOverflowScrolling: 'touch',
