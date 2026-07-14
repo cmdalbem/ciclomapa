@@ -103,8 +103,8 @@ export const ENABLE_SATELLITE_TOGGLE = false;
 
 export const SUPPORTED_COUNTRIES = Object.freeze([
   { code: 'br', labelPt: 'Brasil', flag: '🇧🇷' },
-  { code: 'pt', labelPt: 'Portugal', flag: '🇵🇹' },
-  { code: 'es', labelPt: 'Espanha', flag: '🇪🇸' },
+  // { code: 'pt', labelPt: 'Portugal', flag: '🇵🇹' },
+  // { code: 'es', labelPt: 'Espanha', flag: '🇪🇸' },
   // { code: 'ar', labelPt: 'Argentina', flag: '🇦🇷' },
   // { code: 'bo', labelPt: 'Bolívia', flag: '🇧🇴' },
   // { code: 'cl', labelPt: 'Chile', flag: '🇨🇱' },
