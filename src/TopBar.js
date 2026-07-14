@@ -175,13 +175,22 @@ function TopBar(props) {
                     block={IS_MOBILE}
                     size={IS_MOBILE ? 'large' : 'middle'}
                     onClick={showCityPicker}
+                    aria-label={
+                      IS_MOBILE
+                        ? `Buscar cidade ou endereço. Cidade atual: ${city}, ${state}`
+                        : undefined
+                    }
                   >
                     <h2 className="flex items-center gap-1 m-0 sm:w-auto w-full min-w-0">
                       <IconSearch className="opacity-60 flex-shrink-0 -ml-1" aria-hidden />
 
-                      <span>
-                        {city}, {state}
-                      </span>
+                      {IS_MOBILE ? (
+                        <span className="opacity-60 truncate">Buscar cidade ou endereço</span>
+                      ) : (
+                        <span>
+                          {city}, {state}
+                        </span>
+                      )}
                     </h2>
                   </Button>
                   {loading && (
