@@ -319,8 +319,10 @@ function detectDoubleWayBikePaths(l, segments) {
 }
 
 export function calculateLayersLengths(geoJson, layers, strategy) {
-  // Skipped on mobile (heavy); callers treat an empty result as "no fresh lengths".
+  // Length math is skipped on mobile (heavy); callers treat an empty result as "no fresh lengths".
+  // Still classify typologies so route coverage and cached geoJson keep feature.properties.type.
   if (IS_MOBILE) {
+    computeTypologies(geoJson, layers);
     return {};
   }
 

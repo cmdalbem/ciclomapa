@@ -1,4 +1,13 @@
-import { angleBetweenPoints, angleToEmojiDirection } from './utils/geojsonUtils.js';
+import {
+  angleBetweenPoints,
+  angleToEmojiDirection,
+  calculateLayersLengths,
+} from './utils/geojsonUtils.js';
+
+jest.mock('./config/constants.js', () => ({
+  ...jest.requireActual('./config/constants.js'),
+  IS_MOBILE: true,
+}));
 
 describe('angleBetweenPoints', () => {
   it('returns angle in degrees between two points', () => {
@@ -14,5 +23,42 @@ describe('angleToEmojiDirection', () => {
   });
   it('returns up arrow for ~90 degrees', () => {
     expect(angleToEmojiDirection(90)).toBe('⬆️');
+  });
+});
+
+describe('calculateLayersLengths on mobile', () => {
+  it('classifies typologies but skips length math', () => {
+    const geoJson = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { id: 1, highway: 'cycleway', cycleway: 'track' },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [0.01, 0],
+            ],
+          },
+        },
+      ],
+    };
+    const layers = [
+      {
+        id: 'ciclovia',
+        name: 'Ciclovia',
+        type: 'way',
+        filters: [
+          ['highway', 'cycleway'],
+          ['cycleway', 'track'],
+        ],
+      },
+    ];
+
+    const lengths = calculateLayersLengths(geoJson, layers, 'average');
+
+    expect(lengths).toEqual({});
+    expect(geoJson.features[0].properties.type).toBe('Ciclovia');
   });
 });
