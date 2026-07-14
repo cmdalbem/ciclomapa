@@ -444,12 +444,20 @@ class Map extends Component {
         type: 'circle',
         maxzoom: l.zoomThreshold,
         paint: {
-          'circle-radius': ['interpolate', ['exponential', 1.5], ['zoom'], 12, 2, 15, 4],
+          'circle-radius': [
+            'interpolate',
+            ['exponential', 1.5],
+            ['zoom'],
+            12,
+            IS_MOBILE ? 1 : 2,
+            15,
+            4,
+          ],
           'circle-color': adjustColorBrightness(
             l.style.textColor,
             this.props.isDarkMode ? 0.2 : 0.2
           ),
-          'circle-stroke-width': ['interpolate', ['exponential', 1.5], ['zoom'], 12, 0, 15, 2],
+          'circle-stroke-width': ['interpolate', ['exponential', 1.5], ['zoom'], 12, 0.5, 15, 2],
           'circle-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.7, 1.0],
           'circle-stroke-color': this.props.isDarkMode
             ? MAP_COLORS.DARK.STROKE
