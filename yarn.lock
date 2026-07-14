@@ -3674,7 +3674,7 @@
 
 "@types/leaflet@^1.9.8":
   version "1.9.21"
-  resolved "https://registry.npmjs.org/@types/leaflet/-/leaflet-1.9.21.tgz"
+  resolved "https://registry.yarnpkg.com/@types/leaflet/-/leaflet-1.9.21.tgz#542e8f91250bc444f8a1416d472f5b518d83e979"
   integrity sha512-TbAd9DaPGSnzp6QvtYngntMZgcRk+igFELwR2N99XZn7RXUdKgsXMR+28bUO0rPsWp8MIu/f47luLIQuSLYv/w==
   dependencies:
     "@types/geojson" "*"
@@ -3683,13 +3683,6 @@
   version "4.0.2"
   resolved "https://registry.npmjs.org/@types/long/-/long-4.0.2.tgz"
   integrity sha512-MqTGEo5bj5t157U6fA/BiDynNkn0YknVdh48CMPkTSpFTVmvao5UQmm7uEF6xBEo7qIMAlY/JSleYaE6VOdpaA==
-
-"@types/mapbox-gl@^2.7.21":
-  version "2.7.21"
-  resolved "https://registry.npmjs.org/@types/mapbox-gl/-/mapbox-gl-2.7.21.tgz"
-  integrity sha512-Dx9MuF2kKgT/N22LsMUB4b3acFZh9clVqz9zv1fomoiPoBrJolwYxpWA/9LPO/2N0xWbKi4V+pkjTaFkkx/4wA==
-  dependencies:
-    "@types/geojson" "*"
 
 "@types/mime@^1":
   version "1.3.5"
@@ -7609,7 +7602,7 @@ fdir@^6.5.0:
 
 fflate@^0.8.0:
   version "0.8.3"
-  resolved "https://registry.npmjs.org/fflate/-/fflate-0.8.3.tgz"
+  resolved "https://registry.yarnpkg.com/fflate/-/fflate-0.8.3.tgz#bc27d8eb30343d4d512abb03480202ce65d825fc"
   integrity sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==
 
 file-entry-cache@^6.0.1:
@@ -10186,7 +10179,7 @@ map-obj@^4.0.0:
   resolved "https://registry.npmjs.org/map-obj/-/map-obj-4.3.0.tgz"
   integrity sha512-hdN1wVrZbb29eBGiGjJbeP8JbKjq1urkHJ/LIP/NY48MZ1QVXUsQBV1G1zvYFHn1XE06cwjBsOI2K3Ulnj1YXQ==
 
-mapbox-gl@^3.1.2, mapbox-gl@^3.19.1:
+mapbox-gl@^3.19.1:
   version "3.24.0"
   resolved "https://registry.npmjs.org/mapbox-gl/-/mapbox-gl-3.24.0.tgz"
   integrity sha512-R+FdFUB3DnoE5FYASV7lGSiRyMkSblcZ2UEy7b2pt7s5ZbCxFIUPXd0E6iAFd8OdvdA2VtbvZZVylzAZNaurjA==
@@ -10213,15 +10206,6 @@ mapbox-gl@^3.1.2, mapbox-gl@^3.19.1:
     quickselect "^3.0.0"
     supercluster "^8.0.1"
     tinyqueue "^3.0.0"
-
-mapbox-pmtiles@^1.0.54:
-  version "1.0.56"
-  resolved "https://registry.npmjs.org/mapbox-pmtiles/-/mapbox-pmtiles-1.0.56.tgz"
-  integrity sha512-DcMj0ZpDypMskqU4WSNTlt+2ACTihK/qjtWnyVnJF51f5F5fDLxFUWzRgEn4utSvSuynm5+vlJt+k8U83xuVsQ==
-  dependencies:
-    "@types/mapbox-gl" "^2.7.21"
-    mapbox-gl "^3.1.2"
-    pmtiles "^3.0.3"
 
 martinez-polygon-clipping@^0.8.1:
   version "0.8.1"
@@ -11255,9 +11239,9 @@ playwright@1.60.0:
   optionalDependencies:
     fsevents "2.3.2"
 
-pmtiles@^3.0.3:
+pmtiles@^3.2.1:
   version "3.2.1"
-  resolved "https://registry.npmjs.org/pmtiles/-/pmtiles-3.2.1.tgz"
+  resolved "https://registry.yarnpkg.com/pmtiles/-/pmtiles-3.2.1.tgz#0ef79982ccf6052eeb9301ce7d161996c0b193de"
   integrity sha512-3R4fBwwoli5mw7a6t1IGwOtfmcSAODq6Okz0zkXhS1zi9sz1ssjjIfslwPvcWw5TNhdjNBUg9fgfPLeqZlH6ng==
   dependencies:
     "@types/leaflet" "^1.9.8"
