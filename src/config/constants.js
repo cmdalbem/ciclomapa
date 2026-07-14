@@ -60,6 +60,12 @@ export {
 } from './design-tokens.js';
 
 /*
+ * Environment
+ */
+
+export const IS_PROD = window.location.hostname === 'ciclomapa.app';
+
+/*
  * Routing
  */
 
@@ -101,10 +107,12 @@ export const ENABLE_COMMENTS = true;
 export const ENABLE_BOUNDARY_LAYER = false;
 export const ENABLE_SATELLITE_TOGGLE = false;
 
-export const SUPPORTED_COUNTRIES = Object.freeze([
+const SUPPORTED_COUNTRIES_PROD = Object.freeze([{ code: 'br', labelPt: 'Brasil', flag: '🇧🇷' }]);
+
+const SUPPORTED_COUNTRIES_PREVIEW = Object.freeze([
   { code: 'br', labelPt: 'Brasil', flag: '🇧🇷' },
-  // { code: 'pt', labelPt: 'Portugal', flag: '🇵🇹' },
-  // { code: 'es', labelPt: 'Espanha', flag: '🇪🇸' },
+  { code: 'pt', labelPt: 'Portugal', flag: '🇵🇹' },
+  { code: 'es', labelPt: 'Espanha', flag: '🇪🇸' },
   // { code: 'ar', labelPt: 'Argentina', flag: '🇦🇷' },
   // { code: 'bo', labelPt: 'Bolívia', flag: '🇧🇴' },
   // { code: 'cl', labelPt: 'Chile', flag: '🇨🇱' },
@@ -115,6 +123,8 @@ export const SUPPORTED_COUNTRIES = Object.freeze([
   // { code: 'uy', labelPt: 'Uruguai', flag: '🇺🇾' },
   // { code: 've', labelPt: 'Venezuela', flag: '🇻🇪' },
 ]);
+
+export const SUPPORTED_COUNTRIES = IS_PROD ? SUPPORTED_COUNTRIES_PROD : SUPPORTED_COUNTRIES_PREVIEW;
 
 export const SUPPORTED_COUNTRY_CODES = Object.freeze(SUPPORTED_COUNTRIES.map((c) => c.code));
 
@@ -192,8 +202,6 @@ export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAUL
 /*
  * Debug & local development
  */
-
-export const IS_PROD = window.location.hostname === 'ciclomapa.app';
 
 export const ENABLE_OFFICIAL_CITY_HALL_METRICS_COMPARISON =
   process.env.REACT_APP_ENABLE_OFFICIAL_CITY_HALL_METRICS === 'true'
