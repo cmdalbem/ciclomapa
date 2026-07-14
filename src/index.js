@@ -6,6 +6,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { getCssCustomProperties } from './config/design-tokens.js';
 import { IS_PROD } from './config/constants.js';
 import { PRIVACY_POLICY_PATH } from './config/routes.js';
+import { setPendingUpdate, shouldReloadForSwUpdate } from './pwaUpdate.js';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // Self-hosted fonts (non-blocking: loaded with the JS entry, not render-blocking <link> in HTML).
@@ -101,7 +102,7 @@ root.render(
 );
 
 // --- Service Worker update lifecycle ---
-// On update, activate the new SW immediately; controllerchange handler reloads once.
+// Show PwaUpdateBanner when an update is waiting; reload only after the user accepts.
 let hasReloadedForSwUpdate = false;
 if ('serviceWorker' in navigator) {
   const hadControllerOnLoad = Boolean(navigator.serviceWorker.controller);
@@ -109,6 +110,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (hasReloadedForSwUpdate) return;
     if (!hadControllerOnLoad) return;
+    if (!shouldReloadForSwUpdate()) return;
     hasReloadedForSwUpdate = true;
     window.location.reload();
   });
@@ -142,9 +144,6 @@ window.addEventListener('unhandledrejection', (event) => {
 // Register service worker (production only).
 serviceWorkerRegistration.register({
   onUpdate: (registration) => {
-    const waiting = registration?.waiting;
-    if (waiting) {
-      waiting.postMessage({ type: 'SKIP_WAITING' });
-    }
+    setPendingUpdate(registration);
   },
 });

@@ -4,6 +4,7 @@ import debounce from 'lodash.debounce';
 
 import { appNotification } from './antdNotification';
 import AntdAppShell from './components/AntdAppShell.jsx';
+import PwaUpdateBanner from './PwaUpdateBanner.jsx';
 
 import { MdRemove as IconRemove, MdAdd as IconAdd } from 'react-icons/md';
 
@@ -1956,6 +1957,7 @@ class App extends Component {
     };
     return (
       <AntdAppShell isDarkMode={this.state.isDarkMode}>
+        <PwaUpdateBanner isDarkMode={this.state.isDarkMode} />
         <DirectionsProvider>
           <AppLayout
             state={this.state}
