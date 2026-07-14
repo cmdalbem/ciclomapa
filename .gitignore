@@ -19,6 +19,7 @@ npm-shrinkwrap.json
 # CicloMapa-specific
 *.geojson
 *.pmtiles
+.pmtiles-work/
 test-results/
 playwright-report/
 blob-report/
