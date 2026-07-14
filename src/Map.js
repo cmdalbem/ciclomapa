@@ -5,7 +5,6 @@ import mapboxgl from 'mapbox-gl';
 import turfBbox from '@turf/bbox';
 import turfCircle from '@turf/circle';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { PmTilesSource } from 'mapbox-pmtiles';
 
 import { startDataLoad, finishDataLoad } from './dev/dataLoadTracker.js';
 import {
@@ -150,6 +149,7 @@ class Map extends Component {
 
     // Track geojson feature IDs to hide from pmtiles layers
     this.geojsonFeatureIds = new Set();
+    this.layersInitialized = false;
 
     // Create debounced map state sync function (only syncs if place name has been consistent for 1+ second).
     // geocodeRequestTime is the timestamp of the reverseGeocode call that produced the placeName;
@@ -298,8 +298,8 @@ class Map extends Component {
       ),
     ];
 
-    // For pmtiles layers, combine with geojson feature ID hiding filter
-    if (sourceId === 'pmtiles-source' && this.geojsonFeatureIds.size > 0) {
+    // For pmtiles layers, hide features already shown via GeoJSON (dual-source mode only).
+    if (USE_GEOJSON_SOURCE && sourceId === 'pmtiles-source' && this.geojsonFeatureIds.size > 0) {
       const idsToHide = Array.from(this.geojsonFeatureIds);
       const hideFilter = [
         '!',
@@ -316,6 +316,8 @@ class Map extends Component {
   }
 
   hideGeoJsonFromPmtiles(geoJsonData) {
+    if (!USE_GEOJSON_SOURCE) return;
+
     // Extract feature IDs from geojson data
     const featureIds = new Set();
 
@@ -420,6 +422,8 @@ class Map extends Component {
   }
 
   initPOILayerForSource(l, sourceId) {
+    if (!this.map.getSource(sourceId)) return;
+
     const filters = this.convertFilterToMapboxFilter(l, sourceId);
 
     const sourceLayer = sourceId === 'osmdata' ? '' : 'default';
@@ -530,54 +534,44 @@ class Map extends Component {
         return;
       }
 
-      if (interactionType === 'mouseenter' && e.features.length > 0) {
-        self.map.getCanvas().style.cursor = 'pointer';
-
-        if (self.hoveredPOI) {
-          self.map.setFeatureState(
-            {
-              source: sourceId,
-              sourceLayer: sourceLayer,
-              id: self.hoveredPOI,
-            },
-            { hover: false }
-          );
-        }
-        self.hoveredPOI = e.features[0].id;
+      const clearHoveredPoi = () => {
+        if (self.hoveredPOI == null) return;
         self.map.setFeatureState(
           {
             source: sourceId,
             sourceLayer: sourceLayer,
             id: self.hoveredPOI,
           },
+          { hover: false }
+        );
+      };
+
+      if (interactionType === 'mouseenter' && e.features.length > 0) {
+        const feature = e.features[0];
+        const featureId = feature.id ?? feature.properties?.id ?? feature.properties?.['@id'];
+        if (featureId == null) return;
+
+        self.map.getCanvas().style.cursor = 'pointer';
+        clearHoveredPoi();
+        self.hoveredPOI = featureId;
+        self.map.setFeatureState(
+          {
+            source: sourceId,
+            sourceLayer: sourceLayer,
+            id: featureId,
+          },
           { hover: true }
         );
       } else if (interactionType === 'mouseleave') {
-        if (self.hoveredPOI) {
+        if (self.hoveredPOI != null) {
           self.map.getCanvas().style.cursor = '';
-
-          self.map.setFeatureState(
-            {
-              source: sourceId,
-              sourceLayer: sourceLayer,
-              id: self.hoveredPOI,
-            },
-            { hover: false }
-          );
+          clearHoveredPoi();
         }
         self.hoveredPOI = null;
       } else if (interactionType === 'click') {
         if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-          if (self.hoveredPOI) {
-            self.map.setFeatureState(
-              {
-                source: sourceId,
-                sourceLayer: sourceLayer,
-                id: self.hoveredPOI,
-              },
-              { hover: false }
-            );
-          }
+          clearHoveredPoi();
+          self.hoveredPOI = null;
           self.popups.showPOIPopup(e, iconsMap[l.icon + '-2x'], l.icon);
           self.focusFeatureOnMobile(e.features[0]);
         }
@@ -888,6 +882,8 @@ class Map extends Component {
   }
 
   initCyclepathLayerForSource(l, sourceId) {
+    if (!this.map.getSource(sourceId)) return;
+
     const filters = this.convertFilterToMapboxFilter(l, sourceId);
 
     const layerUnderneathName = this.getLayerUnderneathName(this.map);
@@ -1406,24 +1402,13 @@ class Map extends Component {
       const pmtilesLoadToken = startDataLoad('pmtiles', 'PMTiles', { file: PMTILES_FILENAME });
       try {
         const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + PMTILES_FILENAME;
-        console.log('Loading PMTiles from S3:', PMTILES_URL);
-
-        const header = await PmTilesSource.getHeader(PMTILES_URL);
-        console.log(
-          'PMTiles loaded - bounds:',
-          [header.minLon, header.minLat, header.maxLon, header.maxLat],
-          'zoom:',
-          header.minZoom + '-' + header.maxZoom
-        );
-
-        const bounds = [header.minLon, header.minLat, header.maxLon, header.maxLat];
+        console.log('Loading PMTiles (native vector source):', PMTILES_URL);
 
         this.map.addSource('pmtiles-source', {
-          type: PmTilesSource.SOURCE_TYPE,
+          type: 'vector',
           url: PMTILES_URL,
-          minzoom: header.minZoom,
-          maxzoom: header.maxZoom,
-          bounds: bounds,
+          lineMetrics: true,
+          promoteId: 'id',
         });
 
         console.log('PMTiles source added successfully');
@@ -1440,7 +1425,7 @@ class Map extends Component {
           },
         });
       } catch (error) {
-        console.error('Error setting up PmTiles for cyclepaths:', error);
+        console.error('Error setting up PMTiles source:', error);
         this.pmtilesLoadedSuccessfully = false;
         finishDataLoad('pmtiles', {
           token: pmtilesLoadToken,
@@ -1464,53 +1449,58 @@ class Map extends Component {
   async initGeojsonLayers(layers) {
     const map = this.map;
 
-    // @todo Better way to check if layers are already initialized
-    if (!map.getSource('osmdata')) {
-      await this.initializeDataSources();
+    if (this.layersInitialized) {
+      console.warn('Map layers already initialized.');
+      return;
+    }
 
-      if (!map.getSource('commentsSrc')) {
-        map.addSource('commentsSrc', {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection',
-            features: [],
-          },
-          generateId: true,
-        });
-      }
+    await this.initializeDataSources();
 
-      if (!map.getSource('favoritesSrc')) {
-        map.addSource('favoritesSrc', {
-          type: 'geojson',
-          data: { type: 'FeatureCollection', features: [] },
-        });
-      }
+    if (!map.getSource('commentsSrc')) {
+      map.addSource('commentsSrc', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: [],
+        },
+        generateId: true,
+      });
+    }
 
-      // layers.json is ordered from most to least important, but we
-      //   want the most important ones to be on top so we add in reverse.
-      // Slice is used here to don't destructively reverse the original array.
-      layers
-        .slice()
-        .reverse()
-        .forEach((l) => {
-          if (!l.type || l.type === 'way') {
-            if (this.pmtilesLoadedSuccessfully) {
-              this.initCyclepathLayerForSource(l, 'pmtiles-source');
-            }
+    if (!map.getSource('favoritesSrc')) {
+      map.addSource('favoritesSrc', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+    }
 
+    // layers.json is ordered from most to least important, but we
+    //   want the most important ones to be on top so we add in reverse.
+    // Slice is used here to don't destructively reverse the original array.
+    layers
+      .slice()
+      .reverse()
+      .forEach((l) => {
+        if (!l.type || l.type === 'way') {
+          if (this.pmtilesLoadedSuccessfully) {
+            this.initCyclepathLayerForSource(l, 'pmtiles-source');
+          }
+
+          if (USE_GEOJSON_SOURCE) {
             this.initCyclepathLayerForSource(l, 'osmdata');
-          } else if (l.type === 'poi' && l.filters) {
-            // Mapbox doesn't support symbol layers for pmtiles
-            // if (this.pmtilesLoadedSuccessfully) {
-            //     this.initPOILayerForSource(l, 'pmtiles-source');
-            // }
+          }
+        } else if (l.type === 'poi' && l.filters) {
+          if (this.pmtilesLoadedSuccessfully && !USE_GEOJSON_SOURCE) {
+            this.initPOILayerForSource(l, 'pmtiles-source');
+          }
 
+          if (USE_GEOJSON_SOURCE) {
             this.initPOILayerForSource(l, 'osmdata');
           }
-        });
-    } else {
-      console.warn('Map layers already initialized.');
-    }
+        }
+      });
+
+    this.layersInitialized = true;
 
     if (map.getLayer('mapbox-satellite')) {
       map.setLayoutProperty(
@@ -2640,9 +2630,6 @@ class Map extends Component {
     }
 
     mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
-
-    // Register PmTiles source type
-    mapboxgl.Style.setSourceType(PmTilesSource.SOURCE_TYPE, PmTilesSource);
 
     try {
       console.log('Creating Mapbox map...');
