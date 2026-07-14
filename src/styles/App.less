@@ -342,6 +342,7 @@ a {
 // Mobile: opaque panels without blur (backdrop-filter is costly on phones).
 // Desktop (≥480px): original translucent glass with blur.
 .glass-bg {
+  --glass-bg-opacity: 0.95;
   // no blur on mobile
 }
 
@@ -356,7 +357,6 @@ body.theme-dark .cm-favorite-heart {
 
 .theme-light {
   .glass-bg {
-    --glass-bg-opacity: 0.95;
     background: rgba(245, 245, 245, var(--glass-bg-opacity));
     border: 1px solid rgba(255, 255, 255, 0.35);
   }
@@ -364,7 +364,6 @@ body.theme-dark .cm-favorite-heart {
 
 .theme-dark {
   .glass-bg {
-    --glass-bg-opacity: 0.8;
     background: rgba(23, 23, 23, var(--glass-bg-opacity));
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
