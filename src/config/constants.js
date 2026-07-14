@@ -231,7 +231,7 @@ export const DISABLE_LOCAL_STORAGE = true;
 const URL_PARAMS = new URLSearchParams(window.location.search);
 export const FORCE_RECALCULATE_LENGTHS_ALWAYS = URL_PARAMS.get('debug') === 'true';
 
-export const USE_GEOJSON_SOURCE = true;
+export const USE_GEOJSON_SOURCE = false;
 export const USE_PMTILES_SOURCE = true;
 
 // Providers
