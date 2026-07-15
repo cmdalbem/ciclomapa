@@ -112,10 +112,9 @@ export default function LocationSearchInput({ inputType, parentComponent, classN
   const showClear = Boolean(searchValue) || hasPoint;
   const suggestions = state[`${inputType}Suggestions`];
   const query = (searchValue || '').trim();
+  const isFocused = state.focusedInput === inputType;
   const showLocalDropdown =
-    state.focusedInput === inputType &&
-    query.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH &&
-    suggestions.length > 0;
+    isFocused && query.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH && suggestions.length > 0;
   const showSuffix = showClear || isGeolocating;
 
   const inputSuffix = showSuffix ? (
@@ -154,12 +153,12 @@ export default function LocationSearchInput({ inputType, parentComponent, classN
       onSearch={(value) => handlers.handleSearch(value, inputType)}
       options={buildAutocompleteOptions(suggestions)}
       onSelect={(value, option) => handlers.handleSelect(option.suggestion, inputType)}
-      open={showLocalDropdown ? true : undefined}
+      open={showLocalDropdown ? true : isFocused ? undefined : false}
       className={className}
     >
       <Input
         placeholder={
-          state.focusedInput === inputType
+          isFocused
             ? ENABLE_MAP_CLICK_TO_SET_POINTS
               ? 'Digite ou clique no mapa'
               : 'Comece a digitar para buscar'
