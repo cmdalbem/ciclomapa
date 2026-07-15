@@ -38,6 +38,7 @@ import {
   ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD,
   THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE,
   IS_MOBILE,
+  PMTILES_EXCLUDED_LAYER_NAMES,
   FORCE_RECALCULATE_LENGTHS_ALWAYS,
   DEFAULT_LENGTH_CALCULATE_STRATEGIES,
   MAP_STYLES,
@@ -445,6 +446,14 @@ class App extends Component {
       layers.forEach((l) => {
         if (prevLayersStates[l.id] !== undefined) {
           l.isActive = prevLayersStates[l.id];
+        }
+      });
+    }
+
+    if (IS_MOBILE) {
+      layers.forEach((l) => {
+        if (PMTILES_EXCLUDED_LAYER_NAMES.has(l.name)) {
+          l.isActive = false;
         }
       });
     }
