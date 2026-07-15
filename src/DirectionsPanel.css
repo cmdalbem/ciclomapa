@@ -276,10 +276,9 @@ body.theme-light {
     top: auto;
     bottom: calc(var(--radius-md) + env(safe-area-inset-bottom, 0px));
     width: calc(100% - 2 * var(--radius-md));
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
     transition:
-      transform var(--motion-duration-normal) ease-in-out,
-      opacity var(--motion-duration-normal) ease-in-out;
+      transform var(--motion-duration-normal) ease-out,
+      opacity var(--motion-duration-normal) ease-out;
     transform: translateY(calc(100% + 2 * var(--radius-md)));
     opacity: 0;
     pointer-events: none;
@@ -289,6 +288,12 @@ body.theme-light {
     transform: translateY(0);
     opacity: 1;
     pointer-events: auto;
+  }
+
+  /* Keep TopBar / LayersBar mounted; hide while the route sheet is open (avoids costly unmount). */
+  #ciclomapa:has(#directionsPanel.directions-panel-open) #topbar-wrapper,
+  #ciclomapa:has(#directionsPanel.directions-panel-open) nav[aria-label='Camadas do mapa'] {
+    display: none;
   }
 
   #directionsPanel .ant-input-affix-wrapper {
