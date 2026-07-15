@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { IS_MOBILE, TOPBAR_HEIGHT } from './config/constants.js';
+import { IS_MOBILE, TOPBAR_HEIGHT, PMTILES_EXCLUDED_LAYER_NAMES } from './config/constants.js';
 
 import bikeparkingIcon from './img/icons/poi-bikeparking-mini.png';
 import bikeparkingIconLight from './img/icons/poi-bikeparking-mini--light.png';
@@ -44,8 +44,11 @@ class LayersBar extends Component {
           l.name === 'Ciclofaixa' ||
           l.name === 'Ciclorrota'
       ),
+      // Residenciais, Trilhas e Proibidas are omitted from PMTiles — hide on mobile.
       outras: activeLayers.filter(
-        (l) => l.name === 'Baixa velocidade' || l.name === 'Trilha' || l.name === 'Proibido'
+        (l) =>
+          (l.name === 'Baixa velocidade' || l.name === 'Trilha' || l.name === 'Proibido') &&
+          !PMTILES_EXCLUDED_LAYER_NAMES.has(l.name)
       ),
     };
 
