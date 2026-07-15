@@ -24,6 +24,7 @@ import {
 } from './config/citySlugCatalog.js';
 import { isPrivacyPolicyLocation, PRIVACY_POLICY_PATH } from './config/routes.js';
 import { flyMapToCityFocus } from './Map.js';
+import { flyMapTo, flyMapToCinematic } from './features/map/mapCamera.js';
 import { isAreaBrowsePlaceResult } from './GooglePlacesGeocoder.js';
 import { DirectionsProvider } from './contexts/DirectionsContext';
 import {
@@ -887,12 +888,11 @@ class App extends Component {
         const flyOptions = {
           center: target.center,
           duration: 3000,
-          essential: true,
         };
         if (target.zoom !== null) {
           flyOptions.zoom = target.zoom;
         }
-        map.flyTo(flyOptions);
+        flyMapToCinematic(map, flyOptions);
       } catch (e) {
         console.error('Failed to apply pending flyto:', e);
       }
@@ -1905,10 +1905,9 @@ class App extends Component {
         this.deferOrApplyCityFocus({ lat, lng, placeName });
         return;
       }
-      this.state.map.flyTo({
+      flyMapTo(this.state.map, {
         center: [lng, lat],
         zoom,
-        duration: 1500,
       });
     });
   };

@@ -20,6 +20,7 @@ import {
   ENABLE_AUTOFILL_ORIGIN_ON_PANEL_OPEN,
 } from './config/constants.js';
 import DirectionsManager from './DirectionsManager.js';
+import { flyMapTo } from './features/map/mapCamera.js';
 import userLocationCache from './features/geolocation/userLocationCache.js';
 import LocationSearchInput from './features/directions/components/LocationSearchInput.js';
 import RouteSortDropdown from './features/directions/components/RouteSortDropdown.js';
@@ -434,10 +435,9 @@ class DirectionsPanel extends Component {
       this.props.onFromPointChange(result);
 
       if (fromAutocomplete && this.props.map) {
-        this.props.map.flyTo({
+        flyMapTo(this.props.map, {
           center: result.result.center,
           zoom: Math.max(this.props.map.getZoom(), 16),
-          duration: 1500,
         });
       }
 
