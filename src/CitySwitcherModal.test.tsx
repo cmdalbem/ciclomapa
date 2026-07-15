@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Storage from './Storage.js';
 import { slugify } from './utils/utils.js';
 import { getCanonicalCitySlug } from './config/citySlugCatalog.js';
@@ -81,6 +81,19 @@ function renderOpenPicker(initialPath = '/curitiba') {
   );
 }
 
+function CitySwitcherStaggerTestHost() {
+  const navigate = useNavigate();
+
+  return (
+    <>
+      <button type="button" data-testid="open-city-picker" onClick={() => navigate('?buscar')}>
+        Open city picker
+      </button>
+      <CitySwitcherModal />
+    </>
+  );
+}
+
 it('renders city picker dialog with expected regions when open', async () => {
   renderOpenPicker('/curitiba');
 
@@ -90,6 +103,29 @@ it('renders city picker dialog with expected regions when open', async () => {
     expect(document.querySelector('a[data-city-slug="sao-paulo"]')).toBeInstanceOf(
       HTMLAnchorElement
     );
+  });
+});
+
+it('stagger-enter runs only on the first city picker open', async () => {
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter initialEntries={['/curitiba', '/curitiba?buscar']} initialIndex={1}>
+      <Routes>
+        <Route path="/:city" element={<CitySwitcherStaggerTestHost />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await waitFor(() => {
+    expect(document.querySelector('.city-switcher-modal__staggerEnter')).not.toBeNull();
+  });
+
+  await user.click(screen.getByTestId('city-switcher-close'));
+  await user.click(screen.getByTestId('open-city-picker'));
+
+  await waitFor(() => {
+    expect(screen.getByTestId('city-switcher-dialog')).toBeInTheDocument();
+    expect(document.querySelector('.city-switcher-modal__staggerEnter')).toBeNull();
   });
 });
 
