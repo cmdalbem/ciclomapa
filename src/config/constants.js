@@ -233,6 +233,9 @@ export const FORCE_RECALCULATE_LENGTHS_ALWAYS = URL_PARAMS.get('debug') === 'tru
 
 export const USE_PMTILES_SOURCE = true;
 
+/** Way layers omitted from PMTiles builds — not renderable when map uses PMTiles only. */
+export const PMTILES_EXCLUDED_LAYER_NAMES = new Set(['Baixa velocidade', 'Trilha', 'Proibido']);
+
 // Providers
 
 export const OPENROUTESERVICE_API_KEY = process.env.REACT_APP_OPENROUTESERVICE_API_KEY;
