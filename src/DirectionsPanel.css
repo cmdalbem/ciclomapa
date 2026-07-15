@@ -6,6 +6,18 @@
   left: var(--spacing-panel);
   width: var(--spacing-panel-width);
   z-index: 1;
+  transition:
+    transform var(--motion-duration-normal) ease-out,
+    opacity var(--motion-duration-normal) ease-out;
+  transform: translateY(-10%);
+  opacity: 0;
+  pointer-events: none;
+
+  &.directions-panel-open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
 
   #fromGeocoder {
     z-index: 1001;
@@ -267,7 +279,7 @@ body.theme-light {
   }
 }
 
-/* Mobile: bottom sheet slides up from below */
+/* Mobile: bottom sheet layout */
 @media (min-width: 320px) and (max-width: 480px) {
   #directionsPanel {
     z-index: 1000;
@@ -276,18 +288,7 @@ body.theme-light {
     top: auto;
     bottom: calc(var(--radius-md) + env(safe-area-inset-bottom, 0px));
     width: calc(100% - 2 * var(--radius-md));
-    transition:
-      transform var(--motion-duration-normal) ease-out,
-      opacity var(--motion-duration-normal) ease-out;
     transform: translateY(calc(100% + 2 * var(--radius-md)));
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  #directionsPanel.directions-panel-open {
-    transform: translateY(0);
-    opacity: 1;
-    pointer-events: auto;
   }
 
   /* Keep TopBar / LayersBar mounted; hide while the route sheet is open (avoids costly unmount). */

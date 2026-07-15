@@ -1107,6 +1107,11 @@ class DirectionsPanel extends Component {
 
     const routes = sortedRoutes.slice(0, HYBRID_MAX_RESULTS);
     const showResultsOnMobile = IS_MOBILE && (directions || directionsLoading);
+    const panelOpenClass = !this.state.collapsed
+      ? `directions-panel-open ${
+          showResultsOnMobile ? 'directions-panel-open--results' : 'directions-panel-open--planning'
+        }`
+      : '';
 
     return (
       <>
@@ -1121,22 +1126,7 @@ class DirectionsPanel extends Component {
         )}
         <div
           id="directionsPanel"
-          className={`
-                        cm-panel glass-bg fixed text-white cursor-pointer
-                        ${
-                          IS_MOBILE
-                            ? this.state.collapsed
-                              ? ''
-                              : `directions-panel-open ${
-                                  showResultsOnMobile
-                                    ? 'directions-panel-open--results'
-                                    : 'directions-panel-open--planning'
-                                }`
-                            : this.state.collapsed
-                              ? 'hidden'
-                              : ''
-                        }
-                    `}
+          className={`cm-panel glass-bg fixed text-white cursor-pointer ${panelOpenClass}`}
         >
           <div className="cm-panel__body p-4">
             <div
@@ -1171,7 +1161,12 @@ class DirectionsPanel extends Component {
               ) : (
                 // Default header
                 <>
-                  <h3 className="font-semibold flex items-center mb-0">Planejar rota</h3>
+                  <h3 className="font-semibold flex items-center gap-2 mb-0">
+                    {!IS_MOBILE && (
+                      <LuBike className="text-lg flex-shrink-0 opacity-90" aria-hidden />
+                    )}
+                    Planejar rota
+                  </h3>
 
                   <div
                     className="flex items-start -mr-1 flex-shrink-0 opacity-50"
