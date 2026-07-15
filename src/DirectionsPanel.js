@@ -162,10 +162,6 @@ class DirectionsPanel extends Component {
       if (this.props.onDirectionsPanelToggle) {
         this.props.onDirectionsPanelToggle(true);
       }
-    } else {
-      if (this.props.onDirectionsPanelToggle) {
-        this.props.onDirectionsPanelToggle(!this.state.collapsed);
-      }
     }
   }
 
@@ -406,10 +402,15 @@ class DirectionsPanel extends Component {
       this.cancelActiveGeolocation();
     }
 
+    if (this.blurTimeout) {
+      clearTimeout(this.blurTimeout);
+      this.blurTimeout = null;
+    }
+
     this.setState({
       [`${inputType}SearchValue`]: '',
-      [`${inputType}Suggestions`]: [],
       cityValidationError: null,
+      focusedInput: inputType,
     });
 
     // Clear the corresponding point
@@ -420,6 +421,8 @@ class DirectionsPanel extends Component {
       this.props.onToPointChange(null);
       this.removeMarker('to');
     }
+
+    this.setFavoriteSuggestions(inputType, '');
   }
 
   handleGeolocation(inputType, isAutoTriggered = false) {
@@ -964,6 +967,12 @@ class DirectionsPanel extends Component {
 
   handleInputFocus(inputType) {
     console.debug(`Input focused: ${inputType}`);
+
+    if (this.blurTimeout) {
+      clearTimeout(this.blurTimeout);
+      this.blurTimeout = null;
+    }
+
     this.setState({ focusedInput: inputType });
 
     const currentValue = this.state[`${inputType}SearchValue`] || '';
@@ -991,14 +1000,22 @@ class DirectionsPanel extends Component {
       // Delay to make sure that if the next click was on the map, it'll set the point
       // Also check if the blur was caused by clicking on a suggestion
       this.blurTimeout = setTimeout(() => {
-        // Check if the active element is still within the autocomplete dropdown
+        // User may have focused the other origin/destination field in the meantime
+        if (this.state.focusedInput !== inputType) {
+          this.blurTimeout = null;
+          return;
+        }
+
         const activeElement = document.activeElement;
         const isDropdownActive =
           activeElement &&
           (activeElement.closest('.ant-select-dropdown') ||
             activeElement.closest('.ant-select-item'));
+        const isRoutePointsInputFocused =
+          activeElement?.tagName === 'INPUT' &&
+          Boolean(activeElement.closest('.cm-route-points__inputs'));
 
-        if (!isDropdownActive) {
+        if (!isDropdownActive && !isRoutePointsInputFocused) {
           this.setState({ focusedInput: null });
           console.debug('Focus cleared, resetting cursor');
 
@@ -1007,7 +1024,7 @@ class DirectionsPanel extends Component {
             this.props.onRouteModeChange(false);
           }
         } else {
-          console.debug('Blur ignored - dropdown is active');
+          console.debug('Blur ignored - dropdown or route input is active');
         }
 
         this.blurTimeout = null;

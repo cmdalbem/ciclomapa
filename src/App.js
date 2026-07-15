@@ -84,6 +84,8 @@ class App extends Component {
   _lastExplicitCityNavTimestamp = 0;
   _welcomeMapBootScheduled = false;
   _unmounted = false;
+  /** Mobile directions panel open state (kept off React state to avoid App-wide re-renders). */
+  _isDirectionsPanelOpen = false;
 
   getStorage() {
     if (!this._storage) {
@@ -275,7 +277,6 @@ class App extends Component {
       mapKey: 0,
       fromPoint: fromPoint,
       toPoint: toPoint,
-      isDirectionsPanelOpen: false,
       airtableMetadataRecords: null,
       airtableCityFields: null,
       globalSearchPin: null,
@@ -1818,7 +1819,7 @@ class App extends Component {
   }
 
   onDirectionsPanelToggle(isOpen) {
-    this.setState({ isDirectionsPanelOpen: isOpen });
+    this._isDirectionsPanelOpen = isOpen;
     if (isOpen) {
       this.ensureCityDataLoaded();
     }

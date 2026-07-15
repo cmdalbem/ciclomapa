@@ -82,7 +82,7 @@ export const typography = {
 /** Motion/duration for transitions (ms). Use with prefers-reduced-motion. */
 export const motion = {
   durationFast: 150,
-  durationNormal: 300,
+  durationNormal: 200,
   durationSlow: 500,
 };
 

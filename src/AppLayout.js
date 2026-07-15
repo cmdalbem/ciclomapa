@@ -2,7 +2,7 @@
  * Layout component for the main app shell: header, main (map), asides, modals.
  * Receives state and handlers from App to keep App.js focused on state and logic.
  */
-import React, { Suspense } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import AboutModal from './AboutModal.js';
 import PrivacyPolicyModal from './PrivacyPolicy.jsx';
@@ -25,6 +25,13 @@ export default function AppLayout({
   seoPageTitle,
   cityCanonicalSlug,
 }) {
+  const citySwitcherMapCenter = useMemo(() => {
+    const vp = typeof handlers.getMapViewport === 'function' ? handlers.getMapViewport() : null;
+    const lat = vp && Number.isFinite(vp.lat) ? vp.lat : state.lat;
+    const lng = vp && Number.isFinite(vp.lng) ? vp.lng : state.lng;
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  }, [handlers.getMapViewport, state.lat, state.lng]);
+
   return (
     <div
       id="ciclomapa"
@@ -44,30 +51,28 @@ export default function AppLayout({
 
       <div className="flex">
         <main className="relative w-full" id="main-map" aria-label="Mapa">
-          {!(IS_MOBILE && state.isDirectionsPanelOpen) && (
-            <header id="topbar-wrapper" aria-label="Barra superior">
-              <TopBar
-                title={state.area}
-                lastUpdate={state.dataUpdatedAt}
-                lat={state.lat}
-                lng={state.lng}
-                z={state.zoom}
-                getViewport={handlers.getMapViewport}
-                downloadData={handlers.downloadData}
-                onMapMoved={handlers.onMapMoved}
-                forceUpdate={handlers.forceUpdate}
-                isSidebarOpen={state.isSidebarOpen}
-                toggleSidebar={handlers.toggleSidebar}
-                embedMode={state.embedMode}
-                debugMode={state.debugMode}
-                openAboutModal={handlers.openAboutModal}
-                isDarkMode={state.isDarkMode}
-                toggleTheme={handlers.toggleTheme}
-                loading={state.loading}
-                cancelDataLoad={handlers.cancelDataLoad}
-              />
-            </header>
-          )}
+          <header id="topbar-wrapper" aria-label="Barra superior">
+            <TopBar
+              title={state.area}
+              lastUpdate={state.dataUpdatedAt}
+              lat={state.lat}
+              lng={state.lng}
+              z={state.zoom}
+              getViewport={handlers.getMapViewport}
+              downloadData={handlers.downloadData}
+              onMapMoved={handlers.onMapMoved}
+              forceUpdate={handlers.forceUpdate}
+              isSidebarOpen={state.isSidebarOpen}
+              toggleSidebar={handlers.toggleSidebar}
+              embedMode={state.embedMode}
+              debugMode={state.debugMode}
+              openAboutModal={handlers.openAboutModal}
+              isDarkMode={state.isDarkMode}
+              toggleTheme={handlers.toggleTheme}
+              loading={state.loading}
+              cancelDataLoad={handlers.cancelDataLoad}
+            />
+          </header>
           {state.mapBootReady ? (
             <Map
               key={state.mapKey}
@@ -137,30 +142,22 @@ export default function AppLayout({
 
       <Suspense fallback={null}>
         <CitySwitcherModal
-          mapCenter={(() => {
-            const vp =
-              typeof handlers.getMapViewport === 'function' ? handlers.getMapViewport() : null;
-            const lat = vp && Number.isFinite(vp.lat) ? vp.lat : state.lat;
-            const lng = vp && Number.isFinite(vp.lng) ? vp.lng : state.lng;
-            return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
-          })()}
+          mapCenter={citySwitcherMapCenter}
           onPlacesResultSelected={handlers.handleGlobalSearchPlaceSelect}
           onCatalogCityPicked={handlers.clearGlobalSearchPin}
           onFavoritesChanged={handlers.handleFavoritesChanged}
         />
       </Suspense>
 
-      {!(IS_MOBILE && state.isDirectionsPanelOpen) && (
-        <nav aria-label="Camadas do mapa">
-          <LayersBar
-            layers={state.layers}
-            onLayersChange={handlers.onLayersChange}
-            embedMode={state.embedMode}
-            isDarkMode={state.isDarkMode}
-            openLayersLegendModal={handlers.openLayersLegendModal}
-          />
-        </nav>
-      )}
+      <nav aria-label="Camadas do mapa">
+        <LayersBar
+          layers={state.layers}
+          onLayersChange={handlers.onLayersChange}
+          embedMode={state.embedMode}
+          isDarkMode={state.isDarkMode}
+          openLayersLegendModal={handlers.openLayersLegendModal}
+        />
+      </nav>
 
       <aside aria-label="Painel de camadas">
         <LayersPanel
@@ -242,7 +239,6 @@ AppLayout.propTypes = {
     hideUI: PropTypes.bool,
     hideUIFromUrl: PropTypes.bool,
     isSidebarOpen: PropTypes.bool,
-    isDirectionsPanelOpen: PropTypes.bool,
     area: PropTypes.string,
     dataUpdatedAt: PropTypes.string,
     lat: PropTypes.number,

@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { HiMiniClock, HiOutlineXMark, HiOutlineHeart, HiHeart } from 'react-icons/hi2';
@@ -584,11 +592,11 @@ function usePreloadedStatsTotalsByCanonicalSlug(cityObjs: StatsCityLike[], isPic
     const myGeneration = effectGenerationRef.current;
     const list = Array.isArray(cityObjs) ? cityObjs : [];
 
-    setIsLoadingTotals(true);
     const applyCacheToState = () => {
       if (effectGenerationRef.current !== myGeneration) return;
       setStatsTotalsByCanonicalSlug(new Map(statsTotalsByCanonicalSlugCache));
     };
+    setIsLoadingTotals(true);
     if (!statsTotalsLoadPromise) {
       statsTotalsLoadPromise = preloadStatsTotalsForCities(list, {
         onCacheUpdate: applyCacheToState,
@@ -1424,10 +1432,14 @@ function CitySwitcherModal({
 
   let contentStaggerIndex = 0;
 
+  if (!isCityPickerOpen) {
+    return null;
+  }
+
   /** Portaled to `document.body` so `#ciclomapa { overflow: hidden }` does not clip this overlay. */
   const modalTree = (
     <div
-      className={`city-switcher-modal fixed inset-0${isCityPickerOpen ? ' city-switcher-modal--open' : ''}`}
+      className="city-switcher-modal fixed inset-0 city-switcher-modal--open"
       role="dialog"
       aria-modal="true"
       data-testid="city-switcher-dialog"
@@ -1873,4 +1885,25 @@ export function replaceCitySwitcherStatsCacheForTest(
   );
 }
 
-export default CitySwitcherModal;
+type MapCenter = { lat: number; lng: number };
+
+function mapCenterEqual(a: MapCenter | null | undefined, b: MapCenter | null | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return !a && !b;
+  return a.lat === b.lat && a.lng === b.lng;
+}
+
+function citySwitcherModalPropsAreEqual(
+  prev: CitySwitcherModalProps,
+  next: CitySwitcherModalProps
+): boolean {
+  return (
+    mapCenterEqual(prev.mapCenter, next.mapCenter) &&
+    prev.placesAutocompleteOptions === next.placesAutocompleteOptions &&
+    prev.onPlacesResultSelected === next.onPlacesResultSelected &&
+    prev.onCatalogCityPicked === next.onCatalogCityPicked &&
+    prev.onFavoritesChanged === next.onFavoritesChanged
+  );
+}
+
+export default memo(CitySwitcherModal, citySwitcherModalPropsAreEqual);
