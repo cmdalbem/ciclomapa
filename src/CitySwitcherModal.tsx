@@ -68,6 +68,17 @@ const CITY_SWITCHER_STATS_KM_CACHE_KEY = 'ciclomapa_city_switcher_stats_km_v3';
 const CITY_PICKER_INPUT_SELECTOR =
   '.city-switcher-modal__geocoderMount .city-switcher-global-search input';
 
+/** First city-picker open per page load: stagger-enter on catalog / favorites / recents. */
+const STAGGER_ENTER_CLASS = 'city-switcher-modal__staggerEnter';
+
+function withStaggerEnterClass(className: string, enabled: boolean): string {
+  return enabled ? `${className} ${STAGGER_ENTER_CLASS}` : className;
+}
+
+function staggerEnterStyle(index: number, enabled: boolean): React.CSSProperties | undefined {
+  return enabled ? ({ '--city-content-stagger': index } as React.CSSProperties) : undefined;
+}
+
 /** Responsive columns for catalog cities, favorites, and recents (mobile: single column via CSS). */
 const CITY_SWITCHER_CARD_GRID_CLASS =
   'city-switcher-modal__citiesGrid grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3';
@@ -1007,12 +1018,14 @@ function CityInfraMiniRingPlaceholder() {
 function CityPickerCityCard({
   city,
   stagger,
+  shouldStaggerEnter,
   to,
   onActivate,
   infraLayers,
 }: {
   city: CityPickerRowModel;
   stagger: number;
+  shouldStaggerEnter: boolean;
   to: string;
   onActivate: () => void;
   infraLayers: CitySwitcherInfraLayer[];
@@ -1024,8 +1037,8 @@ function CityPickerCityCard({
 
   return (
     <div
-      className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
-      style={{ '--city-content-stagger': stagger } as React.CSSProperties}
+      className={withStaggerEnterClass('city-switcher-modal__cityCardWrap', shouldStaggerEnter)}
+      style={staggerEnterStyle(stagger, shouldStaggerEnter)}
       role="listitem"
     >
       <Link
@@ -1202,6 +1215,26 @@ function CitySwitcherModal({
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isCityPickerOpen = searchParams.has('buscar');
+  const cityPickerStaggerPlayedRef = useRef(false);
+  const shouldStaggerEnterRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    if (!isCityPickerOpen) {
+      shouldStaggerEnterRef.current = null;
+    }
+  }, [isCityPickerOpen]);
+
+  const shouldStaggerEnter = (() => {
+    if (!isCityPickerOpen) return false;
+    if (shouldStaggerEnterRef.current === null) {
+      const firstOpenThisSession = !cityPickerStaggerPlayedRef.current;
+      shouldStaggerEnterRef.current = firstOpenThisSession;
+      if (firstOpenThisSession) {
+        cityPickerStaggerPlayedRef.current = true;
+      }
+    }
+    return shouldStaggerEnterRef.current;
+  })();
 
   useEffect(() => {
     if (!isCityPickerOpen) {
@@ -1534,8 +1567,11 @@ function CitySwitcherModal({
                     return (
                       <div
                         key={s.id || s.properties?.place_id || `${s.place_name}-${i}`}
-                        className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
-                        style={{ '--city-content-stagger': i } as React.CSSProperties}
+                        className={withStaggerEnterClass(
+                          'city-switcher-modal__cityCardWrap',
+                          shouldStaggerEnter
+                        )}
+                        style={staggerEnterStyle(i, shouldStaggerEnter)}
                         role="listitem"
                       >
                         <div className="city-switcher-modal__placeSearchResultCard">
@@ -1612,8 +1648,8 @@ function CitySwitcherModal({
               data-testid="city-switcher-favorites"
             >
               <div
-                className="city-switcher-modal__staggerEnter"
-                style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
+                className={shouldStaggerEnter ? STAGGER_ENTER_CLASS : undefined}
+                style={staggerEnterStyle(contentStaggerIndex++, shouldStaggerEnter)}
               >
                 <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
                   {/* <HiHeartIcon
@@ -1631,10 +1667,11 @@ function CitySwitcherModal({
                 {favorites.map((fav) => (
                   <div
                     key={fav.id}
-                    className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
-                    style={
-                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
-                    }
+                    className={withStaggerEnterClass(
+                      'city-switcher-modal__cityCardWrap',
+                      shouldStaggerEnter
+                    )}
+                    style={staggerEnterStyle(contentStaggerIndex++, shouldStaggerEnter)}
                     role="listitem"
                   >
                     <button
@@ -1694,8 +1731,8 @@ function CitySwitcherModal({
               data-testid="city-switcher-recent"
             >
               <div
-                className="city-switcher-modal__staggerEnter"
-                style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
+                className={shouldStaggerEnter ? STAGGER_ENTER_CLASS : undefined}
+                style={staggerEnterStyle(contentStaggerIndex++, shouldStaggerEnter)}
               >
                 <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
                   {/* <HiMiniClockIcon
@@ -1713,10 +1750,11 @@ function CitySwitcherModal({
                 {recentItemsDisplayed.map((item) => (
                   <div
                     key={item.id}
-                    className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
-                    style={
-                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
-                    }
+                    className={withStaggerEnterClass(
+                      'city-switcher-modal__cityCardWrap',
+                      shouldStaggerEnter
+                    )}
+                    style={staggerEnterStyle(contentStaggerIndex++, shouldStaggerEnter)}
                     role="listitem"
                   >
                     {item.type === 'city' && item.citySlug ? (
@@ -1820,10 +1858,8 @@ function CitySwitcherModal({
                   data-country-code={group.countryCode}
                 >
                   <div
-                    className="city-switcher-modal__staggerEnter"
-                    style={
-                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
-                    }
+                    className={shouldStaggerEnter ? STAGGER_ENTER_CLASS : undefined}
+                    style={staggerEnterStyle(contentStaggerIndex++, shouldStaggerEnter)}
                   >
                     <div className="city-switcher-modal__sectionTitle px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
                       {group.countryLabel}
@@ -1835,6 +1871,7 @@ function CitySwitcherModal({
                         key={c.canonicalSlug}
                         city={c}
                         stagger={contentStaggerIndex++}
+                        shouldStaggerEnter={shouldStaggerEnter}
                         to={`/${encodeURIComponent(c.canonicalSlug)}`}
                         onActivate={() => onCityLinkActivate(c, 'top')}
                         infraLayers={infraLayersForMiniPie}
