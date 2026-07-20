@@ -7,10 +7,12 @@ import Analytics from './Analytics.js';
 import { formatDistance, formatDuration } from './utils/routeUtils.js';
 import { formatTimeAgo } from './utils/utils.js';
 
-import { ENABLE_COMMENTS, IS_MOBILE } from './config/constants.js';
+import { ENABLE_COMMENTS, ENABLE_BICING_LIVE, IS_MOBILE } from './config/constants.js';
 import { getPlaceTypeIconElement } from './GooglePlacesGeocoder.js';
 import { isFavorite, isFavoriteById } from './favoritesStore';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
+import { formatBicingAgeLabel, renderBicingAvailabilityHtml } from './features/bicing/bicingMap.js';
+import bicingLogo from './features/bicing/bicing-logo.png';
 
 /** POI address line from Overpass tags; Nominatim fallback (https://operations.osmfoundation.org/policies/nominatim/). */
 
@@ -202,11 +204,12 @@ class MapPopups {
   routeTooltips;
   previousCyclewayLayerClass;
 
-  constructor(map, debugMode, isDarkMode = false, selectedAreaLabel = '') {
+  constructor(map, debugMode, isDarkMode = false, selectedAreaLabel = '', options = {}) {
     this.map = map;
     this.debugMode = debugMode;
     this.isDarkMode = isDarkMode;
     this.selectedAreaLabel = selectedAreaLabel || '';
+    this.getBicingStationForPoi = options.getBicingStationForPoi || null;
 
     // "closeOnClick: false" enables chaining clicks continually
     //   from POI to POI, otherwise clicking on another POI would
@@ -432,10 +435,11 @@ class MapPopups {
   }
 
   /** Footer for map feature popups (POI, cycleway, …). Favorite control lives only in {@link getSearchResultFooter}. */
-  getFooter(osmUrl, color = 'black', coordinates = null) {
+  getFooter(osmUrl, color = 'black', coordinates = null, trailingHtml = '') {
     return `
             <div class="popup-footer-outer -mb-6 md:mt-8 mt-5 pt-4 pb-4 rounded-bl-lg rounded-br-lg" >
-                <div class="popup-footer-actions flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5 px-4">
+                <div class="flex items-center justify-between gap-3 px-4">
+                <div class="popup-footer-actions flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5 min-w-0">
                 ${
                   (coordinates &&
                     `
@@ -469,6 +473,8 @@ class MapPopups {
                 </a>`
                     : ''
                 }
+                </div>
+                ${trailingHtml}
                 </div>
             </div>
         `;
@@ -537,6 +543,27 @@ class MapPopups {
     const addressFromOsm = formatAddressLineFromOsmProperties(properties);
     const propertiesForGrid = omitAddressTagsForDetailGrid(properties);
 
+    let bicingLiveHtml = '';
+    let bicingAgeHtml = '';
+    if (
+      ENABLE_BICING_LIVE &&
+      poiType === 'poi-rental' &&
+      typeof this.getBicingStationForPoi === 'function'
+    ) {
+      const station = this.getBicingStationForPoi({
+        lat: coords.lat,
+        lng: coords.lng,
+        ref: properties.ref,
+      });
+      if (station) {
+        bicingLiveHtml = renderBicingAvailabilityHtml(station);
+        const ageLabel = formatBicingAgeLabel(station.lastReportedMs);
+        if (ageLabel) {
+          bicingAgeHtml = `<div class="flex-shrink-0 text-xs opacity-45 leading-snug text-right whitespace-nowrap">Atualizado ${escapeHtml(ageLabel)}</div>`;
+        }
+      }
+    }
+
     const poiTypeMapFallback = {
       'poi-bikeshop': 'Oficina/loja (sem nome)',
       'poi-rental': 'Estação de bicicleta (sem nome)',
@@ -559,7 +586,7 @@ class MapPopups {
             </span>`;
 
     let html = `
-            <div class="flex items-start space-x-3 mt-2 mb-3">
+            <div class="flex items-start gap-3 mt-2 mb-3 w-full">
                 <img src="${iconSrc}" class="w-9 h-9 md:w-10 md:h-10 flex-shrink-0 mt-0.5 md:mt-1 object-contain" alt="" />
                 <div class="flex-1 min-w-0">
                     <div class="text-base md:text-lg font-semibold leading-tight tracking-tight break-words">${titleHtml}</div>
@@ -567,9 +594,11 @@ class MapPopups {
                 </div>
             </div>
 
+            ${bicingLiveHtml}
+
             ${this.renderProperties(propertiesForGrid)}
 
-            ${this.getFooter(osmUrl, 'white', [coords.lng, coords.lat])}
+            ${this.getFooter(osmUrl, 'white', [coords.lng, coords.lat], bicingAgeHtml)}
         `;
 
     this.poiPopup.setLngLat(coords).setHTML(html).addTo(this.map);
@@ -608,6 +637,55 @@ class MapPopups {
         {
           item_name: `${poiType} - ${properties.name}`,
           item_variant: poiType,
+          item_category: 'map data',
+        },
+      ],
+    });
+  }
+
+  showBicingStationPopup(station) {
+    if (!station || !Number.isFinite(station.lon) || !Number.isFinite(station.lat)) return;
+
+    const name = (station.name || '').trim();
+    const address = (station.address || '').trim();
+    const title = name || address || `Estação ${station.stationId}`;
+    const coords = [station.lon, station.lat];
+    const ageLabel = formatBicingAgeLabel(station.lastReportedMs);
+
+    const html = `
+            <div class="mt-2">
+                <img src="${bicingLogo}" class="w-8 h-8 flex-shrink-0 object-contain rounded-full" alt="Bicing" />
+            </div>
+
+            ${renderBicingAvailabilityHtml(station)}
+
+            <div class="popup-footer-outer -mb-6 mt-5 pt-3 pb-4 rounded-bl-lg rounded-br-lg">
+                <div class="flex items-center justify-between gap-3 px-4">
+                    <div class="popup-footer-actions flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5 min-w-0">
+                        <button type="button" class="flex-shrink-0 px-3 py-1.5 text-sm rounded-full whitespace-nowrap"
+                            onclick="window.setDestinationFromPopup && window.setDestinationFromPopup(${JSON.stringify(coords)})"
+                            style="background-color: var(--popup-text-color); color: var(--popup-text-color-on-primary);"
+                        >
+                            ${DIRECTIONS_ICON_SVG}
+                            Como chegar
+                        </button>
+                    </div>
+                    ${
+                      ageLabel
+                        ? `<div class="flex-shrink-0 text-xs opacity-45 leading-snug text-right whitespace-nowrap">Atualizado ${escapeHtml(ageLabel)}</div>`
+                        : ''
+                    }
+                </div>
+            </div>
+        `;
+
+    this.poiPopup.setLngLat({ lng: station.lon, lat: station.lat }).setHTML(html).addTo(this.map);
+
+    Analytics.event('view_item', {
+      items: [
+        {
+          item_name: `bicing - ${title}`,
+          item_variant: 'poi-rental-bicing',
           item_category: 'map data',
         },
       ],
