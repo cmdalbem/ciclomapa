@@ -331,9 +331,15 @@ export function PlacesAutocompleteOptionLabel({
 /** One shared inject so HMR / concurrent callers do not append multiple script tags. */
 let googleMapsScriptReadyPromise = null;
 
+function createPlacesError(message, code) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
 function ensureGoogleMapsScriptLoaded(apiKey, language, region) {
   if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Google Maps API not available (SSR)'));
+    return Promise.reject(createPlacesError('Google Maps API not available (SSR)', 'SSR'));
   }
   if (window.google?.maps) {
     return Promise.resolve();
@@ -351,7 +357,7 @@ function ensureGoogleMapsScriptLoaded(apiKey, language, region) {
       script.onload = () => resolve();
       script.onerror = () => {
         googleMapsScriptReadyPromise = null;
-        reject(new Error('Failed to load Google Maps API'));
+        reject(createPlacesError('Failed to load Google Maps API', 'SCRIPT_LOAD_FAILED'));
       };
       document.head.appendChild(script);
     });
@@ -381,7 +387,7 @@ class GooglePlacesGeocoder {
 
   async loadGoogleMapsAPI() {
     if (!this.apiKey) {
-      throw new Error('Google Maps API key is missing');
+      throw createPlacesError('Google Maps API key is missing', 'MISSING_API_KEY');
     }
     await ensureGoogleMapsScriptLoaded(this.apiKey, this.language, this.region);
     await this.initializeServices();
@@ -389,7 +395,7 @@ class GooglePlacesGeocoder {
 
   async initializeServices() {
     if (!window.google?.maps) {
-      throw new Error('Google Maps API not loaded');
+      throw createPlacesError('Google Maps API not loaded', 'NOT_LOADED');
     }
 
     const maps = window.google.maps;
@@ -405,6 +411,10 @@ class GooglePlacesGeocoder {
         const dummyDiv = document.createElement('div');
         this.placesService = new maps.places.PlacesService(dummyDiv);
       }
+
+      if (!this.autocompleteService) {
+        throw createPlacesError('Google Places library not available', 'PLACES_UNAVAILABLE');
+      }
     } catch (error) {
       console.error('Failed to initialize Google Maps services:', error);
       throw error;
@@ -413,7 +423,7 @@ class GooglePlacesGeocoder {
 
   async search(query, options = {}) {
     if (!this.autocompleteService) {
-      throw new Error('Google Places API not initialized');
+      throw createPlacesError('Google Places API not initialized', 'NOT_INITIALIZED');
     }
 
     trackCall({ api: API_TYPES.GOOGLE_PREDICTIONS, details: query });
@@ -438,7 +448,7 @@ class GooglePlacesGeocoder {
     const adminRegionExclude = resolveAdminRegionExcludeFromBlock(options.exclude);
     const excludeCityOnly = Boolean(options.exclude?.bareCity);
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       this.autocompleteService.getPlacePredictions(request, (predictions, status) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
           let filtered = predictions;
@@ -454,15 +464,16 @@ class GooglePlacesGeocoder {
             .slice(0, limit)
             .map((prediction) => this.formatPredictionResult(prediction));
           resolve(formattedResults);
-        } else {
-          if (
-            status !== window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS &&
-            status !== window.google.maps.places.PlacesServiceStatus.OK
-          ) {
-            console.warn('Google Places API error:', status);
-          }
-          resolve([]);
+          return;
         }
+
+        if (status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+          resolve([]);
+          return;
+        }
+
+        console.warn('Google Places API error:', status);
+        reject(createPlacesError(`Google Places API error: ${status}`, status));
       });
     });
   }
