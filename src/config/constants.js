@@ -211,6 +211,17 @@ export const ENABLE_OFFICIAL_CITY_HALL_METRICS_COMPARISON =
       : !IS_PROD;
 
 /**
+ * Bicing (Barcelona) live availability (GBFS) on Estações — Preview / non-prod only by default.
+ * Override with REACT_APP_ENABLE_BICING_LIVE=true|false.
+ */
+export const ENABLE_BICING_LIVE =
+  process.env.REACT_APP_ENABLE_BICING_LIVE === 'true'
+    ? true
+    : process.env.REACT_APP_ENABLE_BICING_LIVE === 'false'
+      ? false
+      : !IS_PROD;
+
+/**
  * When true and not in production: the About modal auto-opens once on each full page load,
  * ignoring per-city welcome storage (useful to QA the modal in dev/staging).
  * When false: auto-open uses per-city persistence (once per city per browser).
