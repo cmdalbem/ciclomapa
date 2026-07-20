@@ -27,6 +27,8 @@ export const API_TYPES = {
   // Firebase
   FIREBASE_READ: 'firebase-read',
   FIREBASE_WRITE: 'firebase-write',
+  // Bicing (Preview)
+  BICING_GBFS: 'bicing-gbfs',
 };
 
 export const API_LABELS = {
@@ -45,6 +47,7 @@ export const API_LABELS = {
   [API_TYPES.AIRTABLE_WRITE]: 'Write',
   [API_TYPES.FIREBASE_READ]: 'Read',
   [API_TYPES.FIREBASE_WRITE]: 'Write',
+  [API_TYPES.BICING_GBFS]: 'GBFS',
 };
 
 export const API_COLORS = {
@@ -63,6 +66,7 @@ export const API_COLORS = {
   [API_TYPES.AIRTABLE_WRITE]: '#0ea5e9',
   [API_TYPES.FIREBASE_READ]: '#fb923c',
   [API_TYPES.FIREBASE_WRITE]: '#f97316',
+  [API_TYPES.BICING_GBFS]: '#E56119',
 };
 
 /**
@@ -132,6 +136,12 @@ export const API_GROUPS = [
     brand: 'firebase',
     color: '#F5820D',
     types: [API_TYPES.FIREBASE_READ, API_TYPES.FIREBASE_WRITE],
+  },
+  {
+    id: 'bicing',
+    label: 'Bicing',
+    color: '#E56119',
+    types: [API_TYPES.BICING_GBFS],
   },
   {
     id: 'routing',
