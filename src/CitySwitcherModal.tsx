@@ -28,7 +28,7 @@ import {
   SUPPORTED_COUNTRY_LABEL_PT_BY_CODE,
 } from './config/constants.js';
 import { appendKmUnit } from './utils/routeUtils.js';
-import { getAreaStringFromResultLike } from './googlePlacesClient.js';
+import { getAreaStringFromResultLike, getPlacesSearchUserMessage } from './googlePlacesClient.js';
 import { PlacesAutocompleteOptionLabel } from './GooglePlacesGeocoder.js';
 import {
   geocodePlacesSuggestionToResult,
@@ -656,6 +656,7 @@ function usePlacesAutocompleteSearch({
 }) {
   const [suggestions, setSuggestions] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const debounceTimerRef = useRef<number | null>(null);
   const requestSeqRef = useRef(0);
   const getOptionsRef = useRef(getAutocompleteOptions);
@@ -668,6 +669,7 @@ function usePlacesAutocompleteSearch({
       debounceTimerRef.current = null;
     }
     setSuggestions([]);
+    setSearchError(null);
     setLoading(false);
   }, []);
 
@@ -681,12 +683,14 @@ function usePlacesAutocompleteSearch({
       if (trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
         requestSeqRef.current += 1;
         setSuggestions([]);
+        setSearchError(null);
         setLoading(false);
         return;
       }
       requestSeqRef.current += 1;
       const scheduledSeq = requestSeqRef.current;
       setLoading(true);
+      setSearchError(null);
       debounceTimerRef.current = window.setTimeout(async () => {
         debounceTimerRef.current = null;
         if (scheduledSeq !== requestSeqRef.current) return;
@@ -694,10 +698,12 @@ function usePlacesAutocompleteSearch({
           const results = await searchPlacesForAutocomplete(trimmed, getOptionsRef.current());
           if (scheduledSeq !== requestSeqRef.current) return;
           setSuggestions(Array.isArray(results) ? results : []);
+          setSearchError(null);
         } catch (e) {
           if (scheduledSeq !== requestSeqRef.current) return;
           console.warn(CITY_SWITCHER_LOG_PREFIX, 'places search failed', e);
           setSuggestions([]);
+          setSearchError(getPlacesSearchUserMessage(e));
         } finally {
           if (scheduledSeq === requestSeqRef.current) {
             setLoading(false);
@@ -716,7 +722,7 @@ function usePlacesAutocompleteSearch({
     };
   }, []);
 
-  return { suggestions, loading, scheduleSearch, clearResults } as const;
+  return { suggestions, loading, searchError, scheduleSearch, clearResults } as const;
 }
 
 function useCityPickerFocusAndRestore({
@@ -1206,6 +1212,7 @@ function CitySwitcherModal({
   const {
     suggestions: placesSuggestions,
     loading: placesSearchLoading,
+    searchError: placesSearchError,
     scheduleSearch: schedulePlacesSearch,
     clearResults: clearPlacesSearch,
   } = usePlacesAutocompleteSearch({
@@ -1541,6 +1548,10 @@ function CitySwitcherModal({
               {placesSearchLoading ? (
                 <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm opacity-75">
                   Buscando…
+                </p>
+              ) : placesSearchError ? (
+                <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm text-amber-200/90">
+                  {placesSearchError}
                 </p>
               ) : placeSuggestionList.length === 0 ? (
                 <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm opacity-75">
