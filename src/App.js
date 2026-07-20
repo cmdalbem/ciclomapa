@@ -1653,7 +1653,7 @@ class App extends Component {
     // depends on. Geolocation only warms up if permission was already granted,
     // so we don't pop a surprise prompt before the user asks for it.
     userLocationCache.warmUpIfAlreadyGranted();
-    ensureGooglePlacesReady();
+    ensureGooglePlacesReady().catch(() => {});
 
     const citySlug = this.getCitySlugFromRoute();
     if (citySlug) {

@@ -3,12 +3,57 @@ import { GOOGLE_PLACES_API_KEY, GOOGLE_PLACES_DEFAULT_REGION } from './config/co
 
 let googlePlacesGeocoder = null;
 let geocoderInitialized = false;
+let googlePlacesInitError = null;
+let googleMapsAuthFailureHookInstalled = false;
+
+function installGoogleMapsAuthFailureHook() {
+  if (typeof window === 'undefined' || googleMapsAuthFailureHookInstalled) return;
+  googleMapsAuthFailureHookInstalled = true;
+  const previous = window.gm_authFailure;
+  window.gm_authFailure = () => {
+    googlePlacesInitError = Object.assign(new Error('Google Maps authentication failed'), {
+      code: 'AUTH_FAILURE',
+    });
+    geocoderInitialized = false;
+    if (typeof previous === 'function') previous();
+  };
+}
+
+/** Short PT message for UI — distinguishes load failure vs API not responding. */
+export function getPlacesSearchUserMessage(error) {
+  const code = error?.code || '';
+  if (
+    code === 'SCRIPT_LOAD_FAILED' ||
+    code === 'NOT_LOADED' ||
+    code === 'MISSING_API_KEY' ||
+    code === 'AUTH_FAILURE' ||
+    code === 'PLACES_UNAVAILABLE' ||
+    code === 'NOT_INITIALIZED' ||
+    code === 'SSR'
+  ) {
+    return 'Google Maps não carregou.';
+  }
+  if (code) {
+    return `Busca sem resposta do Google (${code}).`;
+  }
+  return 'Não foi possível buscar lugares.';
+}
 
 export function getGooglePlacesGeocoder() {
   return googlePlacesGeocoder;
 }
 
+export function getGooglePlacesInitError() {
+  return googlePlacesInitError;
+}
+
 export async function ensureGooglePlacesReady() {
+  installGoogleMapsAuthFailureHook();
+
+  if (googlePlacesInitError?.code === 'AUTH_FAILURE') {
+    throw googlePlacesInitError;
+  }
+
   if (!geocoderInitialized) {
     try {
       googlePlacesGeocoder = new GooglePlacesGeocoder({
@@ -18,8 +63,11 @@ export async function ensureGooglePlacesReady() {
       });
       await googlePlacesGeocoder.loadGoogleMapsAPI();
       geocoderInitialized = true;
+      googlePlacesInitError = null;
     } catch (error) {
+      googlePlacesInitError = error;
       console.error('Failed to initialize Google Places Geocoder:', error);
+      throw error;
     }
   }
   return googlePlacesGeocoder;

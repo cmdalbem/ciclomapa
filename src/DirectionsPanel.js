@@ -31,6 +31,7 @@ import {
   getAreaStringFromResultLike,
   getCityFromResultLike,
   getGooglePlacesGeocoder,
+  getPlacesSearchUserMessage,
   getShortAddressFromResultLike,
 } from './googlePlacesClient.js';
 import { filterFavoritesByQuery, filterFavoritesForArea } from './favoritesStore';
@@ -64,6 +65,7 @@ class DirectionsPanel extends Component {
       fromSearchLoading: false,
       toSearchLoading: false,
       cityValidationError: null,
+      placesSearchError: null,
       geolocatingInput: null,
     };
 
@@ -276,12 +278,15 @@ class DirectionsPanel extends Component {
     const trimmed = (value ?? '').trim();
     if (!trimmed || trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
       this.setFavoriteSuggestions(inputType, trimmed);
+      this.setState({ placesSearchError: null });
       return;
     }
 
-    this.setState({ [`${inputType}Suggestions`]: [] });
-
-    this.setState({ [`${inputType}SearchLoading`]: true });
+    this.setState({
+      [`${inputType}Suggestions`]: [],
+      [`${inputType}SearchLoading`]: true,
+      placesSearchError: null,
+    });
 
     try {
       const results = await searchPlacesForAutocomplete(
@@ -292,12 +297,14 @@ class DirectionsPanel extends Component {
       this.setState({
         [`${inputType}Suggestions`]: results,
         [`${inputType}SearchLoading`]: false,
+        placesSearchError: null,
       });
     } catch (error) {
       console.error(`${inputType} search error:`, error);
       this.setState({
         [`${inputType}Suggestions`]: [],
         [`${inputType}SearchLoading`]: false,
+        placesSearchError: getPlacesSearchUserMessage(error),
       });
     }
   }
@@ -1257,6 +1264,24 @@ class DirectionsPanel extends Component {
                   aria-label="Trocar origem e destino"
                 />
               </div>
+            )}
+
+            {!showResultsOnMobile && this.state.placesSearchError && (
+              <div className="mt-2 text-sm text-amber-200/90">{this.state.placesSearchError}</div>
+            )}
+
+            {!showResultsOnMobile && (
+              <Button
+                type="primary"
+                size="large"
+                block
+                className="mt-3"
+                onClick={() => this.requestDirectionsCalculation()}
+                loading={directionsLoading}
+                disabled={!this.props.fromPoint || !this.props.toPoint}
+              >
+                Calcular rota
+              </Button>
             )}
 
             {directionsLoading && (
