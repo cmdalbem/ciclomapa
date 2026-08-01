@@ -376,26 +376,27 @@ export function renderBicingAvailabilityHtml(station) {
   const statusParts = [];
   if (!isRenting) statusParts.push('Sem aluguel');
   if (!isReturning) statusParts.push('Sem devolução');
+  const dimClass = (n) => (n <= DIM_COUNT_AT_OR_BELOW ? ' opacity-20' : '');
 
   return `
     <div class="mt-4 mb-1">
       <div class="grid grid-cols-3 gap-3">
         <div class="min-w-0">
-          <div class="text-3xl font-semibold tabular-nums leading-none tracking-tight">${ebike}</div>
-          <div class="mt-1.5 flex items-center gap-1 text-xs opacity-55 leading-snug">
-            ${popupTypeIcon('ebike')}
-            <span>Elétricas</span>
-          </div>
-        </div>
-        <div class="min-w-0">
-          <div class="text-3xl font-semibold tabular-nums leading-none tracking-tight">${mech}</div>
+          <div class="text-3xl font-semibold tabular-nums leading-none tracking-tight${dimClass(mech)}">${mech}</div>
           <div class="mt-1.5 flex items-center gap-1 text-xs opacity-55 leading-snug">
             ${popupTypeIcon('mechanical')}
             <span>Mecânicas</span>
           </div>
         </div>
         <div class="min-w-0">
-          <div class="text-3xl font-semibold tabular-nums leading-none tracking-tight">${docks}</div>
+          <div class="text-3xl font-semibold tabular-nums leading-none tracking-tight${dimClass(ebike)}">${ebike}</div>
+          <div class="mt-1.5 flex items-center gap-1 text-xs opacity-55 leading-snug">
+            ${popupTypeIcon('ebike')}
+            <span>Elétricas</span>
+          </div>
+        </div>
+        <div class="min-w-0">
+          <div class="text-3xl font-semibold tabular-nums leading-none tracking-tight${dimClass(docks)}">${docks}</div>
           <div class="mt-1.5 flex items-center gap-1 text-xs opacity-55 leading-snug">
             ${popupTypeIcon('dock')}
             <span>Vagas</span>
