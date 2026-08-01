@@ -496,7 +496,6 @@ class Map extends Component {
       }
 
       if (self.props.isInRouteMode) {
-        e.originalEvent.preventDefault();
         return;
       }
 
@@ -536,21 +535,15 @@ class Map extends Component {
         }
         self.hoveredPOI = null;
       } else if (interactionType === 'click') {
-        if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-          const feature = e.features.find((f) => !isSuppressed(f));
-          if (!feature) {
-            e.originalEvent.preventDefault();
-            return;
-          }
-          clearHoveredPoi();
-          self.hoveredPOI = null;
-          const clickEvent = { ...e, features: [feature], lngLat: e.lngLat };
-          self.popups.showPOIPopup(clickEvent, iconsMap[l.icon + '-2x'], l.icon);
-          self.focusFeatureOnMobile(feature);
-        }
+        if (!e.features.length) return;
+        const feature = e.features.find((f) => !isSuppressed(f));
+        if (!feature) return;
+        clearHoveredPoi();
+        self.hoveredPOI = null;
+        const clickEvent = { ...e, features: [feature], lngLat: e.lngLat };
+        self.popups.showPOIPopup(clickEvent, iconsMap[l.icon + '-2x'], l.icon);
+        self.focusFeatureOnMobile(feature);
       }
-
-      e.originalEvent.preventDefault();
     };
 
     // Add interactions for circles layer (lower zoom levels)
@@ -1120,39 +1113,37 @@ class Map extends Component {
       if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
         return;
       }
-      if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-        // Disable cyclepath clicks when in route mode
-        if (self.props.isInRouteMode) {
-          e.originalEvent.preventDefault();
-          return;
-        }
+      if (!e.features?.length) return;
 
-        if (self.selectedCycleway) {
-          try {
-            self.map.setFeatureState(
-              { source: sourceId, sourceLayer: sourceLayer, id: self.selectedCycleway },
-              { selected: false, hover: false }
-            );
-          } catch (err) {}
-        }
-        self.selectedCycleway = e.features[0].id;
+      // Disable cyclepath clicks when in route mode
+      if (self.props.isInRouteMode) {
+        return;
+      }
+
+      if (self.selectedCycleway) {
         try {
           self.map.setFeatureState(
             { source: sourceId, sourceLayer: sourceLayer, id: self.selectedCycleway },
-            { selected: true }
+            { selected: false, hover: false }
           );
         } catch (err) {}
+      }
+      self.selectedCycleway = e.features[0].id;
+      try {
+        self.map.setFeatureState(
+          { source: sourceId, sourceLayer: sourceLayer, id: self.selectedCycleway },
+          { selected: true }
+        );
+      } catch (err) {}
 
-        const layer = self.props.layers.find((l) => l.id === e.features[0].layer.id.split('--')[0]);
-        self.popups.showCyclewayPopup(e, layer);
-        if (IS_MOBILE && e.features && e.features[0]) {
-          const bb = turfBbox(e.features[0]); // [minX, minY, maxX, maxY]
-          const bounds = new mapboxgl.LngLatBounds([bb[0], bb[1]], [bb[2], bb[3]]);
-          self.map.fitBounds(bounds, {
-            padding: { top: 150, bottom: 300, left: 100, right: 100 },
-          });
-        }
-        e.originalEvent.preventDefault();
+      const layer = self.props.layers.find((l) => l.id === e.features[0].layer.id.split('--')[0]);
+      self.popups.showCyclewayPopup(e, layer);
+      if (IS_MOBILE && e.features && e.features[0]) {
+        const bb = turfBbox(e.features[0]); // [minX, minY, maxX, maxY]
+        const bounds = new mapboxgl.LngLatBounds([bb[0], bb[1]], [bb[2], bb[3]]);
+        self.map.fitBounds(bounds, {
+          padding: { top: 150, bottom: 300, left: 100, right: 100 },
+        });
       }
     });
 
@@ -1316,16 +1307,14 @@ class Map extends Component {
           // if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
           //   return;
           // }
-          if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-            // Disable comment clicks when in route mode
-            if (self.props.isInRouteMode) {
-              e.originalEvent.preventDefault();
-              return;
-            }
-            self.popups.showCommentPopup(e);
-            self.focusFeatureOnMobile(e.features[0]);
-            e.originalEvent.preventDefault();
+          if (!e.features?.length) return;
+
+          // Disable comment clicks when in route mode
+          if (self.props.isInRouteMode) {
+            return;
           }
+          self.popups.showCommentPopup(e);
+          self.focusFeatureOnMobile(e.features[0]);
         });
 
         self.updateLayerVisibility();
@@ -2979,8 +2968,7 @@ class Map extends Component {
       });
 
       map.on('click', 'favorites', (e) => {
-        if (!e.features || e.features.length === 0) return;
-        e.originalEvent.preventDefault();
+        if (!e.features?.length) return;
         const f = e.features[0];
         const [lng, lat] = f.geometry.coordinates;
         let placeTypes = [];

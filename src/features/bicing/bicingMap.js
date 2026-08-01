@@ -463,10 +463,7 @@ export function createBicingMapController(map, options) {
     });
     map.on('click', BICING_LAYER_ID, (e) => {
       if (!e.features?.length) return;
-      if (options.isInRouteMode()) {
-        e.originalEvent?.preventDefault?.();
-        return;
-      }
+      if (options.isInRouteMode()) return;
       const stationId = e.features[0].properties?.stationId;
       const station = feed?.getStations().find((s) => s.stationId === String(stationId));
       if (!station) return;
