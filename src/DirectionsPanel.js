@@ -1270,20 +1270,6 @@ class DirectionsPanel extends Component {
               <div className="mt-2 text-sm text-amber-200/90">{this.state.placesSearchError}</div>
             )}
 
-            {!showResultsOnMobile && (
-              <Button
-                type="primary"
-                size="large"
-                block
-                className="mt-3"
-                onClick={() => this.requestDirectionsCalculation()}
-                loading={directionsLoading}
-                disabled={!this.props.fromPoint || !this.props.toPoint}
-              >
-                Calcular rota
-              </Button>
-            )}
-
             {directionsLoading && (
               <div
                 id="directionsPanel--results"
