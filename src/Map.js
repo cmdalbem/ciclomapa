@@ -3014,6 +3014,9 @@ class Map extends Component {
       },
       onStationClick: (station) => {
         this.popups?.showBicingStationPopup(station);
+        this.focusFeatureOnMobile({
+          geometry: { type: 'Point', coordinates: [station.lon, station.lat] },
+        });
       },
     });
     await this.bicing.init();
