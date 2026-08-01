@@ -1,4 +1,5 @@
 import mapboxgl from 'mapbox-gl';
+import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import './MapPopups.css';
@@ -12,7 +13,14 @@ import { getPlaceTypeIconElement } from './GooglePlacesGeocoder.js';
 import { isFavorite, isFavoriteById } from './favoritesStore';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 import { formatBicingAgeLabel, renderBicingAvailabilityHtml } from './features/bicing/bicingMap.js';
-import bicingLogo from './features/bicing/bicing-logo.png';
+import { ReactComponent as BicingLogo } from './features/bicing/bicing-logo.svg';
+
+const BICING_LOGO_HTML = renderToStaticMarkup(
+  createElement(BicingLogo, {
+    className: 'bicing-logo h-6 w-auto max-w-[9rem] flex-shrink-0',
+    'aria-label': 'Bicing',
+  })
+);
 
 /** POI address line from Overpass tags; Nominatim fallback (https://operations.osmfoundation.org/policies/nominatim/). */
 
@@ -395,6 +403,8 @@ class MapPopups {
     placeId,
     areaContext,
   }) {
+    this.closeOtherPopups('search');
+
     const titleHtml = title
       ? escapeHtml(title)
       : '<span class="font-medium italic opacity-50">Local</span>';
@@ -476,6 +486,8 @@ class MapPopups {
   }
 
   showCommentPopup(e) {
+    this.closeOtherPopups('comment');
+
     const coords = e.features[0].geometry.coordinates.slice();
     const properties = e.features[0].properties;
 
@@ -520,6 +532,8 @@ class MapPopups {
   }
 
   showPOIPopup(e, iconSrc, poiType) {
+    this.closeOtherPopups('poi');
+
     const coords = e.lngLat;
     const properties = e.features[0].properties;
     const osmUrl = `https://www.openstreetmap.org/${properties['@id'] || properties.id}`;
@@ -641,6 +655,8 @@ class MapPopups {
   showBicingStationPopup(station) {
     if (!station || !Number.isFinite(station.lon) || !Number.isFinite(station.lat)) return;
 
+    this.closeOtherPopups('poi');
+
     const name = (station.name || '').trim();
     const address = (station.address || '').trim();
     const title = name || address || `Estação ${station.stationId}`;
@@ -649,7 +665,7 @@ class MapPopups {
 
     const html = `
             <div class="mt-2">
-                <img src="${bicingLogo}" class="w-8 h-8 flex-shrink-0 object-contain rounded-full" alt="Bicing" />
+                ${BICING_LOGO_HTML}
             </div>
 
             ${renderBicingAvailabilityHtml(station)}
@@ -688,6 +704,8 @@ class MapPopups {
   }
 
   showCyclewayPopup(e, layer) {
+    this.closeOtherPopups('cycleway');
+
     const coords = e.lngLat;
     const properties = e.features[0].properties;
     const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
@@ -901,13 +919,20 @@ class MapPopups {
     this.routeTooltips = [];
   }
 
+  /** Close every popup except `keep` ('cycleway' | 'comment' | 'poi' | 'search'). */
+  closeOtherPopups(keep) {
+    if (keep !== 'poi') {
+      this.poiAddressAbortController?.abort();
+      this.poiAddressAbortController = null;
+    }
+    if (keep !== 'cycleway') this.cyclewayPopup.remove();
+    if (keep !== 'comment') this.commentPopup.remove();
+    if (keep !== 'poi') this.poiPopup.remove();
+    if (keep !== 'search') this.hideSearchResultPopup();
+  }
+
   closeAllPopups() {
-    this.poiAddressAbortController?.abort();
-    this.poiAddressAbortController = null;
-    this.cyclewayPopup.remove();
-    this.commentPopup.remove();
-    this.poiPopup.remove();
-    this.hideSearchResultPopup();
+    this.closeOtherPopups(null);
   }
 }
 
