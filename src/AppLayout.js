@@ -226,7 +226,7 @@ export default function AppLayout({
         onClose={handlers.closePrivacyPolicyModal}
       />
 
-      {state.debugMode && <ApiDebugOverlay />}
+      {(!IS_PROD || state.debugMode) && <ApiDebugOverlay initiallyOpen={!!state.debugMode} />}
     </div>
   );
 }
