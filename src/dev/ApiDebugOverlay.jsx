@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { IS_MOBILE } from '../config/constants.js';
 import {
   API_COLORS,
   API_GROUPS,
@@ -6,9 +7,9 @@ import {
   API_TYPES,
   BRAND_LOGO_SVG,
   BRAND_LOGO_URLS,
-  reset,
   subscribe,
 } from './apiTracker.js';
+import './ApiDebugOverlay.css';
 
 const BADGE_SHORT = {
   [API_TYPES.GOOGLE_GEOCODING]: 'GEO',
@@ -40,8 +41,8 @@ function BrandLogo({ brand }) {
   if (BRAND_LOGO_SVG[brand]) {
     return (
       <span
+        className="api-debug__logo api-debug__logo--svg"
         dangerouslySetInnerHTML={{ __html: BRAND_LOGO_SVG[brand] }}
-        style={{ width: 11, height: 11, flexShrink: 0, display: 'flex' }}
       />
     );
   }
@@ -49,9 +50,9 @@ function BrandLogo({ brand }) {
   if (BRAND_LOGO_URLS[brand]) {
     return (
       <img
+        className="api-debug__logo api-debug__logo--img"
         src={BRAND_LOGO_URLS[brand]}
         alt={brand}
-        style={{ width: 11, height: 11, flexShrink: 0 }}
       />
     );
   }
@@ -61,19 +62,7 @@ function BrandLogo({ brand }) {
 
 function Badge({ api }) {
   return (
-    <span
-      style={{
-        background: API_COLORS[api],
-        color: '#fff',
-        borderRadius: 3,
-        padding: '1px 5px',
-        fontSize: 9,
-        fontWeight: 700,
-        letterSpacing: '0.04em',
-        flexShrink: 0,
-        fontFamily: 'monospace',
-      }}
-    >
+    <span className="api-debug__badge" style={{ '--api-debug-color': API_COLORS[api] }}>
       {BADGE_SHORT[api] ?? api}
     </span>
   );
@@ -84,59 +73,31 @@ function GroupRow({ group, counts }) {
   const hasBreakdown = group.types.length > 1;
 
   return (
-    <div style={{ padding: '5px 10px', borderBottom: '1px solid #27272a' }}>
-      {/* Group header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+    <div className="api-debug__group">
+      <div className="api-debug__group-header">
         <span
-          style={{
-            width: 9,
-            height: 9,
-            borderRadius: '50%',
-            background: group.color,
-            flexShrink: 0,
-          }}
+          className="api-debug__dot api-debug__dot--md"
+          style={{ '--api-debug-color': group.color }}
         />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+        <div className="api-debug__group-label-wrap">
           {group.brand && <BrandLogo brand={group.brand} />}
-          <span
-            style={{
-              color: '#e4e4e7',
-              fontWeight: 600,
-              fontSize: 11,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {group.label}
-          </span>
+          <span className="api-debug__group-label">{group.label}</span>
         </div>
         <span
-          style={{
-            fontWeight: 700,
-            fontSize: 13,
-            color: groupTotal > 0 ? group.color : '#3f3f46',
-            minWidth: 20,
-            textAlign: 'right',
-          }}
+          className={`api-debug__group-total${groupTotal > 0 ? ' api-debug__group-total--active' : ''}`}
+          style={{ '--api-debug-color': group.color }}
         >
           {groupTotal}
         </span>
       </div>
 
-      {/* Breakdown rows — only when the group has more than one type */}
       {hasBreakdown && (
-        <div style={{ marginTop: 3, paddingLeft: 16 }}>
+        <div className="api-debug__breakdown">
           {group.types.map((type) => (
-            <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <span style={{ flex: 1, color: '#71717a', fontSize: 10 }}>{API_LABELS[type]}</span>
+            <div key={type} className="api-debug__breakdown-row">
+              <span className="api-debug__breakdown-label">{API_LABELS[type]}</span>
               <span
-                style={{
-                  color: (counts[type] || 0) > 0 ? '#a1a1aa' : '#3f3f46',
-                  fontSize: 10,
-                  minWidth: 20,
-                  textAlign: 'right',
-                }}
+                className={`api-debug__breakdown-count${(counts[type] || 0) > 0 ? ' api-debug__breakdown-count--active' : ''}`}
               >
                 {counts[type] || 0}
               </span>
@@ -148,8 +109,70 @@ function GroupRow({ group, counts }) {
   );
 }
 
+function CollapsedSummary({ counts }) {
+  const items = [];
+  for (const group of API_GROUPS) {
+    if (group.summaryPerType) {
+      for (const type of group.types) {
+        const total = counts[type] || 0;
+        if (total > 0) {
+          items.push({
+            key: type,
+            label: API_LABELS[type],
+            short: BADGE_SHORT[type] ?? type,
+            color: API_COLORS[type] ?? group.color,
+            total,
+          });
+        }
+      }
+    } else {
+      const total = group.types.reduce((sum, t) => sum + (counts[t] || 0), 0);
+      if (total > 0) {
+        items.push({
+          key: group.id,
+          label: group.label,
+          brand: group.brand,
+          color: group.color,
+          total,
+        });
+      }
+    }
+  }
+
+  return (
+    <div className="api-debug__summary">
+      {items.length === 0 ? (
+        <span className="api-debug__summary-empty">No API calls yet</span>
+      ) : (
+        items.map((item) => (
+          <div key={item.key} className="api-debug__summary-item" title={item.label}>
+            {item.brand ? (
+              <BrandLogo brand={item.brand} />
+            ) : item.short ? (
+              <span
+                className="api-debug__summary-short"
+                style={{ '--api-debug-color': item.color }}
+              >
+                {item.short}
+              </span>
+            ) : (
+              <span
+                className="api-debug__dot api-debug__dot--sm"
+                style={{ '--api-debug-color': item.color }}
+              />
+            )}
+            <span className="api-debug__summary-count" style={{ '--api-debug-color': item.color }}>
+              {item.total}
+            </span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 export default function ApiDebugOverlay() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(IS_MOBILE);
   const [snapshot, setSnapshot] = useState({ entries: [], counts: {} });
   const [flashIds, setFlashIds] = useState(new Set());
   const prevEntriesRef = useRef([]);
@@ -182,113 +205,43 @@ export default function ApiDebugOverlay() {
   const totalCalls = Object.values(snapshot.counts).reduce((s, n) => s + n, 0);
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 16,
-        right: 16,
-        zIndex: 99999,
-        width: 240,
-        fontFamily: 'monospace',
-        fontSize: 11,
-        boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
-        borderRadius: 8,
-        overflow: 'hidden',
-        userSelect: 'none',
-      }}
-    >
-      {/* Header */}
-      <div
-        onClick={() => setCollapsed((c) => !c)}
-        style={{
-          background: '#18181b',
-          color: '#f4f4f5',
-          padding: '6px 10px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          cursor: 'pointer',
-        }}
-      >
-        <span style={{ fontSize: 13 }}>📡</span>
-        <span style={{ fontWeight: 700, flex: 1 }}>API Debug</span>
-        <span
-          style={{
-            background: totalCalls > 0 ? '#ef4444' : '#3f3f46',
-            color: '#fff',
-            borderRadius: 10,
-            padding: '0 7px',
-            fontWeight: 700,
-            fontSize: 10,
-          }}
-        >
-          {totalCalls}
-        </span>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            reset();
-          }}
-          title="Reset counters"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#71717a',
-            cursor: 'pointer',
-            fontSize: 13,
-            padding: '0 2px',
-            lineHeight: 1,
-          }}
-        >
-          ↺
-        </button>
-        <span style={{ color: '#71717a', fontSize: 10 }}>{collapsed ? '▲' : '▼'}</span>
+    <div className={`api-debug api-debug--${IS_MOBILE ? 'mobile' : 'desktop'}`}>
+      <div className="api-debug__header" onClick={() => setCollapsed((c) => !c)}>
+        {IS_MOBILE && collapsed ? (
+          <CollapsedSummary counts={snapshot.counts} />
+        ) : (
+          <>
+            <span className="api-debug__header-icon">📡</span>
+            <span className="api-debug__header-title">API Debug</span>
+            <span
+              className={`api-debug__total${totalCalls > 0 ? ' api-debug__total--active' : ''}`}
+            >
+              {totalCalls}
+            </span>
+          </>
+        )}
+        <span className="api-debug__chevron">{collapsed ? '▲' : '▼'}</span>
       </div>
 
       {!collapsed && (
-        <div style={{ background: '#09090b', color: '#d4d4d8' }}>
-          {/* API groups */}
+        <div className="api-debug__body">
           {API_GROUPS.map((group) => (
             <GroupRow key={group.id} group={group} counts={snapshot.counts} />
           ))}
 
-          {/* Call log */}
-          <div style={{ maxHeight: 200, overflowY: 'auto', borderTop: '1px solid #27272a' }}>
+          <div className="api-debug__log">
             {snapshot.entries.length === 0 ? (
-              <div style={{ color: '#52525b', padding: '10px 8px', textAlign: 'center' }}>
-                No calls yet
-              </div>
+              <div className="api-debug__log-empty">No calls yet</div>
             ) : (
               snapshot.entries.map((entry) => (
                 <div
                   key={entry.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '3px 8px',
-                    borderBottom: '1px solid #18181b',
-                    background: flashIds.has(entry.id)
-                      ? `${API_COLORS[entry.api]}22`
-                      : 'transparent',
-                    transition: 'background 0.3s',
-                  }}
+                  className={`api-debug__log-entry${flashIds.has(entry.id) ? ' api-debug__log-entry--flash' : ''}`}
+                  style={{ '--api-debug-flash': `${API_COLORS[entry.api]}22` }}
                 >
-                  <span
-                    style={{ color: '#52525b', minWidth: 22, textAlign: 'right', flexShrink: 0 }}
-                  >
-                    {formatAge(entry.timestamp)}
-                  </span>
+                  <span className="api-debug__log-age">{formatAge(entry.timestamp)}</span>
                   <Badge api={entry.api} />
-                  <span
-                    style={{
-                      color: '#a1a1aa',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      flex: 1,
-                    }}
-                  >
+                  <span className="api-debug__log-details">
                     {entry.details.length > 30 ? entry.details.slice(0, 30) + '…' : entry.details}
                   </span>
                 </div>

@@ -1,0 +1,274 @@
+.api-debug {
+  position: fixed;
+  z-index: 99999;
+  font-family: monospace;
+  font-size: 11px;
+  overflow: hidden;
+  user-select: none;
+}
+
+.api-debug--desktop {
+  bottom: 16px;
+  right: 16px;
+  width: 240px;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+.api-debug--mobile {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  /* border-radius: 10px 10px 0 0; */
+  /* box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5); */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: #18181b;
+}
+
+/* Header / slim bar */
+.api-debug__header {
+  background: #18181b;
+  color: #f4f4f5;
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.api-debug__header-icon {
+  font-size: 13px;
+}
+
+.api-debug__header-title {
+  font-weight: 700;
+  flex: 1;
+}
+
+.api-debug__total {
+  background: #3f3f46;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 7px;
+  font-weight: 700;
+  font-size: 10px;
+}
+
+.api-debug__total--active {
+  background: #ef4444;
+}
+
+.api-debug__chevron {
+  color: #71717a;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* Collapsed summary (mobile) */
+.api-debug__summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.api-debug__summary-empty {
+  color: #52525b;
+  font-size: 11px;
+}
+
+.api-debug__summary-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.api-debug__summary-count {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--api-debug-color);
+}
+
+.api-debug__summary-short {
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: var(--api-debug-color);
+  border-radius: 3px;
+  padding: 1px 4px;
+  line-height: 1.2;
+}
+
+/* Body (expanded) */
+.api-debug__body {
+  background: #09090b;
+  color: #d4d4d8;
+}
+
+.api-debug--mobile .api-debug__body {
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+/* Brand logos */
+.api-debug__logo {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
+
+.api-debug__logo--svg {
+  display: flex;
+}
+
+.api-debug__logo--img {
+  object-fit: contain;
+}
+
+/* Color dots */
+.api-debug__dot {
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--api-debug-color);
+}
+
+.api-debug__dot--sm {
+  width: 8px;
+  height: 8px;
+}
+
+.api-debug__dot--md {
+  width: 9px;
+  height: 9px;
+}
+
+/* Group rows */
+.api-debug__group {
+  padding: 5px 10px;
+  border-bottom: 1px solid #27272a;
+}
+
+.api-debug__group-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.api-debug__group-label-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.api-debug__group-label {
+  color: #e4e4e7;
+  font-weight: 600;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-debug__group-total {
+  font-weight: 700;
+  font-size: 13px;
+  min-width: 20px;
+  text-align: right;
+  color: #3f3f46;
+}
+
+.api-debug__group-total--active {
+  color: var(--api-debug-color);
+}
+
+.api-debug__breakdown {
+  margin-top: 3px;
+  padding-left: 16px;
+}
+
+.api-debug__breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.api-debug__breakdown-label {
+  flex: 1;
+  color: #71717a;
+  font-size: 10px;
+}
+
+.api-debug__breakdown-count {
+  font-size: 10px;
+  min-width: 20px;
+  text-align: right;
+  color: #3f3f46;
+}
+
+.api-debug__breakdown-count--active {
+  color: #a1a1aa;
+}
+
+/* Call log */
+.api-debug__log {
+  max-height: 200px;
+  overflow-y: auto;
+  border-top: 1px solid #27272a;
+}
+
+.api-debug__log-empty {
+  color: #52525b;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.api-debug__log-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-bottom: 1px solid #18181b;
+  background: transparent;
+  transition: background 0.3s;
+}
+
+.api-debug__log-entry--flash {
+  background: var(--api-debug-flash);
+}
+
+.api-debug__log-age {
+  color: #52525b;
+  min-width: 22px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.api-debug__log-details {
+  color: #a1a1aa;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* Badge */
+.api-debug__badge {
+  background: var(--api-debug-color);
+  color: #fff;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  font-family: monospace;
+}

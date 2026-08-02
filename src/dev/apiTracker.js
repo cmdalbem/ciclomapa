@@ -71,6 +71,11 @@ export const API_COLORS = {
  */
 export const BRAND_LOGO_URLS = {
   google: 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_16dp.png',
+  firebase:
+    'https://brandlogos.net/wp-content/uploads/2025/03/firebase_icon-logo_brandlogos.net_tcvck-512x646.png',
+  osm: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Openstreetmap_logo.svg/3840px-Openstreetmap_logo.svg.png',
+  airtable:
+    'https://cdn.iconscout.com/icon/free/png-256/free-mesa-de-aire-logo-icon-svg-download-png-1254387.png',
 };
 
 /**
@@ -81,15 +86,6 @@ export const BRAND_LOGO_SVG = {
   mapbox: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
     <circle cx="12" cy="12" r="12" fill="#4264FB"/>
     <path fill="#fff" d="M12 5.5C8.96 5.5 6.5 7.96 6.5 11c0 4.42 5.5 9 5.5 9s5.5-4.58 5.5-9c0-3.04-2.46-5.5-5.5-5.5zm0 7.5a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/>
-  </svg>`,
-  osm: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <circle cx="12" cy="12" r="12" fill="#7EBC6F"/>
-    <circle cx="10.5" cy="10" r="4.5" fill="none" stroke="#fff" stroke-width="2.5"/>
-    <line x1="13.7" y1="13.2" x2="17.5" y2="17" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
-  </svg>`,
-  firebase: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <circle cx="12" cy="12" r="12" fill="#F5820D"/>
-    <path fill="#fff" d="M7.5 17.5L9.8 7.2l3 5.5 1.7-3.2 2.5 8H7.5zm4.3-10.8L9.2 15.5h6.5L13.3 8l-1.5 2.8-1.5-4.1z"/>
   </svg>`,
 };
 
@@ -124,14 +120,9 @@ export const API_GROUPS = [
     types: [API_TYPES.NOMINATIM_SEARCH, API_TYPES.NOMINATIM_REVERSE, API_TYPES.OVERPASS],
   },
   {
-    id: 'routing',
-    label: 'Routing',
-    color: '#8b5cf6',
-    types: [API_TYPES.GRAPHHOPPER, API_TYPES.VALHALLA, API_TYPES.ORS],
-  },
-  {
     id: 'airtable',
     label: 'Airtable',
+    brand: 'airtable',
     color: '#0ea5e9',
     types: [API_TYPES.AIRTABLE_READ, API_TYPES.AIRTABLE_WRITE],
   },
@@ -141,6 +132,14 @@ export const API_GROUPS = [
     brand: 'firebase',
     color: '#F5820D',
     types: [API_TYPES.FIREBASE_READ, API_TYPES.FIREBASE_WRITE],
+  },
+  {
+    id: 'routing',
+    label: 'Routing',
+    color: '#8b5cf6',
+    // Multiple alternate engines — show each active service by name in the slim bar
+    summaryPerType: true,
+    types: [API_TYPES.GRAPHHOPPER, API_TYPES.VALHALLA, API_TYPES.ORS],
   },
 ];
 
