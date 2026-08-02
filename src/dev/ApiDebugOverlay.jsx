@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { HiOutlineChevronDown as IconChevron } from 'react-icons/hi';
 import { HiBugAnt as IconDebug, HiOutlineXMark as IconClose } from 'react-icons/hi2';
-import { IS_MOBILE } from '../config/constants.js';
+import { IS_MOBILE, TOPBAR_HEIGHT } from '../config/constants.js';
 import {
   API_COLORS,
   API_GROUPS,
@@ -357,16 +357,20 @@ export default function ApiDebugOverlay({ initiallyOpen = false }) {
     });
   }, []);
 
-  const totalCalls = Object.values(snapshot.counts).reduce((s, n) => s + n, 0);
   const activeGroups = API_GROUPS.filter(
     (group) => group.types.reduce((sum, t) => sum + (snapshot.counts[t] || 0), 0) > 0
   );
+
+  const desktopTop = TOPBAR_HEIGHT + 8;
 
   if (!open) {
     return (
       <button
         type="button"
-        className="fixed bottom-[calc(2px+env(safe-area-inset-bottom,0px))] right-0.5 z-[99999] flex h-4 w-4 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-gray-500 opacity-40 hover:opacity-90 focus-visible:opacity-90"
+        className={`fixed z-[99999] flex h-4 w-4 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-gray-500 opacity-40 hover:opacity-90 focus-visible:opacity-90 ${
+          IS_MOBILE ? 'right-0.5 bottom-[calc(2px+env(safe-area-inset-bottom,0px))]' : 'right-4'
+        }`}
+        style={IS_MOBILE ? undefined : { top: desktopTop }}
         onClick={() => setOpen(true)}
         title="Open debug panel"
         aria-label="Open debug panel"
@@ -381,26 +385,15 @@ export default function ApiDebugOverlay({ initiallyOpen = false }) {
       className={`fixed z-[99999] overflow-hidden font-['Inter',system-ui,sans-serif] text-[10px] select-none ${
         IS_MOBILE
           ? 'inset-x-0 bottom-0 w-full bg-gray-900 pb-[env(safe-area-inset-bottom,0px)]'
-          : 'bottom-4 right-4 w-60 rounded-lg shadow-lg'
+          : 'right-4 w-60 rounded-lg shadow-lg'
       }`}
+      style={IS_MOBILE ? undefined : { top: desktopTop }}
     >
       <div
         className="flex cursor-pointer items-center gap-1.5 bg-gray-900 px-2 py-0.5 text-gray-100"
         onClick={() => setCollapsed((c) => !c)}
       >
-        {IS_MOBILE ? (
-          <CollapsedSummary counts={snapshot.counts} dataSources={dataSnapshot.sources} />
-        ) : (
-          <>
-            <span>📡</span>
-            <span className="flex-1">Debug</span>
-            <span
-              className={`rounded-[10px] px-[7px] font-bold text-[#fff] ${totalCalls > 0 ? 'bg-red-500' : 'bg-gray-700'}`}
-            >
-              {totalCalls}
-            </span>
-          </>
-        )}
+        <CollapsedSummary counts={snapshot.counts} dataSources={dataSnapshot.sources} />
         <IconChevron
           className={`h-[13px] w-[13px] shrink-0 text-gray-500 transition-transform duration-200 ${!collapsed ? 'rotate-180' : ''}`}
         />
