@@ -11260,7 +11260,7 @@ playwright@1.60.0:
   optionalDependencies:
     fsevents "2.3.2"
 
-pmtiles@^3.0.3:
+pmtiles@^3.0.3, pmtiles@^3.2.1:
   version "3.2.1"
   resolved "https://registry.npmjs.org/pmtiles/-/pmtiles-3.2.1.tgz"
   integrity sha512-3R4fBwwoli5mw7a6t1IGwOtfmcSAODq6Okz0zkXhS1zi9sz1ssjjIfslwPvcWw5TNhdjNBUg9fgfPLeqZlH6ng==

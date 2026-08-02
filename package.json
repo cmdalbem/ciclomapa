@@ -57,6 +57,10 @@
     "deploy": "gh-pages -d build",
     "dev:vercel": "vercel dev",
     "overpass": "node scripts/overpass-to-geojson.js",
+    "generate-pmtiles": "node scripts/generate-pmtiles.js",
+    "pmtiles:list": "node scripts/sync-pmtiles-to-s3.js --list-builds",
+    "pmtiles:sync": "node scripts/sync-pmtiles-to-s3.js",
+    "pmtiles:sync:dry-run": "node scripts/sync-pmtiles-to-s3.js --dry-run",
     "generate-pwa-icons": "node scripts/generate-pwa-icons.js",
     "prepare": "husky || true"
   },
@@ -93,6 +97,7 @@
     "husky": "^9.1.7",
     "jest-axe": "^10.0.0",
     "lint-staged": "^15.2.10",
+    "pmtiles": "^3.2.1",
     "postcss": "8.4.49",
     "prettier": "^3.4.2",
     "sharp": "^0.34.5",
