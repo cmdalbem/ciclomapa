@@ -102,7 +102,7 @@ function GroupRow({ group, counts }) {
   const hasBreakdown = group.types.length > 1 && activeTypes.length > 0;
 
   return (
-    <div className="border-b border-white border-opacity-10 px-2.5 py-[5px]">
+    <div className="border-b border-white border-opacity-5 px-2.5 py-[5px] last:border-b-0">
       <div className="flex items-center gap-[7px]">
         <div className="flex min-w-0 flex-1 items-center gap-[5px]">
           {group.brand && <BrandLogo brand={group.brand} />}
@@ -162,7 +162,7 @@ function DataSourceRow({ source }) {
   }
 
   return (
-    <div className="flex items-start gap-[7px] border-b border-white border-opacity-10 px-2.5 py-1">
+    <div className="flex items-start gap-[7px] border-b border-white border-opacity-5 px-2.5 py-1 last:border-b-0">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="flex-1 truncate font-normal text-gray-200">{label}</span>
@@ -382,15 +382,15 @@ export default function ApiDebugOverlay({ initiallyOpen = false }) {
 
   return (
     <div
-      className={`fixed z-[99999] overflow-hidden font-['Inter',system-ui,sans-serif] text-[10px] select-none ${
+      className={`fixed z-[99999] overflow-hidden bg-gray-800 font-['Inter',system-ui,sans-serif] text-[10px] ${
         IS_MOBILE
-          ? 'inset-x-0 bottom-0 w-full bg-gray-900 pb-[env(safe-area-inset-bottom,0px)]'
+          ? 'inset-x-0 bottom-0 w-full pb-[env(safe-area-inset-bottom,0px)]'
           : 'right-4 w-60 rounded-lg shadow-lg'
       }`}
       style={IS_MOBILE ? undefined : { top: desktopTop }}
     >
       <div
-        className="flex cursor-pointer items-center gap-1.5 bg-gray-900 px-2 py-0.5 text-gray-100"
+        className="flex cursor-pointer select-none items-center gap-1.5 bg-gray-800 px-2 py-0.5 text-gray-100"
         onClick={() => setCollapsed((c) => !c)}
       >
         <CollapsedSummary counts={snapshot.counts} dataSources={dataSnapshot.sources} />
@@ -417,44 +417,47 @@ export default function ApiDebugOverlay({ initiallyOpen = false }) {
       >
         <div className="overflow-hidden">
           <div
-            className={`bg-black text-gray-300 transition duration-200 ${collapsed ? 'opacity-0 -translate-y-1' : 'opacity-100 translate-y-0 delay-[60ms]'} ${IS_MOBILE ? 'max-h-[55vh] overflow-y-auto' : ''}`}
+            className={`space-y-2 bg-gray-800 px-2 pb-2 pt-1 text-gray-300 transition duration-200 ${collapsed ? 'opacity-0 -translate-y-1' : 'opacity-100 translate-y-0 delay-[60ms]'} ${IS_MOBILE ? 'max-h-[55vh] overflow-y-auto' : ''}`}
           >
-            <div className="px-2.5 pb-1 pt-1.5 font-medium uppercase tracking-[0.08em] text-gray-600">
-              Data Sources
-            </div>
-            {Object.values(dataSnapshot.sources).map((source) => (
-              <DataSourceRow key={source.key} source={source} />
-            ))}
+            <h3 className="pt-1 text-[9px] font-semibold text-gray-400">Data Sources</h3>
+            <section className="overflow-hidden rounded-md bg-black">
+              {Object.values(dataSnapshot.sources).map((source) => (
+                <DataSourceRow key={source.key} source={source} />
+              ))}
+            </section>
 
-            <div className="px-2.5 pb-1 pt-1.5 font-medium uppercase tracking-[0.08em] text-gray-600">
-              API Calls
-            </div>
-            {activeGroups.length === 0 ? (
-              <div className="px-2 py-2.5 text-center text-gray-600">No calls yet</div>
-            ) : (
-              activeGroups.map((group) => (
-                <GroupRow key={group.id} group={group} counts={snapshot.counts} />
-              ))
-            )}
-
-            <div className="max-h-[200px] overflow-y-auto border-t border-white border-opacity-10">
-              {snapshot.entries.length === 0 ? (
+            <h3 className="pt-1 text-[9px] font-semibold text-gray-400">API Calls</h3>
+            <section className="overflow-hidden rounded-md bg-black">
+              {activeGroups.length === 0 ? (
                 <div className="px-2 py-2.5 text-center text-gray-600">No calls yet</div>
               ) : (
-                snapshot.entries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className={`grid grid-cols-[12px_5rem_minmax(0,1fr)_4.5rem] items-center gap-x-1.5 border-b border-white border-opacity-5 px-2 py-[3px] transition-colors duration-300 ${flashIds.has(entry.id) ? 'bg-gray-800' : ''}`}
-                  >
-                    <LogService api={entry.api} />
-                    <span className="min-w-0 truncate text-gray-400">{entry.details}</span>
-                    <span className={`${MONO} text-right text-gray-600`}>
-                      {formatTime(entry.timestamp)}
-                    </span>
-                  </div>
+                activeGroups.map((group) => (
+                  <GroupRow key={group.id} group={group} counts={snapshot.counts} />
                 ))
               )}
-            </div>
+            </section>
+
+            <h3 className="pt-1 text-[9px] font-semibold text-gray-400">Log</h3>
+            <section className="overflow-hidden rounded-md bg-black">
+              <div className="max-h-[200px] overflow-y-auto">
+                {snapshot.entries.length === 0 ? (
+                  <div className="px-2 py-2.5 text-center text-gray-600">No calls yet</div>
+                ) : (
+                  snapshot.entries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className={`grid grid-cols-[12px_4rem_minmax(0,1fr)_3rem] items-center gap-x-1.5 border-b border-white border-opacity-5 px-2 py-[3px] last:border-b-0 transition-colors duration-300 ${flashIds.has(entry.id) ? 'bg-gray-800' : ''}`}
+                    >
+                      <LogService api={entry.api} />
+                      <span className="min-w-0 truncate text-gray-400">{entry.details}</span>
+                      <span className={`${MONO} text-right text-gray-600`}>
+                        {formatTime(entry.timestamp)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
           </div>
         </div>
       </div>
