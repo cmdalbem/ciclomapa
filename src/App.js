@@ -56,6 +56,7 @@ import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 import userLocationCache from './features/geolocation/userLocationCache.js';
 import { ensureGooglePlacesReady } from './googlePlacesClient.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
+import { startDataLoad, finishDataLoad } from './dev/dataLoadTracker.js';
 
 // v5+ no longer ships global type scale in the old Less bundle; this restores baseline
 // margins for raw h1–p etc. (and complements Tailwind preflight). See antd/dist/reset.css.
@@ -1188,9 +1189,18 @@ class App extends Component {
     //     duration: 0
     // });
 
+    startDataLoad('geojson-osm', 'GeoJSON (Overpass)', {
+      area: areaName,
+      backgroundUpdate: !!backgroundUpdate,
+    });
+
     this.currentOSMRequest = OSMController.getData({ area: areaName });
     return this.currentOSMRequest
       .then((newData) => {
+        finishDataLoad('geojson-osm', {
+          meta: { area: areaName, features: newData.geoJson?.features?.length ?? 0 },
+        });
+
         this.geoJsonDiff(this.state.geoJson, newData.geoJson);
 
         if (forceUpdate && !this.isOSMDataHealthy(this.state.geoJson, newData.geoJson)) {
@@ -1262,12 +1272,14 @@ class App extends Component {
         // Check if the error is due to request abortion
         if (e.message === 'Request aborted') {
           console.debug('OSM request was cancelled due to a new request');
+          finishDataLoad('geojson-osm', { status: 'aborted', meta: { area: areaName } });
           // notification.warning({
           //     message: 'OSM Request Aborted',
           //     description: 'OSM request was cancelled due to a new request.',
           //     duration: 2
           // });
         } else {
+          finishDataLoad('geojson-osm', { error: e, meta: { area: areaName } });
           appNotification.error({
             title: 'Ops',
             description:
@@ -1286,11 +1298,17 @@ class App extends Component {
         this.getDataFromOSM({ forceUpdate: true });
       } else {
         // Try to retrieve this area's geojson data from the database
-        const storageKey = this.getStorageKeyForArea(this.state.area);
+        const area = this.state.area;
+        const storageKey = this.getStorageKeyForArea(area);
+        startDataLoad('geojson-cache', 'GeoJSON (cache)', { area });
         this.getStorage()
           .load(this.state.area, { storageKey })
           .then((data) => {
             if (data) {
+              finishDataLoad('geojson-cache', {
+                meta: { area, features: data.geoJson?.features?.length ?? 0 },
+              });
+
               const hasBoundaryFeature = ENABLE_BOUNDARY_LAYER
                 ? data.geoJson?.features?.some((f) => f.properties?.boundary === 'administrative')
                 : true;
@@ -1323,6 +1341,8 @@ class App extends Component {
                 `Couldn't find previously saved data for area ${this.state.area}, hitting OSM...`
               );
 
+              finishDataLoad('geojson-cache', { status: 'empty', meta: { area, features: 0 } });
+
               this.setState({
                 geoJson: null,
                 lengths: {},
@@ -1333,6 +1353,7 @@ class App extends Component {
           })
           .catch((e) => {
             console.error(e);
+            finishDataLoad('geojson-cache', { error: e, meta: { area } });
             // notification['error']({
             //     message: 'Erro',
             //     description:
