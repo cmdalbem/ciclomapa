@@ -26,7 +26,7 @@
     "idb-keyval": "^6.2.1",
     "jquery": "^3.6.0",
     "lodash.debounce": "^4.0.8",
-    "mapbox-gl": "^3.19.1",
+    "mapbox-gl": "^3.21.0",
     "osmtogeojson": "^3.0.0-beta.4",
     "pako": "^2.0.3",
     "prop-types": "^15.8.1",
