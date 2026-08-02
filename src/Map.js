@@ -48,6 +48,7 @@ import debounce from 'lodash.debounce';
 import { getCurrentSunPosition } from './sunPositionUtils';
 import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/map/icons';
 import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
+import { flyMapTo } from './features/map/mapCamera.js';
 import userLocationCache from './features/geolocation/userLocationCache.js';
 
 import './Map.css';
@@ -70,11 +71,9 @@ export function flyMapToCityFocus(map, centerLngLat, placeName) {
     placeName === VITORIA_GEOCODER_PLACE_NAME ? VITORIA_FOCUS_CENTER_LNG_LAT : [lng, lat];
   if (!center || !Number.isFinite(center[0]) || !Number.isFinite(center[1])) return;
 
-  map.flyTo({
+  flyMapTo(map, {
     center,
     zoom: DEFAULT_ZOOM,
-    speed: 2.2,
-    minZoom: 6,
   });
 }
 
@@ -207,6 +206,12 @@ class Map extends Component {
 
   onMapMoveEnded() {
     this.syncMapState();
+
+    // Mobile never shows a live city label from pan/zoom geocoding (top bar is a search
+    // placeholder; analytics sidebar is desktop-only). Skip Mapbox reverse-geocode entirely.
+    if (IS_MOBILE) {
+      return;
+    }
 
     if (this.map.getZoom() > MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD) {
       const center = this.map.getCenter();

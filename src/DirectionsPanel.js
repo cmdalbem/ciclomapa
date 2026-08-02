@@ -20,6 +20,7 @@ import {
   ENABLE_AUTOFILL_ORIGIN_ON_PANEL_OPEN,
 } from './config/constants.js';
 import DirectionsManager from './DirectionsManager.js';
+import { flyMapTo } from './features/map/mapCamera.js';
 import userLocationCache from './features/geolocation/userLocationCache.js';
 import LocationSearchInput from './features/directions/components/LocationSearchInput.js';
 import RouteSortDropdown from './features/directions/components/RouteSortDropdown.js';
@@ -30,6 +31,7 @@ import {
   getAreaStringFromResultLike,
   getCityFromResultLike,
   getGooglePlacesGeocoder,
+  getPlacesSearchUserMessage,
   getShortAddressFromResultLike,
 } from './googlePlacesClient.js';
 import { filterFavoritesByQuery, filterFavoritesForArea } from './favoritesStore';
@@ -63,6 +65,7 @@ class DirectionsPanel extends Component {
       fromSearchLoading: false,
       toSearchLoading: false,
       cityValidationError: null,
+      placesSearchError: null,
       geolocatingInput: null,
     };
 
@@ -161,10 +164,6 @@ class DirectionsPanel extends Component {
       this.setState({ collapsed: false });
       if (this.props.onDirectionsPanelToggle) {
         this.props.onDirectionsPanelToggle(true);
-      }
-    } else {
-      if (this.props.onDirectionsPanelToggle) {
-        this.props.onDirectionsPanelToggle(!this.state.collapsed);
       }
     }
   }
@@ -279,12 +278,15 @@ class DirectionsPanel extends Component {
     const trimmed = (value ?? '').trim();
     if (!trimmed || trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
       this.setFavoriteSuggestions(inputType, trimmed);
+      this.setState({ placesSearchError: null });
       return;
     }
 
-    this.setState({ [`${inputType}Suggestions`]: [] });
-
-    this.setState({ [`${inputType}SearchLoading`]: true });
+    this.setState({
+      [`${inputType}Suggestions`]: [],
+      [`${inputType}SearchLoading`]: true,
+      placesSearchError: null,
+    });
 
     try {
       const results = await searchPlacesForAutocomplete(
@@ -295,12 +297,14 @@ class DirectionsPanel extends Component {
       this.setState({
         [`${inputType}Suggestions`]: results,
         [`${inputType}SearchLoading`]: false,
+        placesSearchError: null,
       });
     } catch (error) {
       console.error(`${inputType} search error:`, error);
       this.setState({
         [`${inputType}Suggestions`]: [],
         [`${inputType}SearchLoading`]: false,
+        placesSearchError: getPlacesSearchUserMessage(error),
       });
     }
   }
@@ -406,10 +410,15 @@ class DirectionsPanel extends Component {
       this.cancelActiveGeolocation();
     }
 
+    if (this.blurTimeout) {
+      clearTimeout(this.blurTimeout);
+      this.blurTimeout = null;
+    }
+
     this.setState({
       [`${inputType}SearchValue`]: '',
-      [`${inputType}Suggestions`]: [],
       cityValidationError: null,
+      focusedInput: inputType,
     });
 
     // Clear the corresponding point
@@ -420,6 +429,8 @@ class DirectionsPanel extends Component {
       this.props.onToPointChange(null);
       this.removeMarker('to');
     }
+
+    this.setFavoriteSuggestions(inputType, '');
   }
 
   handleGeolocation(inputType, isAutoTriggered = false) {
@@ -431,10 +442,9 @@ class DirectionsPanel extends Component {
       this.props.onFromPointChange(result);
 
       if (fromAutocomplete && this.props.map) {
-        this.props.map.flyTo({
+        flyMapTo(this.props.map, {
           center: result.result.center,
           zoom: Math.max(this.props.map.getZoom(), 16),
-          duration: 1500,
         });
       }
 
@@ -964,6 +974,12 @@ class DirectionsPanel extends Component {
 
   handleInputFocus(inputType) {
     console.debug(`Input focused: ${inputType}`);
+
+    if (this.blurTimeout) {
+      clearTimeout(this.blurTimeout);
+      this.blurTimeout = null;
+    }
+
     this.setState({ focusedInput: inputType });
 
     const currentValue = this.state[`${inputType}SearchValue`] || '';
@@ -991,14 +1007,22 @@ class DirectionsPanel extends Component {
       // Delay to make sure that if the next click was on the map, it'll set the point
       // Also check if the blur was caused by clicking on a suggestion
       this.blurTimeout = setTimeout(() => {
-        // Check if the active element is still within the autocomplete dropdown
+        // User may have focused the other origin/destination field in the meantime
+        if (this.state.focusedInput !== inputType) {
+          this.blurTimeout = null;
+          return;
+        }
+
         const activeElement = document.activeElement;
         const isDropdownActive =
           activeElement &&
           (activeElement.closest('.ant-select-dropdown') ||
             activeElement.closest('.ant-select-item'));
+        const isRoutePointsInputFocused =
+          activeElement?.tagName === 'INPUT' &&
+          Boolean(activeElement.closest('.cm-route-points__inputs'));
 
-        if (!isDropdownActive) {
+        if (!isDropdownActive && !isRoutePointsInputFocused) {
           this.setState({ focusedInput: null });
           console.debug('Focus cleared, resetting cursor');
 
@@ -1007,7 +1031,7 @@ class DirectionsPanel extends Component {
             this.props.onRouteModeChange(false);
           }
         } else {
-          console.debug('Blur ignored - dropdown is active');
+          console.debug('Blur ignored - dropdown or route input is active');
         }
 
         this.blurTimeout = null;
@@ -1090,6 +1114,11 @@ class DirectionsPanel extends Component {
 
     const routes = sortedRoutes.slice(0, HYBRID_MAX_RESULTS);
     const showResultsOnMobile = IS_MOBILE && (directions || directionsLoading);
+    const panelOpenClass = !this.state.collapsed
+      ? `directions-panel-open ${
+          showResultsOnMobile ? 'directions-panel-open--results' : 'directions-panel-open--planning'
+        }`
+      : '';
 
     return (
       <>
@@ -1104,22 +1133,7 @@ class DirectionsPanel extends Component {
         )}
         <div
           id="directionsPanel"
-          className={`
-                        cm-panel glass-bg fixed text-white cursor-pointer
-                        ${
-                          IS_MOBILE
-                            ? this.state.collapsed
-                              ? ''
-                              : `directions-panel-open ${
-                                  showResultsOnMobile
-                                    ? 'directions-panel-open--results'
-                                    : 'directions-panel-open--planning'
-                                }`
-                            : this.state.collapsed
-                              ? 'hidden'
-                              : ''
-                        }
-                    `}
+          className={`cm-panel glass-bg fixed text-white cursor-pointer ${panelOpenClass}`}
         >
           <div className="cm-panel__body p-4">
             <div
@@ -1154,7 +1168,12 @@ class DirectionsPanel extends Component {
               ) : (
                 // Default header
                 <>
-                  <h3 className="font-semibold flex items-center mb-0">Planejar rota</h3>
+                  <h3 className="font-semibold flex items-center gap-2 mb-0">
+                    {!IS_MOBILE && (
+                      <LuBike className="text-lg flex-shrink-0 opacity-90" aria-hidden />
+                    )}
+                    Planejar rota
+                  </h3>
 
                   <div
                     className="flex items-start -mr-1 flex-shrink-0 opacity-50"
@@ -1245,6 +1264,10 @@ class DirectionsPanel extends Component {
                   aria-label="Trocar origem e destino"
                 />
               </div>
+            )}
+
+            {!showResultsOnMobile && this.state.placesSearchError && (
+              <div className="mt-2 text-sm text-amber-200/90">{this.state.placesSearchError}</div>
             )}
 
             {directionsLoading && (

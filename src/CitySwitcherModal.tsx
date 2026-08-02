@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { HiMiniClock, HiOutlineXMark, HiOutlineHeart, HiHeart } from 'react-icons/hi2';
@@ -20,7 +28,7 @@ import {
   SUPPORTED_COUNTRY_LABEL_PT_BY_CODE,
 } from './config/constants.js';
 import { appendKmUnit } from './utils/routeUtils.js';
-import { getAreaStringFromResultLike } from './googlePlacesClient.js';
+import { getAreaStringFromResultLike, getPlacesSearchUserMessage } from './googlePlacesClient.js';
 import { PlacesAutocompleteOptionLabel } from './GooglePlacesGeocoder.js';
 import {
   geocodePlacesSuggestionToResult,
@@ -59,6 +67,17 @@ const CITY_SWITCHER_STATS_KM_CACHE_KEY = 'ciclomapa_city_switcher_stats_km_v3';
 
 const CITY_PICKER_INPUT_SELECTOR =
   '.city-switcher-modal__geocoderMount .city-switcher-global-search input';
+
+/** First city-picker open per page load: stagger-enter on catalog / favorites / recents. */
+const STAGGER_ENTER_CLASS = 'city-switcher-modal__staggerEnter';
+
+function withStaggerEnterClass(className: string, enabled: boolean): string {
+  return enabled ? `${className} ${STAGGER_ENTER_CLASS}` : className;
+}
+
+function staggerEnterStyle(index: number, enabled: boolean): React.CSSProperties | undefined {
+  return enabled ? ({ '--city-content-stagger': index } as React.CSSProperties) : undefined;
+}
 
 /** Responsive columns for catalog cities, favorites, and recents (mobile: single column via CSS). */
 const CITY_SWITCHER_CARD_GRID_CLASS =
@@ -584,11 +603,11 @@ function usePreloadedStatsTotalsByCanonicalSlug(cityObjs: StatsCityLike[], isPic
     const myGeneration = effectGenerationRef.current;
     const list = Array.isArray(cityObjs) ? cityObjs : [];
 
-    setIsLoadingTotals(true);
     const applyCacheToState = () => {
       if (effectGenerationRef.current !== myGeneration) return;
       setStatsTotalsByCanonicalSlug(new Map(statsTotalsByCanonicalSlugCache));
     };
+    setIsLoadingTotals(true);
     if (!statsTotalsLoadPromise) {
       statsTotalsLoadPromise = preloadStatsTotalsForCities(list, {
         onCacheUpdate: applyCacheToState,
@@ -637,6 +656,7 @@ function usePlacesAutocompleteSearch({
 }) {
   const [suggestions, setSuggestions] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const debounceTimerRef = useRef<number | null>(null);
   const requestSeqRef = useRef(0);
   const getOptionsRef = useRef(getAutocompleteOptions);
@@ -649,6 +669,7 @@ function usePlacesAutocompleteSearch({
       debounceTimerRef.current = null;
     }
     setSuggestions([]);
+    setSearchError(null);
     setLoading(false);
   }, []);
 
@@ -662,12 +683,14 @@ function usePlacesAutocompleteSearch({
       if (trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
         requestSeqRef.current += 1;
         setSuggestions([]);
+        setSearchError(null);
         setLoading(false);
         return;
       }
       requestSeqRef.current += 1;
       const scheduledSeq = requestSeqRef.current;
       setLoading(true);
+      setSearchError(null);
       debounceTimerRef.current = window.setTimeout(async () => {
         debounceTimerRef.current = null;
         if (scheduledSeq !== requestSeqRef.current) return;
@@ -675,10 +698,12 @@ function usePlacesAutocompleteSearch({
           const results = await searchPlacesForAutocomplete(trimmed, getOptionsRef.current());
           if (scheduledSeq !== requestSeqRef.current) return;
           setSuggestions(Array.isArray(results) ? results : []);
+          setSearchError(null);
         } catch (e) {
           if (scheduledSeq !== requestSeqRef.current) return;
           console.warn(CITY_SWITCHER_LOG_PREFIX, 'places search failed', e);
           setSuggestions([]);
+          setSearchError(getPlacesSearchUserMessage(e));
         } finally {
           if (scheduledSeq === requestSeqRef.current) {
             setLoading(false);
@@ -697,7 +722,7 @@ function usePlacesAutocompleteSearch({
     };
   }, []);
 
-  return { suggestions, loading, scheduleSearch, clearResults } as const;
+  return { suggestions, loading, searchError, scheduleSearch, clearResults } as const;
 }
 
 function useCityPickerFocusAndRestore({
@@ -999,12 +1024,14 @@ function CityInfraMiniRingPlaceholder() {
 function CityPickerCityCard({
   city,
   stagger,
+  shouldStaggerEnter,
   to,
   onActivate,
   infraLayers,
 }: {
   city: CityPickerRowModel;
   stagger: number;
+  shouldStaggerEnter: boolean;
   to: string;
   onActivate: () => void;
   infraLayers: CitySwitcherInfraLayer[];
@@ -1016,8 +1043,8 @@ function CityPickerCityCard({
 
   return (
     <div
-      className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
-      style={{ '--city-content-stagger': stagger } as React.CSSProperties}
+      className={withStaggerEnterClass('city-switcher-modal__cityCardWrap', shouldStaggerEnter)}
+      style={staggerEnterStyle(stagger, shouldStaggerEnter)}
       role="listitem"
     >
       <Link
@@ -1185,6 +1212,7 @@ function CitySwitcherModal({
   const {
     suggestions: placesSuggestions,
     loading: placesSearchLoading,
+    searchError: placesSearchError,
     scheduleSearch: schedulePlacesSearch,
     clearResults: clearPlacesSearch,
   } = usePlacesAutocompleteSearch({
@@ -1194,6 +1222,26 @@ function CitySwitcherModal({
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isCityPickerOpen = searchParams.has('buscar');
+  const cityPickerStaggerPlayedRef = useRef(false);
+  const shouldStaggerEnterRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    if (!isCityPickerOpen) {
+      shouldStaggerEnterRef.current = null;
+    }
+  }, [isCityPickerOpen]);
+
+  const shouldStaggerEnter = (() => {
+    if (!isCityPickerOpen) return false;
+    if (shouldStaggerEnterRef.current === null) {
+      const firstOpenThisSession = !cityPickerStaggerPlayedRef.current;
+      shouldStaggerEnterRef.current = firstOpenThisSession;
+      if (firstOpenThisSession) {
+        cityPickerStaggerPlayedRef.current = true;
+      }
+    }
+    return shouldStaggerEnterRef.current;
+  })();
 
   useEffect(() => {
     if (!isCityPickerOpen) {
@@ -1424,10 +1472,14 @@ function CitySwitcherModal({
 
   let contentStaggerIndex = 0;
 
+  if (!isCityPickerOpen) {
+    return null;
+  }
+
   /** Portaled to `document.body` so `#ciclomapa { overflow: hidden }` does not clip this overlay. */
   const modalTree = (
     <div
-      className={`city-switcher-modal fixed inset-0${isCityPickerOpen ? ' city-switcher-modal--open' : ''}`}
+      className="city-switcher-modal fixed inset-0 city-switcher-modal--open"
       role="dialog"
       aria-modal="true"
       data-testid="city-switcher-dialog"
@@ -1497,6 +1549,10 @@ function CitySwitcherModal({
                 <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm opacity-75">
                   Buscando…
                 </p>
+              ) : placesSearchError ? (
+                <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm text-amber-200/90">
+                  {placesSearchError}
+                </p>
               ) : placeSuggestionList.length === 0 ? (
                 <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm opacity-75">
                   Nenhum resultado
@@ -1522,8 +1578,11 @@ function CitySwitcherModal({
                     return (
                       <div
                         key={s.id || s.properties?.place_id || `${s.place_name}-${i}`}
-                        className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
-                        style={{ '--city-content-stagger': i } as React.CSSProperties}
+                        className={withStaggerEnterClass(
+                          'city-switcher-modal__cityCardWrap',
+                          shouldStaggerEnter
+                        )}
+                        style={staggerEnterStyle(i, shouldStaggerEnter)}
                         role="listitem"
                       >
                         <div className="city-switcher-modal__placeSearchResultCard">
@@ -1600,8 +1659,8 @@ function CitySwitcherModal({
               data-testid="city-switcher-favorites"
             >
               <div
-                className="city-switcher-modal__staggerEnter"
-                style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
+                className={shouldStaggerEnter ? STAGGER_ENTER_CLASS : undefined}
+                style={staggerEnterStyle(contentStaggerIndex++, shouldStaggerEnter)}
               >
                 <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
                   {/* <HiHeartIcon
@@ -1619,10 +1678,11 @@ function CitySwitcherModal({
                 {favorites.map((fav) => (
                   <div
                     key={fav.id}
-                    className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
-                    style={
-                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
-                    }
+                    className={withStaggerEnterClass(
+                      'city-switcher-modal__cityCardWrap',
+                      shouldStaggerEnter
+                    )}
+                    style={staggerEnterStyle(contentStaggerIndex++, shouldStaggerEnter)}
                     role="listitem"
                   >
                     <button
@@ -1682,8 +1742,8 @@ function CitySwitcherModal({
               data-testid="city-switcher-recent"
             >
               <div
-                className="city-switcher-modal__staggerEnter"
-                style={{ '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties}
+                className={shouldStaggerEnter ? STAGGER_ENTER_CLASS : undefined}
+                style={staggerEnterStyle(contentStaggerIndex++, shouldStaggerEnter)}
               >
                 <div className="city-switcher-modal__sectionTitle flex items-center gap-1 px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
                   {/* <HiMiniClockIcon
@@ -1701,10 +1761,11 @@ function CitySwitcherModal({
                 {recentItemsDisplayed.map((item) => (
                   <div
                     key={item.id}
-                    className="city-switcher-modal__cityCardWrap city-switcher-modal__staggerEnter"
-                    style={
-                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
-                    }
+                    className={withStaggerEnterClass(
+                      'city-switcher-modal__cityCardWrap',
+                      shouldStaggerEnter
+                    )}
+                    style={staggerEnterStyle(contentStaggerIndex++, shouldStaggerEnter)}
                     role="listitem"
                   >
                     {item.type === 'city' && item.citySlug ? (
@@ -1808,10 +1869,8 @@ function CitySwitcherModal({
                   data-country-code={group.countryCode}
                 >
                   <div
-                    className="city-switcher-modal__staggerEnter"
-                    style={
-                      { '--city-content-stagger': contentStaggerIndex++ } as React.CSSProperties
-                    }
+                    className={shouldStaggerEnter ? STAGGER_ENTER_CLASS : undefined}
+                    style={staggerEnterStyle(contentStaggerIndex++, shouldStaggerEnter)}
                   >
                     <div className="city-switcher-modal__sectionTitle px-3.5 py-4 text-xs tracking-wide text-white opacity-75">
                       {group.countryLabel}
@@ -1823,6 +1882,7 @@ function CitySwitcherModal({
                         key={c.canonicalSlug}
                         city={c}
                         stagger={contentStaggerIndex++}
+                        shouldStaggerEnter={shouldStaggerEnter}
                         to={`/${encodeURIComponent(c.canonicalSlug)}`}
                         onActivate={() => onCityLinkActivate(c, 'top')}
                         infraLayers={infraLayersForMiniPie}
@@ -1873,4 +1933,25 @@ export function replaceCitySwitcherStatsCacheForTest(
   );
 }
 
-export default CitySwitcherModal;
+type MapCenter = { lat: number; lng: number };
+
+function mapCenterEqual(a: MapCenter | null | undefined, b: MapCenter | null | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return !a && !b;
+  return a.lat === b.lat && a.lng === b.lng;
+}
+
+function citySwitcherModalPropsAreEqual(
+  prev: CitySwitcherModalProps,
+  next: CitySwitcherModalProps
+): boolean {
+  return (
+    mapCenterEqual(prev.mapCenter, next.mapCenter) &&
+    prev.placesAutocompleteOptions === next.placesAutocompleteOptions &&
+    prev.onPlacesResultSelected === next.onPlacesResultSelected &&
+    prev.onCatalogCityPicked === next.onCatalogCityPicked &&
+    prev.onFavoritesChanged === next.onFavoritesChanged
+  );
+}
+
+export default memo(CitySwitcherModal, citySwitcherModalPropsAreEqual);

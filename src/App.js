@@ -4,6 +4,7 @@ import debounce from 'lodash.debounce';
 
 import { appNotification } from './antdNotification';
 import AntdAppShell from './components/AntdAppShell.jsx';
+import PwaUpdateBanner from './PwaUpdateBanner.jsx';
 
 import { MdRemove as IconRemove, MdAdd as IconAdd } from 'react-icons/md';
 
@@ -23,6 +24,7 @@ import {
 } from './config/citySlugCatalog.js';
 import { isPrivacyPolicyLocation, PRIVACY_POLICY_PATH } from './config/routes.js';
 import { flyMapToCityFocus } from './Map.js';
+import { flyMapTo, flyMapToCinematic } from './features/map/mapCamera.js';
 import { isAreaBrowsePlaceResult } from './GooglePlacesGeocoder.js';
 import { DirectionsProvider } from './contexts/DirectionsContext';
 import {
@@ -80,6 +82,8 @@ class App extends Component {
   _lastExplicitCityNavTimestamp = 0;
   _welcomeMapBootScheduled = false;
   _unmounted = false;
+  /** Mobile directions panel open state (kept off React state to avoid App-wide re-renders). */
+  _isDirectionsPanelOpen = false;
 
   getStorage() {
     if (!this._storage) {
@@ -274,7 +278,6 @@ class App extends Component {
       mapKey: 0,
       fromPoint: fromPoint,
       toPoint: toPoint,
-      isDirectionsPanelOpen: false,
       airtableMetadataRecords: null,
       airtableCityFields: null,
       globalSearchPin: null,
@@ -882,12 +885,11 @@ class App extends Component {
         const flyOptions = {
           center: target.center,
           duration: 3000,
-          essential: true,
         };
         if (target.zoom !== null) {
           flyOptions.zoom = target.zoom;
         }
-        map.flyTo(flyOptions);
+        flyMapToCinematic(map, flyOptions);
       } catch (e) {
         console.error('Failed to apply pending flyto:', e);
       }
@@ -1666,7 +1668,7 @@ class App extends Component {
     // depends on. Geolocation only warms up if permission was already granted,
     // so we don't pop a surprise prompt before the user asks for it.
     userLocationCache.warmUpIfAlreadyGranted();
-    ensureGooglePlacesReady();
+    ensureGooglePlacesReady().catch(() => {});
 
     const citySlug = this.getCitySlugFromRoute();
     if (citySlug) {
@@ -1796,7 +1798,7 @@ class App extends Component {
   }
 
   onDirectionsPanelToggle(isOpen) {
-    this.setState({ isDirectionsPanelOpen: isOpen });
+    this._isDirectionsPanelOpen = isOpen;
   }
 
   setFromPoint = (point) => {
@@ -1879,10 +1881,9 @@ class App extends Component {
         this.deferOrApplyCityFocus({ lat, lng, placeName });
         return;
       }
-      this.state.map.flyTo({
+      flyMapTo(this.state.map, {
         center: [lng, lat],
         zoom,
-        duration: 1500,
       });
     });
   };
@@ -1932,6 +1933,7 @@ class App extends Component {
     };
     return (
       <AntdAppShell isDarkMode={this.state.isDarkMode}>
+        <PwaUpdateBanner isDarkMode={this.state.isDarkMode} />
         <DirectionsProvider>
           <AppLayout
             state={this.state}
