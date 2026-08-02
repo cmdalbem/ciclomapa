@@ -2,14 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { HiOutlineChevronDown as IconChevron } from 'react-icons/hi';
 import { HiBugAnt as IconDebug, HiOutlineXMark as IconClose } from 'react-icons/hi2';
 import { IS_MOBILE, TOPBAR_HEIGHT } from '../config/constants.js';
-import {
-  API_COLORS,
-  API_GROUPS,
-  API_LABELS,
-  API_TYPES,
-  BRAND_LOGO_SVG,
-  subscribe,
-} from './apiTracker.js';
+import { API_COLORS, API_GROUPS, API_LABELS, API_TYPES, subscribe } from './apiTracker.js';
+import { BRAND_LOGO_URLS } from './brandLogos.js';
 import { DATA_SOURCE_STATUS, subscribeDataLoads } from './dataLoadTracker.js';
 import '@fontsource/jetbrains-mono/latin-400.css';
 import '@fontsource/jetbrains-mono/latin-500.css';
@@ -59,12 +53,13 @@ function formatTime(timestamp) {
 }
 
 function BrandLogo({ brand }) {
-  if (!brand || !BRAND_LOGO_SVG[brand]) return null;
+  if (!brand || !BRAND_LOGO_URLS[brand]) return null;
 
   return (
-    <span
-      className="flex h-[11px] w-[11px] shrink-0"
-      dangerouslySetInnerHTML={{ __html: BRAND_LOGO_SVG[brand] }}
+    <img
+      className="h-[11px] w-[11px] shrink-0 object-contain"
+      src={BRAND_LOGO_URLS[brand]}
+      alt=""
     />
   );
 }
@@ -176,8 +171,8 @@ function DataSourceRow({ source }) {
 }
 
 const COLLAPSED_DATA_SOURCES = [
-  { key: 'geojson-cache', label: 'GeoJSON' },
-  { key: 'geojson-osm', label: 'GeoJSON' },
+  { key: 'geojson-cache', label: 'Cache' },
+  { key: 'geojson-osm', label: 'Overpass' },
   { key: 'pmtiles', label: 'PMTiles' },
 ];
 
@@ -210,6 +205,7 @@ function CollapsedDataSources({ sources }) {
     <>
       {items.map((item) => (
         <div key={item.key} className="flex shrink-0 items-center gap-1" title={item.title}>
+          <span className="text-gray-500">{item.label}</span>
           <span
             className={`${MONO} font-normal ${item.isError ? 'text-red-500' : 'text-gray-400'}`}
           >
