@@ -24,6 +24,8 @@ export const DATA_SOURCE_DEFS = [
 let _sources = Object.fromEntries(
   DATA_SOURCE_DEFS.map((def) => [def.key, { ...def, status: DATA_SOURCE_STATUS.IDLE, meta: {} }])
 );
+let _tokens = {};
+let _tokenCounter = 0;
 let _listeners = new Set();
 
 function _notify() {
@@ -36,8 +38,11 @@ function _notify() {
  * @param {string} key stable id, e.g. 'geojson-osm'
  * @param {string} label human-readable name shown in the panel
  * @param {object} [meta] extra info to display right away (e.g. { area })
+ * @returns {number} monotonic token; pass it to finishDataLoad so stale finishes are ignored
  */
 export function startDataLoad(key, label, meta = {}) {
+  const token = ++_tokenCounter;
+  _tokens[key] = token;
   _sources[key] = {
     key,
     label,
@@ -47,15 +52,19 @@ export function startDataLoad(key, label, meta = {}) {
     meta,
   };
   _notify();
+  return token;
 }
 
 /**
  * Mark a previously started data source as finished.
  * @param {string} key
- * @param {{ meta?: object, error?: Error|string, status?: string }} [opts] `status` overrides
+ * @param {{ meta?: object, error?: Error|string, status?: string, token?: number }} [opts] `status` overrides
  * the default success/error inference (e.g. DATA_SOURCE_STATUS.ABORTED or .EMPTY).
+ * Pass the token from startDataLoad; finishes with a mismatched token are ignored.
  */
-export function finishDataLoad(key, { meta = {}, error, status } = {}) {
+export function finishDataLoad(key, { meta = {}, error, status, token } = {}) {
+  if (_tokens[key] != null && token !== _tokens[key]) return;
+
   const existing = _sources[key] || { key, label: key, startedAt: Date.now() };
   const durationMs = Date.now() - (existing.startedAt || Date.now());
   _sources[key] = {

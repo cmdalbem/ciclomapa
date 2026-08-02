@@ -11,12 +11,12 @@ import TopBar from './TopBar.js';
 import LayersPanel from './LayersPanel.js';
 import LayersBar from './LayersBar.js';
 import { IS_MOBILE, IS_PROD, ENABLE_SATELLITE_TOGGLE } from './config/constants.js';
-import ApiDebugOverlay from './dev/ApiDebugOverlay.jsx';
 
 const AnalyticsSidebar = React.lazy(() => import('./AnalyticsSidebar.js'));
 const DirectionsPanel = React.lazy(() => import('./DirectionsPanel.js'));
 const CitySwitcherModal = React.lazy(() => import('./CitySwitcherModal'));
 const LayersLegendModal = React.lazy(() => import('./LayersLegendModal.js'));
+const ApiDebugOverlay = React.lazy(() => import('./dev/ApiDebugOverlay.jsx'));
 
 export default function AppLayout({
   state,
@@ -229,7 +229,11 @@ export default function AppLayout({
         onClose={handlers.closePrivacyPolicyModal}
       />
 
-      {(!IS_PROD || state.debugMode) && <ApiDebugOverlay initiallyOpen={!!state.debugMode} />}
+      {(!IS_PROD || state.debugMode) && (
+        <Suspense fallback={null}>
+          <ApiDebugOverlay initiallyOpen={!!state.debugMode} />
+        </Suspense>
+      )}
     </div>
   );
 }
