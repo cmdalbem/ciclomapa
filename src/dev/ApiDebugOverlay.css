@@ -103,6 +103,69 @@ body.theme-light .api-debug {
   transform: rotate(180deg);
 }
 
+.api-debug__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--api-debug-text-5);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.api-debug__close svg {
+  width: 12px;
+  height: 12px;
+}
+
+.api-debug__close:hover {
+  color: var(--api-debug-text-1);
+  background: var(--api-debug-chip-bg);
+}
+
+/* Tiny reopen trigger (non-prod / after close) */
+.api-debug-trigger {
+  position: fixed;
+  z-index: 99999;
+  bottom: calc(2px + env(safe-area-inset-bottom, 0px));
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--api-debug-text-5, #71717a);
+  opacity: 0.4;
+}
+
+.api-debug-trigger:hover,
+.api-debug-trigger:focus-visible {
+  opacity: 0.9;
+}
+
+.api-debug-trigger__icon {
+  width: 12px;
+  height: 12px;
+}
+
+body.theme-light .api-debug-trigger {
+  color: #71717a;
+}
+
+body.theme-dark .api-debug-trigger {
+  color: #a1a1aa;
+}
+
 /* Collapsed summary (mobile) */
 .api-debug__summary {
   display: flex;
