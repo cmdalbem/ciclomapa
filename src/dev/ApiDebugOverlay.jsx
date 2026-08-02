@@ -8,7 +8,6 @@ import {
   API_LABELS,
   API_TYPES,
   BRAND_LOGO_SVG,
-  BRAND_LOGO_URLS,
   subscribe,
 } from './apiTracker.js';
 import { DATA_SOURCE_STATUS, subscribeDataLoads } from './dataLoadTracker.js';
@@ -60,28 +59,14 @@ function formatTime(timestamp) {
 }
 
 function BrandLogo({ brand }) {
-  if (!brand) return null;
+  if (!brand || !BRAND_LOGO_SVG[brand]) return null;
 
-  if (BRAND_LOGO_SVG[brand]) {
-    return (
-      <span
-        className="flex h-[11px] w-[11px] shrink-0"
-        dangerouslySetInnerHTML={{ __html: BRAND_LOGO_SVG[brand] }}
-      />
-    );
-  }
-
-  if (BRAND_LOGO_URLS[brand]) {
-    return (
-      <img
-        className="h-[11px] w-[11px] shrink-0 object-contain"
-        src={BRAND_LOGO_URLS[brand]}
-        alt={brand}
-      />
-    );
-  }
-
-  return null;
+  return (
+    <span
+      className="flex h-[11px] w-[11px] shrink-0"
+      dangerouslySetInnerHTML={{ __html: BRAND_LOGO_SVG[brand] }}
+    />
+  );
 }
 
 function LogService({ api }) {
