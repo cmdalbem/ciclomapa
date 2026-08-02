@@ -62,6 +62,13 @@
       "areas": ["Brazil"],
       "includePoi": true,
       "description": "Brazil — cycle layers + POIs (non-standard)"
+    },
+    {
+      "id": "brazil-spain-poi",
+      "output": "brazil-spain-poi.pmtiles",
+      "areas": ["Brazil", "Spain"],
+      "includePoi": true,
+      "description": "Brazil + Spain — cycle layers + POIs (non-standard)"
     }
   ]
 }
