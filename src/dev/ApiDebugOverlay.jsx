@@ -12,6 +12,9 @@ import {
   subscribe,
 } from './apiTracker.js';
 import { DATA_SOURCE_STATUS, subscribeDataLoads } from './dataLoadTracker.js';
+import '@fontsource/jetbrains-mono/latin-400.css';
+import '@fontsource/jetbrains-mono/latin-500.css';
+import '@fontsource/jetbrains-mono/latin-700.css';
 import './ApiDebugOverlay.css';
 
 const DATA_STATUS_TEXT = {
@@ -131,11 +134,29 @@ function DataSourceRow({ source }) {
   const isLoading = status === DATA_SOURCE_STATUS.LOADING;
   const isError = status === DATA_SOURCE_STATUS.ERROR;
 
-  const metaParts = [];
-  if (meta.area) metaParts.push(meta.area);
-  if (typeof meta.features === 'number') metaParts.push(`${meta.features} features`);
-  if (meta.file) metaParts.push(meta.file);
-  if (!isLoading && typeof durationMs === 'number') metaParts.push(`${durationMs}ms`);
+  const metaNodes = [];
+  if (meta.area) metaNodes.push(<span key="area">{meta.area}</span>);
+  if (typeof meta.features === 'number') {
+    metaNodes.push(
+      <span key="features" className="api-debug__mono">
+        {meta.features} features
+      </span>
+    );
+  }
+  if (meta.file) {
+    metaNodes.push(
+      <span key="file" className="api-debug__mono">
+        {meta.file}
+      </span>
+    );
+  }
+  if (!isLoading && typeof durationMs === 'number') {
+    metaNodes.push(
+      <span key="dur" className="api-debug__mono">
+        {durationMs}ms
+      </span>
+    );
+  }
 
   return (
     <div className="api-debug__data-row">
@@ -148,8 +169,18 @@ function DataSourceRow({ source }) {
             {DATA_STATUS_TEXT[status] ?? status}
           </span>
         </div>
-        {(metaParts.length > 0 || error) && (
-          <div className="api-debug__data-meta">{error ? `${error}` : metaParts.join(' · ')}</div>
+        {(metaNodes.length > 0 || error) && (
+          <div className="api-debug__data-meta">
+            {error ? (
+              <span className="api-debug__mono">{error}</span>
+            ) : (
+              metaNodes.reduce((acc, node, i) => {
+                if (i > 0) acc.push(<span key={`sep-${i}`}> · </span>);
+                acc.push(node);
+                return acc;
+              }, [])
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -167,7 +198,7 @@ function collapsedDataSourceValue(source) {
   if (source.status === DATA_SOURCE_STATUS.ERROR) return '!';
   if (source.status === DATA_SOURCE_STATUS.ABORTED) return '×';
   if (source.status === DATA_SOURCE_STATUS.EMPTY) return '∅';
-  if (source.meta?.file) return source.meta.file;
+  if (source.meta?.file) return source.meta.file.replace(/\.pmtiles$/i, '');
   if (typeof source.meta?.features === 'number') return source.meta.features;
   return '✓';
 }
@@ -267,13 +298,38 @@ function CollapsedSummary({ counts, dataSources }) {
   );
 }
 
+const OPEN_STORAGE_KEY = 'ciclomapa-debug-panel-open';
+
+function readStoredOpen(fallback) {
+  try {
+    const raw = window.localStorage.getItem(OPEN_STORAGE_KEY);
+    if (raw === '1') return true;
+    if (raw === '0') return false;
+  } catch {
+    // ignore quota / private mode
+  }
+  return fallback;
+}
+
+function writeStoredOpen(open) {
+  try {
+    window.localStorage.setItem(OPEN_STORAGE_KEY, open ? '1' : '0');
+  } catch {
+    // ignore
+  }
+}
+
 export default function ApiDebugOverlay({ initiallyOpen = false }) {
-  const [open, setOpen] = useState(initiallyOpen);
+  const [open, setOpen] = useState(() => readStoredOpen(initiallyOpen));
   const [collapsed, setCollapsed] = useState(IS_MOBILE);
   const [snapshot, setSnapshot] = useState({ entries: [], counts: {} });
   const [dataSnapshot, setDataSnapshot] = useState({ sources: {} });
   const [flashIds, setFlashIds] = useState(new Set());
   const prevEntriesRef = useRef([]);
+
+  useEffect(() => {
+    writeStoredOpen(open);
+  }, [open]);
 
   useEffect(() => subscribeDataLoads(setDataSnapshot), []);
 
