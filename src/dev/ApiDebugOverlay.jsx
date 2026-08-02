@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { HiOutlineChevronDown as IconChevron } from 'react-icons/hi';
 import { IS_MOBILE } from '../config/constants.js';
 import {
   API_COLORS,
@@ -9,30 +10,48 @@ import {
   BRAND_LOGO_URLS,
   subscribe,
 } from './apiTracker.js';
+import { DATA_SOURCE_STATUS, subscribeDataLoads } from './dataLoadTracker.js';
 import './ApiDebugOverlay.css';
 
-const BADGE_SHORT = {
-  [API_TYPES.GOOGLE_GEOCODING]: 'GEO',
-  [API_TYPES.GOOGLE_PREDICTIONS]: 'PRED',
-  [API_TYPES.GOOGLE_PLACE_DETAILS]: 'DETAIL',
-  [API_TYPES.MAPBOX_GEOCODING]: 'GEO',
-  [API_TYPES.MAPBOX_DIRECTIONS]: 'DIR',
-  [API_TYPES.NOMINATIM_SEARCH]: 'NOM',
-  [API_TYPES.NOMINATIM_REVERSE]: 'REV',
-  [API_TYPES.OVERPASS]: 'OVP',
-  [API_TYPES.GRAPHHOPPER]: 'GH',
-  [API_TYPES.VALHALLA]: 'VAL',
-  [API_TYPES.ORS]: 'ORS',
-  [API_TYPES.AIRTABLE_READ]: 'AT-R',
-  [API_TYPES.AIRTABLE_WRITE]: 'AT-W',
-  [API_TYPES.FIREBASE_READ]: 'FB-R',
-  [API_TYPES.FIREBASE_WRITE]: 'FB-W',
+const DATA_STATUS_TEXT = {
+  [DATA_SOURCE_STATUS.IDLE]: 'not loaded yet',
+  [DATA_SOURCE_STATUS.LOADING]: 'loading…',
+  [DATA_SOURCE_STATUS.SUCCESS]: 'loaded',
+  [DATA_SOURCE_STATUS.EMPTY]: 'no cached data',
+  [DATA_SOURCE_STATUS.ABORTED]: 'aborted',
+  [DATA_SOURCE_STATUS.ERROR]: 'error',
 };
 
-function formatAge(timestamp) {
-  const secs = Math.floor((Date.now() - timestamp) / 1000);
-  if (secs < 60) return `${secs}s`;
-  return `${Math.floor(secs / 60)}m${secs % 60}s`;
+const BADGE_SHORT = {
+  [API_TYPES.GOOGLE_GEOCODING]: 'Geocode',
+  [API_TYPES.GOOGLE_PREDICTIONS]: 'Predictions',
+  [API_TYPES.GOOGLE_PLACE_DETAILS]: 'Place Details',
+  [API_TYPES.MAPBOX_GEOCODING]: 'Geocoding',
+  [API_TYPES.MAPBOX_DIRECTIONS]: 'Directions',
+  [API_TYPES.NOMINATIM_SEARCH]: 'Nominatim',
+  [API_TYPES.NOMINATIM_REVERSE]: 'Nominatim Rev',
+  [API_TYPES.OVERPASS]: 'Overpass',
+  [API_TYPES.GRAPHHOPPER]: 'GraphHopper',
+  [API_TYPES.VALHALLA]: 'Valhalla',
+  [API_TYPES.ORS]: 'OpenRoute',
+  [API_TYPES.AIRTABLE_READ]: 'Read',
+  [API_TYPES.AIRTABLE_WRITE]: 'Write',
+  [API_TYPES.FIREBASE_READ]: 'Read',
+  [API_TYPES.FIREBASE_WRITE]: 'Write',
+};
+
+const API_BRAND = Object.fromEntries(
+  API_GROUPS.flatMap((group) => (group.brand ? group.types.map((type) => [type, group.brand]) : []))
+);
+
+function formatTime(timestamp) {
+  const d = new Date(timestamp);
+  return d.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
 }
 
 function BrandLogo({ brand }) {
@@ -60,25 +79,24 @@ function BrandLogo({ brand }) {
   return null;
 }
 
-function Badge({ api }) {
+function LogService({ api }) {
+  const brand = API_BRAND[api];
   return (
-    <span className="api-debug__badge" style={{ '--api-debug-color': API_COLORS[api] }}>
-      {BADGE_SHORT[api] ?? api}
-    </span>
+    <>
+      <span className="api-debug__log-logo">{brand ? <BrandLogo brand={brand} /> : null}</span>
+      <span className="api-debug__log-service-name">{BADGE_SHORT[api] ?? api}</span>
+    </>
   );
 }
 
 function GroupRow({ group, counts }) {
   const groupTotal = group.types.reduce((sum, t) => sum + (counts[t] || 0), 0);
-  const hasBreakdown = group.types.length > 1;
+  const activeTypes = group.types.filter((type) => (counts[type] || 0) > 0);
+  const hasBreakdown = group.types.length > 1 && activeTypes.length > 0;
 
   return (
     <div className="api-debug__group">
       <div className="api-debug__group-header">
-        <span
-          className="api-debug__dot api-debug__dot--md"
-          style={{ '--api-debug-color': group.color }}
-        />
         <div className="api-debug__group-label-wrap">
           {group.brand && <BrandLogo brand={group.brand} />}
           <span className="api-debug__group-label">{group.label}</span>
@@ -93,13 +111,11 @@ function GroupRow({ group, counts }) {
 
       {hasBreakdown && (
         <div className="api-debug__breakdown">
-          {group.types.map((type) => (
+          {activeTypes.map((type) => (
             <div key={type} className="api-debug__breakdown-row">
               <span className="api-debug__breakdown-label">{API_LABELS[type]}</span>
-              <span
-                className={`api-debug__breakdown-count${(counts[type] || 0) > 0 ? ' api-debug__breakdown-count--active' : ''}`}
-              >
-                {counts[type] || 0}
+              <span className="api-debug__breakdown-count api-debug__breakdown-count--active">
+                {counts[type]}
               </span>
             </div>
           ))}
@@ -109,7 +125,85 @@ function GroupRow({ group, counts }) {
   );
 }
 
-function CollapsedSummary({ counts }) {
+function DataSourceRow({ source }) {
+  const { label, status, durationMs, meta = {}, error } = source;
+  const isLoading = status === DATA_SOURCE_STATUS.LOADING;
+  const isError = status === DATA_SOURCE_STATUS.ERROR;
+
+  const metaParts = [];
+  if (meta.area) metaParts.push(meta.area);
+  if (typeof meta.features === 'number') metaParts.push(`${meta.features} features`);
+  if (meta.file) metaParts.push(meta.file);
+  if (!isLoading && typeof durationMs === 'number') metaParts.push(`${durationMs}ms`);
+
+  return (
+    <div className="api-debug__data-row">
+      <div className="api-debug__data-info">
+        <div className="api-debug__data-label-row">
+          <span className="api-debug__data-label">{label}</span>
+          <span
+            className={`api-debug__data-status${isError ? ' api-debug__data-status--error' : ''}${isLoading ? ' api-debug__data-status--loading' : ''}`}
+          >
+            {DATA_STATUS_TEXT[status] ?? status}
+          </span>
+        </div>
+        {(metaParts.length > 0 || error) && (
+          <div className="api-debug__data-meta">{error ? `${error}` : metaParts.join(' · ')}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const COLLAPSED_DATA_SOURCES = [
+  { key: 'geojson-cache', label: 'GeoJSON' },
+  { key: 'geojson-osm', label: 'GeoJSON' },
+  { key: 'pmtiles', label: 'PMTiles' },
+];
+
+function collapsedDataSourceValue(source) {
+  if (source.status === DATA_SOURCE_STATUS.LOADING) return '…';
+  if (source.status === DATA_SOURCE_STATUS.ERROR) return '!';
+  if (source.status === DATA_SOURCE_STATUS.ABORTED) return '×';
+  if (source.status === DATA_SOURCE_STATUS.EMPTY) return '∅';
+  if (source.meta?.file) return source.meta.file;
+  if (typeof source.meta?.features === 'number') return source.meta.features;
+  return '✓';
+}
+
+function CollapsedDataSources({ sources }) {
+  const items = COLLAPSED_DATA_SOURCES.map(({ key, label }) => {
+    const source = sources[key];
+    if (!source || source.status === DATA_SOURCE_STATUS.IDLE) return null;
+    return {
+      key,
+      label,
+      title: source.label,
+      isError: source.status === DATA_SOURCE_STATUS.ERROR,
+      value: collapsedDataSourceValue(source),
+    };
+  }).filter(Boolean);
+
+  if (items.length === 0) return null;
+
+  return (
+    <>
+      {items.map((item) => (
+        <div key={item.key} className="api-debug__summary-item" title={item.title}>
+          {/* <span className="api-debug__summary-label">{item.label}</span> */}
+          <span
+            className={`api-debug__summary-value${item.isError ? ' api-debug__summary-value--error' : ''}`}
+          >
+            {item.value}
+          </span>
+        </div>
+      ))}
+      <span className="api-debug__summary-divider" />
+    </>
+  );
+}
+
+function CollapsedSummary({ counts, dataSources }) {
   const items = [];
   for (const group of API_GROUPS) {
     if (group.summaryPerType) {
@@ -141,6 +235,7 @@ function CollapsedSummary({ counts }) {
 
   return (
     <div className="api-debug__summary">
+      <CollapsedDataSources sources={dataSources} />
       {items.length === 0 ? (
         <span className="api-debug__summary-empty">No API calls yet</span>
       ) : (
@@ -174,8 +269,11 @@ function CollapsedSummary({ counts }) {
 export default function ApiDebugOverlay() {
   const [collapsed, setCollapsed] = useState(IS_MOBILE);
   const [snapshot, setSnapshot] = useState({ entries: [], counts: {} });
+  const [dataSnapshot, setDataSnapshot] = useState({ sources: {} });
   const [flashIds, setFlashIds] = useState(new Set());
   const prevEntriesRef = useRef([]);
+
+  useEffect(() => subscribeDataLoads(setDataSnapshot), []);
 
   useEffect(() => {
     return subscribe((snap) => {
@@ -196,23 +294,20 @@ export default function ApiDebugOverlay() {
     });
   }, []);
 
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
   const totalCalls = Object.values(snapshot.counts).reduce((s, n) => s + n, 0);
+  const activeGroups = API_GROUPS.filter(
+    (group) => group.types.reduce((sum, t) => sum + (snapshot.counts[t] || 0), 0) > 0
+  );
 
   return (
     <div className={`api-debug api-debug--${IS_MOBILE ? 'mobile' : 'desktop'}`}>
       <div className="api-debug__header" onClick={() => setCollapsed((c) => !c)}>
-        {IS_MOBILE && collapsed ? (
-          <CollapsedSummary counts={snapshot.counts} />
+        {IS_MOBILE ? (
+          <CollapsedSummary counts={snapshot.counts} dataSources={dataSnapshot.sources} />
         ) : (
           <>
             <span className="api-debug__header-icon">📡</span>
-            <span className="api-debug__header-title">API Debug</span>
+            <span className="api-debug__header-title">Debug</span>
             <span
               className={`api-debug__total${totalCalls > 0 ? ' api-debug__total--active' : ''}`}
             >
@@ -220,36 +315,47 @@ export default function ApiDebugOverlay() {
             </span>
           </>
         )}
-        <span className="api-debug__chevron">{collapsed ? '▲' : '▼'}</span>
+        <IconChevron
+          className={`api-debug__chevron${!collapsed ? ' api-debug__chevron--open' : ''}`}
+        />
       </div>
 
-      {!collapsed && (
-        <div className="api-debug__body">
-          {API_GROUPS.map((group) => (
-            <GroupRow key={group.id} group={group} counts={snapshot.counts} />
-          ))}
+      <div className={`api-debug__body-wrap${!collapsed ? ' api-debug__body-wrap--open' : ''}`}>
+        <div className="api-debug__body-inner">
+          <div className="api-debug__body">
+            <div className="api-debug__section-title">Data Sources</div>
+            {Object.values(dataSnapshot.sources).map((source) => (
+              <DataSourceRow key={source.key} source={source} />
+            ))}
 
-          <div className="api-debug__log">
-            {snapshot.entries.length === 0 ? (
+            <div className="api-debug__section-title">API Calls</div>
+            {activeGroups.length === 0 ? (
               <div className="api-debug__log-empty">No calls yet</div>
             ) : (
-              snapshot.entries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className={`api-debug__log-entry${flashIds.has(entry.id) ? ' api-debug__log-entry--flash' : ''}`}
-                  style={{ '--api-debug-flash': `${API_COLORS[entry.api]}22` }}
-                >
-                  <span className="api-debug__log-age">{formatAge(entry.timestamp)}</span>
-                  <Badge api={entry.api} />
-                  <span className="api-debug__log-details">
-                    {entry.details.length > 30 ? entry.details.slice(0, 30) + '…' : entry.details}
-                  </span>
-                </div>
+              activeGroups.map((group) => (
+                <GroupRow key={group.id} group={group} counts={snapshot.counts} />
               ))
             )}
+
+            <div className="api-debug__log">
+              {snapshot.entries.length === 0 ? (
+                <div className="api-debug__log-empty">No calls yet</div>
+              ) : (
+                snapshot.entries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className={`api-debug__log-entry${flashIds.has(entry.id) ? ' api-debug__log-entry--flash' : ''}`}
+                  >
+                    <LogService api={entry.api} />
+                    <span className="api-debug__log-details">{entry.details}</span>
+                    <span className="api-debug__log-time">{formatTime(entry.timestamp)}</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
