@@ -15,7 +15,8 @@ import { DATA_SOURCE_STATUS, subscribeDataLoads } from './dataLoadTracker.js';
 import '@fontsource/jetbrains-mono/latin-400.css';
 import '@fontsource/jetbrains-mono/latin-500.css';
 import '@fontsource/jetbrains-mono/latin-700.css';
-import './ApiDebugOverlay.css';
+
+const MONO = "font-['JetBrains_Mono',ui-monospace,monospace] tabular-nums tracking-tight";
 
 const DATA_STATUS_TEXT = {
   [DATA_SOURCE_STATUS.IDLE]: 'not loaded yet',
@@ -64,7 +65,7 @@ function BrandLogo({ brand }) {
   if (BRAND_LOGO_SVG[brand]) {
     return (
       <span
-        className="api-debug__logo api-debug__logo--svg"
+        className="flex h-[11px] w-[11px] shrink-0"
         dangerouslySetInnerHTML={{ __html: BRAND_LOGO_SVG[brand] }}
       />
     );
@@ -73,7 +74,7 @@ function BrandLogo({ brand }) {
   if (BRAND_LOGO_URLS[brand]) {
     return (
       <img
-        className="api-debug__logo api-debug__logo--img"
+        className="h-[11px] w-[11px] shrink-0 object-contain"
         src={BRAND_LOGO_URLS[brand]}
         alt={brand}
       />
@@ -87,8 +88,10 @@ function LogService({ api }) {
   const brand = API_BRAND[api];
   return (
     <>
-      <span className="api-debug__log-logo">{brand ? <BrandLogo brand={brand} /> : null}</span>
-      <span className="api-debug__log-service-name">{BADGE_SHORT[api] ?? api}</span>
+      <span className="flex h-3 w-3 items-center justify-center">
+        {brand ? <BrandLogo brand={brand} /> : null}
+      </span>
+      <span className={`${MONO} truncate text-gray-200`}>{BADGE_SHORT[api] ?? api}</span>
     </>
   );
 }
@@ -99,26 +102,26 @@ function GroupRow({ group, counts }) {
   const hasBreakdown = group.types.length > 1 && activeTypes.length > 0;
 
   return (
-    <div className="api-debug__group">
-      <div className="api-debug__group-header">
-        <div className="api-debug__group-label-wrap">
+    <div className="border-b border-white border-opacity-10 px-2.5 py-[5px]">
+      <div className="flex items-center gap-[7px]">
+        <div className="flex min-w-0 flex-1 items-center gap-[5px]">
           {group.brand && <BrandLogo brand={group.brand} />}
-          <span className="api-debug__group-label">{group.label}</span>
+          <span className="truncate font-normal text-gray-200">{group.label}</span>
         </div>
         <span
-          className={`api-debug__group-total${groupTotal > 0 ? ' api-debug__group-total--active' : ''}`}
-          style={{ '--api-debug-color': group.color }}
+          className={`min-w-[20px] text-right font-bold ${groupTotal > 0 ? '' : 'text-gray-700'}`}
+          style={groupTotal > 0 ? { color: group.color } : undefined}
         >
           {groupTotal}
         </span>
       </div>
 
       {hasBreakdown && (
-        <div className="api-debug__breakdown">
+        <div className="mt-[3px] pl-4">
           {activeTypes.map((type) => (
-            <div key={type} className="api-debug__breakdown-row">
-              <span className="api-debug__breakdown-label">{API_LABELS[type]}</span>
-              <span className="api-debug__breakdown-count api-debug__breakdown-count--active">
+            <div key={type} className="mt-0.5 flex items-center gap-1.5">
+              <span className={`${MONO} flex-1 text-gray-500`}>{API_LABELS[type]}</span>
+              <span className="min-w-[20px] text-right font-bold text-gray-400">
                 {counts[type]}
               </span>
             </div>
@@ -138,41 +141,41 @@ function DataSourceRow({ source }) {
   if (meta.area) metaNodes.push(<span key="area">{meta.area}</span>);
   if (typeof meta.features === 'number') {
     metaNodes.push(
-      <span key="features" className="api-debug__mono">
+      <span key="features" className={MONO}>
         {meta.features} features
       </span>
     );
   }
   if (meta.file) {
     metaNodes.push(
-      <span key="file" className="api-debug__mono">
+      <span key="file" className={MONO}>
         {meta.file}
       </span>
     );
   }
   if (!isLoading && typeof durationMs === 'number') {
     metaNodes.push(
-      <span key="dur" className="api-debug__mono">
+      <span key="dur" className={MONO}>
         {durationMs}ms
       </span>
     );
   }
 
   return (
-    <div className="api-debug__data-row">
-      <div className="api-debug__data-info">
-        <div className="api-debug__data-label-row">
-          <span className="api-debug__data-label">{label}</span>
+    <div className="flex items-start gap-[7px] border-b border-white border-opacity-10 px-2.5 py-1">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="flex-1 truncate font-normal text-gray-200">{label}</span>
           <span
-            className={`api-debug__data-status${isError ? ' api-debug__data-status--error' : ''}${isLoading ? ' api-debug__data-status--loading' : ''}`}
+            className={`shrink-0 ${isError ? 'text-red-500' : 'text-gray-500'}${isLoading ? ' animate-pulse' : ''}`}
           >
             {DATA_STATUS_TEXT[status] ?? status}
           </span>
         </div>
         {(metaNodes.length > 0 || error) && (
-          <div className="api-debug__data-meta">
+          <div className="mt-0.5 truncate text-gray-500">
             {error ? (
-              <span className="api-debug__mono">{error}</span>
+              <span className={MONO}>{error}</span>
             ) : (
               metaNodes.reduce((acc, node, i) => {
                 if (i > 0) acc.push(<span key={`sep-${i}`}> · </span>);
@@ -221,16 +224,15 @@ function CollapsedDataSources({ sources }) {
   return (
     <>
       {items.map((item) => (
-        <div key={item.key} className="api-debug__summary-item" title={item.title}>
-          {/* <span className="api-debug__summary-label">{item.label}</span> */}
+        <div key={item.key} className="flex shrink-0 items-center gap-1" title={item.title}>
           <span
-            className={`api-debug__summary-value${item.isError ? ' api-debug__summary-value--error' : ''}`}
+            className={`${MONO} font-normal ${item.isError ? 'text-red-500' : 'text-gray-400'}`}
           >
             {item.value}
           </span>
         </div>
       ))}
-      <span className="api-debug__summary-divider" />
+      <span className="w-px shrink-0 self-stretch bg-white bg-opacity-10" />
     </>
   );
 }
@@ -266,29 +268,32 @@ function CollapsedSummary({ counts, dataSources }) {
   }
 
   return (
-    <div className="api-debug__summary">
+    <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-x-auto">
       <CollapsedDataSources sources={dataSources} />
       {items.length === 0 ? (
-        <span className="api-debug__summary-empty">No API calls yet</span>
+        <span className="text-gray-600">No API calls yet</span>
       ) : (
         items.map((item) => (
-          <div key={item.key} className="api-debug__summary-item" title={item.label}>
+          <div key={item.key} className="flex shrink-0 items-center gap-1" title={item.label}>
             {item.brand ? (
               <BrandLogo brand={item.brand} />
             ) : item.short ? (
               <span
-                className="api-debug__summary-short"
-                style={{ '--api-debug-color': item.color }}
+                className={`${MONO} rounded-[3px] bg-gray-800 px-1 py-px font-normal leading-tight tracking-[0.03em] text-gray-300`}
+                style={item.color ? { backgroundColor: item.color } : undefined}
               >
                 {item.short}
               </span>
             ) : (
               <span
-                className="api-debug__dot api-debug__dot--sm"
-                style={{ '--api-debug-color': item.color }}
+                className="h-2 w-2 shrink-0 rounded-full bg-gray-600"
+                style={item.color ? { backgroundColor: item.color } : undefined}
               />
             )}
-            <span className="api-debug__summary-count" style={{ '--api-debug-color': item.color }}>
+            <span
+              className="font-bold text-gray-400"
+              style={item.color ? { color: item.color } : undefined}
+            >
               {item.total}
             </span>
           </div>
@@ -361,38 +366,47 @@ export default function ApiDebugOverlay({ initiallyOpen = false }) {
     return (
       <button
         type="button"
-        className="api-debug-trigger"
+        className="fixed bottom-[calc(2px+env(safe-area-inset-bottom,0px))] right-0.5 z-[99999] flex h-4 w-4 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-gray-500 opacity-40 hover:opacity-90 focus-visible:opacity-90"
         onClick={() => setOpen(true)}
         title="Open debug panel"
         aria-label="Open debug panel"
       >
-        <IconDebug className="api-debug-trigger__icon" />
+        <IconDebug className="h-3 w-3" />
       </button>
     );
   }
 
   return (
-    <div className={`api-debug api-debug--${IS_MOBILE ? 'mobile' : 'desktop'}`}>
-      <div className="api-debug__header" onClick={() => setCollapsed((c) => !c)}>
+    <div
+      className={`fixed z-[99999] overflow-hidden font-['Inter',system-ui,sans-serif] text-[10px] select-none ${
+        IS_MOBILE
+          ? 'inset-x-0 bottom-0 w-full bg-gray-900 pb-[env(safe-area-inset-bottom,0px)]'
+          : 'bottom-4 right-4 w-60 rounded-lg shadow-lg'
+      }`}
+    >
+      <div
+        className="flex cursor-pointer items-center gap-1.5 bg-gray-900 px-2 py-0.5 text-gray-100"
+        onClick={() => setCollapsed((c) => !c)}
+      >
         {IS_MOBILE ? (
           <CollapsedSummary counts={snapshot.counts} dataSources={dataSnapshot.sources} />
         ) : (
           <>
-            <span className="api-debug__header-icon">📡</span>
-            <span className="api-debug__header-title">Debug</span>
+            <span>📡</span>
+            <span className="flex-1">Debug</span>
             <span
-              className={`api-debug__total${totalCalls > 0 ? ' api-debug__total--active' : ''}`}
+              className={`rounded-[10px] px-[7px] font-bold text-[#fff] ${totalCalls > 0 ? 'bg-red-500' : 'bg-gray-700'}`}
             >
               {totalCalls}
             </span>
           </>
         )}
         <IconChevron
-          className={`api-debug__chevron${!collapsed ? ' api-debug__chevron--open' : ''}`}
+          className={`h-[13px] w-[13px] shrink-0 text-gray-500 transition-transform duration-200 ${!collapsed ? 'rotate-180' : ''}`}
         />
         <button
           type="button"
-          className="api-debug__close"
+          className="m-0 flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center rounded-[3px] border-0 bg-transparent p-0 text-gray-500 hover:bg-gray-800 hover:text-gray-100"
           onClick={(e) => {
             e.stopPropagation();
             setOpen(false);
@@ -401,39 +415,49 @@ export default function ApiDebugOverlay({ initiallyOpen = false }) {
           title="Hide debug panel"
           aria-label="Hide debug panel"
         >
-          <IconClose />
+          <IconClose className="h-3 w-3" />
         </button>
       </div>
 
-      <div className={`api-debug__body-wrap${!collapsed ? ' api-debug__body-wrap--open' : ''}`}>
-        <div className="api-debug__body-inner">
-          <div className="api-debug__body">
-            <div className="api-debug__section-title">Data Sources</div>
+      <div
+        className={`grid transition-[grid-template-rows] duration-[240ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${collapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}
+      >
+        <div className="overflow-hidden">
+          <div
+            className={`bg-black text-gray-300 transition duration-200 ${collapsed ? 'opacity-0 -translate-y-1' : 'opacity-100 translate-y-0 delay-[60ms]'} ${IS_MOBILE ? 'max-h-[55vh] overflow-y-auto' : ''}`}
+          >
+            <div className="px-2.5 pb-1 pt-1.5 font-medium uppercase tracking-[0.08em] text-gray-600">
+              Data Sources
+            </div>
             {Object.values(dataSnapshot.sources).map((source) => (
               <DataSourceRow key={source.key} source={source} />
             ))}
 
-            <div className="api-debug__section-title">API Calls</div>
+            <div className="px-2.5 pb-1 pt-1.5 font-medium uppercase tracking-[0.08em] text-gray-600">
+              API Calls
+            </div>
             {activeGroups.length === 0 ? (
-              <div className="api-debug__log-empty">No calls yet</div>
+              <div className="px-2 py-2.5 text-center text-gray-600">No calls yet</div>
             ) : (
               activeGroups.map((group) => (
                 <GroupRow key={group.id} group={group} counts={snapshot.counts} />
               ))
             )}
 
-            <div className="api-debug__log">
+            <div className="max-h-[200px] overflow-y-auto border-t border-white border-opacity-10">
               {snapshot.entries.length === 0 ? (
-                <div className="api-debug__log-empty">No calls yet</div>
+                <div className="px-2 py-2.5 text-center text-gray-600">No calls yet</div>
               ) : (
                 snapshot.entries.map((entry) => (
                   <div
                     key={entry.id}
-                    className={`api-debug__log-entry${flashIds.has(entry.id) ? ' api-debug__log-entry--flash' : ''}`}
+                    className={`grid grid-cols-[12px_5rem_minmax(0,1fr)_4.5rem] items-center gap-x-1.5 border-b border-white border-opacity-5 px-2 py-[3px] transition-colors duration-300 ${flashIds.has(entry.id) ? 'bg-gray-800' : ''}`}
                   >
                     <LogService api={entry.api} />
-                    <span className="api-debug__log-details">{entry.details}</span>
-                    <span className="api-debug__log-time">{formatTime(entry.timestamp)}</span>
+                    <span className="min-w-0 truncate text-gray-400">{entry.details}</span>
+                    <span className={`${MONO} text-right text-gray-600`}>
+                      {formatTime(entry.timestamp)}
+                    </span>
                   </div>
                 ))
               )}
