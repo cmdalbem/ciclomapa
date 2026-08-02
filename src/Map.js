@@ -48,6 +48,7 @@ import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/ma
 import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 import { flyMapTo } from './features/map/mapCamera.js';
 import userLocationCache from './features/geolocation/userLocationCache.js';
+import { startDataLoad, finishDataLoad } from './dev/dataLoadTracker.js';
 
 import './Map.css';
 
@@ -1309,8 +1310,10 @@ class Map extends Component {
     await this.awaitStyleReady();
 
     if (USE_PMTILES_SOURCE) {
+      const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + PMTILES_FILENAME;
+      startDataLoad('pmtiles', 'PMTiles', { file: PMTILES_FILENAME });
+
       try {
-        const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + PMTILES_FILENAME;
         console.log('Loading PMTiles (native vector source):', PMTILES_URL);
 
         this.map.addSource('pmtiles-source', {
@@ -1322,9 +1325,29 @@ class Map extends Component {
 
         console.log('PMTiles source added successfully');
         this.pmtilesLoadedSuccessfully = true;
+
+        // addSource() only registers the tile source — actual tiles are fetched lazily,
+        // so we listen once for the first successful load or failure to report real status.
+        const onSourceData = (e) => {
+          if (e.sourceId === 'pmtiles-source' && e.isSourceLoaded) {
+            this.map.off('sourcedata', onSourceData);
+            this.map.off('error', onPmtilesError);
+            finishDataLoad('pmtiles', { meta: { file: PMTILES_FILENAME } });
+          }
+        };
+        const onPmtilesError = (e) => {
+          if (e.sourceId === 'pmtiles-source') {
+            this.map.off('sourcedata', onSourceData);
+            this.map.off('error', onPmtilesError);
+            finishDataLoad('pmtiles', { error: e.error, meta: { file: PMTILES_FILENAME } });
+          }
+        };
+        this.map.on('sourcedata', onSourceData);
+        this.map.on('error', onPmtilesError);
       } catch (error) {
         console.error('Error setting up PMTiles source:', error);
         this.pmtilesLoadedSuccessfully = false;
+        finishDataLoad('pmtiles', { error, meta: { file: PMTILES_FILENAME } });
       }
     }
   }
