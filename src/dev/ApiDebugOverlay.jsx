@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { HiOutlineChevronDown as IconChevron } from 'react-icons/hi';
+import { HiBugAnt as IconDebug, HiOutlineXMark as IconClose } from 'react-icons/hi2';
 import { IS_MOBILE } from '../config/constants.js';
 import {
   API_COLORS,
@@ -266,7 +267,8 @@ function CollapsedSummary({ counts, dataSources }) {
   );
 }
 
-export default function ApiDebugOverlay() {
+export default function ApiDebugOverlay({ initiallyOpen = false }) {
+  const [open, setOpen] = useState(initiallyOpen);
   const [collapsed, setCollapsed] = useState(IS_MOBILE);
   const [snapshot, setSnapshot] = useState({ entries: [], counts: {} });
   const [dataSnapshot, setDataSnapshot] = useState({ sources: {} });
@@ -299,6 +301,20 @@ export default function ApiDebugOverlay() {
     (group) => group.types.reduce((sum, t) => sum + (snapshot.counts[t] || 0), 0) > 0
   );
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className="api-debug-trigger"
+        onClick={() => setOpen(true)}
+        title="Open debug panel"
+        aria-label="Open debug panel"
+      >
+        <IconDebug className="api-debug-trigger__icon" />
+      </button>
+    );
+  }
+
   return (
     <div className={`api-debug api-debug--${IS_MOBILE ? 'mobile' : 'desktop'}`}>
       <div className="api-debug__header" onClick={() => setCollapsed((c) => !c)}>
@@ -318,6 +334,19 @@ export default function ApiDebugOverlay() {
         <IconChevron
           className={`api-debug__chevron${!collapsed ? ' api-debug__chevron--open' : ''}`}
         />
+        <button
+          type="button"
+          className="api-debug__close"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(false);
+            setCollapsed(IS_MOBILE);
+          }}
+          title="Hide debug panel"
+          aria-label="Hide debug panel"
+        >
+          <IconClose />
+        </button>
       </div>
 
       <div className={`api-debug__body-wrap${!collapsed ? ' api-debug__body-wrap--open' : ''}`}>
