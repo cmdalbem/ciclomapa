@@ -207,6 +207,12 @@ class Map extends Component {
   onMapMoveEnded() {
     this.syncMapState();
 
+    // Mobile never shows a live city label from pan/zoom geocoding (top bar is a search
+    // placeholder; analytics sidebar is desktop-only). Skip Mapbox reverse-geocode entirely.
+    if (IS_MOBILE) {
+      return;
+    }
+
     if (this.map.getZoom() > MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD) {
       const center = this.map.getCenter();
       // Capture when this geocode request was initiated so App can distinguish stale
