@@ -38,6 +38,28 @@ const AREA_ALIASES = {
     'Uruguay',
     'Venezuela',
   ],
+  'latin america': [
+    'Argentina',
+    'Bolivia',
+    'Chile',
+    'Colombia',
+    'Ecuador',
+    'Guyana',
+    'Mexico',
+    'Paraguay',
+    'Peru',
+    'Suriname',
+    'Uruguay',
+    'Venezuela',
+    'Belize',
+    'Costa Rica',
+    'El Salvador',
+    'Guatemala',
+    'Honduras',
+    'Nicaragua',
+    'Panama',
+  ],
+  es_pt: ['Spain', 'Portugal'],
   'iberian peninsula': ['Spain', 'Portugal', 'Andorra', 'Gibraltar'],
   europe: [
     'Austria',
@@ -58,6 +80,9 @@ const AREA_ALIASES = {
   ],
   uk: ['United Kingdom'],
 };
+
+// PMtiles intentionally omit low-priority / routing-only layers (see OSMController.js).
+const DEFAULT_PMTILES_EXCLUDE_LAYERS = ['Baixa velocidade', 'Trilha', 'Proibido'];
 
 // Path to the overpass-to-geojson script
 const OVERPASS_SCRIPT = path.join(__dirname, 'overpass-to-geojson.js');
@@ -136,8 +161,8 @@ Options:
   --output <file>     Output PMtiles file path (default: all.pmtiles)
   --areas <list>      Comma-separated list of areas (alternative to positional args)
   --endpoint <url>    Overpass API endpoint (passed to overpass-to-geojson.js)
-  --include-layers    Comma-separated list of layer names to include
-  --exclude-layers    Comma-separated list of layer names to exclude
+  --include-layers    Comma-separated list of layer names to include (disables default exclusions)
+  --exclude-layers    Comma-separated list of extra layer names to exclude (defaults always exclude Baixa velocidade, Trilha, Proibido)
   --include-poi       Include POI (Point of Interest) layers
   --skip-geojson      Skip GeoJSON generation if files already exist
   --skip-existing-geojsons   Alias for --skip-geojson
@@ -151,6 +176,8 @@ Examples:
 
 Aliases:
   "South America" -> Argentina, Bolivia, Brazil, Chile, Colombia, Ecuador, Guyana, Paraguay, Peru, Suriname, Uruguay, Venezuela
+  "Latin America" -> South/Central America + Mexico, excluding Brazil (see AREA_ALIASES in generate-pmtiles.js)
+  "es_pt" -> Spain, Portugal
   "Iberian Peninsula" -> Spain, Portugal, Andorra, Gibraltar
   "europe" -> Austria, Belgium, Denmark, Finland, France, Germany, Ireland, Italy, Luxembourg, Netherlands, Norway, Portugal, Spain, Sweden, Switzerland
   "uk" -> United Kingdom
@@ -163,6 +190,13 @@ Aliases:
   }
 
   config.areas = expandAreaAliases(config.areas);
+
+  if (!config.includeLayers) {
+    config.excludeLayers = [
+      ...new Set([...DEFAULT_PMTILES_EXCLUDE_LAYERS, ...(config.excludeLayers || [])]),
+    ];
+  }
+
   return config;
 }
 
@@ -329,7 +363,7 @@ async function main() {
     console.log(`   Output: ${config.output}`);
     console.log(`   Skip GeoJSON: ${config.skipGeoJSON ? 'YES' : 'NO'}`);
     console.log(
-      `   Include layers: ${config.includeLayers ? config.includeLayers.join(', ') : 'ALL'}`
+      `   Include layers: ${config.includeLayers ? config.includeLayers.join(', ') : 'default (cycle infra)'}`
     );
     console.log(
       `   Exclude layers: ${config.excludeLayers ? config.excludeLayers.join(', ') : 'NONE'}`
@@ -438,4 +472,10 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { main, generateGeoJSONForArea, generatePMtiles };
+module.exports = {
+  main,
+  generateGeoJSONForArea,
+  generatePMtiles,
+  expandAreaAliases,
+  getExpectedGeoJSONFilename,
+};

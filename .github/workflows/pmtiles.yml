@@ -1,0 +1,81 @@
+name: PMtiles build & upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: "Build id(s) from scripts/pmtiles-builds.json (comma-separated, or 'all')"
+        required: false
+        default: 'all'
+      skip_geojson:
+        description: 'Reuse existing GeoJSON in the runner work dir when present'
+        type: boolean
+        default: false
+      upload_only:
+        description: 'Skip generation and only upload existing artifacts'
+        type: boolean
+        default: false
+
+# europe.pmtiles can take a long time; avoid overlapping runs.
+concurrency:
+  group: pmtiles-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: yarn
+
+      - name: Install Node dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install tippecanoe
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsqlite3-dev zlib1g-dev
+          git clone --depth 1 https://github.com/felt/tippecanoe.git /tmp/tippecanoe
+          make -C /tmp/tippecanoe -j"$(nproc)"
+          sudo make -C /tmp/tippecanoe install
+          tippecanoe --version
+
+      - name: Build and upload PMtiles
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME || 'ciclomapa' }}
+          S3_PMTILES_PREFIX: pmtiles/
+          CICLOMAPA_FROM: ${{ secrets.CICLOMAPA_FROM }}
+          PMTILES_BUILD: ${{ inputs.build }}
+        run: |
+          ARGS=()
+          if [ "$PMTILES_BUILD" != "all" ] && [ -n "$PMTILES_BUILD" ]; then
+            ARGS+=(--build "$PMTILES_BUILD")
+          fi
+          if [ "${{ inputs.skip_geojson }}" = "true" ]; then
+            ARGS+=(--skip-geojson)
+          fi
+          if [ "${{ inputs.upload_only }}" = "true" ]; then
+            ARGS+=(--upload-only)
+          fi
+          node scripts/sync-pmtiles-to-s3.js "${ARGS[@]}"
+
+      - name: Upload change reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pmtiles-reports
+          path: .pmtiles-work/reports/
+          if-no-files-found: ignore
