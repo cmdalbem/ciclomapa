@@ -2806,16 +2806,11 @@ class Map extends Component {
           { lng: result.coords.longitude, lat: result.coords.latitude },
           { accuracy: result.coords.accuracy, source: 'mapbox-geolocate' }
         );
-        this.reverseGeocode([result.coords.longitude, result.coords.latitude])
-          .then((geocodeResult) => {
-            // this.syncMapState(geocodeResult.place_name);
-            this.syncMapState();
-            // Update lighting based on user's actual location
-            this.setRealisticLighting();
-          })
-          .catch((err) => {
-            console.debug('Reverse geocoding failed:', err.message);
-          });
+        // No reverse-geocode here: this event fires on every GPS fix while tracking is
+        // active (potentially very frequently), and its result was unused (place_name
+        // was never applied). syncMapState/setRealisticLighting don't need it either.
+        this.syncMapState();
+        this.setRealisticLighting();
       });
 
       // Listen to tracking events to sync state for persistence
