@@ -1189,7 +1189,7 @@ class App extends Component {
     //     duration: 0
     // });
 
-    startDataLoad('geojson-osm', 'GeoJSON (Overpass)', {
+    const osmLoadToken = startDataLoad('geojson-osm', 'GeoJSON (Overpass)', {
       area: areaName,
       backgroundUpdate: !!backgroundUpdate,
     });
@@ -1198,6 +1198,7 @@ class App extends Component {
     return this.currentOSMRequest
       .then((newData) => {
         finishDataLoad('geojson-osm', {
+          token: osmLoadToken,
           meta: { area: areaName, features: newData.geoJson?.features?.length ?? 0 },
         });
 
@@ -1272,14 +1273,22 @@ class App extends Component {
         // Check if the error is due to request abortion
         if (e.message === 'Request aborted') {
           console.debug('OSM request was cancelled due to a new request');
-          finishDataLoad('geojson-osm', { status: 'aborted', meta: { area: areaName } });
+          finishDataLoad('geojson-osm', {
+            token: osmLoadToken,
+            status: 'aborted',
+            meta: { area: areaName },
+          });
           // notification.warning({
           //     message: 'OSM Request Aborted',
           //     description: 'OSM request was cancelled due to a new request.',
           //     duration: 2
           // });
         } else {
-          finishDataLoad('geojson-osm', { error: e, meta: { area: areaName } });
+          finishDataLoad('geojson-osm', {
+            token: osmLoadToken,
+            error: e,
+            meta: { area: areaName },
+          });
           appNotification.error({
             title: 'Ops',
             description:
@@ -1300,12 +1309,13 @@ class App extends Component {
         // Try to retrieve this area's geojson data from the database
         const area = this.state.area;
         const storageKey = this.getStorageKeyForArea(area);
-        startDataLoad('geojson-cache', 'GeoJSON (cache)', { area });
+        const cacheLoadToken = startDataLoad('geojson-cache', 'GeoJSON (cache)', { area });
         this.getStorage()
           .load(this.state.area, { storageKey })
           .then((data) => {
             if (data) {
               finishDataLoad('geojson-cache', {
+                token: cacheLoadToken,
                 meta: { area, features: data.geoJson?.features?.length ?? 0 },
               });
 
@@ -1341,7 +1351,11 @@ class App extends Component {
                 `Couldn't find previously saved data for area ${this.state.area}, hitting OSM...`
               );
 
-              finishDataLoad('geojson-cache', { status: 'empty', meta: { area, features: 0 } });
+              finishDataLoad('geojson-cache', {
+                token: cacheLoadToken,
+                status: 'empty',
+                meta: { area, features: 0 },
+              });
 
               this.setState({
                 geoJson: null,
@@ -1353,7 +1367,7 @@ class App extends Component {
           })
           .catch((e) => {
             console.error(e);
-            finishDataLoad('geojson-cache', { error: e, meta: { area } });
+            finishDataLoad('geojson-cache', { token: cacheLoadToken, error: e, meta: { area } });
             // notification['error']({
             //     message: 'Erro',
             //     description:
