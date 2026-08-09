@@ -7,8 +7,8 @@
   width: var(--spacing-panel-width);
   z-index: 1;
   transition:
-    transform var(--motion-duration-normal) ease-out,
-    opacity var(--motion-duration-normal) ease-out;
+    transform var(--motion-duration-slow) cubic-bezier(0.22, 1, 0.36, 1),
+    opacity var(--motion-duration-slow) cubic-bezier(0.22, 1, 0.36, 1);
   transform: translateY(-10%);
   opacity: 0;
   pointer-events: none;
