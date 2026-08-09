@@ -38,6 +38,14 @@
 }
 
 
+/* Desktop: empty search-field affordance (same copy/treatment as mobile) */
+.city-picker__search--desktop.ant-btn {
+  min-width: 280px;
+  justify-content: flex-start;
+  text-align: left;
+  font-weight: 400;
+}
+
 /* Desktop topbar map actions: shared size (solid fills read heavier than the glass
    search field, so a hair smaller for optical balance). Colors stay per-button. */
 .topbar-map-action.ant-btn {

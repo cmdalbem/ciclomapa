@@ -490,8 +490,8 @@ a.city-switcher-modal__cityBtn {
     flex-direction: row;
     align-items: center;
     gap: 8px;
-    padding-left: 14px;
-    padding-right: 14px;
+    padding-left: 8px;
+    padding-right: 8px;
     box-sizing: border-box;
   }
 
