@@ -1749,6 +1749,12 @@ class App extends Component {
     this.loadAirtableMetadata();
     this.syncPrivacyPolicyFromRoute();
 
+    // Sidebar/routes open state can be restored from localStorage before any toggle
+    // fires — kick off deferred GeoJSON (boundary, metrics, freshness) in that case.
+    if (this.needsCityGeoJsonContext()) {
+      this.ensureCityDataLoaded();
+    }
+
     // Safety net for the GTM `mapReady` trigger: the map normally signals readiness
     // on its first idle, but if the map never mounts or fails (WebGL error, very slow
     // device), we still let deferred analytics (PostHog) load so we don't lose tracking.

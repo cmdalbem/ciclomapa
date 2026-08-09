@@ -543,9 +543,7 @@ class Map extends Component {
     }
 
     const isDarkMode = this.props.isDarkMode;
-    const boundaryLineColor = isDarkMode
-      ? MAP_COLORS.DARK.ROUTE_BORDER
-      : MAP_COLORS.LIGHT.ROUTE_BORDER;
+    const boundaryLineColor = isDarkMode ? MAP_COLORS.DARK.BOUNDARY : MAP_COLORS.LIGHT.BOUNDARY;
 
     const boundaryFeatures = (this.props.data?.features || []).filter(
       (f) => f.properties?.boundary === 'administrative'
@@ -593,64 +591,35 @@ class Map extends Component {
       ],
     };
 
-    if (!this.map.getSource('boundaryLineSrc')) {
-      this.map.addSource('boundaryLineSrc', {
-        type: 'geojson',
-        data: boundaryLineData,
-      });
-    } else {
-      this.map.getSource('boundaryLineSrc').setData(boundaryLineData);
-    }
+    this.map.addSource('boundaryLineSrc', {
+      type: 'geojson',
+      data: boundaryLineData,
+    });
 
-    if (!this.map.getLayer('boundary-layer')) {
-      const beforeRouteLayer = this.map.getLayer('route-padding-selected')
-        ? 'route-padding-selected'
-        : this.map.getLayer('route-paddings-unselected')
-          ? 'route-paddings-unselected'
-          : undefined;
+    const beforeRouteLayer = this.map.getLayer('route-padding-selected')
+      ? 'route-padding-selected'
+      : this.map.getLayer('route-paddings-unselected')
+        ? 'route-paddings-unselected'
+        : undefined;
 
-      this.map.addLayer(
-        {
-          id: 'boundary-layer',
-          type: 'line',
-          source: 'boundaryLineSrc',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
-          paint: {
-            'line-color': boundaryLineColor,
-            'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1, 14, 1.5],
-            'line-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0, 15, 0.8],
-            'line-dasharray': [1.5, 2.5],
-          },
+    this.map.addLayer(
+      {
+        id: 'boundary-layer',
+        type: 'line',
+        source: 'boundaryLineSrc',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
         },
-        beforeRouteLayer
-      );
-    } else {
-      this.map.setPaintProperty('boundary-layer', 'line-color', boundaryLineColor);
-      this.map.setPaintProperty('boundary-layer', 'line-width', [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        10,
-        1,
-        14,
-        1.5,
-      ]);
-      this.map.setPaintProperty('boundary-layer', 'line-opacity', [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        9,
-        0,
-        11,
-        0.2,
-        14,
-        0.35,
-      ]);
-      this.map.setPaintProperty('boundary-layer', 'line-dasharray', [1.5, 2.5]);
-    }
+        paint: {
+          'line-color': boundaryLineColor,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 10, 2, 14, 1],
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 15, 1],
+          'line-dasharray': [1.5, 2.5],
+        },
+      },
+      beforeRouteLayer
+    );
   }
 
   // Boundary mask (disabled) — dims everything outside the city polygon.
@@ -1805,7 +1774,7 @@ class Map extends Component {
         map.setPaintProperty(
           'boundary-layer',
           'line-color',
-          this.props.isDarkMode ? MAP_COLORS.DARK.ROUTE_BORDER : MAP_COLORS.LIGHT.ROUTE_BORDER
+          this.props.isDarkMode ? MAP_COLORS.DARK.BOUNDARY : MAP_COLORS.LIGHT.BOUNDARY
         );
       }
     }
