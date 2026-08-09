@@ -11,10 +11,6 @@ on:
         description: 'Reuse existing GeoJSON in the runner work dir when present'
         type: boolean
         default: false
-      upload_only:
-        description: 'Skip generation and only upload existing artifacts'
-        type: boolean
-        default: false
 
 # europe.pmtiles can take a long time; avoid overlapping runs.
 concurrency:
@@ -66,9 +62,6 @@ jobs:
           fi
           if [ "${{ inputs.skip_geojson }}" = "true" ]; then
             ARGS+=(--skip-geojson)
-          fi
-          if [ "${{ inputs.upload_only }}" = "true" ]; then
-            ARGS+=(--upload-only)
           fi
           node scripts/sync-pmtiles-to-s3.js "${ARGS[@]}"
 
