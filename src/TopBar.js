@@ -161,14 +161,14 @@ function TopBar(props) {
       >
         <div className="flex items-start justify-between text-white w-full">
           {!IS_MOBILE && (
-            <a href="/" className={'mt-2'}>
+            <a href="/" className="mt-2">
               <Logo className={embedMode ? 'text-white opacity-20' : 'text-sm'} />
             </a>
           )}
 
           {!embedMode && (
             <div
-              className={`city-picker sm:text-center ${IS_MOBILE && 'w-full'}`}
+              className={`city-picker sm:text-center ${IS_MOBILE ? 'w-full' : ''}`}
               onMouseEnter={() => !IS_MOBILE && setIsCityPickerHovered(true)}
               onMouseLeave={() => !IS_MOBILE && setIsCityPickerHovered(false)}
             >
@@ -178,27 +178,16 @@ function TopBar(props) {
                 >
                   <div className={`relative ${IS_MOBILE ? 'w-full' : ''} rounded-full`}>
                     <Button
-                      className="glass-bg"
+                      className={`glass-bg city-picker__search ${IS_MOBILE ? '' : 'city-picker__search--desktop'}`}
                       block={IS_MOBILE}
                       size={IS_MOBILE ? 'large' : 'middle'}
                       onClick={showCityPicker}
-                      aria-label={
-                        IS_MOBILE
-                          ? `Buscar cidade ou endereço. Cidade atual: ${city}, ${state}`
-                          : undefined
-                      }
+                      aria-label={`Buscar. Cidade atual: ${city}, ${state}`}
                     >
-                      <h2 className="flex items-center gap-1 m-0 sm:w-auto w-full min-w-0">
+                      <span className="flex items-center gap-1 m-0 sm:w-auto w-full min-w-0 font-normal">
                         <IconSearch className="opacity-60 flex-shrink-0 -ml-1" aria-hidden />
-
-                        {IS_MOBILE ? (
-                          <span className="opacity-60 truncate">Buscar cidade ou endereço</span>
-                        ) : (
-                          <span>
-                            {city}, {state}
-                          </span>
-                        )}
-                      </h2>
+                        <span className="opacity-60 truncate">Buscar</span>
+                      </span>
                     </Button>
                     {loading && (
                       <div className="loader-container h-1 absolute bottom-0 left-0 right-0">
