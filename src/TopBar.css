@@ -37,6 +37,52 @@
   }
 }
 
+
+/* Desktop topbar map actions: shared size (solid fills read heavier than the glass
+   search field, so a hair smaller for optical balance). Colors stay per-button. */
+.topbar-map-action.ant-btn {
+  --topbar-map-action-size: calc(var(--ant-control-height, 32px) - 2px);
+  width: var(--topbar-map-action-size);
+  height: var(--topbar-map-action-size);
+  min-width: var(--topbar-map-action-size);
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05em;
+}
+
+/* Route: solid primary */
+#directionsPanelTopbarButton.topbar-map-action.ant-btn {
+  color: #283e2a;
+  background: #f3f4f6;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+body.theme-light #directionsPanelTopbarButton.topbar-map-action.ant-btn {
+  color: #f9fafb;
+  background: #283e2a;
+  border-color: transparent;
+}
+
+#ciclomapa:has(#directionsPanel.directions-panel-open)
+  #directionsPanelTopbarButton.topbar-map-action.ant-btn {
+  color: #283e2a;
+  background: #d1d5db;
+  border-color: rgba(0, 0, 0, 0.14);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+body.theme-light
+  #ciclomapa:has(#directionsPanel.directions-panel-open)
+  #directionsPanelTopbarButton.topbar-map-action.ant-btn {
+  color: #f9fafb;
+  background: #374151;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {

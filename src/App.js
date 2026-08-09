@@ -120,10 +120,13 @@ class App extends Component {
     this.syncPrivacyPolicyFromRoute = this.syncPrivacyPolicyFromRoute.bind(this);
     this.onChangeStrategy = this.onChangeStrategy.bind(this);
     this.setMapRef = this.setMapRef.bind(this);
+    this.setMapComponentRef = this.setMapComponentRef.bind(this);
+    this.triggerGeolocate = this.triggerGeolocate.bind(this);
     this.toggleTheme = this.toggleTheme.bind(this);
     this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
     this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
     this.onDirectionsPanelToggle = this.onDirectionsPanelToggle.bind(this);
+    this.toggleDirectionsPanel = this.toggleDirectionsPanel.bind(this);
     this.setArea = this.setArea.bind(this);
     this.debouncedUpdateURL = debounce(this.updateURL, 300);
 
@@ -1855,6 +1858,14 @@ class App extends Component {
     this.setState({ map });
   }
 
+  setMapComponentRef(mapComponent) {
+    this.mapComponent = mapComponent;
+  }
+
+  triggerGeolocate() {
+    this.mapComponent?.triggerGeolocate?.();
+  }
+
   setDirectionsPanelRef(directionsPanel) {
     this.directionsPanel = directionsPanel;
   }
@@ -1864,6 +1875,10 @@ class App extends Component {
     if (isOpen) {
       this.ensureCityDataLoaded();
     }
+  }
+
+  toggleDirectionsPanel() {
+    this.directionsPanel?.toggleCollapse?.();
   }
 
   setFromPoint = (point) => {
@@ -1972,6 +1987,8 @@ class App extends Component {
       toggleTheme: this.toggleTheme,
       updateLengths: this.updateLengths,
       setMapRef: this.setMapRef,
+      setMapComponentRef: this.setMapComponentRef,
+      triggerGeolocate: this.triggerGeolocate,
       onTrackingUserLocationChange: (isTracking) => {
         this.setState({ isTrackingUserLocation: isTracking });
         this.saveStateToLocalStorage();
@@ -1985,6 +2002,7 @@ class App extends Component {
       setToPoint: this.setToPoint,
       clearRoutePoints: this.clearRoutePoints,
       onDirectionsPanelToggle: this.onDirectionsPanelToggle,
+      toggleDirectionsPanel: this.toggleDirectionsPanel,
       setArea: this.setArea,
       openLayersLegendModal: this.openLayersLegendModal,
       closeAboutModal: this.closeAboutModal,

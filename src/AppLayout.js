@@ -72,14 +72,17 @@ export default function AppLayout({
               toggleTheme={handlers.toggleTheme}
               loading={state.loading}
               cancelDataLoad={handlers.cancelDataLoad}
+              toggleDirectionsPanel={handlers.toggleDirectionsPanel}
+              triggerGeolocate={handlers.triggerGeolocate}
             />
           </header>
           {state.mapBootReady ? (
             <Map
               key={state.mapKey}
-              ref={(map) => {
+              ref={(mapComponent) => {
+                handlers.setMapComponentRef?.(mapComponent);
                 if (!IS_PROD && state.debugMode) {
-                  window.map = map;
+                  window.map = mapComponent;
                 }
               }}
               data={state.geoJson}
@@ -286,6 +289,8 @@ AppLayout.propTypes = {
     toggleTheme: PropTypes.func,
     updateLengths: PropTypes.func,
     setMapRef: PropTypes.func,
+    setMapComponentRef: PropTypes.func,
+    triggerGeolocate: PropTypes.func,
     onTrackingUserLocationChange: PropTypes.func,
     clearGlobalSearchPin: PropTypes.func,
     handleFavoritesChanged: PropTypes.func,
@@ -297,6 +302,7 @@ AppLayout.propTypes = {
     setToPoint: PropTypes.func,
     clearRoutePoints: PropTypes.func,
     onDirectionsPanelToggle: PropTypes.func,
+    toggleDirectionsPanel: PropTypes.func,
     setArea: PropTypes.func,
     closeAboutModal: PropTypes.func,
     openCityPicker: PropTypes.func,
