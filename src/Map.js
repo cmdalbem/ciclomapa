@@ -162,11 +162,6 @@ class Map extends Component {
     this.debouncedMapStateSync = debounce((placeName, geocodeRequestTime) => {
       console.debug('Syncing map state with consistent place:', placeName);
       this.syncMapState(placeName, geocodeRequestTime);
-      // Dimming the city label while a new one resolves only makes sense on desktop,
-      // where the label shows the actual city name (mobile shows a search placeholder).
-      if (!IS_MOBILE) {
-        document.querySelector('.city-picker span')?.setAttribute('style', 'opacity: 1');
-      }
     }, 1000);
   }
 
@@ -249,10 +244,6 @@ class Map extends Component {
                   '), cancelling previous sync and starting new timer'
               );
 
-              if (!IS_MOBILE) {
-                document.querySelector('.city-picker span')?.setAttribute('style', 'opacity: 0.5');
-              }
-
               // Different place - cancel previous debounced call and start new timer
               this.debouncedMapStateSync.cancel();
               this.lastGeocodedPlaceName = currentPlaceName;
@@ -265,7 +256,6 @@ class Map extends Component {
         });
     } else {
       console.debug('Map zoom is below auto change area zoom threshold');
-      // document.querySelector('.city-picker span').setAttribute('style','opacity: 0.5');
     }
   }
 
