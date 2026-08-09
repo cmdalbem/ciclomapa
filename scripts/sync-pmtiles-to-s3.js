@@ -277,6 +277,30 @@ async function inspectLocalBuild(localPath) {
   };
 }
 
+// Continent-size GeoJSON files can be multi-gigabyte, well past what JSON.parse
+// can safely hold in memory. Instead of parsing, we stream the file and count
+// occurrences of the `"type":"Feature"` marker that starts every feature object.
+const FEATURE_MARKER_RE = /"type"\s*:\s*"Feature"/g;
+const FEATURE_MARKER_OVERLAP = 32; // longer than the marker, covers stray whitespace
+
+function countFeatureMarkers(filePath) {
+  return new Promise((resolve, reject) => {
+    let count = 0;
+    let tail = '';
+
+    const stream = fs.createReadStream(filePath, { encoding: 'utf8' });
+    stream.on('data', (chunk) => {
+      const combined = tail + chunk;
+      for (const match of combined.matchAll(FEATURE_MARKER_RE)) {
+        if (match.index + match[0].length > tail.length) count += 1;
+      }
+      tail = combined.slice(-FEATURE_MARKER_OVERLAP);
+    });
+    stream.on('end', () => resolve(count));
+    stream.on('error', reject);
+  });
+}
+
 async function countGeoJsonFeaturesForBuild(build) {
   const expectedFiles = new Set(
     expandAreaAliases(build.areas).map((area) => getExpectedGeoJSONFilename(area))
@@ -292,8 +316,7 @@ async function countGeoJsonFeaturesForBuild(build) {
       .catch(() => false);
     if (!exists) continue;
 
-    const geojson = JSON.parse(await fsp.readFile(filePath, 'utf8'));
-    const features = Array.isArray(geojson.features) ? geojson.features.length : 0;
+    const features = await countFeatureMarkers(filePath);
     totalFeatures += features;
     files.push({ file: filename, features });
   }
