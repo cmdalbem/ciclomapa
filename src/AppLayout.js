@@ -95,6 +95,7 @@ export default function AppLayout({
               location={state.area}
               onMapMoved={handlers.onMapMoved}
               onMapPositionChange={handlers.onMapPositionChange}
+              needsCityGeoJsonContext={handlers.needsCityGeoJsonContext}
               updateLengths={handlers.updateLengths}
               embedMode={state.embedMode}
               debugMode={state.debugMode}
@@ -281,6 +282,7 @@ AppLayout.propTypes = {
     downloadData: PropTypes.func,
     onMapMoved: PropTypes.func,
     onMapPositionChange: PropTypes.func,
+    needsCityGeoJsonContext: PropTypes.func,
     getMapViewport: PropTypes.func,
     forceUpdate: PropTypes.func,
     cancelDataLoad: PropTypes.func,
