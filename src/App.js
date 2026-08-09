@@ -1558,7 +1558,7 @@ class App extends Component {
       this._geoJsonLoadedArea = null;
       this._geoJsonLoadingArea = null;
       this.setState({ geoJson: null, lengths: {}, dataUpdatedAt: null });
-      if (this.state.isSidebarOpen || this.state.isDirectionsPanelOpen) {
+      if (this.state.isSidebarOpen || this._isDirectionsPanelOpen) {
         this.ensureCityDataLoaded();
       }
 
