@@ -366,7 +366,7 @@ export default function ApiDebugOverlay({ initiallyOpen = false }) {
       className={`fixed z-[99999] overflow-hidden bg-gray-800 font-['Inter',system-ui,sans-serif] text-[10px] ${
         IS_MOBILE
           ? 'inset-x-0 bottom-0 w-full pb-[env(safe-area-inset-bottom,0px)]'
-          : 'right-4 w-60 rounded-lg shadow-lg'
+          : 'right-4 rounded-lg shadow-lg'
       }`}
       style={IS_MOBILE ? undefined : { top: desktopTop }}
     >
