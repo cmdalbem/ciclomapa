@@ -433,7 +433,6 @@ async function uploadToS3(localPath, outputFilename, { dryRun }) {
       Bucket: bucket,
       Key: key,
       Body: fs.createReadStream(localPath),
-      ACL: 'public-read',
       ContentType: 'application/vnd.pmtiles',
       CacheControl: 'public, max-age=3600',
     })
