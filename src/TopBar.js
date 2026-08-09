@@ -12,6 +12,10 @@ import {
   HiSun as IconSun,
   HiMoon as IconMoon,
   HiSearch as IconSearch,
+  HiInformationCircle as IconAbout,
+  HiUsers as IconCollaborate,
+  HiChartPie as IconMetrics,
+  HiDotsVertical as IconMore,
 } from 'react-icons/hi';
 
 import { IconContext } from 'react-icons';
@@ -150,6 +154,52 @@ function TopBar(props) {
       },
     ],
     onClick: handleMenuClick,
+  };
+
+  const overflowMenu = {
+    items: [
+      ...(!isSidebarOpen
+        ? [
+            {
+              key: 'metrics',
+              icon: <IconMetrics />,
+              label: 'Métricas',
+            },
+          ]
+        : []),
+      {
+        key: 'collaborate',
+        icon: <IconCollaborate />,
+        label: 'Colaborar',
+        children: collaborateMenu.items,
+      },
+      ...(!IS_PROD && debugMode
+        ? [
+            {
+              key: 'review-icons',
+              label: 'Revisar ícones',
+            },
+          ]
+        : []),
+      {
+        key: 'about',
+        icon: <IconAbout />,
+        label: 'Sobre',
+      },
+      { type: 'divider' },
+      {
+        key: 'theme',
+        icon: isDarkMode ? <IconSun /> : <IconMoon />,
+        label: isDarkMode ? 'Tema claro' : 'Tema escuro',
+      },
+    ],
+    onClick: ({ key }) => {
+      if (key === 'theme') toggleTheme();
+      else if (key === 'about') openAboutModal();
+      else if (key === 'review-icons') navigate('/dev/place-type-icons');
+      else if (key === 'metrics') toggleSidebar(true);
+      else handleMenuClick({ key });
+    },
   };
 
   return (
@@ -293,49 +343,72 @@ function TopBar(props) {
           <div className="nav-links font-white">
             {!embedMode ? (
               <div className="hidden sm:flex gap-2 items-center">
-                <Space.Compact className="glass-bg rounded-full overflow-hidden">
-                  <Button
-                    type={!isDarkMode ? 'default' : 'text'}
-                    className={!isDarkMode ? 'border border-opacity-10 border-white' : 'opacity-50'}
-                    shape="circle"
-                    onClick={() => toggleTheme()}
-                    aria-label="Usar tema claro"
-                  >
-                    <IconSun />
-                  </Button>
-                  <Button
-                    type={isDarkMode ? 'default' : 'text'}
-                    className={isDarkMode ? 'border border-opacity-10 border-white' : 'opacity-50'}
-                    shape="circle"
-                    onClick={() => toggleTheme()}
-                    aria-label="Usar tema escuro"
-                  >
-                    <IconMoon />
-                  </Button>
-                </Space.Compact>
+                <div className="topbar-nav-expanded">
+                  <Space.Compact className="glass-bg rounded-full overflow-hidden">
+                    <Button
+                      type={!isDarkMode ? 'default' : 'text'}
+                      className={
+                        !isDarkMode ? 'border border-opacity-10 border-white' : 'opacity-50'
+                      }
+                      shape="circle"
+                      onClick={() => toggleTheme()}
+                      aria-label="Usar tema claro"
+                    >
+                      <IconSun />
+                    </Button>
+                    <Button
+                      type={isDarkMode ? 'default' : 'text'}
+                      className={
+                        isDarkMode ? 'border border-opacity-10 border-white' : 'opacity-50'
+                      }
+                      shape="circle"
+                      onClick={() => toggleTheme()}
+                      aria-label="Usar tema escuro"
+                    >
+                      <IconMoon />
+                    </Button>
+                  </Space.Compact>
 
-                <Button className="glass-bg" onClick={openAboutModal}>
-                  Sobre
-                </Button>
-
-                {!IS_PROD && debugMode && (
-                  <Button className="glass-bg" onClick={() => navigate('/dev/place-type-icons')}>
-                    Revisar ícones
+                  <Button className="glass-bg" onClick={openAboutModal}>
+                    Sobre
                   </Button>
-                )}
 
-                <Dropdown menu={collaborateMenu}>
-                  <Button className="glass-bg">
-                    <span> Colaborar </span>
-                    <IconCaret className="text-green-300" style={{ marginRight: '-3px' }} />
-                  </Button>
+                  {!IS_PROD && debugMode && (
+                    <Button className="glass-bg" onClick={() => navigate('/dev/place-type-icons')}>
+                      Revisar ícones
+                    </Button>
+                  )}
+
+                  <Dropdown menu={collaborateMenu}>
+                    <Button className="glass-bg">
+                      <span> Colaborar </span>
+                      <IconCaret className="text-green-300" style={{ marginRight: '-3px' }} />
+                    </Button>
+                  </Dropdown>
+
+                  {!isSidebarOpen && (
+                    <Button className="glass-bg" onClick={() => toggleSidebar(true)}>
+                      Métricas
+                    </Button>
+                  )}
+                </div>
+
+                <Dropdown
+                  menu={{ ...overflowMenu, className: 'topbar-nav-overflow-menu' }}
+                  trigger={['click']}
+                  placement="bottomRight"
+                  classNames={{ root: 'topbar-nav-overflow-dropdown' }}
+                >
+                  <Tooltip title="Mais opções">
+                    <Button
+                      className="glass-bg topbar-nav-overflow"
+                      shape="circle"
+                      aria-label="Mais opções"
+                    >
+                      <IconMore aria-hidden />
+                    </Button>
+                  </Tooltip>
                 </Dropdown>
-
-                {!isSidebarOpen && (
-                  <Button className="glass-bg" onClick={() => toggleSidebar(true)}>
-                    Métricas
-                  </Button>
-                )}
               </div>
             ) : (
               <Button target="_blank" href={window.location.href.replace(/&embed=true/g, '')}>
