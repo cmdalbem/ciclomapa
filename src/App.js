@@ -1577,10 +1577,6 @@ class App extends Component {
         });
       }
 
-      if (!IS_MOBILE) {
-        document.querySelector('.city-picker span')?.setAttribute('style', 'opacity: 1');
-      }
-
       // Only redo the query if we need new data
       // if (!doesAContainsB(largestBoundsYet, newBounds)) {
       //     this.updateData();
