@@ -7,10 +7,10 @@
       "description": "Production — Brazil only"
     },
     {
-      "id": "la",
+      "id": "la--except-br",
       "output": "la.pmtiles",
       "areas": ["Latin America"],
-      "description": "Latin America only (excludes Brazil)"
+      "description": "Latin America except Brazil)"
     },
     {
       "id": "la_es_pt",
@@ -47,21 +47,21 @@
       "output": "barcelona-poi.pmtiles",
       "areas": ["Barcelona"],
       "includePoi": true,
-      "description": "Barcelona city — cycle layers + POIs (non-standard)"
+      "description": "Barcelona city — cycle layers + POIs"
     },
     {
       "id": "spain-poi",
       "output": "spain-poi.pmtiles",
       "areas": ["Spain"],
       "includePoi": true,
-      "description": "Spain — cycle layers + POIs (non-standard)"
+      "description": "Spain — cycle layers + POIs"
     },
     {
       "id": "brazil-poi",
       "output": "brazil-poi.pmtiles",
       "areas": ["Brazil"],
       "includePoi": true,
-      "description": "Brazil — cycle layers + POIs (non-standard)"
+      "description": "Brazil — cycle layers + POIs"
     }
   ]
 }
