@@ -2764,6 +2764,10 @@ class Map extends Component {
       this.map.addControl(geolocate, 'bottom-right');
       const geolocateButton = geolocate._container?.querySelector('button');
       if (geolocateButton) geolocateButton.setAttribute('aria-label', 'Mostrar minha localização');
+      // Desktop: control stays mounted for trigger(), but the visible button lives in the topbar.
+      if (!IS_MOBILE && geolocate._container) {
+        geolocate._container.classList.add('mapboxgl-ctrl-geolocate-host--topbar');
+      }
 
       // Restore tracking state if it was active before
       // Note: trigger() will start tracking if trackUserLocation is true
@@ -2796,6 +2800,12 @@ class Map extends Component {
       // this.map.addControl(new mapboxgl.FullscreenControl({
       //     container: document.querySelector('body')
       // }), 'bottom-right');
+    }
+  }
+
+  triggerGeolocate() {
+    if (this.geolocateControl && typeof this.geolocateControl.trigger === 'function') {
+      this.geolocateControl.trigger();
     }
   }
 
