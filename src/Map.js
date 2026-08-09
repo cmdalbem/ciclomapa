@@ -49,7 +49,6 @@ import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/ma
 import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 import { flyMapTo } from './features/map/mapCamera.js';
 import userLocationCache from './features/geolocation/userLocationCache.js';
-import { startDataLoad, finishDataLoad } from './dev/dataLoadTracker.js';
 
 import './Map.css';
 
