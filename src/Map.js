@@ -2771,8 +2771,10 @@ class Map extends Component {
     // Initialize map after style is loaded
     this.initializeMapAfterStyleLoad();
 
-    // Initialize map center
-    const shouldInitializeArea = this.props.zoom >= MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD;
+    // Initialize map center. Match onMapMoveEnded: mobile never reverse-geocodes
+    // (no live city label), so skip the Mapbox request on startup too.
+    const shouldInitializeArea =
+      !IS_MOBILE && this.props.zoom >= MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD;
     if (shouldInitializeArea) {
       this.reverseGeocode([this.props.lng, this.props.lat])
         .then((result) => {
@@ -2783,7 +2785,7 @@ class Map extends Component {
           console.debug('Reverse geocoding failed during initialization:', err.message);
         });
     } else {
-      // Preserve map state without forcing an area when zoomed out.
+      // Preserve map state without forcing an area when zoomed out (or on mobile).
       this.syncMapState();
     }
   }
