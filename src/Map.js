@@ -209,6 +209,13 @@ class Map extends Component {
       return;
     }
 
+    // Reverse geocoding here is only needed to keep the area/URL in sync while the
+    // analytics sidebar or routes panel is open (they depend on knowing the current
+    // area). Otherwise skip the Mapbox request entirely - it was firing on every pan.
+    if (!this.props.needsCityGeoJsonContext?.()) {
+      return;
+    }
+
     if (this.map.getZoom() > MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD) {
       const center = this.map.getCenter();
       // Capture when this geocode request was initiated so App can distinguish stale
@@ -529,7 +536,9 @@ class Map extends Component {
     if (this.map.getLayer('boundary-layer')) this.map.removeLayer('boundary-layer');
     if (this.map.getSource('boundaryLineSrc')) this.map.removeSource('boundaryLineSrc');
 
-    if (!ENABLE_BOUNDARY_LAYER) {
+    // Same gate as live area geocoding / deferred GeoJSON: only draw while Analytics
+    // or Routing actually needs city context. Closing both panels clears the layer above.
+    if (!ENABLE_BOUNDARY_LAYER || !this.props.needsCityGeoJsonContext?.()) {
       return;
     }
 
@@ -2680,9 +2689,10 @@ class Map extends Component {
     this.initializeMapAfterStyleLoad();
 
     // Initialize map center. Match onMapMoveEnded: mobile never reverse-geocodes
-    // (no live city label), so skip the Mapbox request on startup too.
+    // (no live city label), so skip the Mapbox request on startup too. Also skip
+    // when we already know the area (city picker/route) - no need to re-derive it.
     const shouldInitializeArea =
-      !IS_MOBILE && this.props.zoom >= MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD;
+      !IS_MOBILE && !this.props.location && this.props.zoom >= MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD;
     if (shouldInitializeArea) {
       this.reverseGeocode([this.props.lng, this.props.lat])
         .then((result) => {
