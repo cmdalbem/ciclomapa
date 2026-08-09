@@ -1428,6 +1428,10 @@ class Map extends Component {
 
         console.log('PMTiles source added successfully');
         this.pmtilesLoadedSuccessfully = true;
+
+        // Hide geojson features from pmtiles layers
+        this.hideGeoJsonFromPmtiles(this.props.data);
+
         finishDataLoad('pmtiles', {
           token: pmtilesLoadToken,
           meta: {
@@ -1435,9 +1439,6 @@ class Map extends Component {
             zoom: `${header.minZoom}-${header.maxZoom}`,
           },
         });
-
-        // Hide geojson features from pmtiles layers
-        this.hideGeoJsonFromPmtiles(this.props.data);
       } catch (error) {
         console.error('Error setting up PmTiles for cyclepaths:', error);
         this.pmtilesLoadedSuccessfully = false;
