@@ -1323,7 +1323,7 @@ class Map extends Component {
 
     if (USE_PMTILES_SOURCE) {
       const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + PMTILES_FILENAME;
-      startDataLoad('pmtiles', 'PMTiles', { file: PMTILES_FILENAME });
+      const pmtilesLoadToken = startDataLoad('pmtiles', 'PMTiles', { file: PMTILES_FILENAME });
 
       try {
         console.log('Loading PMTiles (native vector source):', PMTILES_URL);
@@ -1344,14 +1344,21 @@ class Map extends Component {
           if (e.sourceId === 'pmtiles-source' && e.isSourceLoaded) {
             this.map.off('sourcedata', onSourceData);
             this.map.off('error', onPmtilesError);
-            finishDataLoad('pmtiles', { meta: { file: PMTILES_FILENAME } });
+            finishDataLoad('pmtiles', {
+              token: pmtilesLoadToken,
+              meta: { file: PMTILES_FILENAME },
+            });
           }
         };
         const onPmtilesError = (e) => {
           if (e.sourceId === 'pmtiles-source') {
             this.map.off('sourcedata', onSourceData);
             this.map.off('error', onPmtilesError);
-            finishDataLoad('pmtiles', { error: e.error, meta: { file: PMTILES_FILENAME } });
+            finishDataLoad('pmtiles', {
+              token: pmtilesLoadToken,
+              error: e.error,
+              meta: { file: PMTILES_FILENAME },
+            });
           }
         };
         this.map.on('sourcedata', onSourceData);
@@ -1359,7 +1366,11 @@ class Map extends Component {
       } catch (error) {
         console.error('Error setting up PMTiles source:', error);
         this.pmtilesLoadedSuccessfully = false;
-        finishDataLoad('pmtiles', { error, meta: { file: PMTILES_FILENAME } });
+        finishDataLoad('pmtiles', {
+          token: pmtilesLoadToken,
+          error,
+          meta: { file: PMTILES_FILENAME },
+        });
       }
     }
   }
