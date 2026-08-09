@@ -301,7 +301,12 @@ function countFeatureMarkers(filePath) {
   });
 }
 
+function workDirForBuild(build) {
+  return path.join(WORK_DIR, build.id);
+}
+
 async function countGeoJsonFeaturesForBuild(build) {
+  const buildDir = workDirForBuild(build);
   const expectedFiles = new Set(
     expandAreaAliases(build.areas).map((area) => getExpectedGeoJSONFilename(area))
   );
@@ -309,7 +314,7 @@ async function countGeoJsonFeaturesForBuild(build) {
   const files = [];
 
   for (const filename of expectedFiles) {
-    const filePath = path.join(WORK_DIR, filename);
+    const filePath = path.join(buildDir, filename);
     const exists = await fsp
       .access(filePath)
       .then(() => true)
@@ -472,14 +477,16 @@ async function runGeneratePMtiles(build, localOutputPath, options) {
   if (options.cleanup) args.push('--cleanup');
   if (build.includePoi) args.push('--include-poi');
 
-  await fsp.mkdir(WORK_DIR, { recursive: true });
+  const buildDir = workDirForBuild(build);
+  await fsp.mkdir(buildDir, { recursive: true });
 
   return new Promise((resolve, reject) => {
     console.log(`   Running: node scripts/generate-pmtiles.js ${args.join(' ')}`);
+    console.log(`   GeoJSON work dir: ${buildDir}`);
 
     const child = spawn('node', [GENERATE_SCRIPT, ...args], {
       stdio: 'inherit',
-      cwd: WORK_DIR,
+      cwd: buildDir,
     });
 
     child.on('close', (code) => {
