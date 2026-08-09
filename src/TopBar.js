@@ -1,11 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
-import { Space, Button, Popover, Dropdown, Tooltip } from 'antd';
+import { Space, Button, Dropdown, Tooltip } from 'antd';
 
 import {
   HiOutlineMap as IconMap,
-  HiOutlineRefresh as IconUpdate,
   HiOutlineChevronDown as IconCaret,
   HiPencil as IconEdit,
   HiChatAlt as IconComment,
@@ -24,7 +23,7 @@ import { MdMyLocation } from 'react-icons/md';
 
 import { useNavigate } from 'react-router-dom';
 
-import { timeSince, getOsmUrl } from './utils/utils.js';
+import { getOsmUrl } from './utils/utils.js';
 
 import { TOPBAR_HEIGHT, IS_MOBILE, IS_PROD, ENABLE_COMMENTS } from './config/constants.js';
 
@@ -33,19 +32,13 @@ import Logo from './components/Logo';
 
 import './TopBar.css';
 
-const LAST_UPDATE_LABEL_VISIBLE_MS = 6000;
-
 function TopBar(props) {
   const {
     title,
-    lastUpdate,
-    forceUpdate,
     embedMode,
     debugMode,
     isDarkMode,
     toggleTheme,
-    loading,
-    cancelDataLoad,
     lat,
     lng,
     z,
@@ -68,18 +61,6 @@ function TopBar(props) {
 
   const [editModal, setEditModal] = useState(false);
   const [hasDismissedEditModal, setHasDismissedEditModal] = useState(false);
-  const [showLastUpdate, setShowLastUpdate] = useState(false);
-  const [isCityPickerHovered, setIsCityPickerHovered] = useState(false);
-
-  useEffect(() => {
-    if (loading || !lastUpdate) {
-      setShowLastUpdate(false);
-      return undefined;
-    }
-    setShowLastUpdate(true);
-    const timer = setTimeout(() => setShowLastUpdate(false), LAST_UPDATE_LABEL_VISIBLE_MS);
-    return () => clearTimeout(timer);
-  }, [title, lastUpdate, loading]);
 
   const openEditModal = useCallback(() => setEditModal(true), []);
   const closeEditModal = useCallback(() => setEditModal(false), []);
@@ -126,15 +107,9 @@ function TopBar(props) {
     ]
   );
 
-  const showLastUpdateLabel = showLastUpdate || (!IS_MOBILE && isCityPickerHovered);
-
   const parts = title.split(',');
   const city = parts[0];
   const state = parts[1];
-  let updatedAtStr;
-  if (lastUpdate) {
-    updatedAtStr = lastUpdate.toLocaleString('pt-BR');
-  }
 
   const collaborateMenu = {
     items: [
@@ -217,11 +192,7 @@ function TopBar(props) {
           )}
 
           {!embedMode && (
-            <div
-              className={`city-picker sm:text-center ${IS_MOBILE ? 'w-full' : ''}`}
-              onMouseEnter={() => !IS_MOBILE && setIsCityPickerHovered(true)}
-              onMouseLeave={() => !IS_MOBILE && setIsCityPickerHovered(false)}
-            >
+            <div className={`city-picker sm:text-center ${IS_MOBILE ? 'w-full' : ''}`}>
               <div className="flex flex-col items-center sm:mb-1">
                 <div
                   className={`relative z-10 flex items-center gap-2 ${IS_MOBILE ? 'w-full' : ''}`}
@@ -239,13 +210,6 @@ function TopBar(props) {
                         <span className="opacity-60 truncate">Buscar</span>
                       </span>
                     </Button>
-                    {loading && (
-                      <div className="loader-container h-1 absolute bottom-0 left-0 right-0">
-                        <div className="progress-materializecss">
-                          <div className="indeterminate"></div>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {!IS_MOBILE && triggerGeolocate && (
@@ -278,64 +242,6 @@ function TopBar(props) {
                     </Tooltip>
                   )}
                 </div>
-
-                {!IS_MOBILE &&
-                  (!loading ? (
-                    lastUpdate && (
-                      <Popover
-                        trigger={IS_MOBILE ? 'click' : 'hover'}
-                        placement="bottom"
-                        arrow={{ pointAtCenter: true }}
-                        content={
-                          <div style={{ maxWidth: 250 }}>
-                            <Space size="small" orientation="vertical">
-                              {lastUpdate && (
-                                <div>
-                                  O mapa de {city} que você está vendo é uma cópia dos dados obtidos
-                                  do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}
-                                  ).
-                                </div>
-                              )}
-
-                              <Button
-                                size="small"
-                                icon={<IconUpdate />}
-                                type="primary"
-                                block
-                                onClick={forceUpdate}
-                              >
-                                Atualizar
-                              </Button>
-                            </Space>
-                          </div>
-                        }
-                      >
-                        <div
-                          className={[
-                            'flex flex-center items-center gap-1 font-regular cursor text-xs transition-all transform  duration-700 ease-out',
-                            showLastUpdateLabel
-                              ? 'opacity-50 translate-y-1.5 hover:opacity-100'
-                              : ' opacity-0 -translate-y-3 pointer-events-none',
-                          ].join(' ')}
-                          aria-hidden={!showLastUpdateLabel}
-                        >
-                          Atualizado há {timeSince(lastUpdate)}
-                        </div>
-                      </Popover>
-                    )
-                  ) : (
-                    <div className="flex flex-center items-center gap-1 font-regular text-xs mt-1 opacity-50 hover:opacity-100 transition-opacity duration-300">
-                      Acessando dados do OpenStreetMap...
-                      <Button
-                        type="link"
-                        size="small"
-                        className="text-xs p-0 h-auto min-h-0 text-inherit opacity-70 hover:opacity-100"
-                        onClick={cancelDataLoad}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  ))}
               </div>
             </div>
           )}
@@ -435,14 +341,10 @@ export default TopBar;
 
 TopBar.propTypes = {
   title: PropTypes.string.isRequired,
-  lastUpdate: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.string]),
-  forceUpdate: PropTypes.func.isRequired,
   embedMode: PropTypes.bool,
   debugMode: PropTypes.bool,
   isDarkMode: PropTypes.bool,
   toggleTheme: PropTypes.func.isRequired,
-  loading: PropTypes.bool,
-  cancelDataLoad: PropTypes.func,
   lat: PropTypes.number,
   lng: PropTypes.number,
   z: PropTypes.number,
@@ -455,12 +357,9 @@ TopBar.propTypes = {
 };
 
 TopBar.defaultProps = {
-  lastUpdate: null,
   embedMode: false,
   debugMode: false,
   isDarkMode: false,
-  loading: false,
-  cancelDataLoad: () => {},
   lat: null,
   lng: null,
   z: null,
