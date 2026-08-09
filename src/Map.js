@@ -7,6 +7,7 @@ import turfCircle from '@turf/circle';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { PmTilesSource } from 'mapbox-pmtiles';
 
+import { startDataLoad, finishDataLoad } from './dev/dataLoadTracker.js';
 import {
   MAPBOX_ACCESS_TOKEN,
   USE_GEOJSON_SOURCE,
@@ -1402,6 +1403,7 @@ class Map extends Component {
     }
 
     if (USE_PMTILES_SOURCE) {
+      const pmtilesLoadToken = startDataLoad('pmtiles', 'PMTiles', { file: PMTILES_FILENAME });
       try {
         const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + PMTILES_FILENAME;
         console.log('Loading PMTiles from S3:', PMTILES_URL);
@@ -1426,12 +1428,24 @@ class Map extends Component {
 
         console.log('PMTiles source added successfully');
         this.pmtilesLoadedSuccessfully = true;
+        finishDataLoad('pmtiles', {
+          token: pmtilesLoadToken,
+          meta: {
+            file: PMTILES_FILENAME,
+            zoom: `${header.minZoom}-${header.maxZoom}`,
+          },
+        });
 
         // Hide geojson features from pmtiles layers
         this.hideGeoJsonFromPmtiles(this.props.data);
       } catch (error) {
         console.error('Error setting up PmTiles for cyclepaths:', error);
         this.pmtilesLoadedSuccessfully = false;
+        finishDataLoad('pmtiles', {
+          token: pmtilesLoadToken,
+          error,
+          meta: { file: PMTILES_FILENAME },
+        });
       }
     }
   }
