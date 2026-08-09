@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { Popover, Button, Select, Checkbox } from 'antd';
+import { Popover, Button, Select, Checkbox, Dropdown } from 'antd';
 
 import './AnalyticsSidebar.css';
 
@@ -20,6 +20,7 @@ import {
   HiX as IconClose,
   HiInformationCircle as IconInfo,
   HiDownload as IconDownload,
+  HiDotsVertical as IconMore,
 } from 'react-icons/hi';
 
 import { HiMiniCheckBadge as IconVerified } from 'react-icons/hi2';
@@ -236,14 +237,50 @@ class AnalyticsSidebar extends Component {
               <h2 className="my-0">Métricas</h2>
             </div>
 
-            <Button
-              type="text"
-              shape="circle"
-              className="text-xl -mr-2 text-inherit"
-              icon={<IconClose />}
-              onClick={() => this.props.toggle(false)}
-              aria-label="Fechar painel de métricas"
-            />
+            <div className="flex items-center -mr-2">
+              {this.props.downloadData && (
+                <Dropdown
+                  trigger={['click']}
+                  placement="bottomRight"
+                  menu={{
+                    items: [
+                      {
+                        key: 'download',
+                        icon: <IconDownload className="mt-0.5 self-start" />,
+                        label: (
+                          <div className="max-w-[220px] py-0.5 leading-snug">
+                            <div>Baixar GeoJSON</div>
+                            <div className="mt-0.5 text-xs font-normal opacity-60 whitespace-normal">
+                              Dados da infraestrutura cicloviária desta cidade para uso em seus
+                              próprios projetos e análises.
+                            </div>
+                          </div>
+                        ),
+                      },
+                    ],
+                    onClick: ({ key }) => {
+                      if (key === 'download') this.props.downloadData();
+                    },
+                  }}
+                >
+                  <Button
+                    type="text"
+                    shape="circle"
+                    className="text-xl text-inherit"
+                    icon={<IconMore />}
+                    aria-label="Mais opções"
+                  />
+                </Dropdown>
+              )}
+              <Button
+                type="text"
+                shape="circle"
+                className="text-xl text-inherit"
+                icon={<IconClose />}
+                onClick={() => this.props.toggle(false)}
+                aria-label="Fechar painel de métricas"
+              />
+            </div>
           </div>
 
           {this.props.location && (
@@ -556,19 +593,6 @@ class AnalyticsSidebar extends Component {
                   )
               )}
           </Section>
-
-          {this.props.downloadData && (
-            <Section title="Download dados">
-              <p className="text-xs opacity-50">
-                Baixe os dados da infraestrutura cicloviária desta cidade para uso em seus próprios
-                projetos e análises.
-              </p>
-              <Button onClick={this.props.downloadData} size="small" className="opacity-70">
-                <IconDownload className="inline-block" />
-                {this.props.location.split(',')[0]}.geojson
-              </Button>
-            </Section>
-          )}
         </div>
       </div>
     );
