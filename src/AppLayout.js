@@ -2,7 +2,7 @@
  * Layout component for the main app shell: header, main (map), asides, modals.
  * Receives state and handlers from App to keep App.js focused on state and logic.
  */
-import React, { Suspense, useMemo } from 'react';
+import React, { Suspense } from 'react';
 import PropTypes from 'prop-types';
 import AboutModal from './AboutModal.js';
 import PrivacyPolicyModal from './PrivacyPolicy.jsx';
@@ -25,12 +25,13 @@ export default function AppLayout({
   seoPageTitle,
   cityCanonicalSlug,
 }) {
-  const citySwitcherMapCenter = useMemo(() => {
-    const vp = typeof handlers.getMapViewport === 'function' ? handlers.getMapViewport() : null;
-    const lat = vp && Number.isFinite(vp.lat) ? vp.lat : state.lat;
-    const lng = vp && Number.isFinite(vp.lng) ? vp.lng : state.lng;
-    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
-  }, [handlers.getMapViewport, state.lat, state.lng]);
+  const vp = typeof handlers.getMapViewport === 'function' ? handlers.getMapViewport() : null;
+  const citySwitcherLat = vp && Number.isFinite(vp.lat) ? vp.lat : state.lat;
+  const citySwitcherLng = vp && Number.isFinite(vp.lng) ? vp.lng : state.lng;
+  const citySwitcherMapCenter =
+    Number.isFinite(citySwitcherLat) && Number.isFinite(citySwitcherLng)
+      ? { lat: citySwitcherLat, lng: citySwitcherLng }
+      : null;
 
   return (
     <div
