@@ -104,6 +104,7 @@ class App extends Component {
     this.onMapShowSatelliteChanged = this.onMapShowSatelliteChanged.bind(this);
     this.onMapMoved = this.onMapMoved.bind(this);
     this.onMapPositionChange = this.onMapPositionChange.bind(this);
+    this.needsCityGeoJsonContext = this.needsCityGeoJsonContext.bind(this);
     this.getMapViewport = this.getMapViewport.bind(this);
     this.onLayersChange = this.onLayersChange.bind(this);
     this.downloadData = this.downloadData.bind(this);
@@ -355,10 +356,13 @@ class App extends Component {
   }
 
   toggleSidebar(state) {
-    this.setState({ isSidebarOpen: state });
-    if (state) {
-      this.ensureCityDataLoaded();
-    }
+    this.setState({ isSidebarOpen: state }, () => {
+      if (state) {
+        this.ensureCityDataLoaded();
+      }
+      // Boundary visibility follows the same Analytics/Routing gate as GeoJSON loading.
+      this.mapComponent?.initBoundaryLayer?.();
+    });
   }
 
   openAboutModal() {
@@ -1414,9 +1418,9 @@ class App extends Component {
   }
 
   // Map rendering runs entirely off the regional PMTiles, so per-city GeoJSON is only
-  // needed by routing coverage, analytics/km stats, and the GeoJSON export. Call this
-  // right before any of those features are used instead of loading eagerly on every
-  // city change.
+  // needed by routing coverage, analytics/km stats, the city boundary outline, and the
+  // GeoJSON export. Call this right before any of those features are used instead of
+  // loading eagerly on every city change.
   ensureCityDataLoaded() {
     const area = this.state.area;
     if (!area || this._geoJsonLoadedArea === area || this._geoJsonLoadingArea === area) {
@@ -1560,7 +1564,7 @@ class App extends Component {
       this._geoJsonLoadedArea = null;
       this._geoJsonLoadingArea = null;
       this.setState({ geoJson: null, lengths: {}, dataUpdatedAt: null });
-      if (this.state.isSidebarOpen || this._isDirectionsPanelOpen) {
+      if (this.needsCityGeoJsonContext()) {
         this.ensureCityDataLoaded();
       }
 
@@ -1871,6 +1875,16 @@ class App extends Component {
     if (isOpen) {
       this.ensureCityDataLoaded();
     }
+    // Directions open state is kept off React state (avoids App-wide re-renders), so
+    // poke Map directly — same gate as Analytics for boundary + live area tracking.
+    this.mapComponent?.initBoundaryLayer?.();
+  }
+
+  // Shared gate for anything that needs per-city GeoJSON / a live area label:
+  // Analytics sidebar, Routing panel, city boundary, and Mapbox reverse-geocode on pan.
+  // Idle map browsing stays on PMTiles only.
+  needsCityGeoJsonContext() {
+    return this.state.isSidebarOpen || this._isDirectionsPanelOpen;
   }
 
   toggleDirectionsPanel() {
@@ -1975,6 +1989,7 @@ class App extends Component {
       downloadData: this.downloadData,
       onMapMoved: this.onMapMoved,
       onMapPositionChange: this.onMapPositionChange,
+      needsCityGeoJsonContext: this.needsCityGeoJsonContext,
       getMapViewport: this.getMapViewport,
       forceUpdate: this.forceUpdate,
       cancelDataLoad: this.cancelDataLoad,
