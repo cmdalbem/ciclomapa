@@ -20,7 +20,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { timeSince, getOsmUrl } from './utils/utils.js';
 
-import { TOPBAR_HEIGHT, IS_MOBILE, IS_PROD } from './config/constants.js';
+import { TOPBAR_HEIGHT, IS_MOBILE, IS_PROD, ENABLE_COMMENTS } from './config/constants.js';
 
 import EditModal from './EditModal.js';
 import Logo from './components/Logo';
@@ -130,11 +130,15 @@ function TopBar(props) {
 
   const collaborateMenu = {
     items: [
-      {
-        key: 'comment',
-        icon: <IconComment />,
-        label: 'Adicionar comentário',
-      },
+      ...(ENABLE_COMMENTS
+        ? [
+            {
+              key: 'comment',
+              icon: <IconComment />,
+              label: 'Adicionar comentário',
+            },
+          ]
+        : []),
       {
         key: 'edit',
         icon: <IconEdit />,

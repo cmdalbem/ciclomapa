@@ -3163,6 +3163,7 @@ class Map extends Component {
   }
 
   newComment() {
+    if (!ENABLE_COMMENTS) return;
     this.setState({ showCommentCursor: true }, () => {
       this.map.once('click', (e) => {
         this.newCommentCoords = e.lngLat;
