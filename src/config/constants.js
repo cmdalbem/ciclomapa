@@ -104,7 +104,9 @@ export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = true;
 // desktop (will require a one-time permission prompt for new users).
 export const ENABLE_AUTOFILL_ORIGIN_ON_PANEL_OPEN = IS_MOBILE;
 export const ENABLE_COMMENTS = !IS_MOBILE;
-export const ENABLE_BOUNDARY_LAYER = false;
+// Master kill switch. When on, the city boundary still only draws while Analytics
+// or Routing is active (see App.needsCityGeoJsonContext) — GeoJSON is deferred otherwise.
+export const ENABLE_BOUNDARY_LAYER = true;
 export const ENABLE_SATELLITE_TOGGLE = false;
 
 const SUPPORTED_COUNTRIES_PROD = Object.freeze([{ code: 'br', labelPt: 'Brasil', flag: '🇧🇷' }]);
@@ -189,7 +191,7 @@ export const INTERACTIVE_LAYERS_ZOOM_THRESHOLD = 15;
 export const COMMENTS_ZOOM_THRESHOLD = 13;
 export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 12;
 
-const DEFAULT_PMTILES_FILENAME = 'spain.pmtiles';
+const DEFAULT_PMTILES_FILENAME = 'spain-poi.pmtiles';
 export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAULT_PMTILES_FILENAME;
 
 /*
