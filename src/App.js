@@ -1394,7 +1394,7 @@ class App extends Component {
           })
           .catch((e) => {
             console.error(e);
-            finishDataLoad('geojson-cache', { error: e, meta: { area } });
+            finishDataLoad('geojson-cache', { token: cacheLoadToken, error: e, meta: { area } });
 
             if (this._geoJsonLoadingArea === area) {
               this._geoJsonLoadingArea = null;
