@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
-import { Space, Button, Popover, Dropdown } from 'antd';
+import { Space, Button, Popover, Dropdown, Tooltip } from 'antd';
 
 import {
   HiOutlineMap as IconMap,
@@ -15,6 +15,8 @@ import {
 } from 'react-icons/hi';
 
 import { IconContext } from 'react-icons';
+import { LuBike } from 'react-icons/lu';
+import { MdMyLocation } from 'react-icons/md';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -47,6 +49,8 @@ function TopBar(props) {
     openAboutModal,
     isSidebarOpen,
     toggleSidebar,
+    toggleDirectionsPanel,
+    triggerGeolocate,
   } = props;
 
   const navigate = useNavigate();
@@ -169,36 +173,70 @@ function TopBar(props) {
               onMouseLeave={() => !IS_MOBILE && setIsCityPickerHovered(false)}
             >
               <div className="flex flex-col items-center sm:mb-1">
-                <div className={`relative z-10 ${IS_MOBILE && 'w-full'} rounded-full`}>
-                  <Button
-                    className="glass-bg"
-                    block={IS_MOBILE}
-                    size={IS_MOBILE ? 'large' : 'middle'}
-                    onClick={showCityPicker}
-                    aria-label={
-                      IS_MOBILE
-                        ? `Buscar cidade ou endereço. Cidade atual: ${city}, ${state}`
-                        : undefined
-                    }
-                  >
-                    <h2 className="flex items-center gap-1 m-0 sm:w-auto w-full min-w-0">
-                      <IconSearch className="opacity-60 flex-shrink-0 -ml-1" aria-hidden />
+                <div
+                  className={`relative z-10 flex items-center gap-2 ${IS_MOBILE ? 'w-full' : ''}`}
+                >
+                  <div className={`relative ${IS_MOBILE ? 'w-full' : ''} rounded-full`}>
+                    <Button
+                      className="glass-bg"
+                      block={IS_MOBILE}
+                      size={IS_MOBILE ? 'large' : 'middle'}
+                      onClick={showCityPicker}
+                      aria-label={
+                        IS_MOBILE
+                          ? `Buscar cidade ou endereço. Cidade atual: ${city}, ${state}`
+                          : undefined
+                      }
+                    >
+                      <h2 className="flex items-center gap-1 m-0 sm:w-auto w-full min-w-0">
+                        <IconSearch className="opacity-60 flex-shrink-0 -ml-1" aria-hidden />
 
-                      {IS_MOBILE ? (
-                        <span className="opacity-60 truncate">Buscar cidade ou endereço</span>
-                      ) : (
-                        <span>
-                          {city}, {state}
-                        </span>
-                      )}
-                    </h2>
-                  </Button>
-                  {loading && (
-                    <div className="loader-container h-1 absolute bottom-0 left-0 right-0">
-                      <div className="progress-materializecss">
-                        <div className="indeterminate"></div>
+                        {IS_MOBILE ? (
+                          <span className="opacity-60 truncate">Buscar cidade ou endereço</span>
+                        ) : (
+                          <span>
+                            {city}, {state}
+                          </span>
+                        )}
+                      </h2>
+                    </Button>
+                    {loading && (
+                      <div className="loader-container h-1 absolute bottom-0 left-0 right-0">
+                        <div className="progress-materializecss">
+                          <div className="indeterminate"></div>
+                        </div>
                       </div>
-                    </div>
+                    )}
+                  </div>
+
+                  {!IS_MOBILE && triggerGeolocate && (
+                    <Tooltip title="Mostrar minha localização" placement="bottom">
+                      <Button
+                        id="geolocateTopbarButton"
+                        className="glass-bg topbar-map-action"
+                        size="middle"
+                        shape="circle"
+                        onClick={triggerGeolocate}
+                        aria-label="Mostrar minha localização"
+                      >
+                        <MdMyLocation aria-hidden />
+                      </Button>
+                    </Tooltip>
+                  )}
+
+                  {!IS_MOBILE && toggleDirectionsPanel && (
+                    <Tooltip title="Planejar rota de bicicleta" placement="bottom">
+                      <Button
+                        id="directionsPanelTopbarButton"
+                        className="topbar-map-action directions-topbar-button"
+                        size="middle"
+                        shape="circle"
+                        onClick={toggleDirectionsPanel}
+                        aria-label="Planejar rota de bicicleta"
+                      >
+                        <LuBike aria-hidden />
+                      </Button>
+                    </Tooltip>
                   )}
                 </div>
 
@@ -350,6 +388,8 @@ TopBar.propTypes = {
   openAboutModal: PropTypes.func.isRequired,
   isSidebarOpen: PropTypes.bool,
   toggleSidebar: PropTypes.func.isRequired,
+  toggleDirectionsPanel: PropTypes.func,
+  triggerGeolocate: PropTypes.func,
 };
 
 TopBar.defaultProps = {
