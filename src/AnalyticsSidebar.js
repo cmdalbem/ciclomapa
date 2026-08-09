@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { Popover, Button, Select, Checkbox, Dropdown } from 'antd';
+import { Popover, Button, Select, Checkbox, Dropdown, Space } from 'antd';
 
 import './AnalyticsSidebar.css';
 
@@ -19,6 +19,7 @@ import {
 import {
   HiX as IconClose,
   HiInformationCircle as IconInfo,
+  HiOutlineRefresh as IconUpdate,
   HiDownload as IconDownload,
   HiDotsVertical as IconMore,
 } from 'react-icons/hi';
@@ -31,6 +32,7 @@ import {
   LENGTH_COUNTED_LAYER_IDS,
 } from './config/constants.js';
 import { THIN_SPACE, appendKmUnit } from './utils/routeUtils.js';
+import { timeSince } from './utils/utils.js';
 
 const PIE_CHART_WIDTH_PX = 207;
 const nullableNumber = PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]);
@@ -231,102 +233,103 @@ class AnalyticsSidebar extends Component {
           this.props.open ? 'analytics-sidebar--open' : 'analytics-sidebar--closed'
         }`}
       >
-        <div className="px-5 pb-10">
-          <div className="flex w-full justify-between items-center pt-2 mt-1">
-            <div className="flex items-center">
-              <h2 className="my-0">Métricas</h2>
-            </div>
+        <div className="px-5 pb-5 flex flex-col min-h-full">
+          <div className="flex-1">
+            <div className="flex w-full justify-between items-center pt-2 mt-1">
+              <div className="flex items-center">
+                <h2 className="my-0">Métricas</h2>
+              </div>
 
-            <div className="flex items-center -mr-2">
-              {this.props.downloadData && (
-                <Dropdown
-                  trigger={['click']}
-                  placement="bottomRight"
-                  menu={{
-                    items: [
-                      {
-                        key: 'download',
-                        icon: <IconDownload className="mt-0.5 self-start" />,
-                        label: (
-                          <div className="max-w-[220px] py-0.5 leading-snug">
-                            <div>Baixar GeoJSON</div>
-                            <div className="mt-0.5 text-xs font-normal opacity-60 whitespace-normal">
-                              Dados da infraestrutura cicloviária desta cidade para uso em seus
-                              próprios projetos e análises.
+              <div className="flex items-center -mr-2">
+                {this.props.downloadData && (
+                  <Dropdown
+                    trigger={['click']}
+                    placement="bottomRight"
+                    menu={{
+                      items: [
+                        {
+                          key: 'download',
+                          icon: <IconDownload className="mt-0.5 self-start" />,
+                          label: (
+                            <div className="max-w-[220px] py-0.5 leading-snug">
+                              <div>Baixar GeoJSON</div>
+                              <div className="mt-0.5 text-xs font-normal opacity-60 whitespace-normal">
+                                Dados da infraestrutura cicloviária desta cidade para uso em seus
+                                próprios projetos e análises.
+                              </div>
                             </div>
-                          </div>
-                        ),
+                          ),
+                        },
+                      ],
+                      onClick: ({ key }) => {
+                        if (key === 'download') this.props.downloadData();
                       },
-                    ],
-                    onClick: ({ key }) => {
-                      if (key === 'download') this.props.downloadData();
-                    },
-                  }}
-                >
-                  <Button
-                    type="text"
-                    shape="circle"
-                    className="text-xl text-inherit"
-                    icon={<IconMore />}
-                    aria-label="Mais opções"
-                  />
-                </Dropdown>
-              )}
-              <Button
-                type="text"
-                shape="circle"
-                className="text-xl text-inherit"
-                icon={<IconClose />}
-                onClick={() => this.props.toggle(false)}
-                aria-label="Fechar painel de métricas"
-              />
+                    }}
+                  >
+                    <Button
+                      type="text"
+                      shape="circle"
+                      className="text-xl text-inherit"
+                      icon={<IconMore />}
+                      aria-label="Mais opções"
+                    />
+                  </Dropdown>
+                )}
+                <Button
+                  type="text"
+                  shape="circle"
+                  className="text-xl text-inherit"
+                  icon={<IconClose />}
+                  onClick={() => this.props.toggle(false)}
+                  aria-label="Fechar painel de métricas"
+                />
+              </div>
             </div>
-          </div>
 
-          {this.props.location && (
-            <>
-              <div className="mt-3 text-3xl leading-snug font-heading-display uppercase">
-                {this.props.location.split(',')[0]}
-              </div>
-              <div className="mb-2 mt-2 text-lg tracking-tight opacity-50 leading-tight">
-                {this.props.location.split(',')[1] && `${this.props.location.split(',')[1]}`}
-              </div>
-            </>
-          )}
+            {this.props.location && (
+              <>
+                <div className="mt-3 text-3xl leading-snug font-heading-display uppercase">
+                  {this.props.location.split(',')[0]}
+                </div>
+                <div className="mb-2 mt-2 text-lg tracking-tight opacity-50 leading-tight">
+                  {this.props.location.split(',')[1] && `${this.props.location.split(',')[1]}`}
+                </div>
+              </>
+            )}
 
-          {this.props.cityMetadata && this.props.cityMetadata.pnb_total !== undefined && (
-            <Section
-              title="PNB"
-              link={'https://itdpbrasil.org/pnb/'}
-              year={this.props.cityMetadata.pnb_year}
-              description={
-                <>
-                  <p>
-                    O People Near Bike (pessoas próximas a bicicleta) é apurado anualmente pelo ITDP
-                    Brasil para avaliar as políticas de ciclomobilidade com maior efetividade e
-                    indica o percentual de pessoas que moram a até 300 metros de ciclovias e
-                    ciclofaixas.
-                  </p>
-                </>
-              }
-            >
-              <BigNum>{this.props.cityMetadata.pnb_total + '%'}</BigNum>
+            {this.props.cityMetadata && this.props.cityMetadata.pnb_total !== undefined && (
+              <Section
+                title="PNB"
+                link={'https://itdpbrasil.org/pnb/'}
+                year={this.props.cityMetadata.pnb_year}
+                description={
+                  <>
+                    <p>
+                      O People Near Bike (pessoas próximas a bicicleta) é apurado anualmente pelo
+                      ITDP Brasil para avaliar as políticas de ciclomobilidade com maior efetividade
+                      e indica o percentual de pessoas que moram a até 300 metros de ciclovias e
+                      ciclofaixas.
+                    </p>
+                  </>
+                }
+              >
+                <BigNum>{this.props.cityMetadata.pnb_total + '%'}</BigNum>
 
-              {this.props.cityMetadata.pnb_black_women !== undefined && (
-                <DataLine
-                  name="Mulheres negras"
-                  length={this.props.cityMetadata.pnb_black_women}
-                  unit="%"
-                />
-              )}
-              {this.props.cityMetadata.pnb_women_less_one_salary !== undefined && (
-                <DataLine
-                  name="Mulheres renda até 1 SM"
-                  length={this.props.cityMetadata.pnb_women_less_one_salary}
-                  unit="%"
-                />
-              )}
-              {/* {
+                {this.props.cityMetadata.pnb_black_women !== undefined && (
+                  <DataLine
+                    name="Mulheres negras"
+                    length={this.props.cityMetadata.pnb_black_women}
+                    unit="%"
+                  />
+                )}
+                {this.props.cityMetadata.pnb_women_less_one_salary !== undefined && (
+                  <DataLine
+                    name="Mulheres renda até 1 SM"
+                    length={this.props.cityMetadata.pnb_women_less_one_salary}
+                    unit="%"
+                  />
+                )}
+                {/* {
                                 this.props.cityMetadata.pnb_2024!==undefined &&
                                 <DataLine
                                     name="2024"
@@ -383,216 +386,265 @@ class AnalyticsSidebar extends Component {
                                 />
                             } */}
 
-              {pnbEvolutionData.length >= 2 && (
-                <div>
-                  <div className="w-full mt-3" style={{ height: 124, marginBottom: -24 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={pnbEvolutionData}
-                        margin={{
-                          right: 12,
-                          left: 12,
-                          top: 1,
-                        }}
-                      >
-                        <XAxis
-                          dataKey="year"
-                          tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
-                          ticks={['2018', '2020', '2022', '2024']}
-                          interval={'preserveStartEnd'}
-                          margin={{ left: 8, right: 8 }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <YAxis
-                          // domain={['dataMin', 'dataMax']}
-                          domain={[0, 50]}
-                          ticks={[15, 30, 50]}
-                          interval={'preserveEnd'}
-                          tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
-                          axisLine={false}
-                          tickLine={false}
-                          mirror={true}
-                        />
-                        <CartesianGrid
-                          stroke="currentColor"
-                          strokeOpacity={0.2}
-                          strokeWidth={0.5}
-                        />
-                        <RechartsTooltip {...pnbLineChartTooltipProps} />
-                        <Line
-                          type="monotone"
-                          dataKey="value"
-                          stroke={isDarkMode ? '#a8c957' : '#386641'}
-                          strokeWidth={2}
-                          dot={{ r: 1 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                {pnbEvolutionData.length >= 2 && (
+                  <div>
+                    <div className="w-full mt-3" style={{ height: 124, marginBottom: -24 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={pnbEvolutionData}
+                          margin={{
+                            right: 12,
+                            left: 12,
+                            top: 1,
+                          }}
+                        >
+                          <XAxis
+                            dataKey="year"
+                            tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
+                            ticks={['2018', '2020', '2022', '2024']}
+                            interval={'preserveStartEnd'}
+                            margin={{ left: 8, right: 8 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            // domain={['dataMin', 'dataMax']}
+                            domain={[0, 50]}
+                            ticks={[15, 30, 50]}
+                            interval={'preserveEnd'}
+                            tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
+                            axisLine={false}
+                            tickLine={false}
+                            mirror={true}
+                          />
+                          <CartesianGrid
+                            stroke="currentColor"
+                            strokeOpacity={0.2}
+                            strokeWidth={0.5}
+                          />
+                          <RechartsTooltip {...pnbLineChartTooltipProps} />
+                          <Line
+                            type="monotone"
+                            dataKey="value"
+                            stroke={isDarkMode ? '#a8c957' : '#386641'}
+                            strokeWidth={2}
+                            dot={{ r: 1 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                </div>
-              )}
-            </Section>
-          )}
+                )}
+              </Section>
+            )}
 
-          {this.props.cityMetadata && this.props.cityMetadata.ideciclo !== undefined && (
+            {this.props.cityMetadata && this.props.cityMetadata.ideciclo !== undefined && (
+              <Section
+                title="IDECiclo"
+                link="https://www.ideciclo.org/"
+                year={this.props.cityMetadata.ideciclo_year}
+                description={
+                  <>
+                    <p>
+                      O Índice de Desenvolvimento Cicloviário (IDECICLO) tem como objetivo avaliar
+                      qualitativamente a infraestrutura cicloviária da cidade de forma objetiva e
+                      replicável de modo que haja acompanhamento da evolução dos parâmetros para uma
+                      comparação entre infraestruturas e entre cidades, de maneira a construir uma
+                      séria histórica.
+                    </p>
+                    <p>
+                      O IDECICLO faz uma avaliação local de cada estrutura e pondera esta sob a
+                      malha total da cidade e com as velocidades máximas das vias que estão sendo
+                      inseridas, podendo ser um índice comparativo entre cidades e entre estruturas.
+                    </p>
+                    <p>Escala: de 0 a 1.</p>
+                  </>
+                }
+              >
+                <BigNum>{this.props.cityMetadata.ideciclo}</BigNum>
+              </Section>
+            )}
+
             <Section
-              title="IDECiclo"
-              link="https://www.ideciclo.org/"
-              year={this.props.cityMetadata.ideciclo_year}
+              title="Vias"
               description={
                 <>
                   <p>
-                    O Índice de Desenvolvimento Cicloviário (IDECICLO) tem como objetivo avaliar
-                    qualitativamente a infraestrutura cicloviária da cidade de forma objetiva e
-                    replicável de modo que haja acompanhamento da evolução dos parâmetros para uma
-                    comparação entre infraestruturas e entre cidades, de maneira a construir uma
-                    séria histórica.
+                    As extensões totais das vias são calculadas automaticamente com base nos dados
+                    do OpenStreetMap.
                   </p>
                   <p>
-                    O IDECICLO faz uma avaliação local de cada estrutura e pondera esta sob a malha
-                    total da cidade e com as velocidades máximas das vias que estão sendo inseridas,
-                    podendo ser um índice comparativo entre cidades e entre estruturas.
+                    Para vias que tem estrutura dos dois lados nós desenvolvemos um método que
+                    automaticamente detecta estes casos e remove esta contagem dupla do total.
                   </p>
-                  <p>Escala: de 0 a 1.</p>
+                  <OpenStreetMapDisclaimer />
                 </>
               }
             >
-              <BigNum>{this.props.cityMetadata.ideciclo}</BigNum>
-            </Section>
-          )}
+              {this.props.debugMode && strategiesDropdown}
 
-          <Section
-            title="Vias"
-            description={
-              <>
-                <p>
-                  As extensões totais das vias são calculadas automaticamente com base nos dados do
-                  OpenStreetMap.
-                </p>
-                <p>
-                  Para vias que tem estrutura dos dois lados nós desenvolvemos um método que
-                  automaticamente detecta estes casos e remove esta contagem dupla do total.
-                </p>
-                <OpenStreetMapDisclaimer />
-              </>
-            }
-          >
-            {this.props.debugMode && strategiesDropdown}
+              <div className="relative">
+                <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
+                  <defs>{this.generatePatterns(layers)}</defs>
+                  <Pie
+                    data={vias.pieSlices}
+                    dataKey="value"
+                    cx={'50%'}
+                    cy={'50%'}
+                    innerRadius={90}
+                    outerRadius={100}
+                    paddingAngle={vias.hasPieBreakdown ? 4 : 0}
+                    strokeWidth={0}
+                    startAngle={90}
+                    endAngle={450}
+                    cornerRadius="50%"
+                  />
+                </PieChart>
 
-            <div className="relative">
-              <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
-                <defs>{this.generatePatterns(layers)}</defs>
-                <Pie
-                  data={vias.pieSlices}
-                  dataKey="value"
-                  cx={'50%'}
-                  cy={'50%'}
-                  innerRadius={90}
-                  outerRadius={100}
-                  paddingAngle={vias.hasPieBreakdown ? 4 : 0}
-                  strokeWidth={0}
-                  startAngle={90}
-                  endAngle={450}
-                  cornerRadius="50%"
-                />
-              </PieChart>
-
-              <div
-                className="absolute top-0 w-full flex flex-col items-center justify-center"
-                style={{ height: `${PIE_CHART_WIDTH_PX}px`, width: `${PIE_CHART_WIDTH_PX}px` }}
-              >
-                {lengths && vias.rawTotal > 0 ? (
-                  <>
-                    <span className="inline-flex flex-col items-center cursor-default">
-                      <span className="tracking-wides text-xs">TOTAL</span>
-                      <span className="font-regular">
-                        <span className="text-4xl tracking-tighter">
-                          {vias.effectiveTotal.toFixed(1)}
+                <div
+                  className="absolute top-0 w-full flex flex-col items-center justify-center"
+                  style={{ height: `${PIE_CHART_WIDTH_PX}px`, width: `${PIE_CHART_WIDTH_PX}px` }}
+                >
+                  {lengths && vias.rawTotal > 0 ? (
+                    <>
+                      <span className="inline-flex flex-col items-center cursor-default">
+                        <span className="tracking-wides text-xs">TOTAL</span>
+                        <span className="font-regular">
+                          <span className="text-4xl tracking-tighter">
+                            {vias.effectiveTotal.toFixed(1)}
+                          </span>
+                          <span className="text-sm">{`${THIN_SPACE}km`}</span>
                         </span>
-                        <span className="text-sm">{`${THIN_SPACE}km`}</span>
                       </span>
-                    </span>
-                    {ENABLE_OFFICIAL_CITY_HALL_METRICS_COMPARISON &&
-                      this.props.cityMetadata &&
-                      this.props.cityMetadata.alianca_2025 !== undefined &&
-                      this.props.cityMetadata.alianca_2025 !== null && (
-                        <>
-                          {/* <span className="tracking-widest mt-2">OFICIAL</span> */}
-                          <Popover
-                            placement="left"
-                            arrow={{ pointAtCenter: true }}
-                            content={
-                              <div
-                                className="flex flex-col gap-3 leading-normal"
-                                style={{ width: 320 }}
-                              >
-                                <h3 className="text-lg flex items-center gap-1">
-                                  <IconVerified className="inline-block text-green-300 text-xl" />{' '}
-                                  Dado Oficial da Prefeitura
-                                </h3>
-                                <p>
-                                  Quilometragem total de ciclovias e ciclofaixas divulgada como dado
-                                  oficial da Prefeitura com base no levantamento anual da Aliança
-                                  Bike. Última atualização: julho de 2025.
-                                </p>
-                                <OfficialDisclaimer />
-                                <Button
-                                  type="primary"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  href="https://aliancabike.org.br/dados-do-setor/ciclovias-e-ciclofaixas/"
+                      {ENABLE_OFFICIAL_CITY_HALL_METRICS_COMPARISON &&
+                        this.props.cityMetadata &&
+                        this.props.cityMetadata.alianca_2025 !== undefined &&
+                        this.props.cityMetadata.alianca_2025 !== null && (
+                          <>
+                            {/* <span className="tracking-widest mt-2">OFICIAL</span> */}
+                            <Popover
+                              placement="left"
+                              arrow={{ pointAtCenter: true }}
+                              content={
+                                <div
+                                  className="flex flex-col gap-3 leading-normal"
+                                  style={{ width: 320 }}
                                 >
-                                  Saiba mais
-                                </Button>
-                              </div>
-                            }
-                          >
-                            <span className="flex items-center decoration-dotted tracking-tight gap-0.5">
-                              <IconVerified className="inline-block opacity-50" />
-                              <div className="flex items-center items-baseline opacity-70">
-                                {appendKmUnit(
-                                  Number(this.props.cityMetadata.alianca_2025).toFixed(1)
-                                )}
-                              </div>
-                              {/* <IconInfo /> */}
-                            </span>
-                          </Popover>
-                        </>
-                      )}
-                  </>
-                ) : (
-                  <span className="opacity-50">Sem dados</span>
-                )}
+                                  <h3 className="text-lg flex items-center gap-1">
+                                    <IconVerified className="inline-block text-green-300 text-xl" />{' '}
+                                    Dado Oficial da Prefeitura
+                                  </h3>
+                                  <p>
+                                    Quilometragem total de ciclovias e ciclofaixas divulgada como
+                                    dado oficial da Prefeitura com base no levantamento anual da
+                                    Aliança Bike. Última atualização: julho de 2025.
+                                  </p>
+                                  <OfficialDisclaimer />
+                                  <Button
+                                    type="primary"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    href="https://aliancabike.org.br/dados-do-setor/ciclovias-e-ciclofaixas/"
+                                  >
+                                    Saiba mais
+                                  </Button>
+                                </div>
+                              }
+                            >
+                              <span className="flex items-center decoration-dotted tracking-tight gap-0.5">
+                                <IconVerified className="inline-block opacity-50" />
+                                <div className="flex items-center items-baseline opacity-70">
+                                  {appendKmUnit(
+                                    Number(this.props.cityMetadata.alianca_2025).toFixed(1)
+                                  )}
+                                </div>
+                                {/* <IconInfo /> */}
+                              </span>
+                            </Popover>
+                          </>
+                        )}
+                    </>
+                  ) : (
+                    <span className="opacity-50">Sem dados</span>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="mt-2">
-              {vias.infraLayers.map((l) => (
-                <ViaDataRow
-                  key={l.id}
-                  layer={l}
-                  length={lengths && lengths[l.id]}
-                  rawTotal={vias.rawTotal}
-                  effectiveTotal={vias.effectiveTotal}
-                  included={this.state.lengthsInclude[l.id]}
-                  onToggleInclude={() => this.toggleLengthsInclude(l.id)}
-                />
-              ))}
-            </div>
-          </Section>
+              <div className="mt-2">
+                {vias.infraLayers.map((l) => (
+                  <ViaDataRow
+                    key={l.id}
+                    layer={l}
+                    length={lengths && lengths[l.id]}
+                    rawTotal={vias.rawTotal}
+                    effectiveTotal={vias.effectiveTotal}
+                    included={this.state.lengthsInclude[l.id]}
+                    onToggleInclude={() => this.toggleLengthsInclude(l.id)}
+                  />
+                ))}
+              </div>
+            </Section>
 
-          <Section title="Pontos de interesse">
-            {layers
-              .filter((l) => l.type === 'poi' && l.name !== 'Comentários')
-              .map(
-                (l) =>
-                  lengths &&
-                  lengths[l.id] >= 0 && (
-                    <DataLine name={l.name} key={l.name} length={lengths[l.id]} />
-                  )
+            <Section title="Pontos de interesse">
+              {layers
+                .filter((l) => l.type === 'poi' && l.name !== 'Comentários')
+                .map(
+                  (l) =>
+                    lengths &&
+                    lengths[l.id] >= 0 && (
+                      <DataLine name={l.name} key={l.name} length={lengths[l.id]} />
+                    )
+                )}
+            </Section>
+          </div>
+
+          {(this.props.loading || this.props.lastUpdate) && (
+            <div className="mt-auto pt-7">
+              {this.props.loading ? (
+                <div className="flex items-center gap-1 text-xs opacity-50 hover:opacity-100 transition-opacity duration-300">
+                  Carregando dados do OpenStreetMap...
+                  <Button
+                    type="link"
+                    size="small"
+                    className="text-xs p-0 h-auto min-h-0 text-inherit opacity-70 hover:opacity-100"
+                    onClick={this.props.cancelDataLoad}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <Popover
+                  placement="top"
+                  arrow={{ pointAtCenter: true }}
+                  content={
+                    <div style={{ maxWidth: 250 }}>
+                      <Space size="small" orientation="vertical">
+                        <div>
+                          Estes dados são uma cópia do OpenStreetMap obtida há{' '}
+                          <b>{timeSince(this.props.lastUpdate)}</b> (
+                          {this.props.lastUpdate.toLocaleString('pt-BR')}).
+                        </div>
+
+                        <Button
+                          size="small"
+                          icon={<IconUpdate />}
+                          type="primary"
+                          block
+                          onClick={this.props.forceUpdate}
+                        >
+                          Atualizar
+                        </Button>
+                      </Space>
+                    </div>
+                  }
+                >
+                  <div className="inline-flex items-center gap-1 text-xs opacity-50 hover:opacity-100 cursor transition-opacity duration-300">
+                    Atualizado há {timeSince(this.props.lastUpdate)}
+                  </div>
+                </Popover>
               )}
-          </Section>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -611,6 +663,10 @@ AnalyticsSidebar.propTypes = {
   onChangeStrategy: PropTypes.func,
   lengthCalculationStrategy: PropTypes.string,
   downloadData: PropTypes.func,
+  lastUpdate: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.string]),
+  loading: PropTypes.bool,
+  forceUpdate: PropTypes.func,
+  cancelDataLoad: PropTypes.func,
 };
 
 const BigNum = ({ children }) => (

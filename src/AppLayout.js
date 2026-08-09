@@ -55,14 +55,12 @@ export default function AppLayout({
           <header id="topbar-wrapper" aria-label="Barra superior">
             <TopBar
               title={state.area}
-              lastUpdate={state.dataUpdatedAt}
               lat={state.lat}
               lng={state.lng}
               z={state.zoom}
               getViewport={handlers.getMapViewport}
               downloadData={handlers.downloadData}
               onMapMoved={handlers.onMapMoved}
-              forceUpdate={handlers.forceUpdate}
               isSidebarOpen={state.isSidebarOpen}
               toggleSidebar={handlers.toggleSidebar}
               embedMode={state.embedMode}
@@ -70,8 +68,6 @@ export default function AppLayout({
               openAboutModal={handlers.openAboutModal}
               isDarkMode={state.isDarkMode}
               toggleTheme={handlers.toggleTheme}
-              loading={state.loading}
-              cancelDataLoad={handlers.cancelDataLoad}
               toggleDirectionsPanel={handlers.toggleDirectionsPanel}
               triggerGeolocate={handlers.triggerGeolocate}
             />
@@ -138,6 +134,10 @@ export default function AppLayout({
                   toggle={handlers.toggleSidebar}
                   onChangeStrategy={handlers.onChangeStrategy}
                   downloadData={handlers.downloadData}
+                  lastUpdate={state.dataUpdatedAt}
+                  loading={state.loading}
+                  forceUpdate={handlers.forceUpdate}
+                  cancelDataLoad={handlers.cancelDataLoad}
                 />
               </Suspense>
             </aside>
