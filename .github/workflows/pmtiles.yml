@@ -11,6 +11,11 @@ on:
         description: 'Reuse existing GeoJSON in the runner work dir when present'
         type: boolean
         default: false
+  schedule:
+    # Daily 06:00 UTC → br
+    - cron: '0 6 * * *'
+    # Weekly Sunday 08:00 UTC → spain
+    - cron: '0 8 * * 0'
 
 # europe.pmtiles can take a long time; avoid overlapping runs.
 concurrency:
@@ -46,6 +51,17 @@ jobs:
           sudo make -C /tmp/tippecanoe install
           tippecanoe --version
 
+      - name: Resolve build target
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "build=${{ inputs.build }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 8 * * 0" ]; then
+            echo "build=spain" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=br" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and upload PMtiles
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -54,7 +70,7 @@ jobs:
           S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME || 'ciclomapa' }}
           S3_PMTILES_PREFIX: pmtiles/
           CICLOMAPA_FROM: ${{ secrets.CICLOMAPA_FROM }}
-          PMTILES_BUILD: ${{ inputs.build }}
+          PMTILES_BUILD: ${{ steps.target.outputs.build }}
         run: |
           ARGS=()
           if [ "$PMTILES_BUILD" != "all" ] && [ -n "$PMTILES_BUILD" ]; then
