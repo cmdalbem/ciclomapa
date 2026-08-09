@@ -50,6 +50,13 @@
       "description": "Barcelona city — cycle layers + POIs"
     },
     {
+      "id": "spain",
+      "output": "spain.pmtiles",
+      "areas": ["Spain"],
+      "includePoi": false,
+      "description": "Spain"
+    },
+    {
       "id": "spain-poi",
       "output": "spain-poi.pmtiles",
       "areas": ["Spain"],
