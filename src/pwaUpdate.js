@@ -29,7 +29,10 @@ export function subscribeToPwaUpdate(listener) {
 
 export function applyPendingUpdate() {
   const waiting = pendingRegistration?.waiting;
-  if (!waiting) return;
+  if (!waiting) {
+    window.location.reload();
+    return;
+  }
   userRequestedReload = true;
   waiting.postMessage({ type: 'SKIP_WAITING' });
 }
