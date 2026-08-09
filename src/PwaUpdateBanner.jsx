@@ -11,56 +11,25 @@ import './PwaUpdateBanner.css';
 const isPwaBannerPreview =
   !IS_PROD && new URLSearchParams(window.location.search).has('pwa-banner');
 
-const TRANSITION_MS = 750;
-
 function hasUpdateToShow() {
   return isPwaBannerPreview || Boolean(getPendingUpdate());
 }
 
 export default function PwaUpdateBanner({ isDarkMode }) {
-  const [visible, setVisible] = useState(() => hasUpdateToShow());
-  const [dismissed, setDismissed] = useState(false);
-  const [mounted, setMounted] = useState(() => hasUpdateToShow());
-  const [active, setActive] = useState(false);
-
-  const shouldShow = visible && !dismissed && hasUpdateToShow();
+  const [open, setOpen] = useState(() => hasUpdateToShow());
 
   useEffect(() => {
     return subscribeToPwaUpdate(() => {
-      if (getPendingUpdate()) {
-        setDismissed(false);
-        setVisible(true);
-      }
+      if (getPendingUpdate()) setOpen(true);
     });
   }, []);
 
-  useEffect(() => {
-    if (shouldShow) {
-      setMounted(true);
-      const frame = requestAnimationFrame(() => {
-        requestAnimationFrame(() => setActive(true));
-      });
-      return () => cancelAnimationFrame(frame);
-    }
-
-    setActive(false);
-    return undefined;
-  }, [shouldShow]);
-
-  useEffect(() => {
-    if (!shouldShow && mounted && !active) {
-      const timer = window.setTimeout(() => setMounted(false), TRANSITION_MS);
-      return () => window.clearTimeout(timer);
-    }
-    return undefined;
-  }, [shouldShow, mounted, active]);
-
-  if (!mounted) {
+  if (!open) {
     return null;
   }
 
   const handleDismiss = () => {
-    setDismissed(true);
+    setOpen(false);
   };
 
   const handleApply = () => {
@@ -75,7 +44,6 @@ export default function PwaUpdateBanner({ isDarkMode }) {
     <div
       className={[
         'pwa-update-banner fixed bottom-2 left-2 right-2 z-[1000] flex min-h-12 items-center gap-2 rounded-lg border px-4 py-3 shadow-md sm:gap-3',
-        active ? 'pwa-update-banner--visible' : '',
         isDarkMode ? 'pwa-update-banner--dark' : 'pwa-update-banner--light',
       ].join(' ')}
       role="status"
