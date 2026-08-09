@@ -1159,7 +1159,7 @@ class DirectionsPanel extends Component {
 
     return (
       <>
-        {(!IS_MOBILE || this.state.collapsed) && (
+        {IS_MOBILE && this.state.collapsed && (
           <div
             id="directionsPanelMobileButton"
             className={`directions-panel-button ${this.state.collapsed ? 'collapsed' : 'expanded'}`}

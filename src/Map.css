@@ -106,12 +106,20 @@ body.theme-dark .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group {
   margin-right: 12px;
 }
 
-/* Route FAB vs geolocate: geo high (ex-route), route low (ex-geo) */
-.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate) {
-  margin: 0 8px 74px 0;
+/* Desktop: Mapbox geolocate stays mounted for trigger(), but the visible control is in the topbar. */
+.mapboxgl-ctrl-geolocate-host--topbar {
+  display: none !important;
 }
 
+/* Route FAB vs geolocate: geo high, route low — mobile only (desktop geo+route live in the topbar).
+   #ciclomapa + :not(.hideUI) so this beats App.less chrome transitions without stealing hideUI motion. */
 @media (max-width: 480px) {
+  #ciclomapa:not(.hideUI)
+    .mapboxgl-ctrl-bottom-right
+    .mapboxgl-ctrl-group:has(.mapboxgl-ctrl-geolocate) {
+    margin: 0 8px 74px 0;
+  }
+
   /* Above open panel: planning form vs route results (heights differ) */
   #ciclomapa:has(#directionsPanel.directions-panel-open--planning)
     .mapboxgl-ctrl-bottom-right
