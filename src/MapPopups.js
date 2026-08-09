@@ -458,13 +458,18 @@ class MapPopups {
                     Editar
                 </a>
 
+                ${
+                  ENABLE_COMMENTS
+                    ? `
                 <a  href="#"
                     class="flex-shrink-0 border border-opacity-25 border-${color} px-3 py-1.5 text-sm rounded-full whitespace-nowrap"
                     onClick="document.dispatchEvent(new Event('newComment'));"
                 >
                     ${COMMENT_ICON_SVG}
                     Comentar
-                </a>
+                </a>`
+                    : ''
+                }
                 </div>
             </div>
         `;

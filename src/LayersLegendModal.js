@@ -11,6 +11,7 @@ import commentIcon from './img/icons/poi-comment-flat.png';
 import { HiOutlineXMark } from 'react-icons/hi2';
 
 import {
+  ENABLE_COMMENTS,
   IS_MOBILE,
   ROUTE_COLORS,
   ROUTE_INFRASTRUCTURE_QUALITY_WEIGHTS,
@@ -380,21 +381,23 @@ class LayersLegendModal extends Component {
                     <h3 className={sectionHeadingClass}>Pontos de interesse</h3>
                     <div className={categoryContainerClasses}>
                       {pontosLayers.map(renderLayer)}
-                      <div className="rounded-xl border border-white border-opacity-10 bg-gray-900 bg-opacity-80 p-4">
-                        <div className="flex gap-4 md:flex-col flex-row">
-                          <div className="flex-shrink-0">
-                            <img className="h-7 w-7 opacity-90" src={commentIcon} alt="" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className={layerTitleClass}>Comentários da comunidade</h3>
-                            <p className="text-sm text-gray-400 leading-normal mb-0 mt-2">
-                              Enviados por quem usa o CicloMapa, servem para relatar problemas,
-                              sugestões ou observações sobre o local para auxiliar parceiros
-                              editores do OpenStreetMap.
-                            </p>
+                      {ENABLE_COMMENTS && (
+                        <div className="rounded-xl border border-white border-opacity-10 bg-gray-900 bg-opacity-80 p-4">
+                          <div className="flex gap-4 md:flex-col flex-row">
+                            <div className="flex-shrink-0">
+                              <img className="h-7 w-7 opacity-90" src={commentIcon} alt="" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className={layerTitleClass}>Comentários da comunidade</h3>
+                              <p className="text-sm text-gray-400 leading-normal mb-0 mt-2">
+                                Enviados por quem usa o CicloMapa, servem para relatar problemas,
+                                sugestões ou observações sobre o local para auxiliar parceiros
+                                editores do OpenStreetMap.
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 )}
