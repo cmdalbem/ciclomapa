@@ -138,6 +138,7 @@ export default function AppLayout({
                   loading={state.loading}
                   forceUpdate={handlers.forceUpdate}
                   cancelDataLoad={handlers.cancelDataLoad}
+                  openCityPicker={handlers.openCityPicker}
                 />
               </Suspense>
             </aside>

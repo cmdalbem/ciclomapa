@@ -5,16 +5,21 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 
 import { bindAntdNotification } from '../antdNotification';
+import { bindAntdModal } from '../antdModal';
 import { getAntdConfigProviderProps } from '../config/antdTheme';
 
 dayjs.locale('pt-br');
 
-function NotificationBinder({ children }) {
-  const { notification } = App.useApp();
+function AppApiBinder({ children }) {
+  const { notification, modal } = App.useApp();
 
   useEffect(() => {
     bindAntdNotification(notification);
   }, [notification]);
+
+  useEffect(() => {
+    bindAntdModal(modal);
+  }, [modal]);
 
   return children;
 }
@@ -23,7 +28,7 @@ export default function AntdAppShell({ isDarkMode, children }) {
   return (
     <ConfigProvider locale={ptBR} {...getAntdConfigProviderProps(isDarkMode)}>
       <App>
-        <NotificationBinder>{children}</NotificationBinder>
+        <AppApiBinder>{children}</AppApiBinder>
       </App>
     </ConfigProvider>
   );
