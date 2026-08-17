@@ -191,7 +191,7 @@ class LayersPanel extends Component {
                         <span
                           className="w-full"
                           style={{
-                            height: 6,
+                            height: 4,
                             background:
                               l.style.lineStyle === 'solid'
                                 ? l.style.lineColor
@@ -205,7 +205,12 @@ class LayersPanel extends Component {
                           }}
                         ></span>
                       ) : (
-                        <img className="h-4" src={iconsMap[l.icon]} alt="" />
+                        <img
+                          className="h-4"
+                          style={{ borderRadius: '4px' }}
+                          src={iconsMap[l.icon]}
+                          alt=""
+                        />
                       )}
                     </span>
 
