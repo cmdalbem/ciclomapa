@@ -46,7 +46,6 @@ import { adjustColorBrightness } from './utils/utils.js';
 import debounce from 'lodash.debounce';
 import { getCurrentSunPosition } from './sunPositionUtils';
 import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/map/icons';
-import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 import { flyMapTo } from './features/map/mapCamera.js';
 import userLocationCache from './features/geolocation/userLocationCache.js';
 
@@ -109,8 +108,6 @@ class Map extends Component {
 
   airtableDatabase;
   comments;
-  debouncedMapStateSync;
-  lastGeocodedPlaceName;
   originalRouteEndpointPoiFilters; // POI layer filters before route-mode `within` is applied; restored when routes clear
   geolocateControl; // Reference to Mapbox GeolocateControl
   resizeObserver;
@@ -146,15 +143,6 @@ class Map extends Component {
     };
 
     this.layersInitialized = false;
-
-    // Create debounced map state sync function (only syncs if place name has been consistent for 1+ second).
-    // geocodeRequestTime is the timestamp of the reverseGeocode call that produced the placeName;
-    // it is forwarded to App.onMapMoved so that stale-geocode detection can compare against the
-    // navigation timestamp rather than the (later) resolution timestamp.
-    this.debouncedMapStateSync = debounce((placeName, geocodeRequestTime) => {
-      console.debug('Syncing map state with consistent place:', placeName);
-      this.syncMapState(placeName, geocodeRequestTime);
-    }, 1000);
   }
 
   _onSearchResultPopupClosed() {
@@ -193,72 +181,11 @@ class Map extends Component {
     this.initCommentsLayer();
   }
 
-  reverseGeocode(lngLat) {
-    return reverseGeocodePlace(lngLat).catch((err) => {
-      console.error('Reverse geocoding failed:', err);
-      throw err;
-    });
-  }
-
   onMapMoveEnded() {
     this.syncMapState();
-
-    // Mobile never shows a live city label from pan/zoom geocoding (top bar is a search
-    // placeholder; analytics sidebar is desktop-only). Skip Mapbox reverse-geocode entirely.
-    if (IS_MOBILE) {
-      return;
-    }
-
-    // Reverse geocoding here is only needed to keep the area/URL in sync while the
-    // analytics sidebar or routes panel is open (they depend on knowing the current
-    // area). Otherwise skip the Mapbox request entirely - it was firing on every pan.
-    if (!this.props.needsCityGeoJsonContext?.()) {
-      return;
-    }
-
-    if (this.map.getZoom() > MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD) {
-      const center = this.map.getCenter();
-      // Capture when this geocode request was initiated so App can distinguish stale
-      // (pre-navigation) results from fresh (post-navigation) ones.
-      const geocodeRequestTime = Date.now();
-      this.reverseGeocode([center.lng, center.lat])
-        .then((result) => {
-          const currentPlaceName = result.place_name;
-          // console.debug('Geocoding result:', currentPlaceName);
-
-          if (!this.lastGeocodedPlaceName) {
-            // Initial case
-            this.lastGeocodedPlaceName = this.props.location;
-            console.debug('Initializing last geocoded place name:', this.lastGeocodedPlaceName);
-          } else {
-            // Check if this is the same place as the last geocoding result
-            if (this.lastGeocodedPlaceName === currentPlaceName) {
-              // console.debug('Same place detected, not triggering debounced sync...');
-            } else {
-              console.debug(
-                'Different place detected (current: ' +
-                  currentPlaceName +
-                  ', last: ' +
-                  this.lastGeocodedPlaceName +
-                  '), cancelling previous sync and starting new timer'
-              );
-
-              // Different place - cancel previous debounced call and start new timer
-              this.debouncedMapStateSync.cancel();
-              this.lastGeocodedPlaceName = currentPlaceName;
-              this.debouncedMapStateSync(currentPlaceName, geocodeRequestTime);
-            }
-          }
-        })
-        .catch((err) => {
-          console.debug('Reverse geocoding failed:', err);
-        });
-    } else {
-      console.debug('Map zoom is below auto change area zoom threshold');
-    }
   }
 
-  syncMapState(newArea, geocodeRequestTime) {
+  syncMapState() {
     const center = this.map.getCenter();
     const ret = {
       lat: center.lat,
@@ -266,24 +193,13 @@ class Map extends Component {
       zoom: this.map.getZoom(),
     };
 
-    if (newArea) {
-      ret.area = newArea;
-      // Forward the request timestamp so App.onMapMoved can detect stale results.
-      if (geocodeRequestTime != null) {
-        ret._geocodeRequestTime = geocodeRequestTime;
-      }
-      // Area/city changes are rare and must flow through React state (city picker,
-      // data loading), so they go through the regular onMapMoved -> setState path.
-      this.props.onMapMoved(ret);
+    // Position-only sync (pan/zoom) is high-frequency. Route it through a
+    // dedicated callback that updates the URL WITHOUT triggering a React
+    // re-render of the heavy map subtree (see App.onMapPositionChange).
+    if (this.props.onMapPositionChange) {
+      this.props.onMapPositionChange(ret);
     } else {
-      // Position-only sync (pan/zoom) is high-frequency. Route it through a
-      // dedicated callback that updates the URL WITHOUT triggering a React
-      // re-render of the heavy map subtree (see App.onMapPositionChange).
-      if (this.props.onMapPositionChange) {
-        this.props.onMapPositionChange(ret);
-      } else {
-        this.props.onMapMoved(ret);
-      }
+      this.props.onMapMoved(ret);
     }
   }
 
@@ -566,19 +482,38 @@ class Map extends Component {
       return;
     }
 
-    let lineGeometry = boundary.geometry;
-    if (lineGeometry?.type === 'Polygon' && lineGeometry.coordinates?.[0]?.length) {
-      lineGeometry = { type: 'LineString', coordinates: lineGeometry.coordinates[0] };
-    } else if (lineGeometry?.type === 'MultiPolygon') {
-      const rings = lineGeometry.coordinates
-        .map((poly) => poly?.[0])
-        .filter((ring) => ring?.length);
-      if (rings.length === 1) {
-        lineGeometry = { type: 'LineString', coordinates: rings[0] };
-      } else if (rings.length > 1) {
-        lineGeometry = { type: 'MultiLineString', coordinates: rings };
-      }
+    // Outer ring(s) of the boundary polygon, reused below both for the dashed line and
+    // as holes cut into a world-covering mask. OSM boundary relations are assembled
+    // from ways and can come back broken (open ring, missing segment) when the
+    // Overpass query is incomplete — an invalid hole isn't rejected by the fill
+    // renderer, it's just skipped, which paints the mask across the *whole* map
+    // instead of just outside the city. Treat anything but a proper closed ring
+    // (4+ points, first === last) as "no boundary data" rather than risk that.
+    let rawRings = [];
+    if (boundary.geometry?.type === 'Polygon') {
+      rawRings = [boundary.geometry.coordinates?.[0]];
+    } else if (boundary.geometry?.type === 'MultiPolygon') {
+      rawRings = (boundary.geometry.coordinates || []).map((poly) => poly?.[0]);
     }
+    const outerRings = rawRings.filter((ring) => {
+      if (!Array.isArray(ring) || ring.length < 4) return false;
+      const first = ring[0];
+      const last = ring[ring.length - 1];
+      return (
+        Array.isArray(first) && Array.isArray(last) && first[0] === last[0] && first[1] === last[1]
+      );
+    });
+
+    if (outerRings.length === 0) {
+      if (this.map.getLayer('boundary-layer')) this.map.removeLayer('boundary-layer');
+      if (this.map.getSource('boundaryLineSrc')) this.map.removeSource('boundaryLineSrc');
+      return;
+    }
+
+    const lineGeometry =
+      outerRings.length === 1
+        ? { type: 'LineString', coordinates: outerRings[0] }
+        : { type: 'MultiLineString', coordinates: outerRings };
 
     const boundaryLineData = {
       type: 'FeatureCollection',
@@ -591,16 +526,58 @@ class Map extends Component {
       ],
     };
 
-    this.map.addSource('boundaryLineSrc', {
-      type: 'geojson',
-      data: boundaryLineData,
-    });
-
     const beforeRouteLayer = this.map.getLayer('route-padding-selected')
       ? 'route-padding-selected'
       : this.map.getLayer('route-paddings-unselected')
         ? 'route-paddings-unselected'
         : undefined;
+
+    // Dark mask: a world-covering polygon with the city boundary punched out as a
+    // hole, so everything outside the city reads as dimmed rather than highlighted.
+    const maskData = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [-180, -90],
+                [180, -90],
+                [180, 90],
+                [-180, 90],
+                [-180, -90],
+              ],
+              ...outerRings,
+            ],
+          },
+        },
+      ],
+    };
+
+    this.map.addSource('boundaryMaskSrc', {
+      type: 'geojson',
+      data: maskData,
+    });
+
+    this.map.addLayer(
+      {
+        id: 'boundary-mask',
+        type: 'fill',
+        source: 'boundaryMaskSrc',
+        paint: {
+          'fill-color': '#000000',
+          'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0, 12, isDarkMode ? 0.45 : 0.25],
+        },
+      },
+      beforeRouteLayer
+    );
+
+    this.map.addSource('boundaryLineSrc', {
+      type: 'geojson',
+      data: boundaryLineData,
+    });
 
     this.map.addLayer(
       {
@@ -1777,6 +1754,17 @@ class Map extends Component {
           this.props.isDarkMode ? MAP_COLORS.DARK.BOUNDARY : MAP_COLORS.LIGHT.BOUNDARY
         );
       }
+      if (map.getLayer('boundary-mask')) {
+        map.setPaintProperty('boundary-mask', 'fill-opacity', [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,
+          0,
+          12,
+          this.props.isDarkMode ? 0.45 : 0.25,
+        ]);
+      }
     }
 
     const layersChanged = this.props.layers.some((layer, index) => {
@@ -2657,24 +2645,7 @@ class Map extends Component {
     // Initialize map after style is loaded
     this.initializeMapAfterStyleLoad();
 
-    // Initialize map center. Match onMapMoveEnded: mobile never reverse-geocodes
-    // (no live city label), so skip the Mapbox request on startup too. Also skip
-    // when we already know the area (city picker/route) - no need to re-derive it.
-    const shouldInitializeArea =
-      !IS_MOBILE && !this.props.location && this.props.zoom >= MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD;
-    if (shouldInitializeArea) {
-      this.reverseGeocode([this.props.lng, this.props.lat])
-        .then((result) => {
-          this.syncMapState(result.place_name);
-        })
-        .catch((err) => {
-          // Reverse geocoding failure is not critical - map can function without it
-          console.debug('Reverse geocoding failed during initialization:', err.message);
-        });
-    } else {
-      // Preserve map state without forcing an area when zoomed out (or on mobile).
-      this.syncMapState();
-    }
+    this.syncMapState();
   }
 
   initMapControls() {
@@ -3027,9 +2998,6 @@ class Map extends Component {
     // Cancel any pending debounced calls
     if (this.debouncedOnMapMoveEnded) {
       this.debouncedOnMapMoveEnded.cancel();
-    }
-    if (this.debouncedMapStateSync) {
-      this.debouncedMapStateSync.cancel();
     }
 
     if (this.map) {
