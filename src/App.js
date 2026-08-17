@@ -83,7 +83,6 @@ class App extends Component {
   lastResolvedCitySlug = null;
   lastNotifiedCitySlugError = null;
   initialBareRootEntry = false;
-  _lastExplicitCityNavTimestamp = 0;
   _welcomeMapBootScheduled = false;
   _unmounted = false;
   /** Mobile directions panel open state (kept off React state to avoid App-wide re-renders). */
@@ -721,7 +720,6 @@ class App extends Component {
     if (this.lastResolvedCitySlug === citySlug) return;
 
     this.lastResolvedCitySlug = citySlug;
-    this._lastExplicitCityNavTimestamp = Date.now();
 
     try {
       const normalizedSlug = decodeURIComponent(citySlug).trim().toLowerCase();
@@ -1191,9 +1189,7 @@ class App extends Component {
       this.abortCurrentOSMRequest();
     }
 
-    if (!backgroundUpdate) {
-      this.setState({ loading: true });
-    }
+    this.setState({ loading: true });
 
     // const parts = areaName.split(',');
     // const city = parts[0];
@@ -1267,7 +1263,7 @@ class App extends Component {
           this.setState({
             geoJson: newData.geoJson,
             dataUpdatedAt: new Date(),
-            ...(backgroundUpdate ? {} : { loading: false }),
+            loading: false,
             lengths: lengths,
           });
 
@@ -1516,12 +1512,6 @@ class App extends Component {
     const currCitySlug = this.getCitySlugFromRoute();
     if (prevCitySlug !== currCitySlug) {
       this.lastResolvedCitySlug = null;
-      // Stamp the navigation timestamp immediately so that any in-flight stale geocodes
-      // from the previous city are suppressed regardless of which branch below runs.
-      // Without this, resolveCitySlugToAreaAndViewport might be skipped (e.g. when
-      // hasExplicitViewportInURL is true) and the timestamp would never be updated,
-      // letting stale geocodes overwrite the new city slug.
-      this._lastExplicitCityNavTimestamp = Date.now();
       if (currCitySlug) {
         const routeWasNormalized = this.normalizeCitySlugRouteIfNeeded();
         if (routeWasNormalized) return;
@@ -1827,35 +1817,14 @@ class App extends Component {
   }
 
   onMapMoved(newState) {
-    // Area/city change path (rare): this DOES go through setState because `area`
-    // is rendered and drives data loading.
-    // This does NOT control the map - the map manages its own position
+    // This does NOT control the map - the map manages its own position.
+    // City/area is no longer inferred from pan/zoom; it only changes via the
+    // city picker, URL slug, or an explicit setArea (e.g. routing).
     requestAnimationFrame(() => {
       const nextState = { ...newState };
       if (typeof nextState.area === 'string' && nextState.area.trim()) {
-        const normalized = this.normalizeAreaLabelForDisplay(nextState.area);
-
-        // Guard against stale reverse-geocode results: a geocode that was *requested before*
-        // an explicit city navigation (picker, direct URL) can resolve afterwards and overwrite
-        // the new slug.  We detect this by comparing the geocode's request timestamp
-        // (_geocodeRequestTime, set in Map.onMapMoveEnded) against the last navigation
-        // timestamp.  Geocodes requested after the navigation are always accepted.
-        const routeSlug = this.getCanonicalRouteCitySlug();
-        if (normalized && routeSlug) {
-          const candidateSlug = this.getCitySlugFromArea(normalized);
-          const geocodeRequestTime = nextState._geocodeRequestTime ?? Date.now();
-          const isStaleGeocode = geocodeRequestTime < this._lastExplicitCityNavTimestamp;
-          if (candidateSlug && candidateSlug !== routeSlug && isStaleGeocode) {
-            // Stale geocode result — drop the area update to protect the current slug.
-            delete nextState.area;
-          } else {
-            nextState.area = normalized;
-          }
-        } else {
-          nextState.area = normalized;
-        }
+        nextState.area = this.normalizeAreaLabelForDisplay(nextState.area);
       }
-      delete nextState._geocodeRequestTime;
       this.setState(nextState);
     });
   }
@@ -1882,13 +1851,13 @@ class App extends Component {
       this.ensureCityDataLoaded();
     }
     // Directions open state is kept off React state (avoids App-wide re-renders), so
-    // poke Map directly — same gate as Analytics for boundary + live area tracking.
+    // poke Map directly — same gate as Analytics for boundary visibility.
     this.mapComponent?.initBoundaryLayer?.();
   }
 
-  // Shared gate for anything that needs per-city GeoJSON / a live area label:
-  // Analytics sidebar, Routing panel, city boundary, and Mapbox reverse-geocode on pan.
-  // Idle map browsing stays on PMTiles only.
+  // Shared gate for anything that needs per-city GeoJSON: Analytics sidebar,
+  // Routing panel, and the city boundary outline. Idle map browsing stays on
+  // PMTiles only; city/area itself is only changed via the picker / URL.
   needsCityGeoJsonContext() {
     return this.state.isSidebarOpen || this._isDirectionsPanelOpen;
   }
