@@ -43,6 +43,11 @@ export function getGooglePlacesGeocoder() {
   return googlePlacesGeocoder;
 }
 
+/** Abandon the current Places autocomplete billing session (e.g. on clear or field switch). */
+export function resetPlacesAutocompleteSession() {
+  googlePlacesGeocoder?.resetAutocompleteSession?.();
+}
+
 export function getGooglePlacesInitError() {
   return googlePlacesInitError;
 }

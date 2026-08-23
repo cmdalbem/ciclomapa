@@ -373,6 +373,8 @@ class GooglePlacesGeocoder {
     this.geocoder = null;
     this.autocompleteService = null;
     this.placesService = null;
+    /** @type {google.maps.places.AutocompleteSessionToken | null} */
+    this.autocompleteSessionToken = null;
 
     if (this.apiKey && window.google && window.google.maps) {
       this.initializeServices().catch((error) => {
@@ -421,6 +423,20 @@ class GooglePlacesGeocoder {
     }
   }
 
+  getOrCreateAutocompleteSessionToken() {
+    if (!window.google?.maps?.places?.AutocompleteSessionToken) {
+      return null;
+    }
+    if (!this.autocompleteSessionToken) {
+      this.autocompleteSessionToken = new window.google.maps.places.AutocompleteSessionToken();
+    }
+    return this.autocompleteSessionToken;
+  }
+
+  resetAutocompleteSession() {
+    this.autocompleteSessionToken = null;
+  }
+
   async search(query, options = {}) {
     if (!this.autocompleteService) {
       throw createPlacesError('Google Places API not initialized', 'NOT_INITIALIZED');
@@ -442,6 +458,11 @@ class GooglePlacesGeocoder {
     if (options.proximity) {
       request.location = new window.google.maps.LatLng(options.proximity[1], options.proximity[0]);
       request.radius = options.radius || 50000;
+    }
+
+    const sessionToken = this.getOrCreateAutocompleteSessionToken();
+    if (sessionToken) {
+      request.sessionToken = sessionToken;
     }
 
     const limit = options.limit || 5;
@@ -509,7 +530,14 @@ class GooglePlacesGeocoder {
         fields: ['geometry', 'formatted_address', 'name', 'types', 'address_component'],
       };
 
+      const sessionToken = this.getOrCreateAutocompleteSessionToken();
+      if (sessionToken) {
+        request.sessionToken = sessionToken;
+      }
+
       this.placesService.getDetails(request, (place, status) => {
+        this.resetAutocompleteSession();
+
         if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
           resolve({
             coordinates: [place.geometry.location.lng(), place.geometry.location.lat()],

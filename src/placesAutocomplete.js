@@ -9,6 +9,9 @@ import {
 /** Same threshold as DirectionsPanel origin/destination search. */
 export const PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH = 3;
 
+/** Shared debounce for Google Places prediction requests (keystroke typing). */
+export const PLACES_AUTOCOMPLETE_DEBOUNCE_MS = 600;
+
 /**
  * Default result cap: responsive (desktop 5, mobile 3), shared with hybrid routing settings.
  * DirectionsPanel previously used a fixed 5; city modal already used HYBRID_MAX_RESULTS.

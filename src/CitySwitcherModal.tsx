@@ -28,11 +28,16 @@ import {
   SUPPORTED_COUNTRY_LABEL_PT_BY_CODE,
 } from './config/constants.js';
 import { appendKmUnit } from './utils/routeUtils.js';
-import { getAreaStringFromResultLike, getPlacesSearchUserMessage } from './googlePlacesClient.js';
+import {
+  getAreaStringFromResultLike,
+  getPlacesSearchUserMessage,
+  resetPlacesAutocompleteSession,
+} from './googlePlacesClient.js';
 import { PlacesAutocompleteOptionLabel } from './GooglePlacesGeocoder.js';
 import {
   geocodePlacesSuggestionToResult,
   getCitySwitcherPlacesSearchOptions,
+  PLACES_AUTOCOMPLETE_DEBOUNCE_MS,
   PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
@@ -648,7 +653,7 @@ type PlacesAutocompleteSearchOptions = NonNullable<
 
 /** Debounced Google Places predictions for the city picker search field (single consumer). */
 function usePlacesAutocompleteSearch({
-  debounceMs = 280,
+  debounceMs = PLACES_AUTOCOMPLETE_DEBOUNCE_MS,
   getAutocompleteOptions,
 }: {
   debounceMs?: number;
@@ -668,6 +673,7 @@ function usePlacesAutocompleteSearch({
       window.clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
     }
+    resetPlacesAutocompleteSession();
     setSuggestions([]);
     setSearchError(null);
     setLoading(false);
@@ -682,6 +688,7 @@ function usePlacesAutocompleteSearch({
       const trimmed = q.trim();
       if (trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
         requestSeqRef.current += 1;
+        resetPlacesAutocompleteSession();
         setSuggestions([]);
         setSearchError(null);
         setLoading(false);

@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import debounce from 'lodash.debounce';
 import { useDirections } from './contexts/DirectionsContext';
 import { Button, Select } from 'antd';
 import { HiX as IconClose, HiOutlineArrowLeft as IconBack } from 'react-icons/hi';
@@ -33,6 +34,7 @@ import {
   getGooglePlacesGeocoder,
   getPlacesSearchUserMessage,
   getShortAddressFromResultLike,
+  resetPlacesAutocompleteSession,
 } from './googlePlacesClient.js';
 import { filterFavoritesByQuery, filterFavoritesForArea } from './favoritesStore';
 import {
@@ -40,6 +42,7 @@ import {
   getDirectionsPanelPlacesSearchOptions,
   favoriteToDirectionsSuggestion,
   getDirectionsCurrentLocationSuggestion,
+  PLACES_AUTOCOMPLETE_DEBOUNCE_MS,
   PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
@@ -77,6 +80,10 @@ class DirectionsPanel extends Component {
     // Monotonic id; lets us discard a slow geolocation response if the user
     // typed in the origin field or selected something in the meantime.
     this.geolocationRequestId = 0;
+    this.placesSearchSeq = 0;
+
+    this.runPlacesSearch = this.runPlacesSearch.bind(this);
+    this.debouncedRunPlacesSearch = debounce(this.runPlacesSearch, PLACES_AUTOCOMPLETE_DEBOUNCE_MS);
 
     this.toggleCollapse = this.toggleCollapse.bind(this);
     this.clearDirections = this.clearDirections.bind(this);
@@ -231,6 +238,9 @@ class DirectionsPanel extends Component {
       clearTimeout(this.blurTimeout);
       this.blurTimeout = null;
     }
+    if (this.debouncedRunPlacesSearch) {
+      this.debouncedRunPlacesSearch.cancel();
+    }
     this.cleanup();
     this.removeMapClickListener();
   }
@@ -274,13 +284,23 @@ class DirectionsPanel extends Component {
     }
   }
 
-  async handleSearch(value, inputType) {
+  handleSearch(value, inputType) {
     const trimmed = (value ?? '').trim();
     if (!trimmed || trimmed.length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
+      this.debouncedRunPlacesSearch.cancel();
+      this.placesSearchSeq += 1;
+      resetPlacesAutocompleteSession();
       this.setFavoriteSuggestions(inputType, trimmed);
       this.setState({ placesSearchError: null });
       return;
     }
+
+    this.debouncedRunPlacesSearch(value, inputType);
+  }
+
+  async runPlacesSearch(value, inputType) {
+    this.placesSearchSeq += 1;
+    const seq = this.placesSearchSeq;
 
     this.setState({
       [`${inputType}Suggestions`]: [],
@@ -294,12 +314,16 @@ class DirectionsPanel extends Component {
         getDirectionsPanelPlacesSearchOptions(this.props.map)
       );
 
+      if (seq !== this.placesSearchSeq) return;
+
       this.setState({
         [`${inputType}Suggestions`]: results,
         [`${inputType}SearchLoading`]: false,
         placesSearchError: null,
       });
     } catch (error) {
+      if (seq !== this.placesSearchSeq) return;
+
       console.error(`${inputType} search error:`, error);
       this.setState({
         [`${inputType}Suggestions`]: [],
@@ -334,6 +358,7 @@ class DirectionsPanel extends Component {
     console.debug(`${inputType} point selected:`, result);
 
     if (result?.isCurrentLocation) {
+      resetPlacesAutocompleteSession();
       this.setState({ [`${inputType}Suggestions`]: [] });
       this.handleGeolocation(inputType);
       return;
@@ -344,6 +369,7 @@ class DirectionsPanel extends Component {
     }
 
     if (result?.isFavorite && result.center) {
+      resetPlacesAutocompleteSession();
       const committed = applyDirectionsInputLabelToResult(result, {
         area: this.props.area,
       });
@@ -414,6 +440,10 @@ class DirectionsPanel extends Component {
       clearTimeout(this.blurTimeout);
       this.blurTimeout = null;
     }
+
+    this.debouncedRunPlacesSearch.cancel();
+    this.placesSearchSeq += 1;
+    resetPlacesAutocompleteSession();
 
     this.setState({
       [`${inputType}SearchValue`]: '',
@@ -978,6 +1008,13 @@ class DirectionsPanel extends Component {
     if (this.blurTimeout) {
       clearTimeout(this.blurTimeout);
       this.blurTimeout = null;
+    }
+
+    const prevFocused = this.state.focusedInput;
+    if (prevFocused && prevFocused !== inputType) {
+      this.debouncedRunPlacesSearch.cancel();
+      this.placesSearchSeq += 1;
+      resetPlacesAutocompleteSession();
     }
 
     this.setState({ focusedInput: inputType });
