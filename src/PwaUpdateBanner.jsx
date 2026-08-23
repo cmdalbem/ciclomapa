@@ -41,33 +41,37 @@ export default function PwaUpdateBanner({ isDarkMode }) {
   };
 
   return (
-    <div
-      className={[
-        'pwa-update-banner fixed bottom-2 left-2 right-2 z-[1000] flex min-h-12 items-center gap-2 rounded-lg border px-4 py-3 shadow-md sm:gap-3',
-        isDarkMode ? 'pwa-update-banner--dark' : 'pwa-update-banner--light',
-      ].join(' ')}
-      role="status"
-      aria-live="polite"
-    >
-      <span
+    <div className="pointer-events-none fixed bottom-2 left-2 right-2 z-[1000] flex justify-center sm:bottom-4">
+      <div
         className={[
-          'pwa-update-banner__label min-w-0 flex-1 truncate text-sm',
-          isDarkMode ? 'pwa-update-banner__label--dark' : 'pwa-update-banner__label--light',
+          'pwa-update-banner pointer-events-auto flex min-h-12 w-full max-w-md items-center gap-2 rounded-lg border py-3 pl-4 pr-2 shadow-md sm:w-auto sm:gap-3',
+          isDarkMode ? 'pwa-update-banner--dark' : 'pwa-update-banner--light',
         ].join(' ')}
+        role="status"
+        aria-live="polite"
       >
-        Tem nova versão do app!
-      </span>
-      <Button type="primary" size="small" onClick={handleApply}>
-        Atualizar
-      </Button>
-      <Button
-        type="text"
-        size="small"
-        className="pwa-update-banner__close !min-w-0 !px-2"
-        onClick={handleDismiss}
-        aria-label="Fechar"
-        icon={<HiOutlineXMark className="text-lg opacity-70" aria-hidden />}
-      />
+        <span
+          className={[
+            'pwa-update-banner__label min-w-0 flex-1 truncate text-sm',
+            isDarkMode ? 'pwa-update-banner__label--dark' : 'pwa-update-banner__label--light',
+          ].join(' ')}
+        >
+          Tem nova versão do app!
+        </span>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button type="primary" size="small" onClick={handleApply}>
+            Atualizar
+          </Button>
+          <Button
+            type="text"
+            size="small"
+            className="pwa-update-banner__close !min-w-0 !px-2"
+            onClick={handleDismiss}
+            aria-label="Fechar"
+            icon={<HiOutlineXMark className="text-lg opacity-70" aria-hidden />}
+          />
+        </div>
+      </div>
     </div>
   );
 }
