@@ -16,6 +16,7 @@ jest.mock('./googlePlacesClient.js', () => {
       loadGoogleMapsAPI: jest.fn(),
     }),
     ensureGooglePlacesReady: jest.fn().mockResolvedValue(undefined),
+    resetPlacesAutocompleteSession: jest.fn(),
   };
 });
 
