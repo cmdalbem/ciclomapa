@@ -34,6 +34,7 @@ import {
   ROUTES_ACTIVE_LOW_ZOOM_WIDTH_DIVISOR,
   ROUTES_ACTIVE_HIGH_ZOOM_WIDTH_MULTIPLIER,
   DEFAULT_ZOOM,
+  ENABLE_BICING_LIVE,
 } from './config/constants.js';
 
 import Analytics from './Analytics.js';
@@ -48,6 +49,13 @@ import { getCurrentSunPosition } from './sunPositionUtils';
 import { arrowIconsByLayer, arrowIcons, arrowSdf, iconsMap } from './features/map/icons';
 import { flyMapTo } from './features/map/mapCamera.js';
 import userLocationCache from './features/geolocation/userLocationCache.js';
+import {
+  BICING_SOURCE_ID,
+  circleOpacityWithBicing,
+  createBicingMapController,
+  isOsmFeatureSuppressedForBicing,
+  symbolOpacityWithBicing,
+} from './features/bicing/bicingMap.js';
 
 import './Map.css';
 
@@ -83,6 +91,7 @@ const CICLOMAPA_DATA_SOURCES = new Set([
   'pmtiles-source',
   'commentsSrc',
   'favoritesSrc',
+  BICING_SOURCE_ID,
   'route-selected',
   'routes-unselected',
   'overlapping-cyclepaths-selected',
@@ -183,6 +192,7 @@ class Map extends Component {
 
   onMapMoveEnded() {
     this.syncMapState();
+    this.bicing?.syncOsm();
   }
 
   syncMapState() {
@@ -274,6 +284,9 @@ class Map extends Component {
     const layerId = l.id + sourceSuffix;
 
     const layerUnderneathName = this.getLayerUnderneathName(this.map);
+    const bicingOsmMode = ENABLE_BICING_LIVE && l.name === 'Estações';
+    const withCircleOpacity = (expr) => (bicingOsmMode ? circleOpacityWithBicing(expr) : expr);
+    const withSymbolOpacity = (expr) => (bicingOsmMode ? symbolOpacityWithBicing(expr) : expr);
 
     // Circles (lower zoom levels)
     this.map.addLayer(
@@ -301,7 +314,13 @@ class Map extends Component {
             this.props.isDarkMode ? 0.2 : 0.2
           ),
           'circle-stroke-width': ['interpolate', ['exponential', 1.5], ['zoom'], 12, 0.5, 15, 2],
-          'circle-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.7, 1.0],
+          'circle-opacity': withCircleOpacity([
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            0.7,
+            1.0,
+          ]),
+          'circle-stroke-opacity': withCircleOpacity(1),
           'circle-stroke-color': this.props.isDarkMode
             ? MAP_COLORS.DARK.STROKE
             : MAP_COLORS.LIGHT.STROKE,
@@ -321,7 +340,7 @@ class Map extends Component {
       type: 'fill',
       paint: {
         'fill-color': adjustColorBrightness(l.style.textColor, this.props.isDarkMode ? -0.1 : 0.2),
-        'fill-opacity': 0.2,
+        'fill-opacity': withSymbolOpacity(0.2),
       },
       // }, layerUnderneathName); // This one should be on TOP of the rest!
     });
@@ -342,15 +361,7 @@ class Map extends Component {
         'text-letter-spacing': 0.05,
         'text-max-width': 8,
         'icon-size': 0.5,
-        // 'icon-size': [
-        //     "interpolate",
-        //         ["exponential", 1.5],
-        //         ["zoom"],
-        //         10, 0.2,
-        //         15, 0.5
-        // ],
         'text-size': ['interpolate', ['exponential', 1.5], ['zoom'], 10, 10, 18, 14],
-        // 'text-variable-anchor': ['left'],
         'text-variable-anchor': ['top'],
         'icon-padding': 0,
         'icon-offset': [0, -14],
@@ -363,8 +374,18 @@ class Map extends Component {
         'text-occlusion-opacity': 1,
         'text-color': l.style.textColor || 'white',
         'text-halo-width': 1,
-        'text-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.7, 1.0],
-        'icon-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.7, 1.0],
+        'text-opacity': withSymbolOpacity([
+          'case',
+          ['boolean', ['feature-state', 'hover'], false],
+          0.7,
+          1.0,
+        ]),
+        'icon-opacity': withSymbolOpacity([
+          'case',
+          ['boolean', ['feature-state', 'hover'], false],
+          0.7,
+          1.0,
+        ]),
         'text-halo-color': this.props.isDarkMode ? MAP_COLORS.DARK.HALO : MAP_COLORS.LIGHT.HALO,
       },
       // }, layerUnderneathName); // This one should be on TOP of the rest!
@@ -373,6 +394,14 @@ class Map extends Component {
     // Interactions
     const self = this;
 
+    const isSuppressed = (feature) =>
+      bicingOsmMode &&
+      isOsmFeatureSuppressedForBicing(self.map, feature, {
+        sourceId,
+        sourceLayer,
+        zoomThreshold: l.zoomThreshold,
+      });
+
     // Helper function to handle POI interactions
     const handlePOIInteraction = (e, interactionType) => {
       if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
@@ -380,7 +409,6 @@ class Map extends Component {
       }
 
       if (self.props.isInRouteMode) {
-        e.originalEvent.preventDefault();
         return;
       }
 
@@ -397,7 +425,8 @@ class Map extends Component {
       };
 
       if (interactionType === 'mouseenter' && e.features.length > 0) {
-        const feature = e.features[0];
+        const feature = e.features.find((f) => !isSuppressed(f));
+        if (!feature) return;
         const featureId = feature.id ?? feature.properties?.id ?? feature.properties?.['@id'];
         if (featureId == null) return;
 
@@ -419,15 +448,15 @@ class Map extends Component {
         }
         self.hoveredPOI = null;
       } else if (interactionType === 'click') {
-        if (e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-          clearHoveredPoi();
-          self.hoveredPOI = null;
-          self.popups.showPOIPopup(e, iconsMap[l.icon + '-2x'], l.icon);
-          self.focusFeatureOnMobile(e.features[0]);
-        }
+        if (!e.features.length) return;
+        const feature = e.features.find((f) => !isSuppressed(f));
+        if (!feature) return;
+        clearHoveredPoi();
+        self.hoveredPOI = null;
+        const clickEvent = { ...e, features: [feature], lngLat: e.lngLat };
+        self.popups.showPOIPopup(clickEvent, iconsMap[l.icon + '-2x'], l.icon);
+        self.focusFeatureOnMobile(feature);
       }
-
-      e.originalEvent.preventDefault();
     };
 
     // Add interactions for circles layer (lower zoom levels)
@@ -1029,39 +1058,37 @@ class Map extends Component {
       if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
         return;
       }
-      if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-        // Disable cyclepath clicks when in route mode
-        if (self.props.isInRouteMode) {
-          e.originalEvent.preventDefault();
-          return;
-        }
+      if (!e.features?.length) return;
 
-        if (self.selectedCycleway) {
-          try {
-            self.map.setFeatureState(
-              { source: sourceId, sourceLayer: sourceLayer, id: self.selectedCycleway },
-              { selected: false, hover: false }
-            );
-          } catch (err) {}
-        }
-        self.selectedCycleway = e.features[0].id;
+      // Disable cyclepath clicks when in route mode
+      if (self.props.isInRouteMode) {
+        return;
+      }
+
+      if (self.selectedCycleway) {
         try {
           self.map.setFeatureState(
             { source: sourceId, sourceLayer: sourceLayer, id: self.selectedCycleway },
-            { selected: true }
+            { selected: false, hover: false }
           );
         } catch (err) {}
+      }
+      self.selectedCycleway = e.features[0].id;
+      try {
+        self.map.setFeatureState(
+          { source: sourceId, sourceLayer: sourceLayer, id: self.selectedCycleway },
+          { selected: true }
+        );
+      } catch (err) {}
 
-        const layer = self.props.layers.find((l) => l.id === e.features[0].layer.id.split('--')[0]);
-        self.popups.showCyclewayPopup(e, layer);
-        if (IS_MOBILE && e.features && e.features[0]) {
-          const bb = turfBbox(e.features[0]); // [minX, minY, maxX, maxY]
-          const bounds = new mapboxgl.LngLatBounds([bb[0], bb[1]], [bb[2], bb[3]]);
-          self.map.fitBounds(bounds, {
-            padding: { top: 150, bottom: 300, left: 100, right: 100 },
-          });
-        }
-        e.originalEvent.preventDefault();
+      const layer = self.props.layers.find((l) => l.id === e.features[0].layer.id.split('--')[0]);
+      self.popups.showCyclewayPopup(e, layer);
+      if (IS_MOBILE && e.features && e.features[0]) {
+        const bb = turfBbox(e.features[0]); // [minX, minY, maxX, maxY]
+        const bounds = new mapboxgl.LngLatBounds([bb[0], bb[1]], [bb[2], bb[3]]);
+        self.map.fitBounds(bounds, {
+          padding: { top: 150, bottom: 300, left: 100, right: 100 },
+        });
       }
     });
 
@@ -1225,16 +1252,14 @@ class Map extends Component {
           // if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
           //   return;
           // }
-          if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
-            // Disable comment clicks when in route mode
-            if (self.props.isInRouteMode) {
-              e.originalEvent.preventDefault();
-              return;
-            }
-            self.popups.showCommentPopup(e);
-            self.focusFeatureOnMobile(e.features[0]);
-            e.originalEvent.preventDefault();
+          if (!e.features?.length) return;
+
+          // Disable comment clicks when in route mode
+          if (self.props.isInRouteMode) {
+            return;
           }
+          self.popups.showCommentPopup(e);
+          self.focusFeatureOnMobile(e.features[0]);
         });
 
         self.updateLayerVisibility();
@@ -2439,6 +2464,9 @@ class Map extends Component {
       const showComments = !hasRoutes && !this.props.cleanMode;
       map.setLayoutProperty('comentarios', 'visibility', showComments ? 'visible' : 'none');
     }
+
+    this.bicing?.updateVisibility();
+    this.bicing?.syncOsm();
   }
 
   updateRouteTooltips() {
@@ -2563,7 +2591,10 @@ class Map extends Component {
       this.map,
       this.props.debugMode,
       this.props.isDarkMode,
-      this.props.location
+      this.props.location,
+      {
+        getBicingStationForPoi: (opts) => this.bicing?.matchStationForPoi(opts) ?? null,
+      }
     );
 
     // Set up global function for popup routing button
@@ -2900,8 +2931,7 @@ class Map extends Component {
       });
 
       map.on('click', 'favorites', (e) => {
-        if (!e.features || e.features.length === 0) return;
-        e.originalEvent.preventDefault();
+        if (!e.features?.length) return;
         const f = e.features[0];
         const [lng, lat] = f.geometry.coordinates;
         let placeTypes = [];
@@ -2936,6 +2966,34 @@ class Map extends Component {
     this.applyFavoriteMarkers(this.props.favorites);
   }
 
+  shouldShowBicingOverlay() {
+    if (!ENABLE_BICING_LIVE) return false;
+    const hasRoutes = !!(this.props.routes && this.props.routes.routes?.length > 0);
+    if (hasRoutes) return false;
+    const estacoes = (this.props.layers || []).find((l) => l.name === 'Estações');
+    return !!(estacoes && estacoes.isActive);
+  }
+
+  async initBicing() {
+    if (!ENABLE_BICING_LIVE || !this.map) return;
+    this.bicing = createBicingMapController(this.map, {
+      shouldShow: () => this.shouldShowBicingOverlay(),
+      isInRouteMode: () => !!this.props.isInRouteMode,
+      isDarkMode: () => !!this.props.isDarkMode,
+      getSymbolMinZoom: () => {
+        const estacoes = (this.props.layers || []).find((l) => l.name === 'Estações');
+        return estacoes?.zoomThreshold ?? 15;
+      },
+      onStationClick: (station) => {
+        this.popups?.showBicingStationPopup(station);
+        this.focusFeatureOnMobile({
+          geometry: { type: 'Point', coordinates: [station.lon, station.lat] },
+        });
+      },
+    });
+    await this.bicing.init();
+  }
+
   async initLayers() {
     // The order in which layers are initialized will define their paint order
     await this.initGeojsonLayers(this.props.layers);
@@ -2947,6 +3005,7 @@ class Map extends Component {
     }
 
     this.initFavoritesLayer();
+    await this.initBicing();
 
     // Restore current routes if they exist
     if (this.props.routes) {
@@ -2968,6 +3027,9 @@ class Map extends Component {
   }
 
   componentWillUnmount() {
+    this.bicing?.destroy();
+    this.bicing = null;
+
     if (this.resizeObserver) {
       try {
         this.resizeObserver.disconnect();
