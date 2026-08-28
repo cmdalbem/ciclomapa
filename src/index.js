@@ -8,6 +8,7 @@ import { IS_PROD } from './config/constants.js';
 import { PRIVACY_POLICY_PATH } from './config/routes.js';
 import { setPendingUpdate, shouldReloadForSwUpdate } from './pwaUpdate.js';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import { Analytics } from '@vercel/analytics/react';
 
 // Self-hosted fonts (non-blocking: loaded with the JS entry, not render-blocking <link> in HTML).
 import './styles/fonts.less';
@@ -98,6 +99,7 @@ root.render(
   <Router>
     <AppRoutes />
     <SpeedInsights />
+    <Analytics />
   </Router>
 );
 
