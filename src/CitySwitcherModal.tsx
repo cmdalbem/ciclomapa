@@ -1381,7 +1381,7 @@ function CitySwitcherModal({
         : labelsPt.length === 1
           ? `em ${labelsPt[0]}`
           : `em ${labelsPt.slice(0, -1).join(', ')} e ${labelsPt[labelsPt.length - 1]}`;
-    return IS_PROD ? `Buscar endereço ou local ${suffix}` : 'Buscar endereço ou local no mundo';
+    return IS_PROD ? `Buscar ${suffix}` : 'Buscar no mundo';
   }, []);
 
   const handlePlaceSuggestionPick = useCallback(

@@ -37,6 +37,101 @@
   }
 }
 
+/* Desktop: empty search-field affordance (same copy/treatment as mobile) */
+.city-picker__search--desktop.ant-btn {
+  min-width: 280px;
+  justify-content: flex-start;
+  text-align: left;
+  font-weight: 400;
+}
+
+/* Desktop topbar map actions: shared size (solid fills read heavier than the glass
+   search field, so a hair smaller for optical balance). Colors stay per-button. */
+.topbar-map-action.ant-btn {
+  --topbar-map-action-size: calc(var(--ant-control-height, 32px) - 2px);
+  width: var(--topbar-map-action-size);
+  height: var(--topbar-map-action-size);
+  min-width: var(--topbar-map-action-size);
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05em;
+}
+
+/* Route: solid primary */
+#directionsPanelTopbarButton.topbar-map-action.ant-btn {
+  color: #283e2a;
+  background: #f3f4f6;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+body.theme-light #directionsPanelTopbarButton.topbar-map-action.ant-btn {
+  color: #f9fafb;
+  background: #283e2a;
+  border-color: transparent;
+}
+
+#ciclomapa:has(#directionsPanel.directions-panel-open)
+  #directionsPanelTopbarButton.topbar-map-action.ant-btn {
+  color: #283e2a;
+  background: #d1d5db;
+  border-color: rgba(0, 0, 0, 0.14);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+body.theme-light
+  #ciclomapa:has(#directionsPanel.directions-panel-open)
+  #directionsPanelTopbarButton.topbar-map-action.ant-btn {
+  color: #f9fafb;
+  background: #374151;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* Very small desktop: collapse theme + Sobre / Colaborar / Métricas into an overflow menu.
+   Nav is already hidden below Tailwind `sm` (640px); mobile chrome is ≤480px.
+   Avoid Tailwind `flex` on these nodes — utilities load after TopBar.css and would
+   beat a plain `display: none`. */
+.topbar-nav-expanded {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 1100px) {
+  .topbar-nav-expanded {
+    display: none;
+  }
+}
+
+@media (min-width: 1101px) {
+  .topbar-nav-overflow {
+    display: none;
+  }
+}
+
+/* Overflow menu: keep icon + label vertically centered (submenu title has an expand
+   chevron that otherwise throws off HiUsers vs the label). */
+.topbar-nav-overflow-dropdown .ant-dropdown-menu-item,
+.topbar-nav-overflow-dropdown .ant-dropdown-menu-submenu-title {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-nav-overflow-dropdown .ant-dropdown-menu-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.topbar-nav-overflow-dropdown .ant-dropdown-menu-item-icon .react-icon {
+  margin-right: 0;
+  display: block;
+}
+
 /* Mobile */
 
 @media (min-width: 320px) and (max-width: 480px) {

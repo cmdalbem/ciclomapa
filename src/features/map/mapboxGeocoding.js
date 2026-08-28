@@ -1,12 +1,12 @@
 /**
- * Reverse geocoding via Mapbox — used for high-frequency map-move area detection.
+ * Reverse geocoding via Mapbox — used when a global search pick doesn't already
+ * carry an area label (App.handleGlobalSearchPlaceSelect).
  *
  * This replaces the Google Geocoding API path that was introduced in the city-switcher-v2
  * refactor (commit 6bccc22). Mapbox handles this use case at a much lower cost since we
  * only need a city/place name string, not Google's richer address components.
  *
  * To swap back to Google:
- *   - Map.js:  change import from `./features/map/mapboxGeocoding.js` to `./googlePlacesClient.js`
  *   - App.js:  change import from `./features/map/mapboxGeocoding.js` to `./googlePlacesClient.js`
  * The Google implementation (reverseGeocodePlace) is preserved there and ready to use.
  */

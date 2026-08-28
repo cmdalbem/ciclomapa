@@ -55,14 +55,12 @@ export default function AppLayout({
           <header id="topbar-wrapper" aria-label="Barra superior">
             <TopBar
               title={state.area}
-              lastUpdate={state.dataUpdatedAt}
               lat={state.lat}
               lng={state.lng}
               z={state.zoom}
               getViewport={handlers.getMapViewport}
               downloadData={handlers.downloadData}
               onMapMoved={handlers.onMapMoved}
-              forceUpdate={handlers.forceUpdate}
               isSidebarOpen={state.isSidebarOpen}
               toggleSidebar={handlers.toggleSidebar}
               embedMode={state.embedMode}
@@ -70,16 +68,17 @@ export default function AppLayout({
               openAboutModal={handlers.openAboutModal}
               isDarkMode={state.isDarkMode}
               toggleTheme={handlers.toggleTheme}
-              loading={state.loading}
-              cancelDataLoad={handlers.cancelDataLoad}
+              toggleDirectionsPanel={handlers.toggleDirectionsPanel}
+              triggerGeolocate={handlers.triggerGeolocate}
             />
           </header>
           {state.mapBootReady ? (
             <Map
               key={state.mapKey}
-              ref={(map) => {
+              ref={(mapComponent) => {
+                handlers.setMapComponentRef?.(mapComponent);
                 if (!IS_PROD && state.debugMode) {
-                  window.map = map;
+                  window.map = mapComponent;
                 }
               }}
               data={state.geoJson}
@@ -92,6 +91,7 @@ export default function AppLayout({
               location={state.area}
               onMapMoved={handlers.onMapMoved}
               onMapPositionChange={handlers.onMapPositionChange}
+              needsCityGeoJsonContext={handlers.needsCityGeoJsonContext}
               updateLengths={handlers.updateLengths}
               embedMode={state.embedMode}
               debugMode={state.debugMode}
@@ -134,6 +134,11 @@ export default function AppLayout({
                   toggle={handlers.toggleSidebar}
                   onChangeStrategy={handlers.onChangeStrategy}
                   downloadData={handlers.downloadData}
+                  lastUpdate={state.dataUpdatedAt}
+                  loading={state.loading}
+                  forceUpdate={handlers.forceUpdate}
+                  cancelDataLoad={handlers.cancelDataLoad}
+                  openCityPicker={handlers.openCityPicker}
                 />
               </Suspense>
             </aside>
@@ -278,6 +283,7 @@ AppLayout.propTypes = {
     downloadData: PropTypes.func,
     onMapMoved: PropTypes.func,
     onMapPositionChange: PropTypes.func,
+    needsCityGeoJsonContext: PropTypes.func,
     getMapViewport: PropTypes.func,
     forceUpdate: PropTypes.func,
     cancelDataLoad: PropTypes.func,
@@ -286,6 +292,8 @@ AppLayout.propTypes = {
     toggleTheme: PropTypes.func,
     updateLengths: PropTypes.func,
     setMapRef: PropTypes.func,
+    setMapComponentRef: PropTypes.func,
+    triggerGeolocate: PropTypes.func,
     onTrackingUserLocationChange: PropTypes.func,
     clearGlobalSearchPin: PropTypes.func,
     handleFavoritesChanged: PropTypes.func,
@@ -297,6 +305,7 @@ AppLayout.propTypes = {
     setToPoint: PropTypes.func,
     clearRoutePoints: PropTypes.func,
     onDirectionsPanelToggle: PropTypes.func,
+    toggleDirectionsPanel: PropTypes.func,
     setArea: PropTypes.func,
     closeAboutModal: PropTypes.func,
     openCityPicker: PropTypes.func,
