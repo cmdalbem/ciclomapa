@@ -1,6 +1,7 @@
 import { get, set } from 'idb-keyval';
 
-import firebase from 'firebase';
+import firebase from 'firebase/app';
+import 'firebase/firestore';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 
 // import { cleanUpInternalTags, gzipCompress } from './utils/geojsonUtils.js'
