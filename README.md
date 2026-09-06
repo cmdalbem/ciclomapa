@@ -39,6 +39,7 @@ We store a mirror of the OSM data in a Firebase Database. Any user (possibly an 
 
 Create a `.env` file in the project root (or set these in your environment) for the app to work fully:
 
+- `REACT_APP_SENTRY_DSN` — Sentry error reporting (also required on Vercel; CRA bakes it in at build time)
 - `REACT_APP_MAPBOX_ACCESS_TOKEN` — Mapbox map tiles and geocoding
 - `REACT_APP_OPENROUTESERVICE_API_KEY` — Route calculations (OpenRouteService)
 - `REACT_APP_GOOGLE_PLACES_API_KEY` — Place autocomplete in the directions panel (optional)

@@ -12,6 +12,7 @@
     "@fontsource/boldonse": "^5.2.4",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@mapbox/mapbox-sdk": "^0.16.2",
+    "@sentry/react": "^10.73.0",
     "@turf/bbox": "^7.2.0",
     "@turf/circle": "^7.2.0",
     "@turf/distance": "^7.2.0",
