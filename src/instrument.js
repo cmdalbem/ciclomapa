@@ -2,18 +2,22 @@ import * as Sentry from '@sentry/react';
 
 const dsn = process.env.REACT_APP_SENTRY_DSN;
 
+// Only report from real deploys: ciclomapa.app and Vercel preview URLs (beta).
+// Skip localhost / yarn start even if the DSN is in .env.
 function sentryEnvironment() {
-  if (process.env.NODE_ENV !== 'production') return 'development';
-  if (typeof window !== 'undefined' && window.location.hostname === 'ciclomapa.app') {
-    return 'production';
-  }
-  return 'preview';
+  if (typeof window === 'undefined') return null;
+  const host = window.location.hostname;
+  if (host === 'ciclomapa.app' || host === 'www.ciclomapa.app') return 'production';
+  if (host.endsWith('.vercel.app')) return 'preview';
+  return null;
 }
 
-if (dsn && process.env.NODE_ENV !== 'test') {
+const environment = sentryEnvironment();
+
+if (dsn && environment) {
   Sentry.init({
     dsn,
-    environment: sentryEnvironment(),
+    environment,
     sendDefaultPii: false,
     dataCollection: {
       userInfo: false,
