@@ -25,4 +25,4 @@ test-results/
 playwright-report/
 blob-report/
 coverage/
-.pmtiles-work/
+.env*.local
