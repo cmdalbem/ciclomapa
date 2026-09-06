@@ -1,4 +1,6 @@
 name: PMtiles build & upload
+run-name: >-
+  PMtiles ${{ inputs.build || (github.event.schedule == '0 8 * * 0' && 'spain') || 'br' }}
 
 on:
   workflow_dispatch:
