@@ -45,6 +45,7 @@ Create a `.env` file in the project root (or set these in your environment) for 
 - `REACT_APP_OPENROUTESERVICE_API_KEY` — Route calculations (OpenRouteService)
 - `REACT_APP_GOOGLE_PLACES_API_KEY` — Place autocomplete in the directions panel (optional)
 - `REACT_APP_PMTILES_URL` / `REACT_APP_PMTILES_FILENAME` — Vector tile archive served from S3 (see `.env.example`)
+- `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` — server-only, used by `/api/airtable/*` Vercel Functions. Never `REACT_APP_`. CRA inlines every `REACT_APP_*` variable that is still in `.env`, even if unused. For local comments/metadata, run `yarn dev:vercel`. After the first deploy, revoke any token that used to be in `REACT_APP_AIRTABLE_API_KEY`.
 
 ### PMtiles data pipeline
 
@@ -84,6 +85,8 @@ To start the local server:
 ```
 yarn start
 ```
+
+Comments and city metadata go through Vercel Functions (`/api/airtable/*`). For those locally, use `yarn dev:vercel` with `AIRTABLE_API_KEY` and `AIRTABLE_BASE_ID` in `.env`. `vercel.json` points that at `yarn start` (CRACO). If Vercel falls back to `react-scripts start`, Less never compiles and the UI looks broken. Plain `yarn start` still runs the SPA, but those API routes 404.
 
 To deploy to production server:
 
