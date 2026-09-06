@@ -1,5 +1,8 @@
+import './instrument';
+
 import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom/client'; // Note the updated import
+import * as Sentry from '@sentry/react';
 import App from './App';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
@@ -60,8 +63,23 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('scroll', handleResize);
 }
 
+function SentryFallback() {
+  return (
+    <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
+      <p>Algo deu errado. Recarregue a página ou tente de novo em instantes.</p>
+      <button type="button" onClick={() => window.location.reload()}>
+        Recarregar
+      </button>
+    </div>
+  );
+}
+
 // Create a root using ReactDOM.createRoot
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById('root'), {
+  onUncaughtError: Sentry.reactErrorHandler(),
+  onCaughtError: Sentry.reactErrorHandler(),
+  onRecoverableError: Sentry.reactErrorHandler(),
+});
 
 const shouldExposeDebugHandles =
   new URLSearchParams(window.location.search).has('debug') && process.env.NODE_ENV !== 'production';
@@ -95,10 +113,12 @@ function AppRoutes() {
 
 // Render the app using the new root API
 root.render(
-  <Router>
-    <AppRoutes />
-    <SpeedInsights />
-  </Router>
+  <Sentry.ErrorBoundary fallback={<SentryFallback />}>
+    <Router>
+      <AppRoutes />
+      <SpeedInsights />
+    </Router>
+  </Sentry.ErrorBoundary>
 );
 
 // --- Service Worker update lifecycle ---
