@@ -57,18 +57,22 @@ module.exports = {
         },
       });
 
-      // Exclude these packages from source-map-loader
+      // CRA's source-map-loader walks node_modules JS. zipson and @firebase/auth
+      // ship maps that point at files not in the npm package (ENOENT spam in
+      // yarn start / vercel dev). mapbox-pmtiles is excluded for the same reason.
       const sourceMapLoaderRule = webpackConfig.module.rules.find(
-        (rule) =>
-          rule.use &&
-          rule.use.find &&
-          rule.use.find((use) => use.loader && use.loader.includes('source-map-loader'))
+        (rule) => typeof rule.loader === 'string' && rule.loader.includes('source-map-loader')
       );
 
       if (sourceMapLoaderRule) {
+        const existingExclude = sourceMapLoaderRule.exclude
+          ? [].concat(sourceMapLoaderRule.exclude)
+          : [];
         sourceMapLoaderRule.exclude = [
-          ...(sourceMapLoaderRule.exclude || []),
+          ...existingExclude,
           /node_modules\/(mapbox-pmtiles|pmtiles)/,
+          /[\\/]node_modules[\\/]zipson[\\/]/,
+          /[\\/]node_modules[\\/]@firebase[\\/]/,
         ];
       }
 

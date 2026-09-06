@@ -1,4 +1,5 @@
 {
+  "devCommand": "yarn start",
   "headers": [
     {
       "source": "/.well-known/assetlinks.json",
