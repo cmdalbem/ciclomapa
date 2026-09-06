@@ -1,16 +1,4 @@
 import { removeAccents } from './utils/utils.js';
-import { API_TYPES, trackCall } from './dev/apiTracker.js';
-
-const COMMENTS_TABLE_NAME = 'Comments';
-const METADATA_TABLE_NAME = 'Metadata';
-
-const TAGS_LIST_COMMENT_ID = 44;
-
-const debugStyles = {
-  blue: 'color: lightblue;',
-  gray: 'color: gray;',
-  important: 'font-size: 1.2em;',
-};
 
 class AirtableDatabase {
   /**
@@ -37,117 +25,39 @@ class AirtableDatabase {
     return hit?.fields ?? null;
   }
 
-  async fetchTable(tableName, view, offset, accumulator = []) {
-    const apiKey = process.env.REACT_APP_AIRTABLE_API_KEY;
-    const baseId = process.env.REACT_APP_AIRTABLE_BASE_ID;
-    if (!apiKey || !baseId) {
-      console.error('No AIRTABLE_API_KEY found');
-      return;
-    }
-
-    const label = view ? `${tableName}/${view}` : tableName;
-    trackCall({ api: API_TYPES.AIRTABLE_READ, details: label });
-
-    let queryUrl = `https://api.airtable.com/v0/${baseId}/${tableName}?`;
-    if (view) {
-      queryUrl += `&view=${view}`;
-    }
-    if (offset) {
-      queryUrl += `&offset=${offset}`;
-    }
-    const response = await fetch(queryUrl, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-    });
-
-    let data = null;
-    try {
-      data = await response.json();
-    } catch {
-      data = null;
-    }
-
-    // 401s were logged as "zero records". captureConsole sends that warn to
-    // Sentry, so every page load looked like an empty table.
-    if (!response.ok || !data) {
-      console.debug(`fetchTable(${label}): HTTP ${response.status}`);
-      return;
-    }
-
-    if (data.records && data.records.length > 0) {
-      let accumulated = data.records;
-
-      accumulated = accumulated.concat(accumulator);
-
-      if (data.offset) {
-        console.debug(`%cfetchTable(${label}): offset detected, recursing...`, debugStyles.blue);
-        return this.fetchTable(tableName, view, data.offset, accumulated);
-      } else {
-        console.debug(`%cfetchTable(${label}): end of pagination, returning.`, debugStyles.blue);
-        return accumulated;
+  async request(path, options) {
+    const response = await fetch(path, options);
+    if (!response.ok) {
+      let message = 'Airtable request failed';
+      try {
+        const body = await response.json();
+        if (body && typeof body.error === 'string' && body.error.trim()) {
+          message = body.error;
+        }
+      } catch {
+        // keep generic message
       }
+      const err = new Error(message);
+      err.status = response.status;
+      throw err;
     }
+    return response.json();
   }
 
-  async post(tableName, data) {
-    const apiKey = process.env.REACT_APP_AIRTABLE_API_KEY;
-    const baseId = process.env.REACT_APP_AIRTABLE_BASE_ID;
-    if (!apiKey || !baseId) {
-      console.error('No AIRTABLE_API_KEY found');
-      return;
-    }
-
-    trackCall({ api: API_TYPES.AIRTABLE_WRITE, details: tableName });
-
-    let queryUrl = `https://api.airtable.com/v0/${baseId}/${tableName}`;
-
-    await fetch(queryUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(data),
-    }).then((res) => {
-      console.log('Request complete! response:', res);
-    });
+  async getMetadata() {
+    return this.request('/api/airtable/metadata');
   }
 
   async getComments() {
-    let comments = await this.fetchTable(COMMENTS_TABLE_NAME);
-
-    if (comments) {
-      // This special comment has a list of all possible tags
-      const tagsListComment = comments.filter((c) => c.fields.id === TAGS_LIST_COMMENT_ID)[0];
-
-      if (tagsListComment) {
-        const tagsList = tagsListComment.fields.tags;
-
-        // Filter out solved comments
-        // @todo filter them when fetching the table, to improve performance
-        comments = comments.filter((c) => c.fields.status !== 'Resolvida');
-
-        // Ignore if there are comments without latlong
-        comments = comments.filter((c) => c.fields.latlong !== undefined);
-
-        return {
-          comments,
-          tagsList,
-        };
-      } else {
-        console.error('getComments(): Error retrieving tags list');
-      }
-    }
-  }
-
-  async getMetadata(city) {
-    return await this.fetchTable(METADATA_TABLE_NAME);
+    return this.request('/api/airtable/comments');
   }
 
   async create(fields) {
-    return await this.post(COMMENTS_TABLE_NAME, { records: [{ fields }] });
+    return this.request('/api/airtable/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields),
+    });
   }
 }
 
