@@ -23,6 +23,10 @@ if (dsn && environment) {
       userInfo: false,
       httpBodies: [],
     },
+    integrations: (integrations) => [
+      ...integrations,
+      Sentry.captureConsoleIntegration({ levels: ['error', 'warn'] }),
+    ],
     // Chunk-load failures already trigger a reload in index.js; don't burn quota on them.
     ignoreErrors: [
       /Loading chunk [\d]+ failed/,
