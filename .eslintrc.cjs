@@ -4,4 +4,10 @@ module.exports = {
   rules: {
     'react/prop-types': ['warn', { skipUndeclared: false }],
   },
+  overrides: [
+    {
+      files: ['api/**/*.js'],
+      env: { node: true },
+    },
+  ],
 };
