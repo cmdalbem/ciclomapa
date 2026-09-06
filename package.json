@@ -48,10 +48,10 @@
     "e2e": "playwright test",
     "e2e:apis": "playwright test e2e/apis.spec.ts",
     "e2e:ui": "playwright test --ui",
-    "lint": "eslint src/",
+    "lint": "eslint src/ api/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "format": "prettier --write \"{src,scripts,docs}/**/*.{js,jsx,ts,tsx,json,css,less,md}\"",
-    "format:check": "prettier --check \"{src,scripts,docs}/**/*.{js,jsx,ts,tsx,json,css,less,md}\"",
+    "format": "prettier --write \"{src,scripts,docs,api}/**/*.{js,jsx,ts,tsx,json,css,less,md}\"",
+    "format:check": "prettier --check \"{src,scripts,docs,api}/**/*.{js,jsx,ts,tsx,json,css,less,md}\"",
     "eject": "react-scripts eject",
     "predeploy": "yarn run build",
     "deploy": "gh-pages -d build",
@@ -120,6 +120,10 @@
       "prettier --write"
     ],
     "scripts/**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "api/**/*.{js,ts}": [
       "eslint --fix",
       "prettier --write"
     ],

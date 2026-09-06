@@ -8,7 +8,7 @@
 import { clientsClaim } from 'workbox-core';
 import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute, NavigationRoute } from 'workbox-routing';
-import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
+import { CacheFirst, NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { enable as enableNavigationPreload } from 'workbox-navigation-preload';
 
@@ -47,15 +47,6 @@ registerRoute(
   new CacheFirst({
     cacheName: 'nominatim',
     plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 24 * 60 * 60 })],
-  })
-);
-
-// StaleWhileRevalidate: Airtable (city metadata, comments)
-registerRoute(
-  ({ url }) => url.hostname === 'api.airtable.com',
-  new StaleWhileRevalidate({
-    cacheName: 'airtable',
-    plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 7 * 24 * 60 * 60 })],
   })
 );
 
