@@ -15,6 +15,7 @@ npm-shrinkwrap.json
 .env
 .env.local
 .env.production
+.env.sentry-build-plugin
 
 # CicloMapa-specific
 *.geojson
