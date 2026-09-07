@@ -27,11 +27,16 @@ if (dsn && environment) {
       ...integrations,
       Sentry.captureConsoleIntegration({ levels: ['error', 'warn'] }),
     ],
-    // Chunk-load failures already trigger a reload in index.js; don't burn quota on them.
+    // Drop known noise before it hits the free-plan quota. Chunk-load failures
+    // already trigger a reload in index.js. Google Places and Mapbox `light`
+    // deprecations are library/style warnings until those APIs are migrated.
     ignoreErrors: [
       /Loading chunk [\d]+ failed/,
       'ResizeObserver loop limit exceeded',
       'ResizeObserver loop completed with undelivered notifications',
+      /google\.maps\.places\.(PlacesService|AutocompleteService)/,
+      /As of May 2023, bounds, location, and radius are deprecated/,
+      /The `light` root property is deprecated/,
     ],
   });
 
