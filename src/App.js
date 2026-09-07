@@ -38,6 +38,7 @@ import {
   ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD,
   THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE,
   IS_MOBILE,
+  PMTILES_EXCLUDED_LAYER_NAMES,
   FORCE_RECALCULATE_LENGTHS_ALWAYS,
   DEFAULT_LENGTH_CALCULATE_STRATEGIES,
   MAP_STYLES,
@@ -73,13 +74,16 @@ class App extends Component {
   _storage = null;
   osmController = OSMController;
   currentOSMRequest = null;
+  // Tracks which area's GeoJSON is currently loaded/in-flight, so ensureCityDataLoaded()
+  // can avoid redundant Firestore/Overpass hits when data is deferred (see updateData()).
+  _geoJsonLoadedArea = null;
+  _geoJsonLoadingArea = null;
   deferredCityFocus = null;
   // Fly-to target from the `?flyto=lat,lng[,zoom]` URL param; consumed when the map mounts.
   pendingFlyToTarget = null;
   lastResolvedCitySlug = null;
   lastNotifiedCitySlugError = null;
   initialBareRootEntry = false;
-  _lastExplicitCityNavTimestamp = 0;
   _welcomeMapBootScheduled = false;
   _unmounted = false;
   /** Mobile directions panel open state (kept off React state to avoid App-wide re-renders). */
@@ -95,10 +99,12 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.updateData = this.updateData.bind(this);
+    this.ensureCityDataLoaded = this.ensureCityDataLoaded.bind(this);
     this.onMapStyleChange = this.onMapStyleChange.bind(this);
     this.onMapShowSatelliteChanged = this.onMapShowSatelliteChanged.bind(this);
     this.onMapMoved = this.onMapMoved.bind(this);
     this.onMapPositionChange = this.onMapPositionChange.bind(this);
+    this.needsCityGeoJsonContext = this.needsCityGeoJsonContext.bind(this);
     this.getMapViewport = this.getMapViewport.bind(this);
     this.onLayersChange = this.onLayersChange.bind(this);
     this.downloadData = this.downloadData.bind(this);
@@ -115,10 +121,13 @@ class App extends Component {
     this.syncPrivacyPolicyFromRoute = this.syncPrivacyPolicyFromRoute.bind(this);
     this.onChangeStrategy = this.onChangeStrategy.bind(this);
     this.setMapRef = this.setMapRef.bind(this);
+    this.setMapComponentRef = this.setMapComponentRef.bind(this);
+    this.triggerGeolocate = this.triggerGeolocate.bind(this);
     this.toggleTheme = this.toggleTheme.bind(this);
     this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
     this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
     this.onDirectionsPanelToggle = this.onDirectionsPanelToggle.bind(this);
+    this.toggleDirectionsPanel = this.toggleDirectionsPanel.bind(this);
     this.setArea = this.setArea.bind(this);
     this.debouncedUpdateURL = debounce(this.updateURL, 300);
 
@@ -136,10 +145,6 @@ class App extends Component {
       !initialHasCitySlug;
 
     this.state = this.buildInitialState();
-
-    if (this.state.mapBootReady) {
-      this.updateData();
-    }
   }
 
   buildInitialState() {
@@ -351,7 +356,13 @@ class App extends Component {
   }
 
   toggleSidebar(state) {
-    this.setState({ isSidebarOpen: state });
+    this.setState({ isSidebarOpen: state }, () => {
+      if (state) {
+        this.ensureCityDataLoaded();
+      }
+      // Boundary visibility follows the same Analytics/Routing gate as GeoJSON loading.
+      this.mapComponent?.initBoundaryLayer?.();
+    });
   }
 
   openAboutModal() {
@@ -441,6 +452,14 @@ class App extends Component {
       layers.forEach((l) => {
         if (prevLayersStates[l.id] !== undefined) {
           l.isActive = prevLayersStates[l.id];
+        }
+      });
+    }
+
+    if (IS_MOBILE) {
+      layers.forEach((l) => {
+        if (PMTILES_EXCLUDED_LAYER_NAMES.has(l.name)) {
+          l.isActive = false;
         }
       });
     }
@@ -702,7 +721,6 @@ class App extends Component {
     if (this.lastResolvedCitySlug === citySlug) return;
 
     this.lastResolvedCitySlug = citySlug;
-    this._lastExplicitCityNavTimestamp = Date.now();
 
     try {
       const normalizedSlug = decodeURIComponent(citySlug).trim().toLowerCase();
@@ -1172,9 +1190,7 @@ class App extends Component {
       this.abortCurrentOSMRequest();
     }
 
-    if (!backgroundUpdate) {
-      this.setState({ loading: true });
-    }
+    this.setState({ loading: true });
 
     // const parts = areaName.split(',');
     // const city = parts[0];
@@ -1248,9 +1264,14 @@ class App extends Component {
           this.setState({
             geoJson: newData.geoJson,
             dataUpdatedAt: new Date(),
-            ...(backgroundUpdate ? {} : { loading: false }),
+            loading: false,
             lengths: lengths,
           });
+
+          this._geoJsonLoadedArea = areaName;
+          if (this._geoJsonLoadingArea === areaName) {
+            this._geoJsonLoadingArea = null;
+          }
 
           appNotification.destroy();
 
@@ -1269,6 +1290,10 @@ class App extends Component {
         this.setState({
           loading: false,
         });
+
+        if (this._geoJsonLoadingArea === areaName) {
+          this._geoJsonLoadingArea = null;
+        }
 
         appNotification.destroy();
 
@@ -1313,7 +1338,7 @@ class App extends Component {
         const storageKey = this.getStorageKeyForArea(area);
         const cacheLoadToken = startDataLoad('geojson-cache', 'GeoJSON (cache)', { area });
         this.getStorage()
-          .load(this.state.area, { storageKey })
+          .load(area, { storageKey })
           .then((data) => {
             if (data) {
               finishDataLoad('geojson-cache', {
@@ -1348,10 +1373,13 @@ class App extends Component {
                 lengths: data.lengths,
                 dataUpdatedAt: new Date(data.updatedAt),
               });
+
+              this._geoJsonLoadedArea = area;
+              if (this._geoJsonLoadingArea === area) {
+                this._geoJsonLoadingArea = null;
+              }
             } else {
-              console.debug(
-                `Couldn't find previously saved data for area ${this.state.area}, hitting OSM...`
-              );
+              console.debug(`Couldn't find previously saved data for area ${area}, hitting OSM...`);
 
               finishDataLoad('geojson-cache', {
                 token: cacheLoadToken,
@@ -1370,6 +1398,10 @@ class App extends Component {
           .catch((e) => {
             console.error(e);
             finishDataLoad('geojson-cache', { token: cacheLoadToken, error: e, meta: { area } });
+
+            if (this._geoJsonLoadingArea === area) {
+              this._geoJsonLoadingArea = null;
+            }
             // notification['error']({
             //     message: 'Erro',
             //     description:
@@ -1380,6 +1412,19 @@ class App extends Component {
     } else {
       this.setState({ loading: false });
     }
+  }
+
+  // Map rendering runs entirely off the regional PMTiles, so per-city GeoJSON is only
+  // needed by routing coverage, analytics/km stats, the city boundary outline, and the
+  // GeoJSON export. Call this right before any of those features are used instead of
+  // loading eagerly on every city change.
+  ensureCityDataLoaded() {
+    const area = this.state.area;
+    if (!area || this._geoJsonLoadedArea === area || this._geoJsonLoadingArea === area) {
+      return;
+    }
+    this._geoJsonLoadingArea = area;
+    this.updateData();
   }
 
   onMapStyleChange(newMapStyle) {
@@ -1425,6 +1470,17 @@ class App extends Component {
   }
 
   downloadData() {
+    if (!this.state.geoJson) {
+      // Data is loaded on-demand (see ensureCityDataLoaded); if the user clicks
+      // download before it's ready, kick off the load and ask them to retry shortly.
+      this.ensureCityDataLoaded();
+      appNotification.info({
+        title: 'Só um momento',
+        description: 'Ainda estamos carregando os dados desta cidade. Tente novamente em breve.',
+      });
+      return;
+    }
+
     Analytics.event('purchase', {
       items: [
         {
@@ -1457,12 +1513,6 @@ class App extends Component {
     const currCitySlug = this.getCitySlugFromRoute();
     if (prevCitySlug !== currCitySlug) {
       this.lastResolvedCitySlug = null;
-      // Stamp the navigation timestamp immediately so that any in-flight stale geocodes
-      // from the previous city are suppressed regardless of which branch below runs.
-      // Without this, resolveCitySlugToAreaAndViewport might be skipped (e.g. when
-      // hasExplicitViewportInURL is true) and the timestamp would never be updated,
-      // letting stale geocodes overwrite the new city slug.
-      this._lastExplicitCityNavTimestamp = Date.now();
       if (currCitySlug) {
         const routeWasNormalized = this.normalizeCitySlugRouteIfNeeded();
         if (routeWasNormalized) return;
@@ -1496,7 +1546,18 @@ class App extends Component {
 
       this.recordRecentlyVisitedCity(this.state.area);
 
-      this.updateData();
+      // Map rendering is driven entirely by PMTiles, so per-city GeoJSON is no longer
+      // fetched eagerly on every city change (see ensureCityDataLoaded). Just clear out
+      // the previous city's data/in-flight tracking; Analytics/Routing/Export will
+      // (re)request it on demand. If one of those panels is already open, though, it
+      // needs data for the *new* city right away.
+      this.abortCurrentOSMRequest();
+      this._geoJsonLoadedArea = null;
+      this._geoJsonLoadingArea = null;
+      this.setState({ geoJson: null, lengths: {}, dataUpdatedAt: null });
+      if (this.needsCityGeoJsonContext()) {
+        this.ensureCityDataLoaded();
+      }
 
       if (Array.isArray(this.state.airtableMetadataRecords)) {
         this.syncAirtableCityFields();
@@ -1509,8 +1570,6 @@ class App extends Component {
           openAboutModal: () => this.openAboutModal(),
         });
       }
-
-      document.querySelector('.city-picker span')?.setAttribute('style', 'opacity: 1');
 
       // Only redo the query if we need new data
       // if (!doesAContainsB(largestBoundsYet, newBounds)) {
@@ -1622,9 +1681,7 @@ class App extends Component {
 
   startDeferredMapBoot() {
     if (this.state.mapBootReady) return;
-    this.setState({ mapBootReady: true }, () => {
-      this.updateData();
-    });
+    this.setState({ mapBootReady: true });
   }
 
   componentDidMount() {
@@ -1681,6 +1738,12 @@ class App extends Component {
 
     this.loadAirtableMetadata();
     this.syncPrivacyPolicyFromRoute();
+
+    // Sidebar/routes open state can be restored from localStorage before any toggle
+    // fires — kick off deferred GeoJSON (boundary, metrics, freshness) in that case.
+    if (this.needsCityGeoJsonContext()) {
+      this.ensureCityDataLoaded();
+    }
 
     // Safety net for the GTM `mapReady` trigger: the map normally signals readiness
     // on its first idle, but if the map never mounts or fails (WebGL error, very slow
@@ -1756,35 +1819,14 @@ class App extends Component {
   }
 
   onMapMoved(newState) {
-    // Area/city change path (rare): this DOES go through setState because `area`
-    // is rendered and drives data loading.
-    // This does NOT control the map - the map manages its own position
+    // This does NOT control the map - the map manages its own position.
+    // City/area is no longer inferred from pan/zoom; it only changes via the
+    // city picker, URL slug, or an explicit setArea (e.g. routing).
     requestAnimationFrame(() => {
       const nextState = { ...newState };
       if (typeof nextState.area === 'string' && nextState.area.trim()) {
-        const normalized = this.normalizeAreaLabelForDisplay(nextState.area);
-
-        // Guard against stale reverse-geocode results: a geocode that was *requested before*
-        // an explicit city navigation (picker, direct URL) can resolve afterwards and overwrite
-        // the new slug.  We detect this by comparing the geocode's request timestamp
-        // (_geocodeRequestTime, set in Map.onMapMoveEnded) against the last navigation
-        // timestamp.  Geocodes requested after the navigation are always accepted.
-        const routeSlug = this.getCanonicalRouteCitySlug();
-        if (normalized && routeSlug) {
-          const candidateSlug = this.getCitySlugFromArea(normalized);
-          const geocodeRequestTime = nextState._geocodeRequestTime ?? Date.now();
-          const isStaleGeocode = geocodeRequestTime < this._lastExplicitCityNavTimestamp;
-          if (candidateSlug && candidateSlug !== routeSlug && isStaleGeocode) {
-            // Stale geocode result — drop the area update to protect the current slug.
-            delete nextState.area;
-          } else {
-            nextState.area = normalized;
-          }
-        } else {
-          nextState.area = normalized;
-        }
+        nextState.area = this.normalizeAreaLabelForDisplay(nextState.area);
       }
-      delete nextState._geocodeRequestTime;
       this.setState(nextState);
     });
   }
@@ -1793,12 +1835,37 @@ class App extends Component {
     this.setState({ map });
   }
 
+  setMapComponentRef(mapComponent) {
+    this.mapComponent = mapComponent;
+  }
+
+  triggerGeolocate() {
+    this.mapComponent?.triggerGeolocate?.();
+  }
+
   setDirectionsPanelRef(directionsPanel) {
     this.directionsPanel = directionsPanel;
   }
 
   onDirectionsPanelToggle(isOpen) {
     this._isDirectionsPanelOpen = isOpen;
+    if (isOpen) {
+      this.ensureCityDataLoaded();
+    }
+    // Directions open state is kept off React state (avoids App-wide re-renders), so
+    // poke Map directly — same gate as Analytics for boundary visibility.
+    this.mapComponent?.initBoundaryLayer?.();
+  }
+
+  // Shared gate for anything that needs per-city GeoJSON: Analytics sidebar,
+  // Routing panel, and the city boundary outline. Idle map browsing stays on
+  // PMTiles only; city/area itself is only changed via the picker / URL.
+  needsCityGeoJsonContext() {
+    return this.state.isSidebarOpen || this._isDirectionsPanelOpen;
+  }
+
+  toggleDirectionsPanel() {
+    this.directionsPanel?.toggleCollapse?.();
   }
 
   setFromPoint = (point) => {
@@ -1899,6 +1966,7 @@ class App extends Component {
       downloadData: this.downloadData,
       onMapMoved: this.onMapMoved,
       onMapPositionChange: this.onMapPositionChange,
+      needsCityGeoJsonContext: this.needsCityGeoJsonContext,
       getMapViewport: this.getMapViewport,
       forceUpdate: this.forceUpdate,
       cancelDataLoad: this.cancelDataLoad,
@@ -1907,6 +1975,8 @@ class App extends Component {
       toggleTheme: this.toggleTheme,
       updateLengths: this.updateLengths,
       setMapRef: this.setMapRef,
+      setMapComponentRef: this.setMapComponentRef,
+      triggerGeolocate: this.triggerGeolocate,
       onTrackingUserLocationChange: (isTracking) => {
         this.setState({ isTrackingUserLocation: isTracking });
         this.saveStateToLocalStorage();
@@ -1920,6 +1990,7 @@ class App extends Component {
       setToPoint: this.setToPoint,
       clearRoutePoints: this.clearRoutePoints,
       onDirectionsPanelToggle: this.onDirectionsPanelToggle,
+      toggleDirectionsPanel: this.toggleDirectionsPanel,
       setArea: this.setArea,
       openLayersLegendModal: this.openLayersLegendModal,
       closeAboutModal: this.closeAboutModal,

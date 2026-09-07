@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { Popover, Button, Select, Checkbox } from 'antd';
+import { Popover, Button, Select, Checkbox, Dropdown } from 'antd';
 
 import './AnalyticsSidebar.css';
 
@@ -19,7 +19,10 @@ import {
 import {
   HiX as IconClose,
   HiInformationCircle as IconInfo,
+  HiOutlineRefresh as IconUpdate,
+  HiOutlineChevronDown as IconCaret,
   HiDownload as IconDownload,
+  HiDotsVertical as IconMore,
 } from 'react-icons/hi';
 
 import { HiMiniCheckBadge as IconVerified } from 'react-icons/hi2';
@@ -30,6 +33,8 @@ import {
   LENGTH_COUNTED_LAYER_IDS,
 } from './config/constants.js';
 import { THIN_SPACE, appendKmUnit } from './utils/routeUtils.js';
+import { timeSince } from './utils/utils.js';
+import { appModal } from './antdModal.js';
 
 const PIE_CHART_WIDTH_PX = 207;
 const nullableNumber = PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]);
@@ -122,6 +127,19 @@ class AnalyticsSidebar extends Component {
         /* ignore quota / private mode */
       }
       return { lengthsInclude: next };
+    });
+  }
+
+  confirmForceUpdate() {
+    appModal.confirm({
+      title: 'Atualizar dados do OpenStreetMap?',
+      content:
+        'Vamos baixar novamente os dados desta cidade. Dependendo do tamanho dela, isso pode levar alguns segundos ou até mais de um minuto.',
+      okText: 'Atualizar',
+      cancelText: 'Cancelar',
+      onOk: () => {
+        this.props.forceUpdate?.();
+      },
     });
   }
 
@@ -226,35 +244,81 @@ class AnalyticsSidebar extends Component {
     return (
       <div
         id="analyticsSidebar"
-        className={`analytics-sidebar w-64 border-l border-opacity-10 border-white h-screen overflow-y-auto glass-bg ${
+        className={`analytics-sidebar relative w-64 border-l border-opacity-10 border-white h-screen overflow-y-auto glass-bg flex flex-col ${
           this.props.open ? 'analytics-sidebar--open' : 'analytics-sidebar--closed'
         }`}
       >
-        <div className="px-5 pb-10">
+        <div className="px-5 pb-5 flex-1">
           <div className="flex w-full justify-between items-center pt-2 mt-1">
             <div className="flex items-center">
               <h2 className="my-0">Métricas</h2>
             </div>
 
-            <Button
-              type="text"
-              shape="circle"
-              className="text-xl -mr-2 text-inherit"
-              icon={<IconClose />}
-              onClick={() => this.props.toggle(false)}
-              aria-label="Fechar painel de métricas"
-            />
+            <div className="flex items-center -mr-2">
+              {this.props.downloadData && (
+                <Dropdown
+                  trigger={['click']}
+                  placement="bottomRight"
+                  menu={{
+                    items: [
+                      {
+                        key: 'download',
+                        icon: <IconDownload className="mt-0.5 self-start" />,
+                        label: (
+                          <div className="max-w-[220px] py-0.5 leading-snug">
+                            <div>Baixar GeoJSON</div>
+                            <div className="mt-0.5 text-xs font-normal opacity-60 whitespace-normal">
+                              Dados da infraestrutura cicloviária desta cidade para uso em seus
+                              próprios projetos e análises.
+                            </div>
+                          </div>
+                        ),
+                      },
+                    ],
+                    onClick: ({ key }) => {
+                      if (key === 'download') this.props.downloadData();
+                    },
+                  }}
+                >
+                  <Button
+                    type="text"
+                    shape="circle"
+                    className="text-xl text-inherit"
+                    icon={<IconMore />}
+                    aria-label="Mais opções"
+                  />
+                </Dropdown>
+              )}
+              <Button
+                type="text"
+                shape="circle"
+                className="text-xl text-inherit"
+                icon={<IconClose />}
+                onClick={() => this.props.toggle(false)}
+                aria-label="Fechar painel de métricas"
+              />
+            </div>
           </div>
 
           {this.props.location && (
-            <>
-              <div className="mt-3 text-3xl leading-snug font-heading-display uppercase">
+            <button
+              type="button"
+              className="mt-3 mb-2 text-left bg-transparent border-0 p-0 cursor-pointer text-inherit hover:opacity-80 transition-opacity duration-200"
+              onClick={this.props.openCityPicker}
+              aria-label={`Trocar cidade. Cidade atual: ${this.props.location}`}
+            >
+              <div className="text-3xl leading-snug uppercase font-heading-display">
                 {this.props.location.split(',')[0]}
+                <IconCaret
+                  className="inline-block opacity-60 ml-[0.15em] align-[-0.08em]"
+                  size="0.55em"
+                  aria-hidden
+                />
               </div>
-              <div className="mb-2 mt-2 text-lg tracking-tight opacity-50 leading-tight">
+              <div className="mt-2 text-lg tracking-tight opacity-50 leading-tight">
                 {this.props.location.split(',')[1] && `${this.props.location.split(',')[1]}`}
               </div>
-            </>
+            </button>
           )}
 
           {this.props.cityMetadata && this.props.cityMetadata.pnb_total !== undefined && (
@@ -556,20 +620,51 @@ class AnalyticsSidebar extends Component {
                   )
               )}
           </Section>
-
-          {this.props.downloadData && (
-            <Section title="Download dados">
-              <p className="text-xs opacity-50">
-                Baixe os dados da infraestrutura cicloviária desta cidade para uso em seus próprios
-                projetos e análises.
-              </p>
-              <Button onClick={this.props.downloadData} size="small" className="opacity-70">
-                <IconDownload className="inline-block" />
-                {this.props.location.split(',')[0]}.geojson
-              </Button>
-            </Section>
-          )}
         </div>
+
+        {(this.props.loading || this.props.lastUpdate) && (
+          <div className="mt-auto bg-white bg-opacity-5">
+            {this.props.loading && (
+              <div className="loader-container h-1">
+                <div className="progress-materializecss">
+                  <div className="indeterminate"></div>
+                </div>
+              </div>
+            )}
+            <div className="px-5 py-3 flex flex-col gap-2.5">
+              {this.props.loading ? (
+                <>
+                  <p className="m-0 text-xs leading-snug opacity-70">
+                    Carregando dados do OpenStreetMap...
+                  </p>
+                  <Button
+                    type="link"
+                    size="small"
+                    className="self-start p-0 h-auto text-xs"
+                    onClick={this.props.cancelDataLoad}
+                  >
+                    Cancelar
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="m-0 text-xs leading-snug opacity-70">
+                    Dados obtidos do OpenStreetMap há {timeSince(this.props.lastUpdate)}.
+                  </p>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<IconUpdate />}
+                    className="self-start p-0 h-auto text-xs"
+                    onClick={() => this.confirmForceUpdate()}
+                  >
+                    Atualizar
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -587,6 +682,11 @@ AnalyticsSidebar.propTypes = {
   onChangeStrategy: PropTypes.func,
   lengthCalculationStrategy: PropTypes.string,
   downloadData: PropTypes.func,
+  lastUpdate: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.string]),
+  loading: PropTypes.bool,
+  forceUpdate: PropTypes.func,
+  cancelDataLoad: PropTypes.func,
+  openCityPicker: PropTypes.func,
 };
 
 const BigNum = ({ children }) => (

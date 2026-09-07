@@ -40,6 +40,9 @@ export const mapColors = {
   // Route border (outline): white in dark theme, black in light
   routeBorderDark: '#ffffff',
   routeBorderLight: '#000000',
+  // City admin boundary (Analytics/Routing context) — ciclovia greens, not route outline
+  boundaryLineDark: '#B9FAB7',
+  boundaryLineLight: '#386641',
   // Text/icon halo (readability on map)
   haloDark: '#1c1a17',
   haloLight: '#ffffff',
@@ -144,12 +147,14 @@ export const MAP_COLORS = {
   DARK: {
     STROKE: mapColors.strokeDark,
     ROUTE_BORDER: mapColors.routeBorderDark,
+    BOUNDARY: mapColors.boundaryLineDark,
     HALO: mapColors.haloDark,
     ROUTE_PADDING_LINE: mapColors.routePaddingLineDark,
   },
   LIGHT: {
     STROKE: mapColors.strokeLight,
     ROUTE_BORDER: mapColors.routeBorderLight,
+    BOUNDARY: mapColors.boundaryLineLight,
     HALO: mapColors.haloLight,
     ICON_HALO: mapColors.iconHaloLight,
     ROUTE_PADDING_LINE: mapColors.routePaddingLineLight,

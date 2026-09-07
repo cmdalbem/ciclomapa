@@ -35,31 +35,9 @@ module.exports = {
   ],
   webpack: {
     configure: (webpackConfig) => {
-      // Add rule to handle TypeScript files in node_modules
-      webpackConfig.module.rules.push({
-        test: /\.tsx?$/,
-        include: /node_modules\/(mapbox-pmtiles|pmtiles)/,
-        use: {
-          loader: 'babel-loader',
-          options: {
-            presets: [
-              ['@babel/preset-env', { targets: { node: 'current' } }],
-              [
-                '@babel/preset-typescript',
-                {
-                  allowDeclareFields: true,
-                  onlyRemoveTypeImports: true,
-                },
-              ],
-            ],
-            plugins: ['@babel/plugin-proposal-class-properties'],
-          },
-        },
-      });
-
       // CRA's source-map-loader walks node_modules JS. zipson and @firebase/auth
       // ship maps that point at files not in the npm package (ENOENT spam in
-      // yarn start / vercel dev). mapbox-pmtiles is excluded for the same reason.
+      // yarn start / vercel dev).
       const sourceMapLoaderRule = webpackConfig.module.rules.find(
         (rule) => typeof rule.loader === 'string' && rule.loader.includes('source-map-loader')
       );
@@ -70,7 +48,6 @@ module.exports = {
           : [];
         sourceMapLoaderRule.exclude = [
           ...existingExclude,
-          /node_modules\/(mapbox-pmtiles|pmtiles)/,
           /[\\/]node_modules[\\/]zipson[\\/]/,
           /[\\/]node_modules[\\/]@firebase[\\/]/,
         ];

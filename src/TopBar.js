@@ -1,24 +1,29 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
-import { Space, Button, Popover, Dropdown } from 'antd';
+import { Space, Button, Dropdown, Tooltip } from 'antd';
 
 import {
   HiOutlineMap as IconMap,
-  HiOutlineRefresh as IconUpdate,
   HiOutlineChevronDown as IconCaret,
   HiPencil as IconEdit,
   HiChatAlt as IconComment,
   HiSun as IconSun,
   HiMoon as IconMoon,
   HiSearch as IconSearch,
+  HiInformationCircle as IconAbout,
+  HiUsers as IconCollaborate,
+  HiChartPie as IconMetrics,
+  HiDotsVertical as IconMore,
 } from 'react-icons/hi';
 
 import { IconContext } from 'react-icons';
+import { LuBike } from 'react-icons/lu';
+import { MdMyLocation } from 'react-icons/md';
 
 import { useNavigate } from 'react-router-dom';
 
-import { timeSince, getOsmUrl } from './utils/utils.js';
+import { getOsmUrl } from './utils/utils.js';
 
 import { TOPBAR_HEIGHT, IS_MOBILE, IS_PROD, ENABLE_COMMENTS } from './config/constants.js';
 
@@ -27,19 +32,13 @@ import Logo from './components/Logo';
 
 import './TopBar.css';
 
-const LAST_UPDATE_LABEL_VISIBLE_MS = 6000;
-
 function TopBar(props) {
   const {
     title,
-    lastUpdate,
-    forceUpdate,
     embedMode,
     debugMode,
     isDarkMode,
     toggleTheme,
-    loading,
-    cancelDataLoad,
     lat,
     lng,
     z,
@@ -47,6 +46,8 @@ function TopBar(props) {
     openAboutModal,
     isSidebarOpen,
     toggleSidebar,
+    toggleDirectionsPanel,
+    triggerGeolocate,
   } = props;
 
   const navigate = useNavigate();
@@ -60,18 +61,6 @@ function TopBar(props) {
 
   const [editModal, setEditModal] = useState(false);
   const [hasDismissedEditModal, setHasDismissedEditModal] = useState(false);
-  const [showLastUpdate, setShowLastUpdate] = useState(false);
-  const [isCityPickerHovered, setIsCityPickerHovered] = useState(false);
-
-  useEffect(() => {
-    if (loading || !lastUpdate) {
-      setShowLastUpdate(false);
-      return undefined;
-    }
-    setShowLastUpdate(true);
-    const timer = setTimeout(() => setShowLastUpdate(false), LAST_UPDATE_LABEL_VISIBLE_MS);
-    return () => clearTimeout(timer);
-  }, [title, lastUpdate, loading]);
 
   const openEditModal = useCallback(() => setEditModal(true), []);
   const closeEditModal = useCallback(() => setEditModal(false), []);
@@ -118,15 +107,9 @@ function TopBar(props) {
     ]
   );
 
-  const showLastUpdateLabel = showLastUpdate || (!IS_MOBILE && isCityPickerHovered);
-
   const parts = title.split(',');
   const city = parts[0];
   const state = parts[1];
-  let updatedAtStr;
-  if (lastUpdate) {
-    updatedAtStr = lastUpdate.toLocaleString('pt-BR');
-  }
 
   const collaborateMenu = {
     items: [
@@ -148,6 +131,52 @@ function TopBar(props) {
     onClick: handleMenuClick,
   };
 
+  const overflowMenu = {
+    items: [
+      ...(!isSidebarOpen
+        ? [
+            {
+              key: 'metrics',
+              icon: <IconMetrics />,
+              label: 'Métricas',
+            },
+          ]
+        : []),
+      {
+        key: 'collaborate',
+        icon: <IconCollaborate />,
+        label: 'Colaborar',
+        children: collaborateMenu.items,
+      },
+      ...(!IS_PROD && debugMode
+        ? [
+            {
+              key: 'review-icons',
+              label: 'Revisar ícones',
+            },
+          ]
+        : []),
+      {
+        key: 'about',
+        icon: <IconAbout />,
+        label: 'Sobre',
+      },
+      { type: 'divider' },
+      {
+        key: 'theme',
+        icon: isDarkMode ? <IconSun /> : <IconMoon />,
+        label: isDarkMode ? 'Tema claro' : 'Tema escuro',
+      },
+    ],
+    onClick: ({ key }) => {
+      if (key === 'theme') toggleTheme();
+      else if (key === 'about') openAboutModal();
+      else if (key === 'review-icons') navigate('/dev/place-type-icons');
+      else if (key === 'metrics') toggleSidebar(true);
+      else handleMenuClick({ key });
+    },
+  };
+
   return (
     <IconContext.Provider value={{ className: 'react-icon' }}>
       <div
@@ -157,99 +186,62 @@ function TopBar(props) {
       >
         <div className="flex items-start justify-between text-white w-full">
           {!IS_MOBILE && (
-            <a href="/" className={'mt-2'}>
+            <a href="/" className="mt-2">
               <Logo className={embedMode ? 'text-white opacity-20' : 'text-sm'} />
             </a>
           )}
 
           {!embedMode && (
-            <div
-              className={`city-picker sm:text-center ${IS_MOBILE && 'w-full'}`}
-              onMouseEnter={() => !IS_MOBILE && setIsCityPickerHovered(true)}
-              onMouseLeave={() => !IS_MOBILE && setIsCityPickerHovered(false)}
-            >
+            <div className={`city-picker sm:text-center ${IS_MOBILE ? 'w-full' : ''}`}>
               <div className="flex flex-col items-center sm:mb-1">
-                <div className={`relative z-10 ${IS_MOBILE && 'w-full'} rounded-full`}>
-                  <Button
-                    className="glass-bg"
-                    block={IS_MOBILE}
-                    size={IS_MOBILE ? 'large' : 'middle'}
-                    onClick={showCityPicker}
-                  >
-                    <h2 className="flex items-center gap-1 m-0 sm:w-auto w-full min-w-0">
-                      <IconSearch className="opacity-60 flex-shrink-0 -ml-1" aria-hidden />
-
-                      <span>
-                        {city}, {state}
+                <div
+                  className={`relative z-10 flex items-center gap-2 ${IS_MOBILE ? 'w-full' : ''}`}
+                >
+                  <div className={`relative ${IS_MOBILE ? 'w-full' : ''} rounded-full`}>
+                    <Button
+                      className={`glass-bg city-picker__search ${IS_MOBILE ? '' : 'city-picker__search--desktop'}`}
+                      block={IS_MOBILE}
+                      size={IS_MOBILE ? 'large' : 'middle'}
+                      onClick={showCityPicker}
+                      aria-label={`Buscar. Cidade atual: ${city}, ${state}`}
+                    >
+                      <span className="flex items-center gap-1 m-0 sm:w-auto w-full min-w-0 font-normal">
+                        <IconSearch className="opacity-60 flex-shrink-0 -ml-1" aria-hidden />
+                        <span className="opacity-60 truncate">Buscar</span>
                       </span>
-                    </h2>
-                  </Button>
-                  {loading && (
-                    <div className="loader-container h-1 absolute bottom-0 left-0 right-0">
-                      <div className="progress-materializecss">
-                        <div className="indeterminate"></div>
-                      </div>
-                    </div>
+                    </Button>
+                  </div>
+
+                  {!IS_MOBILE && triggerGeolocate && (
+                    <Tooltip title="Mostrar minha localização" placement="bottom">
+                      <Button
+                        id="geolocateTopbarButton"
+                        className="glass-bg topbar-map-action"
+                        size="middle"
+                        shape="circle"
+                        onClick={triggerGeolocate}
+                        aria-label="Mostrar minha localização"
+                      >
+                        <MdMyLocation aria-hidden />
+                      </Button>
+                    </Tooltip>
+                  )}
+
+                  {!IS_MOBILE && toggleDirectionsPanel && (
+                    <Tooltip title="Planejar rota de bicicleta" placement="bottom">
+                      <Button
+                        id="directionsPanelTopbarButton"
+                        className="topbar-map-action directions-topbar-button"
+                        size="middle"
+                        shape="circle"
+                        onClick={toggleDirectionsPanel}
+                        aria-label="Planejar rota de bicicleta"
+                      >
+                        <LuBike aria-hidden />
+                      </Button>
+                    </Tooltip>
                   )}
                 </div>
-
-                {!IS_MOBILE &&
-                  (!loading ? (
-                    lastUpdate && (
-                      <Popover
-                        trigger={IS_MOBILE ? 'click' : 'hover'}
-                        placement="bottom"
-                        arrow={{ pointAtCenter: true }}
-                        content={
-                          <div style={{ maxWidth: 250 }}>
-                            <Space size="small" orientation="vertical">
-                              {lastUpdate && (
-                                <div>
-                                  O mapa de {city} que você está vendo é uma cópia dos dados obtidos
-                                  do OpenStreetMap há <b>{timeSince(lastUpdate)}</b> ({updatedAtStr}
-                                  ).
-                                </div>
-                              )}
-
-                              <Button
-                                size="small"
-                                icon={<IconUpdate />}
-                                type="primary"
-                                block
-                                onClick={forceUpdate}
-                              >
-                                Atualizar
-                              </Button>
-                            </Space>
-                          </div>
-                        }
-                      >
-                        <div
-                          className={[
-                            'flex flex-center items-center gap-1 font-regular cursor text-xs transition-all transform  duration-700 ease-out',
-                            showLastUpdateLabel
-                              ? 'opacity-50 translate-y-1.5 hover:opacity-100'
-                              : ' opacity-0 -translate-y-3 pointer-events-none',
-                          ].join(' ')}
-                          aria-hidden={!showLastUpdateLabel}
-                        >
-                          Atualizado há {timeSince(lastUpdate)}
-                        </div>
-                      </Popover>
-                    )
-                  ) : (
-                    <div className="flex flex-center items-center gap-1 font-regular text-xs mt-1 opacity-50 hover:opacity-100 transition-opacity duration-300">
-                      Acessando dados do OpenStreetMap...
-                      <Button
-                        type="link"
-                        size="small"
-                        className="text-xs p-0 h-auto min-h-0 text-inherit opacity-70 hover:opacity-100"
-                        onClick={cancelDataLoad}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  ))}
               </div>
             </div>
           )}
@@ -257,49 +249,72 @@ function TopBar(props) {
           <div className="nav-links font-white">
             {!embedMode ? (
               <div className="hidden sm:flex gap-2 items-center">
-                <Space.Compact className="glass-bg rounded-full overflow-hidden">
-                  <Button
-                    type={!isDarkMode ? 'default' : 'text'}
-                    className={!isDarkMode ? 'border border-opacity-10 border-white' : 'opacity-50'}
-                    shape="circle"
-                    onClick={() => toggleTheme()}
-                    aria-label="Usar tema claro"
-                  >
-                    <IconSun />
-                  </Button>
-                  <Button
-                    type={isDarkMode ? 'default' : 'text'}
-                    className={isDarkMode ? 'border border-opacity-10 border-white' : 'opacity-50'}
-                    shape="circle"
-                    onClick={() => toggleTheme()}
-                    aria-label="Usar tema escuro"
-                  >
-                    <IconMoon />
-                  </Button>
-                </Space.Compact>
+                <div className="topbar-nav-expanded">
+                  <Space.Compact className="glass-bg rounded-full overflow-hidden">
+                    <Button
+                      type={!isDarkMode ? 'default' : 'text'}
+                      className={
+                        !isDarkMode ? 'border border-opacity-10 border-white' : 'opacity-50'
+                      }
+                      shape="circle"
+                      onClick={() => toggleTheme()}
+                      aria-label="Usar tema claro"
+                    >
+                      <IconSun />
+                    </Button>
+                    <Button
+                      type={isDarkMode ? 'default' : 'text'}
+                      className={
+                        isDarkMode ? 'border border-opacity-10 border-white' : 'opacity-50'
+                      }
+                      shape="circle"
+                      onClick={() => toggleTheme()}
+                      aria-label="Usar tema escuro"
+                    >
+                      <IconMoon />
+                    </Button>
+                  </Space.Compact>
 
-                <Button className="glass-bg" onClick={openAboutModal}>
-                  Sobre
-                </Button>
-
-                {!IS_PROD && debugMode && (
-                  <Button className="glass-bg" onClick={() => navigate('/dev/place-type-icons')}>
-                    Revisar ícones
+                  <Button className="glass-bg" onClick={openAboutModal}>
+                    Sobre
                   </Button>
-                )}
 
-                <Dropdown menu={collaborateMenu}>
-                  <Button className="glass-bg">
-                    <span> Colaborar </span>
-                    <IconCaret className="text-green-300" style={{ marginRight: '-3px' }} />
-                  </Button>
+                  {!IS_PROD && debugMode && (
+                    <Button className="glass-bg" onClick={() => navigate('/dev/place-type-icons')}>
+                      Revisar ícones
+                    </Button>
+                  )}
+
+                  <Dropdown menu={collaborateMenu}>
+                    <Button className="glass-bg">
+                      <span> Colaborar </span>
+                      <IconCaret className="text-green-300" style={{ marginRight: '-3px' }} />
+                    </Button>
+                  </Dropdown>
+
+                  {!isSidebarOpen && (
+                    <Button className="glass-bg" onClick={() => toggleSidebar(true)}>
+                      Métricas
+                    </Button>
+                  )}
+                </div>
+
+                <Dropdown
+                  menu={{ ...overflowMenu, className: 'topbar-nav-overflow-menu' }}
+                  trigger={['click']}
+                  placement="bottomRight"
+                  classNames={{ root: 'topbar-nav-overflow-dropdown' }}
+                >
+                  <Tooltip title="Mais opções">
+                    <Button
+                      className="glass-bg topbar-nav-overflow"
+                      shape="circle"
+                      aria-label="Mais opções"
+                    >
+                      <IconMore aria-hidden />
+                    </Button>
+                  </Tooltip>
                 </Dropdown>
-
-                {!isSidebarOpen && (
-                  <Button className="glass-bg" onClick={() => toggleSidebar(true)}>
-                    Métricas
-                  </Button>
-                )}
               </div>
             ) : (
               <Button target="_blank" href={window.location.href.replace(/&embed=true/g, '')}>
@@ -326,14 +341,10 @@ export default TopBar;
 
 TopBar.propTypes = {
   title: PropTypes.string.isRequired,
-  lastUpdate: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.string]),
-  forceUpdate: PropTypes.func.isRequired,
   embedMode: PropTypes.bool,
   debugMode: PropTypes.bool,
   isDarkMode: PropTypes.bool,
   toggleTheme: PropTypes.func.isRequired,
-  loading: PropTypes.bool,
-  cancelDataLoad: PropTypes.func,
   lat: PropTypes.number,
   lng: PropTypes.number,
   z: PropTypes.number,
@@ -341,15 +352,14 @@ TopBar.propTypes = {
   openAboutModal: PropTypes.func.isRequired,
   isSidebarOpen: PropTypes.bool,
   toggleSidebar: PropTypes.func.isRequired,
+  toggleDirectionsPanel: PropTypes.func,
+  triggerGeolocate: PropTypes.func,
 };
 
 TopBar.defaultProps = {
-  lastUpdate: null,
   embedMode: false,
   debugMode: false,
   isDarkMode: false,
-  loading: false,
-  cancelDataLoad: () => {},
   lat: null,
   lng: null,
   z: null,
