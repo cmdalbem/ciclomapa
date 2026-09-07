@@ -81,6 +81,13 @@ export function flyMapToCityFocus(map, centerLngLat, placeName) {
 /** GeoJSON source holding endpoint circles used alongside route-mode POI `within` filters */
 const ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID = 'route-endpoint-poi-zones';
 
+const MISSING_BASEMAP_IMAGES = new Set([
+  'turning-circle-outline',
+  'turning-circle',
+  'oneway-small',
+  'oneway-large',
+]);
+
 /** Geo sources for app data layers; basemap (e.g. composite) is everything else. */
 const CICLOMAPA_DATA_SOURCES = new Set([
   'osmdata',
@@ -925,7 +932,6 @@ class Map extends Component {
           'source-layer': sourceLayer,
           filter: filters,
           paint: {
-            'line-occlusion-opacity': 1,
             'line-opacity': [
               'case',
               ['boolean', ['feature-state', 'selected'], false],
@@ -2677,6 +2683,16 @@ class Map extends Component {
     if (!this.map) {
       return;
     }
+
+    this.map.on('styleimagemissing', ({ id }) => {
+      if (MISSING_BASEMAP_IMAGES.has(id) && !this.map.hasImage(id)) {
+        this.map.addImage(id, {
+          width: 1,
+          height: 1,
+          data: new Uint8Array(4),
+        });
+      }
+    });
 
     // Mapbox tracks window resize, but the map container can change size without one
     // (e.g. --viewport-height updates from visualViewport in index.js). ResizeObserver
