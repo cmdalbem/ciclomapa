@@ -7,7 +7,7 @@ import Logo from './components/Logo';
 import { handleModalKeyDown, setupModalFocus, restoreModalFocus } from './modalFocusTrap';
 
 const CONTACT_EMAIL = 'contato@ciclomapa.org.br';
-const LAST_UPDATED = '31/05/2026';
+const LAST_UPDATED = '07/09/2026';
 
 const paragraphClass = 'text-sm sm:text-base leading-relaxed text-gray-300 mb-3';
 const listClass =
@@ -183,6 +183,10 @@ function getSections() {
             <li>sistema operacional;</li>
             <li>tipo e versão do navegador;</li>
             <li>informações derivadas do endereço de IP;</li>
+            <li>
+              um identificador aleatório salvo no navegador, usado para estimar quantas pessoas
+              encontraram o mesmo erro, sem incluir nome ou e-mail;
+            </li>
             <li>registros técnicos de erro ou funcionamento;</li>
             <li>dados agregados sobre uso da plataforma.</li>
           </ul>
