@@ -3,6 +3,7 @@
  * (no browser, no `yarn start`). Run: `yarn e2e e2e/apis.spec.ts`
  *
  * Optional env (same names as CRA): when unset, Mapbox / ORS / GraphHopper / Google tests skip.
+ * Airtable function smoke: set AIRTABLE_API_SMOKE_BASE_URL (no POST; does not create comments).
  * Keys restricted to browser referrers may fail here; use a server-friendly token or run locally.
  *
  * When a provider is down (connection errors or HTTP 5xx/429), tests skip with warnings in the
@@ -37,6 +38,8 @@ const OVERPASS_TRY_MS = 35_000;
 const VALHALLA_BASE_URL = 'https://valhalla1.openstreetmap.de/route';
 const VALHALLA_TRY_MS = 30_000;
 const VALHALLA_RETRIES = 3;
+
+const airtableSmokeBase = process.env.AIRTABLE_API_SMOKE_BASE_URL?.replace(/\/$/, '');
 
 const mapboxToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
 const orsKey = process.env.REACT_APP_OPENROUTESERVICE_API_KEY;
@@ -295,6 +298,44 @@ test.describe('Google Maps JS bootstrap (requires REACT_APP_GOOGLE_PLACES_API_KE
       skipIfHttpOutage(testInfo, 'Google Maps', endpoint, res.status(), text);
       expect(res.ok(), text).toBeTruthy();
       expect(text).toContain('google.maps');
+    });
+  });
+});
+
+test.describe('CicloMapa Airtable proxy (requires AIRTABLE_API_SMOKE_BASE_URL)', () => {
+  test.beforeEach(() => {
+    test.skip(
+      !airtableSmokeBase,
+      'Set AIRTABLE_API_SMOKE_BASE_URL to run deployed Airtable function checks'
+    );
+  });
+
+  test('GET /api/airtable/metadata returns records', async ({ request }, testInfo) => {
+    const endpoint = `${airtableSmokeBase}/api/airtable/metadata`;
+    await withApiOutageSkip(testInfo, 'Airtable metadata', endpoint, async () => {
+      const res = await request.get(endpoint);
+      const text = await res.text();
+      skipIfHttpOutage(testInfo, 'Airtable metadata', endpoint, res.status(), text);
+      expect(res.ok(), text).toBeTruthy();
+      const data = JSON.parse(text);
+      expect(Array.isArray(data)).toBe(true);
+    });
+  });
+
+  test('GET /api/airtable/comments returns tags and no emails', async ({ request }, testInfo) => {
+    const endpoint = `${airtableSmokeBase}/api/airtable/comments`;
+    await withApiOutageSkip(testInfo, 'Airtable comments', endpoint, async () => {
+      const res = await request.get(endpoint);
+      const text = await res.text();
+      skipIfHttpOutage(testInfo, 'Airtable comments', endpoint, res.status(), text);
+      expect(res.ok(), text).toBeTruthy();
+      const data = JSON.parse(text);
+      expect(Array.isArray(data.tagsList)).toBe(true);
+      expect(Array.isArray(data.comments)).toBe(true);
+      for (const comment of data.comments) {
+        expect(comment.fields?.email).toBeUndefined();
+      }
+      expect(JSON.stringify(data)).not.toMatch(/"email"\s*:/);
     });
   });
 });

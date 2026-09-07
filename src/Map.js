@@ -1137,7 +1137,15 @@ class Map extends Component {
       this.map.removeLayer('comentarios');
     }
 
-    this.setState(await this.airtableDatabase.getComments(), () => {
+    let commentsData;
+    try {
+      commentsData = await this.airtableDatabase.getComments();
+    } catch (err) {
+      console.warn('Failed to load comments', err);
+      return;
+    }
+
+    this.setState(commentsData, () => {
       if (this.state.comments.length > 0) {
         this.map.getSource('commentsSrc').setData({
           type: 'FeatureCollection',
