@@ -353,6 +353,7 @@ function ensureGoogleMapsScriptLoaded(apiKey, language, region) {
         libraries: 'places',
         language,
         region,
+        loading: 'async',
       }).toString()}`;
       script.onload = () => resolve();
       script.onerror = () => {
