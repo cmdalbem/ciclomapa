@@ -34,4 +34,16 @@ if (dsn && environment) {
       'ResizeObserver loop completed with undelivered notifications',
     ],
   });
+
+  let anonymousUserId;
+  try {
+    anonymousUserId = window.localStorage.getItem('ciclomapa:sentry-user-id');
+    if (!anonymousUserId) {
+      anonymousUserId = window.crypto.randomUUID();
+      window.localStorage.setItem('ciclomapa:sentry-user-id', anonymousUserId);
+    }
+  } catch {
+    anonymousUserId = window.crypto.randomUUID();
+  }
+  Sentry.setUser({ id: anonymousUserId });
 }
