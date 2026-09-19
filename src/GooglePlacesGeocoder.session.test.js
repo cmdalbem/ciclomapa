@@ -151,11 +151,20 @@ describe('GooglePlacesGeocoder autocomplete sessions', () => {
       }),
     }));
 
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const geocoder = new GooglePlacesGeocoder({ apiKey: 'test-key' });
-    await expect(geocoder.getPlaceDetails('missing')).rejects.toMatchObject({
+    await expect(
+      geocoder.getPlaceDetails('missing', { label: 'Padaria do Centro' })
+    ).rejects.toMatchObject({
       message: 'Failed to get place details (NOT_FOUND)',
       code: 'NOT_FOUND',
     });
+    expect(warn).toHaveBeenCalledWith('Google place details error:', {
+      status: 'NOT_FOUND',
+      placeId: 'missing',
+      label: 'Padaria do Centro',
+    });
+    warn.mockRestore();
   });
 
   it('resetAutocompleteSession drops the token so the next search starts fresh', async () => {
