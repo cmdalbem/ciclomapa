@@ -22,6 +22,10 @@ function installGoogleMapsAuthFailureHook() {
 /** Short PT message for UI — distinguishes load failure vs API not responding. */
 export function getPlacesSearchUserMessage(error) {
   const code = error?.code || '';
+  const message = error?.message || '';
+  if (typeof message === 'string' && message.startsWith('Failed to get place details')) {
+    return 'Não foi possível abrir esse lugar. Tente outro resultado.';
+  }
   if (
     code === 'SCRIPT_LOAD_FAILED' ||
     code === 'NOT_LOADED' ||

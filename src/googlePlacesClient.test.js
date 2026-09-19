@@ -1,6 +1,7 @@
 import {
   applyDirectionsInputLabelToResult,
   getDirectionsInputLabelFromResultLike,
+  getPlacesSearchUserMessage,
   getShortAddressFromResultLike,
 } from './googlePlacesClient.js';
 
@@ -108,5 +109,16 @@ describe('getShortAddressFromResultLike', () => {
     });
 
     expect(label).toBe('Rua das Flores, 123');
+  });
+});
+
+describe('getPlacesSearchUserMessage', () => {
+  it('tells people to try another result when place details fail', () => {
+    expect(
+      getPlacesSearchUserMessage({
+        message: 'Failed to get place details (NOT_FOUND)',
+        code: 'NOT_FOUND',
+      })
+    ).toBe('Não foi possível abrir esse lugar. Tente outro resultado.');
   });
 });

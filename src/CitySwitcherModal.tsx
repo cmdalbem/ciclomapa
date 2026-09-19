@@ -730,7 +730,14 @@ function usePlacesAutocompleteSearch({
     };
   }, []);
 
-  return { suggestions, loading, searchError, scheduleSearch, clearResults } as const;
+  return {
+    suggestions,
+    loading,
+    searchError,
+    setSearchError,
+    scheduleSearch,
+    clearResults,
+  } as const;
 }
 
 function useCityPickerFocusAndRestore({
@@ -1221,6 +1228,7 @@ function CitySwitcherModal({
     suggestions: placesSuggestions,
     loading: placesSearchLoading,
     searchError: placesSearchError,
+    setSearchError: setPlacesSearchError,
     scheduleSearch: schedulePlacesSearch,
     clearResults: clearPlacesSearch,
   } = usePlacesAutocompleteSearch({
@@ -1391,7 +1399,10 @@ function CitySwitcherModal({
         const { result: resolvedRaw } = await geocodePlacesSuggestionToResult(sug);
         const resolved = resolvedRaw as GeocodedPlaceResult;
         if (!resolved.center) {
-          console.error(CITY_SWITCHER_LOG_PREFIX, 'place resolve missing center', resolved);
+          console.warn(CITY_SWITCHER_LOG_PREFIX, 'place resolve missing center', resolved);
+          setPlacesSearchError(
+            getPlacesSearchUserMessage({ message: 'Failed to get place details' })
+          );
           return;
         }
         const [lng, lat] = resolved.center;
@@ -1423,9 +1434,16 @@ function CitySwitcherModal({
         clearPlacesSearch();
       } catch (e) {
         console.warn(CITY_SWITCHER_LOG_PREFIX, 'place details failed', e);
+        setPlacesSearchError(getPlacesSearchUserMessage(e));
       }
     },
-    [clearPlacesSearch, closeCityPicker, onPlacesResultSelected, recordRecentPlace]
+    [
+      clearPlacesSearch,
+      closeCityPicker,
+      onPlacesResultSelected,
+      recordRecentPlace,
+      setPlacesSearchError,
+    ]
   );
 
   /** Runs when the user follows a city link in this tab (navigation is handled by the link `to`). */
@@ -1560,105 +1578,112 @@ function CitySwitcherModal({
                 <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm opacity-75">
                   Buscando…
                 </p>
-              ) : placesSearchError ? (
-                <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm text-amber-200/90">
-                  {placesSearchError}
-                </p>
               ) : placeSuggestionList.length === 0 ? (
-                <p className="city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm opacity-75">
-                  Nenhum resultado
+                <p
+                  className={`city-switcher-modal__placeSearchStatus px-3.5 py-4 text-sm ${
+                    placesSearchError ? 'text-amber-200/90' : 'opacity-75'
+                  }`}
+                >
+                  {placesSearchError || 'Nenhum resultado'}
                 </p>
               ) : (
-                <div
-                  id="city-switcher-place-results-list"
-                  className="city-switcher-modal__placeResultsList"
-                  role="list"
-                >
-                  {placeSuggestionList.map((s, i) => {
-                    const sugName =
-                      s.properties?.structured_formatting?.main_text ||
-                      s.properties?.name ||
-                      s.place_name ||
-                      '';
-                    const sugSecondary =
-                      s.properties?.structured_formatting?.secondary_text ||
-                      s.properties?.formatted_address ||
-                      '';
-                    const rowFav = isPlaceSearchRowFavorited(s, favorites);
-                    const rowPlaceId = placeSearchRowKey(s);
-                    return (
-                      <div
-                        key={s.id || s.properties?.place_id || `${s.place_name}-${i}`}
-                        className={withStaggerEnterClass(
-                          'city-switcher-modal__cityCardWrap',
-                          shouldStaggerEnter
-                        )}
-                        style={staggerEnterStyle(i, shouldStaggerEnter)}
-                        role="listitem"
-                      >
-                        <div className="city-switcher-modal__placeSearchResultCard">
-                          <button
-                            type="button"
-                            className="city-switcher-modal__placeSearchCardPick"
-                            onClick={() => void handlePlaceSuggestionPick(s)}
-                          >
-                            <PlacesAutocompleteOptionLabel
-                              suggestion={s}
-                              rowClassName="city-switcher-modal__placeSearchRow"
-                              iconWrapperClassName="city-switcher-modal__placeSearchIconWrap"
-                              primaryClassName="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary"
-                              secondaryClassName="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary"
-                              iconClassName="city-switcher-modal__placeSearchIcon"
-                              iconMatchedClassName="city-switcher-modal__placeSearchIcon city-switcher-modal__placeSearchIcon--matched"
-                            />
-                          </button>
-                          <button
-                            type="button"
-                            className="city-switcher-modal__favBtn city-switcher-modal__placeSearchCardFav"
-                            aria-label={
-                              rowFav ? `Remover ${sugName} dos favoritos` : `Favoritar ${sugName}`
-                            }
-                            aria-pressed={rowFav}
-                            onClick={() => {
-                              (async () => {
-                                try {
-                                  const { result: resolvedRaw } =
-                                    await geocodePlacesSuggestionToResult(s);
-                                  const resolved = resolvedRaw as GeocodedPlaceResult;
-                                  if (!resolved.center) return;
-                                  const [lng, lat] = resolved.center;
-                                  handleToggleFavorite({
-                                    lng,
-                                    lat,
-                                    title:
-                                      resolved.properties?.name || resolved.place_name || sugName,
-                                    subtitle:
-                                      resolved.properties?.formatted_address || sugSecondary,
-                                    placeTypes: resolved.properties?.types,
-                                    placeId: rowPlaceId,
-                                    areaContext: getAreaStringFromResultLike(resolved) || '',
-                                  });
-                                } catch {}
-                              })();
-                            }}
-                          >
-                            {rowFav ? (
-                              <HiHeartIcon
-                                className="city-switcher-modal__favIcon city-switcher-modal__favIcon--active"
-                                aria-hidden
+                <>
+                  {placesSearchError ? (
+                    <p className="city-switcher-modal__placeSearchStatus px-3.5 pb-2 text-sm text-amber-200/90">
+                      {placesSearchError}
+                    </p>
+                  ) : null}
+                  <div
+                    id="city-switcher-place-results-list"
+                    className="city-switcher-modal__placeResultsList"
+                    role="list"
+                  >
+                    {placeSuggestionList.map((s, i) => {
+                      const sugName =
+                        s.properties?.structured_formatting?.main_text ||
+                        s.properties?.name ||
+                        s.place_name ||
+                        '';
+                      const sugSecondary =
+                        s.properties?.structured_formatting?.secondary_text ||
+                        s.properties?.formatted_address ||
+                        '';
+                      const rowFav = isPlaceSearchRowFavorited(s, favorites);
+                      const rowPlaceId = placeSearchRowKey(s);
+                      return (
+                        <div
+                          key={s.id || s.properties?.place_id || `${s.place_name}-${i}`}
+                          className={withStaggerEnterClass(
+                            'city-switcher-modal__cityCardWrap',
+                            shouldStaggerEnter
+                          )}
+                          style={staggerEnterStyle(i, shouldStaggerEnter)}
+                          role="listitem"
+                        >
+                          <div className="city-switcher-modal__placeSearchResultCard">
+                            <button
+                              type="button"
+                              className="city-switcher-modal__placeSearchCardPick"
+                              onClick={() => void handlePlaceSuggestionPick(s)}
+                            >
+                              <PlacesAutocompleteOptionLabel
+                                suggestion={s}
+                                rowClassName="city-switcher-modal__placeSearchRow"
+                                iconWrapperClassName="city-switcher-modal__placeSearchIconWrap"
+                                primaryClassName="city-switcher-modal__cityName city-switcher-modal__placeSearchPrimary"
+                                secondaryClassName="city-switcher-modal__cityMeta city-switcher-modal__placeSearchSecondary"
+                                iconClassName="city-switcher-modal__placeSearchIcon"
+                                iconMatchedClassName="city-switcher-modal__placeSearchIcon city-switcher-modal__placeSearchIcon--matched"
                               />
-                            ) : (
-                              <HiOutlineHeartIcon
-                                className="city-switcher-modal__favIcon"
-                                aria-hidden
-                              />
-                            )}
-                          </button>
+                            </button>
+                            <button
+                              type="button"
+                              className="city-switcher-modal__favBtn city-switcher-modal__placeSearchCardFav"
+                              aria-label={
+                                rowFav ? `Remover ${sugName} dos favoritos` : `Favoritar ${sugName}`
+                              }
+                              aria-pressed={rowFav}
+                              onClick={() => {
+                                (async () => {
+                                  try {
+                                    const { result: resolvedRaw } =
+                                      await geocodePlacesSuggestionToResult(s);
+                                    const resolved = resolvedRaw as GeocodedPlaceResult;
+                                    if (!resolved.center) return;
+                                    const [lng, lat] = resolved.center;
+                                    handleToggleFavorite({
+                                      lng,
+                                      lat,
+                                      title:
+                                        resolved.properties?.name || resolved.place_name || sugName,
+                                      subtitle:
+                                        resolved.properties?.formatted_address || sugSecondary,
+                                      placeTypes: resolved.properties?.types,
+                                      placeId: rowPlaceId,
+                                      areaContext: getAreaStringFromResultLike(resolved) || '',
+                                    });
+                                  } catch {}
+                                })();
+                              }}
+                            >
+                              {rowFav ? (
+                                <HiHeartIcon
+                                  className="city-switcher-modal__favIcon city-switcher-modal__favIcon--active"
+                                  aria-hidden
+                                />
+                              ) : (
+                                <HiOutlineHeartIcon
+                                  className="city-switcher-modal__favIcon"
+                                  aria-hidden
+                                />
+                              )}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </section>
           ) : null}

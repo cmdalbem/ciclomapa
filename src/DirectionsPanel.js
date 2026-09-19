@@ -419,13 +419,8 @@ class DirectionsPanel extends Component {
       }
     } catch (error) {
       console.warn('Error getting place details:', error);
-      if (this.validateSameCity(inputType, result)) {
-        const committed = applyDirectionsInputLabelToResult(result, { area: this.props.area });
-        this.handleGeocoderResult({ result: committed }, inputType);
-      }
       this.setState({
-        [`${inputType}Suggestions`]: [],
-        [`${inputType}SearchValue`]: this.getInputDisplayValue(result),
+        placesSearchError: getPlacesSearchUserMessage(error),
       });
     }
   }
