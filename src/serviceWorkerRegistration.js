@@ -52,7 +52,12 @@ function registerValidSW(swUrl, config) {
       };
     })
     .catch((error) => {
-      console.error('Error during service worker registration:', error);
+      // Use console.log (not console.error/warn) so Sentry's captureConsole
+      // integration doesn't report this as an issue. Registration failures
+      // are typically caused by browser extensions intercepting the SW API
+      // on certain devices (e.g. Android + Chrome Mobile) and are not
+      // actionable from the app side.
+      console.log('Error during service worker registration:', error);
     });
 }
 
