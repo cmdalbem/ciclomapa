@@ -404,15 +404,38 @@ class GooglePlacesGeocoder {
     const maps = window.google.maps;
 
     try {
-      // Classic script URL (no loading=async): onload means Geocoder + libraries=places are ready.
-      this.geocoder = new maps.Geocoder();
+      // `loading=async` only boots the loader. Geocoder / Places live on
+      // google.maps after importLibrary, not on script.onload.
+      let GeocoderCtor = maps.Geocoder;
+      let places = maps.places;
 
-      if (maps.places?.AutocompleteService) {
-        this.autocompleteService = new maps.places.AutocompleteService();
+      if (typeof maps.importLibrary === 'function') {
+        const [geocodingLib, placesLib] = await Promise.all([
+          maps.importLibrary('geocoding'),
+          maps.importLibrary('places'),
+        ]);
+        GeocoderCtor = geocodingLib?.Geocoder || maps.Geocoder;
+        places = placesLib || maps.places;
+        if (GeocoderCtor && !maps.Geocoder) {
+          maps.Geocoder = GeocoderCtor;
+        }
+        if (places) {
+          maps.places = { ...(maps.places || {}), ...places };
+        }
       }
-      if (maps.places?.PlacesService) {
+
+      if (typeof GeocoderCtor !== 'function') {
+        throw createPlacesError('Google Geocoder not available', 'GEOCODER_UNAVAILABLE');
+      }
+
+      this.geocoder = new GeocoderCtor();
+
+      if (typeof places?.AutocompleteService === 'function') {
+        this.autocompleteService = new places.AutocompleteService();
+      }
+      if (typeof places?.PlacesService === 'function') {
         const dummyDiv = document.createElement('div');
-        this.placesService = new maps.places.PlacesService(dummyDiv);
+        this.placesService = new places.PlacesService(dummyDiv);
       }
 
       if (!this.autocompleteService) {
