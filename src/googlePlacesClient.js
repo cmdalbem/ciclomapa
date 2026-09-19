@@ -24,7 +24,7 @@ export function getPlacesSearchUserMessage(error) {
   const code = error?.code || '';
   const message = error?.message || '';
   if (typeof message === 'string' && message.startsWith('Failed to get place details')) {
-    return 'Não foi possível abrir esse lugar. Tente outro resultado.';
+    return 'Não foi possível abrir esse lugar. Tente de novo, ou escolha outro resultado.';
   }
   if (
     code === 'SCRIPT_LOAD_FAILED' ||
