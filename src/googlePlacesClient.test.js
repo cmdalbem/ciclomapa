@@ -119,6 +119,6 @@ describe('getPlacesSearchUserMessage', () => {
         message: 'Failed to get place details (NOT_FOUND)',
         code: 'NOT_FOUND',
       })
-    ).toBe('Não foi possível abrir esse lugar. Tente outro resultado.');
+    ).toBe('Não foi possível abrir esse lugar. Tente de novo, ou escolha outro resultado.');
   });
 });
