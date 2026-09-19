@@ -9,6 +9,19 @@ import {
 /** Same threshold as DirectionsPanel origin/destination search. */
 export const PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH = 3;
 
+/** Start the Maps bootstrap without waiting; used when a search field is focused. */
+export function prefetchGooglePlaces() {
+  try {
+    const pending = ensureGooglePlacesReady();
+    if (pending && typeof pending.catch === 'function') {
+      return pending.catch(() => {});
+    }
+  } catch {
+    // Search still loads Maps on the first real query.
+  }
+  return Promise.resolve();
+}
+
 /** Shared debounce for Google Places prediction requests (keystroke typing). */
 export const PLACES_AUTOCOMPLETE_DEBOUNCE_MS = 600;
 

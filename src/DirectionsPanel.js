@@ -44,6 +44,7 @@ import {
   getDirectionsCurrentLocationSuggestion,
   PLACES_AUTOCOMPLETE_DEBOUNCE_MS,
   PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
+  prefetchGooglePlaces,
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
 
@@ -417,7 +418,7 @@ class DirectionsPanel extends Component {
         }, 500);
       }
     } catch (error) {
-      console.error('Error getting place details:', error);
+      console.warn('Error getting place details:', error);
       if (this.validateSameCity(inputType, result)) {
         const committed = applyDirectionsInputLabelToResult(result, { area: this.props.area });
         this.handleGeocoderResult({ result: committed }, inputType);
@@ -1018,6 +1019,7 @@ class DirectionsPanel extends Component {
     }
 
     this.setState({ focusedInput: inputType });
+    prefetchGooglePlaces();
 
     const currentValue = this.state[`${inputType}SearchValue`] || '';
     if (currentValue.trim().length < PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH) {

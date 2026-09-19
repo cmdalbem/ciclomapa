@@ -81,11 +81,28 @@ describe('GooglePlacesGeocoder autocomplete sessions', () => {
     expect(thirdRequest.sessionToken).not.toBe(firstRequest.sessionToken);
   });
 
-  it('loads Geocoder and Places via importLibrary when constructors are missing', async () => {
-    const Geocoder = jest.fn();
+  it('loads Places via importLibrary on search, and Geocoder only on reverse geocode', async () => {
+    const Geocoder = jest.fn().mockImplementation(() => ({
+      geocode: jest.fn((request, callback) => {
+        callback(
+          [
+            {
+              place_id: 'rev',
+              formatted_address: 'Rua Teste',
+              geometry: { location: { lng: () => -46.6, lat: () => -23.5 } },
+              address_components: [],
+              types: ['route'],
+            },
+          ],
+          'OK'
+        );
+      }),
+    }));
     class AutocompleteSessionToken {}
     const AutocompleteService = jest.fn().mockImplementation(() => ({
-      getPlacePredictions: jest.fn(),
+      getPlacePredictions: jest.fn((request, callback) => {
+        callback([], window.google.maps.places.PlacesServiceStatus.OK);
+      }),
     }));
     const PlacesService = jest.fn().mockImplementation(() => ({
       getDetails: jest.fn(),
@@ -93,6 +110,7 @@ describe('GooglePlacesGeocoder autocomplete sessions', () => {
 
     window.google = {
       maps: {
+        GeocoderStatus: { OK: 'OK' },
         importLibrary: jest.fn(async (name) => {
           if (name === 'geocoding') {
             return { Geocoder };
@@ -102,7 +120,7 @@ describe('GooglePlacesGeocoder autocomplete sessions', () => {
               AutocompleteSessionToken,
               AutocompleteService,
               PlacesService,
-              PlacesServiceStatus: { OK: 'OK' },
+              PlacesServiceStatus: { OK: 'OK', ZERO_RESULTS: 'ZERO_RESULTS' },
             };
           }
           return {};
@@ -112,15 +130,32 @@ describe('GooglePlacesGeocoder autocomplete sessions', () => {
 
     const geocoder = new GooglePlacesGeocoder({ apiKey: 'test-key' });
     await geocoder.loadGoogleMapsAPI();
+    expect(window.google.maps.importLibrary).not.toHaveBeenCalled();
 
-    expect(window.google.maps.importLibrary).toHaveBeenCalledWith('geocoding');
+    await geocoder.search('cafe');
     expect(window.google.maps.importLibrary).toHaveBeenCalledWith('places');
-    expect(Geocoder).toHaveBeenCalled();
+    expect(window.google.maps.importLibrary).not.toHaveBeenCalledWith('geocoding');
     expect(AutocompleteService).toHaveBeenCalled();
-    expect(PlacesService).toHaveBeenCalled();
-    expect(geocoder.geocoder).toBeDefined();
-    expect(geocoder.autocompleteService).toBeDefined();
-    expect(geocoder.placesService).toBeDefined();
+    expect(Geocoder).not.toHaveBeenCalled();
+
+    await geocoder.reverseGeocode([-46.6, -23.5]);
+    expect(window.google.maps.importLibrary).toHaveBeenCalledWith('geocoding');
+    expect(Geocoder).toHaveBeenCalled();
+  });
+
+  it('includes the Google status when place details fail', async () => {
+    mockGooglePlaces();
+    window.google.maps.places.PlacesService = jest.fn().mockImplementation(() => ({
+      getDetails: jest.fn((request, callback) => {
+        callback(null, 'NOT_FOUND');
+      }),
+    }));
+
+    const geocoder = new GooglePlacesGeocoder({ apiKey: 'test-key' });
+    await expect(geocoder.getPlaceDetails('missing')).rejects.toMatchObject({
+      message: 'Failed to get place details (NOT_FOUND)',
+      code: 'NOT_FOUND',
+    });
   });
 
   it('resetAutocompleteSession drops the token so the next search starts fresh', async () => {

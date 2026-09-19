@@ -350,7 +350,6 @@ function ensureGoogleMapsScriptLoaded(apiKey, language, region) {
       script.async = true;
       script.src = `https://maps.googleapis.com/maps/api/js?${new URLSearchParams({
         key: apiKey,
-        libraries: 'places',
         language,
         region,
         loading: 'async',
@@ -376,16 +375,6 @@ class GooglePlacesGeocoder {
     this.placesService = null;
     /** @type {google.maps.places.AutocompleteSessionToken | null} */
     this.autocompleteSessionToken = null;
-
-    if (this.apiKey && window.google && window.google.maps) {
-      this.initializeServices().catch((error) => {
-        console.error('Failed to initialize services in constructor:', error);
-      });
-    } else if (this.apiKey) {
-      this.loadGoogleMapsAPI().catch((error) => {
-        console.error('Failed to load Google Maps API:', error);
-      });
-    }
   }
 
   async loadGoogleMapsAPI() {
@@ -393,58 +382,58 @@ class GooglePlacesGeocoder {
       throw createPlacesError('Google Maps API key is missing', 'MISSING_API_KEY');
     }
     await ensureGoogleMapsScriptLoaded(this.apiKey, this.language, this.region);
-    await this.initializeServices();
-  }
-
-  async initializeServices() {
     if (!window.google?.maps) {
       throw createPlacesError('Google Maps API not loaded', 'NOT_LOADED');
     }
+  }
+
+  async ensurePlacesServices() {
+    await this.loadGoogleMapsAPI();
+    if (this.autocompleteService && this.placesService) {
+      return;
+    }
 
     const maps = window.google.maps;
-
-    try {
-      // `loading=async` only boots the loader. Geocoder / Places live on
-      // google.maps after importLibrary, not on script.onload.
-      let GeocoderCtor = maps.Geocoder;
-      let places = maps.places;
-
-      if (typeof maps.importLibrary === 'function') {
-        const [geocodingLib, placesLib] = await Promise.all([
-          maps.importLibrary('geocoding'),
-          maps.importLibrary('places'),
-        ]);
-        GeocoderCtor = geocodingLib?.Geocoder || maps.Geocoder;
-        places = placesLib || maps.places;
-        if (GeocoderCtor && !maps.Geocoder) {
-          maps.Geocoder = GeocoderCtor;
-        }
-        if (places) {
-          maps.places = { ...(maps.places || {}), ...places };
-        }
+    let places = maps.places;
+    if (typeof maps.importLibrary === 'function') {
+      const placesLib = await maps.importLibrary('places');
+      places = placesLib || maps.places;
+      if (places) {
+        maps.places = { ...(maps.places || {}), ...places };
       }
-
-      if (typeof GeocoderCtor !== 'function') {
-        throw createPlacesError('Google Geocoder not available', 'GEOCODER_UNAVAILABLE');
-      }
-
-      this.geocoder = new GeocoderCtor();
-
-      if (typeof places?.AutocompleteService === 'function') {
-        this.autocompleteService = new places.AutocompleteService();
-      }
-      if (typeof places?.PlacesService === 'function') {
-        const dummyDiv = document.createElement('div');
-        this.placesService = new places.PlacesService(dummyDiv);
-      }
-
-      if (!this.autocompleteService) {
-        throw createPlacesError('Google Places library not available', 'PLACES_UNAVAILABLE');
-      }
-    } catch (error) {
-      console.error('Failed to initialize Google Maps services:', error);
-      throw error;
     }
+
+    if (typeof places?.AutocompleteService !== 'function') {
+      throw createPlacesError('Google Places library not available', 'PLACES_UNAVAILABLE');
+    }
+
+    this.autocompleteService = new places.AutocompleteService();
+    if (typeof places.PlacesService === 'function') {
+      this.placesService = new places.PlacesService(document.createElement('div'));
+    }
+  }
+
+  async ensureGeocoderService() {
+    await this.loadGoogleMapsAPI();
+    if (this.geocoder) {
+      return;
+    }
+
+    const maps = window.google.maps;
+    let GeocoderCtor = maps.Geocoder;
+    if (typeof maps.importLibrary === 'function') {
+      const geocodingLib = await maps.importLibrary('geocoding');
+      GeocoderCtor = geocodingLib?.Geocoder || maps.Geocoder;
+      if (GeocoderCtor && !maps.Geocoder) {
+        maps.Geocoder = GeocoderCtor;
+      }
+    }
+
+    if (typeof GeocoderCtor !== 'function') {
+      throw createPlacesError('Google Geocoder not available', 'GEOCODER_UNAVAILABLE');
+    }
+
+    this.geocoder = new GeocoderCtor();
   }
 
   getOrCreateAutocompleteSessionToken() {
@@ -462,6 +451,7 @@ class GooglePlacesGeocoder {
   }
 
   async search(query, options = {}) {
+    await this.ensurePlacesServices();
     if (!this.autocompleteService) {
       throw createPlacesError('Google Places API not initialized', 'NOT_INITIALIZED');
     }
@@ -480,8 +470,10 @@ class GooglePlacesGeocoder {
     }
 
     if (options.proximity) {
-      request.location = new window.google.maps.LatLng(options.proximity[1], options.proximity[0]);
-      request.radius = options.radius || 50000;
+      request.locationBias = {
+        center: { lat: options.proximity[1], lng: options.proximity[0] },
+        radius: options.radius || 50000,
+      };
     }
 
     const sessionToken = this.getOrCreateAutocompleteSessionToken();
@@ -542,8 +534,9 @@ class GooglePlacesGeocoder {
   }
 
   async getPlaceDetails(placeId) {
+    await this.ensurePlacesServices();
     if (!this.placesService) {
-      throw new Error('Google Places Service not initialized');
+      throw createPlacesError('Google Places Service not initialized', 'NOT_INITIALIZED');
     }
 
     trackCall({ api: API_TYPES.GOOGLE_PLACE_DETAILS, details: placeId });
@@ -570,16 +563,19 @@ class GooglePlacesGeocoder {
             types: place.types,
             address_components: place.address_components,
           });
-        } else {
-          reject(new Error('Failed to get place details'));
+          return;
         }
+
+        console.warn('Google place details error:', status);
+        reject(createPlacesError(`Failed to get place details (${status})`, status));
       });
     });
   }
 
   async reverseGeocode(lngLat, options = {}) {
+    await this.ensureGeocoderService();
     if (!this.geocoder) {
-      throw new Error('Google Geocoder not initialized');
+      throw createPlacesError('Google Geocoder not initialized', 'GEOCODER_UNAVAILABLE');
     }
 
     trackCall({
@@ -588,7 +584,7 @@ class GooglePlacesGeocoder {
     });
 
     const request = {
-      location: new window.google.maps.LatLng(lngLat[1], lngLat[0]),
+      location: { lat: lngLat[1], lng: lngLat[0] },
       language: options.language || this.language,
     };
 

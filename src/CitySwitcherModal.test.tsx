@@ -18,7 +18,7 @@ jest.mock('./googlePlacesClient.js', () => {
     getCityFromResultLike: actual.getCityFromResultLike,
     getAreaStringFromResultLike: actual.getAreaStringFromResultLike,
     getPlacesSearchUserMessage: actual.getPlacesSearchUserMessage,
-    ensureGooglePlacesReady: jest.fn().mockResolvedValue(undefined),
+    ensureGooglePlacesReady: jest.fn(() => Promise.resolve()),
     resetPlacesAutocompleteSession: jest.fn(),
     getGooglePlacesGeocoder: jest.fn().mockReturnValue({
       search: jest.fn().mockResolvedValue([]),
