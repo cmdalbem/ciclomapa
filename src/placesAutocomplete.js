@@ -190,7 +190,16 @@ export async function geocodePlacesSuggestionToResult(suggestion, { area } = {})
 
   if (suggestion.properties?.place_id && !suggestion.center) {
     await ensureGooglePlacesReady();
-    const details = await getGooglePlacesGeocoder().getPlaceDetails(suggestion.properties.place_id);
+    const label =
+      suggestion.place_name ||
+      suggestion.properties?.structured_formatting?.main_text ||
+      suggestion.text;
+    const details = await getGooglePlacesGeocoder().getPlaceDetails(
+      suggestion.properties.place_id,
+      {
+        label,
+      }
+    );
     const completeResult = {
       ...suggestion,
       center: details.coordinates,

@@ -533,7 +533,7 @@ class GooglePlacesGeocoder {
     };
   }
 
-  async getPlaceDetails(placeId) {
+  async getPlaceDetails(placeId, { label } = {}) {
     await this.ensurePlacesServices();
     if (!this.placesService) {
       throw createPlacesError('Google Places Service not initialized', 'NOT_INITIALIZED');
@@ -566,7 +566,11 @@ class GooglePlacesGeocoder {
           return;
         }
 
-        console.warn('Google place details error:', status);
+        console.warn('Google place details error:', {
+          status,
+          placeId,
+          label: label || null,
+        });
         reject(createPlacesError(`Failed to get place details (${status})`, status));
       });
     });
