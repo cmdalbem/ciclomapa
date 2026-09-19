@@ -28,6 +28,7 @@ export function getPlacesSearchUserMessage(error) {
     code === 'MISSING_API_KEY' ||
     code === 'AUTH_FAILURE' ||
     code === 'PLACES_UNAVAILABLE' ||
+    code === 'GEOCODER_UNAVAILABLE' ||
     code === 'NOT_INITIALIZED' ||
     code === 'SSR'
   ) {
