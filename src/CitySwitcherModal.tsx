@@ -39,6 +39,7 @@ import {
   getCitySwitcherPlacesSearchOptions,
   PLACES_AUTOCOMPLETE_DEBOUNCE_MS,
   PLACES_AUTOCOMPLETE_MIN_QUERY_LENGTH,
+  prefetchGooglePlaces,
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
 import OSMController from './OSMController.js';
@@ -1421,7 +1422,7 @@ function CitySwitcherModal({
         setGlobalSearchValue('');
         clearPlacesSearch();
       } catch (e) {
-        console.error(CITY_SWITCHER_LOG_PREFIX, 'place details failed', e);
+        console.warn(CITY_SWITCHER_LOG_PREFIX, 'place details failed', e);
       }
     },
     [clearPlacesSearch, closeCityPicker, onPlacesResultSelected, recordRecentPlace]
@@ -1530,6 +1531,9 @@ function CitySwitcherModal({
                 }}
                 prefix={<IconSearchTyped className="opacity-60" aria-hidden />}
                 placeholder={globalSearchPlaceholder}
+                onFocus={() => {
+                  prefetchGooglePlaces();
+                }}
                 aria-autocomplete="list"
                 aria-controls={
                   showPlaceSearchResults ? 'city-switcher-place-results-list' : undefined

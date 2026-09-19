@@ -56,7 +56,6 @@ import {
 import { readFavorites, toggleFavorite } from './favoritesStore';
 import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 import userLocationCache from './features/geolocation/userLocationCache.js';
-import { ensureGooglePlacesReady } from './googlePlacesClient.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 import { startDataLoad, finishDataLoad } from './dev/dataLoadTracker.js';
 
@@ -1668,7 +1667,6 @@ class App extends Component {
     // depends on. Geolocation only warms up if permission was already granted,
     // so we don't pop a surprise prompt before the user asks for it.
     userLocationCache.warmUpIfAlreadyGranted();
-    ensureGooglePlacesReady().catch(() => {});
 
     const citySlug = this.getCitySlugFromRoute();
     if (citySlug) {
