@@ -3213,24 +3213,27 @@ class Map extends Component {
         <div
           data-testid="map-container"
           ref={(el) => (this.mapContainer = el)}
-          style={
+          className={
             isE2E || this.state.webglError
-              ? {
-                  width: '100%',
-                  height: 'var(--viewport-height, 100vh)',
-                  minHeight: 'var(--viewport-height, 100vh)',
-                }
+              ? 'h-[var(--viewport-height,100vh)] min-h-[var(--viewport-height,100vh)] w-full'
               : undefined
           }
         >
           {this.state.webglError && (
-            <div className="webgl-error" role="alert">
-              <p>
+            <div
+              className="box-border flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center text-base leading-normal text-white"
+              role="alert"
+            >
+              <p className="m-0 max-w-md">
                 Não deu para desenhar o mapa. Seu navegador não tem suporte a WebGL, ou ele está
                 desligado.
               </p>
-              <p>Tente outro navegador, ou recarregue a página.</p>
-              <button type="button" onClick={() => window.location.reload()}>
+              <p className="m-0 max-w-md">Tente outro navegador, ou recarregue a página.</p>
+              <button
+                type="button"
+                className="mt-2 rounded-full border border-current bg-transparent px-4 py-2 text-inherit"
+                onClick={() => window.location.reload()}
+              >
                 Recarregar
               </button>
             </div>
