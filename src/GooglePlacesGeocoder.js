@@ -330,6 +330,7 @@ export function PlacesAutocompleteOptionLabel({
 
 /** One shared inject so HMR / concurrent callers do not append multiple script tags. */
 let googleMapsScriptReadyPromise = null;
+const GOOGLE_MAPS_READY_CALLBACK = '__ciclomapaGoogleMapsReady';
 
 function createPlacesError(message, code) {
   const error = new Error(message);
@@ -337,25 +338,42 @@ function createPlacesError(message, code) {
   return error;
 }
 
+function isGoogleMapsReady() {
+  const maps = window.google?.maps;
+  if (typeof maps?.importLibrary === 'function') {
+    return true;
+  }
+  return (
+    typeof maps?.Geocoder === 'function' &&
+    typeof maps?.places?.AutocompleteService === 'function' &&
+    typeof maps?.places?.PlacesService === 'function'
+  );
+}
+
 function ensureGoogleMapsScriptLoaded(apiKey, language, region) {
   if (typeof window === 'undefined') {
     return Promise.reject(createPlacesError('Google Maps API not available (SSR)', 'SSR'));
   }
-  if (window.google?.maps) {
+  if (isGoogleMapsReady()) {
     return Promise.resolve();
   }
   if (!googleMapsScriptReadyPromise) {
     googleMapsScriptReadyPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.async = true;
+      window[GOOGLE_MAPS_READY_CALLBACK] = () => {
+        delete window[GOOGLE_MAPS_READY_CALLBACK];
+        resolve();
+      };
       script.src = `https://maps.googleapis.com/maps/api/js?${new URLSearchParams({
         key: apiKey,
         language,
         region,
         loading: 'async',
+        callback: GOOGLE_MAPS_READY_CALLBACK,
       }).toString()}`;
-      script.onload = () => resolve();
       script.onerror = () => {
+        delete window[GOOGLE_MAPS_READY_CALLBACK];
         googleMapsScriptReadyPromise = null;
         reject(createPlacesError('Failed to load Google Maps API', 'SCRIPT_LOAD_FAILED'));
       };
