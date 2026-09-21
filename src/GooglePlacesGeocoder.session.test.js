@@ -143,6 +143,55 @@ describe('GooglePlacesGeocoder autocomplete sessions', () => {
     expect(Geocoder).toHaveBeenCalled();
   });
 
+  it('waits for the Google callback before importing Geocoder', async () => {
+    const Geocoder = jest.fn().mockImplementation(() => ({
+      geocode: jest.fn((request, callback) => {
+        callback(
+          [
+            {
+              place_id: 'rev',
+              formatted_address: 'Rua Teste',
+              geometry: { location: { lng: () => -46.6, lat: () => -23.5 } },
+              address_components: [],
+              types: ['route'],
+            },
+          ],
+          'OK'
+        );
+      }),
+    }));
+
+    const importLibrary = jest.fn(async (name) => {
+      if (name === 'geocoding') {
+        return { Geocoder };
+      }
+      return {};
+    });
+
+    const appendChild = jest.spyOn(document.head, 'appendChild').mockImplementation((script) => {
+      const callbackName = new URL(script.src).searchParams.get('callback');
+      expect(callbackName).toBe('__ciclomapaGoogleMapsReady');
+      expect(new URL(script.src).searchParams.get('loading')).toBe('async');
+
+      window.google = {
+        maps: {
+          GeocoderStatus: { OK: 'OK' },
+          importLibrary,
+        },
+      };
+      window[callbackName]();
+      return script;
+    });
+
+    const geocoder = new GooglePlacesGeocoder({ apiKey: 'test-key' });
+    await geocoder.reverseGeocode([-46.6, -23.5]);
+
+    expect(importLibrary).toHaveBeenCalledWith('geocoding');
+    expect(Geocoder).toHaveBeenCalled();
+    expect(window.__ciclomapaGoogleMapsReady).toBeUndefined();
+    appendChild.mockRestore();
+  });
+
   it('includes the Google status when place details fail', async () => {
     mockGooglePlaces();
     window.google.maps.places.PlacesService = jest.fn().mockImplementation(() => ({
