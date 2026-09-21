@@ -30,6 +30,7 @@ if (dsn && environment) {
     // Drop known noise before it hits the free-plan quota. Chunk-load failures
     // already trigger a reload in index.js. Google Places and Mapbox `light`
     // deprecations are library/style warnings until those APIs are migrated.
+    // WebGL init failures are a client GPU/browser limit; Map.js shows a fallback.
     ignoreErrors: [
       /Loading chunk [\d]+ failed/,
       'ResizeObserver loop limit exceeded',
@@ -37,6 +38,7 @@ if (dsn && environment) {
       /google\.maps\.places\.(PlacesService|AutocompleteService)/,
       /As of May 2023, bounds, location, and radius are deprecated/,
       /The `light` root property is deprecated/,
+      /Failed to initialize WebGL/,
     ],
   });
 
