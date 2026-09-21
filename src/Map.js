@@ -153,6 +153,7 @@ class Map extends Component {
       showCommentCursor: false,
       tagsList: [],
       comments: [],
+      webglError: false,
     };
 
     // Track geojson feature IDs to hide from pmtiles layers
@@ -2674,7 +2675,7 @@ class Map extends Component {
         })
       );
     } catch (error) {
-      console.error('Error creating Mapbox map:', error);
+      console.debug('Error creating Mapbox map:', error);
       // Don't crash the entire app if WebGL isn't available (common in headless browsers).
       this.setState({ webglError: true });
       return;
@@ -3213,7 +3214,7 @@ class Map extends Component {
           data-testid="map-container"
           ref={(el) => (this.mapContainer = el)}
           style={
-            isE2E
+            isE2E || this.state.webglError
               ? {
                   width: '100%',
                   height: 'var(--viewport-height, 100vh)',
@@ -3221,7 +3222,20 @@ class Map extends Component {
                 }
               : undefined
           }
-        />
+        >
+          {this.state.webglError && (
+            <div className="webgl-error" role="alert">
+              <p>
+                Não deu para desenhar o mapa. Seu navegador não tem suporte a WebGL, ou ele está
+                desligado.
+              </p>
+              <p>Tente outro navegador, ou recarregue a página.</p>
+              <button type="button" onClick={() => window.location.reload()}>
+                Recarregar
+              </button>
+            </div>
+          )}
+        </div>
 
         {ENABLE_COMMENTS && this.state.showCommentCursor && (
           <NewCommentCursor isDarkMode={this.props.isDarkMode} />
