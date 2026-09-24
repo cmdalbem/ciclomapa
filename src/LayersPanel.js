@@ -10,7 +10,7 @@ import { IconSignal1, IconSignal2, IconSignal3 } from './components/ProtectionSi
 
 import './LayersPanel.css';
 
-import { IS_MOBILE } from './config/constants.js';
+import { IS_MOBILE, PMTILES_EXCLUDED_LAYER_NAMES } from './config/constants.js';
 
 import commentIcon from './img/icons/poi-comment-flat.png';
 import bikeparkingIcon from './img/icons/poi-bikeparking@2x.png';
@@ -42,7 +42,7 @@ const VIAS_CICLAVEIS_LAYER_NAMES = new Set([
   'Ciclorrota',
 ]);
 
-const OUTRAS_VIAS_LAYER_NAMES = new Set(['Baixa velocidade', 'Trilha', 'Proibido']);
+const OUTRAS_VIAS_LAYER_NAMES = PMTILES_EXCLUDED_LAYER_NAMES;
 
 /** @returns {string | null} LayersLegendModal section id */
 const getLegendSectionForLayer = (layer) => {
@@ -168,6 +168,7 @@ class LayersPanel extends Component {
         >
           {layers
             .filter((l) => (embedMode ? l.isActive : true))
+            .filter((l) => !IS_MOBILE || !PMTILES_EXCLUDED_LAYER_NAMES.has(l.name))
             .map((l) => (
               <Popover
                 placement="left"
@@ -190,7 +191,7 @@ class LayersPanel extends Component {
                         <span
                           className="w-full"
                           style={{
-                            height: 6,
+                            height: 4,
                             background:
                               l.style.lineStyle === 'solid'
                                 ? l.style.lineColor
@@ -204,7 +205,12 @@ class LayersPanel extends Component {
                           }}
                         ></span>
                       ) : (
-                        <img className="h-4" src={iconsMap[l.icon]} alt="" />
+                        <img
+                          className="h-4"
+                          style={{ borderRadius: '4px' }}
+                          src={iconsMap[l.icon]}
+                          alt=""
+                        />
                       )}
                     </span>
 

@@ -13,6 +13,7 @@ import { HiOutlineXMark } from 'react-icons/hi2';
 import {
   ENABLE_COMMENTS,
   IS_MOBILE,
+  PMTILES_EXCLUDED_LAYER_NAMES,
   ROUTE_COLORS,
   ROUTE_INFRASTRUCTURE_QUALITY_WEIGHTS,
 } from './config/constants.js';
@@ -181,9 +182,7 @@ class LayersLegendModal extends Component {
           l.name === 'Ciclorrota')
     );
     const outrasViasLayers = activeLayers.filter(
-      (l) =>
-        l.type === 'way' &&
-        (l.name === 'Baixa velocidade' || l.name === 'Trilha' || l.name === 'Proibido')
+      (l) => l.type === 'way' && PMTILES_EXCLUDED_LAYER_NAMES.has(l.name)
     );
 
     const categoryContainerClasses = 'grid grid-cols-1 items-stretch gap-4 md:grid-cols-2';
@@ -201,8 +200,11 @@ class LayersLegendModal extends Component {
       }`;
     };
 
-    const { visible } = this.props;
+    const { visible, isDarkMode } = this.props;
     const deferLegendImage = IS_MOBILE && !visible;
+    const mobileUnavailableNoteClass = isDarkMode
+      ? 'border border-amber-400/50 bg-amber-500/20 text-amber-100'
+      : 'border border-amber-700/25 bg-amber-100 text-amber-950';
 
     const renderLayer = (layer) => (
       <div
@@ -260,6 +262,14 @@ class LayersLegendModal extends Component {
                 </InfrastructureBadge>
               )}
             </div>
+            {PMTILES_EXCLUDED_LAYER_NAMES.has(layer.name) && (
+              <p
+                className={`mb-0 mt-3 rounded-lg px-3 py-2.5 text-sm font-semibold leading-snug ${mobileUnavailableNoteClass}`}
+                role="note"
+              >
+                Não exibida no mapa na versão para celular.
+              </p>
+            )}
             <p className="mb-0 mt-2 text-sm leading-normal text-gray-400">{layer.description}</p>
           </div>
         </div>

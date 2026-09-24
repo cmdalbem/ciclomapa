@@ -15,13 +15,10 @@ class LayersBar extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      outrasExpanded: false,
       pontosExpanded: false,
       ciclowaysExpanded: false,
-      outrasAnimating: false,
       pontosAnimating: false,
       ciclowaysAnimating: false,
-      outrasExpanding: false,
       pontosExpanding: false,
       ciclowaysExpanding: false,
     };
@@ -44,9 +41,7 @@ class LayersBar extends Component {
           l.name === 'Ciclofaixa' ||
           l.name === 'Ciclorrota'
       ),
-      outras: activeLayers.filter(
-        (l) => l.name === 'Baixa velocidade' || l.name === 'Trilha' || l.name === 'Proibido'
-      ),
+      // Baixa velocidade / Trilha / Proibido are omitted from PMTiles, so no "outras" category on mobile.
     };
 
     return categories;
@@ -262,9 +257,6 @@ class LayersBar extends Component {
       cicloways: {
         label: 'Vias cicláveis',
       },
-      outras: {
-        label: 'Outras vias',
-      },
     };
 
     return (
@@ -360,52 +352,6 @@ class LayersBar extends Component {
                 label: layer.shortName || layer.displayName || layer.name,
                 shouldMergeWithNext,
                 isAnimated: this.state.pontosAnimating,
-              });
-            });
-          })()}
-
-          {/* Outras category button (last) */}
-          {(() => {
-            const config = categoryConfig.outras;
-            const hasLayers = categories.outras.length > 0;
-            const allLayersDeactivated =
-              hasLayers && categories.outras.every((layer) => !layer.isActive);
-
-            // Only show Outras button if all layers are deactivated
-            if (!hasLayers || !allLayersDeactivated) return null;
-
-            return this.renderLayerButton({
-              id: 'outras',
-              onClick: () => this.toggleCategoryExpansion('outras'),
-              isActive: false, // Always false since we only show when all are deactivated
-              icon: config.icon,
-              lineStyle: config.style,
-              label: config.label,
-              isAnimated: this.state.outrasAnimating,
-              isCategoryPill: true,
-            });
-          })()}
-
-          {/* Individual Outras layers - show when any are active or when expanded */}
-          {(() => {
-            const hasActiveOutrasLayers = categories.outras.some((layer) => layer.isActive);
-            const shouldShowIndividual = hasActiveOutrasLayers || this.state.outrasExpanded;
-
-            if (!shouldShowIndividual) return null;
-
-            return categories.outras.map((layer, index) => {
-              const displayName = layer.displayName || layer.name;
-              const shouldMergeWithNext = index < categories.outras.length - 1;
-
-              return this.renderLayerButton({
-                id: layer.id,
-                onClick: () => this.toggleCategoryLayer('outras', layer.id),
-                isActive: layer.isActive,
-                lineStyle: layer.style,
-                label: displayName,
-                className: 'ml-2',
-                shouldMergeWithNext,
-                isAnimated: this.state.outrasAnimating,
               });
             });
           })()}

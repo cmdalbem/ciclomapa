@@ -219,11 +219,10 @@ class MapPopups {
       if (this.selectedCycleway) {
         try {
           this.map.setFeatureState(
-            { source: 'osmdata', id: this.selectedCycleway },
+            { source: 'pmtiles-source', sourceLayer: 'default', id: this.selectedCycleway },
             { selected: false, hover: false }
           );
         } catch (e) {}
-        // try { this.map.setFeatureState({ source: 'pmtiles-source', id: this.selectedCycleway }, { selected: false, hover: false }); } catch (e) {}
       }
       this.selectedCycleway = null;
     });
