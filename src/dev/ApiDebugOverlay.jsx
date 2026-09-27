@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { HiOutlineChevronDown as IconChevron } from 'react-icons/hi';
 import { HiBugAnt as IconDebug, HiOutlineXMark as IconClose } from 'react-icons/hi2';
-import { IS_MOBILE, TOPBAR_HEIGHT } from '../config/constants.js';
+import { IS_MOBILE } from '../config/constants.js';
 import { API_COLORS, API_GROUPS, API_LABELS, API_TYPES, subscribe } from './apiTracker.js';
 import { BRAND_LOGO_URLS } from './brandLogos.js';
 import { DATA_SOURCE_STATUS, subscribeDataLoads } from './dataLoadTracker.js';
@@ -286,6 +286,9 @@ function CollapsedSummary({ counts, dataSources }) {
 
 const OPEN_STORAGE_KEY = 'ciclomapa-debug-panel-open';
 
+// No bottom-right map FABs on desktop (geo + route live in the topbar).
+const DESKTOP_BOTTOM_OFFSET_PX = 16;
+
 function readStoredOpen(fallback) {
   try {
     const raw = window.localStorage.getItem(OPEN_STORAGE_KEY);
@@ -342,8 +345,6 @@ export default function ApiDebugOverlay({ initiallyOpen = false }) {
     (group) => group.types.reduce((sum, t) => sum + (snapshot.counts[t] || 0), 0) > 0
   );
 
-  const desktopTop = TOPBAR_HEIGHT + 8;
-
   if (!open) {
     return (
       <button
@@ -351,7 +352,7 @@ export default function ApiDebugOverlay({ initiallyOpen = false }) {
         className={`fixed z-[99999] flex h-4 w-4 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-gray-500 opacity-40 hover:opacity-90 focus-visible:opacity-90 ${
           IS_MOBILE ? 'right-0.5 bottom-[calc(2px+env(safe-area-inset-bottom,0px))]' : 'right-4'
         }`}
-        style={IS_MOBILE ? undefined : { top: desktopTop }}
+        style={IS_MOBILE ? undefined : { bottom: DESKTOP_BOTTOM_OFFSET_PX }}
         onClick={() => setOpen(true)}
         title="Open debug panel"
         aria-label="Open debug panel"
@@ -366,9 +367,9 @@ export default function ApiDebugOverlay({ initiallyOpen = false }) {
       className={`fixed z-[99999] overflow-hidden bg-gray-800 font-['Inter',system-ui,sans-serif] text-[10px] ${
         IS_MOBILE
           ? 'inset-x-0 bottom-0 w-full pb-[env(safe-area-inset-bottom,0px)]'
-          : 'right-4 w-60 rounded-lg shadow-lg'
+          : 'right-4 rounded-lg shadow-lg'
       }`}
-      style={IS_MOBILE ? undefined : { top: desktopTop }}
+      style={IS_MOBILE ? undefined : { bottom: DESKTOP_BOTTOM_OFFSET_PX }}
     >
       <div
         className="flex cursor-pointer select-none items-center gap-1.5 bg-gray-800 px-2 py-0.5 text-gray-100"
