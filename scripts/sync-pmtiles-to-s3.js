@@ -475,7 +475,9 @@ async function runGeneratePMtiles(build, localOutputPath, options) {
   const args = ['--output', localOutputPath, '--areas', build.areas.join(',')];
   if (options.skipGeoJSON) args.push('--skip-geojson');
   if (options.cleanup) args.push('--cleanup');
-  if (build.includePoi) args.push('--include-poi');
+  // The map renders POIs from the tiles only (no GeoJSON fallback), so POIs are on
+  // by default. A build can opt out with `"includePoi": false`.
+  if (build.includePoi !== false) args.push('--include-poi');
 
   const buildDir = workDirForBuild(build);
   await fsp.mkdir(buildDir, { recursive: true });
@@ -567,7 +569,7 @@ async function main() {
       console.log(`  ${build.id}`);
       console.log(`    output: ${build.output}`);
       console.log(`    areas:  ${build.areas.join(', ')}`);
-      if (build.includePoi) console.log(`    POIs:   included`);
+      console.log(`    POIs:   ${build.includePoi !== false ? 'included' : 'excluded'}`);
       if (build.description) console.log(`    note:   ${build.description}`);
       console.log('');
     }

@@ -2517,12 +2517,26 @@
   dependencies:
     base-64 "^0.1.0"
 
+"@mapbox/point-geometry@~1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@mapbox/point-geometry/-/point-geometry-1.1.0.tgz#3328fb54b3a1273bc619bf0a6baad8de37181749"
+  integrity sha512-YGcBz1cg4ATXDCM/71L9xveh4dynfGmcLDqufR+nQQy3fKwsAZsWd/x4621/6uJaeB9mwOHE6hPeDgXz9uViUQ==
+
 "@mapbox/polyline@^1.0.0":
   version "1.2.1"
   resolved "https://registry.npmjs.org/@mapbox/polyline/-/polyline-1.2.1.tgz"
   integrity sha512-sn0V18O3OzW4RCcPoUIVDWvEGQaBNH9a0y5lgqrf5hUycyw1CzrhEoxV5irzrMNXKCkw1xRsZXcaVbsVZggHXA==
   dependencies:
     meow "^9.0.0"
+
+"@mapbox/vector-tile@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@mapbox/vector-tile/-/vector-tile-3.0.0.tgz#71a75acb5ee20c20adca5c4e1ffb5ef95a56e351"
+  integrity sha512-Qf10S1uIHMk20ri/IVBnpS+esUEkVaR5Hftmz88jTInrpmWgPGJfPe3LVjjlE77trLx8tH6qjTG7uWH9hIq/0Q==
+  dependencies:
+    "@mapbox/point-geometry" "~1.1.0"
+    "@types/geojson" "^7946.0.16"
+    pbf "^5.0.0"
 
 "@napi-rs/wasm-runtime@^1.0.3":
   version "1.1.4"
@@ -3865,7 +3879,7 @@
     "@types/qs" "*"
     "@types/serve-static" "^1"
 
-"@types/geojson@*", "@types/geojson@^7946.0", "@types/geojson@^7946.0.10":
+"@types/geojson@*", "@types/geojson@^7946.0", "@types/geojson@^7946.0.10", "@types/geojson@^7946.0.16":
   version "7946.0.16"
   resolved "https://registry.npmjs.org/@types/geojson/-/geojson-7946.0.16.tgz"
   integrity sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg==
@@ -11332,6 +11346,13 @@ pbf@^3.0.4:
     ieee754 "^1.1.12"
     resolve-protobuf-schema "^2.1.0"
 
+pbf@^5.0.0, pbf@^5.1.2:
+  version "5.1.2"
+  resolved "https://registry.yarnpkg.com/pbf/-/pbf-5.1.2.tgz#07c427819eda32f02f1ec9741558f61444f2e1c0"
+  integrity sha512-mnvGdvOrIvJOBGUEdGkrVXjN8E/VkIJCkf2eS1DH2yv82ORUlLttmDt0rWY38yYZmVwciZwBUvHM20qxBZf40w==
+  dependencies:
+    resolve-protobuf-schema "^2.1.0"
+
 pend@~1.2.0:
   version "1.2.0"
   resolved "https://registry.npmjs.org/pend/-/pend-1.2.0.tgz"
@@ -12025,11 +12046,6 @@ postcss@^7.0.35:
   dependencies:
     picocolors "^0.2.1"
     source-map "^0.6.1"
-
-potpack@^2.0.0:
-  version "2.1.0"
-  resolved "https://registry.npmjs.org/potpack/-/potpack-2.1.0.tgz"
-  integrity sha512-pcaShQc1Shq0y+E7GqJqvZj8DTthWV1KeHGdi0Z6IAin2Oi3JnLCOfwnCo84qc+HAp52wT9nK9H7FAJp5a44GQ==
 
 prelude-ls@^1.2.1:
   version "1.2.1"

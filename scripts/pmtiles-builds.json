@@ -1,10 +1,11 @@
 {
+  "_comment": "All builds include POI layers by default (the map renders POIs from the tiles only). Set \"includePoi\": false to opt out. Baixa velocidade / Trilha / Proibido are always excluded (see DEFAULT_PMTILES_EXCLUDE_LAYERS in generate-pmtiles.js).",
   "builds": [
     {
       "id": "br",
       "output": "br.pmtiles",
       "areas": ["Brazil"],
-      "description": "Production — Brazil only"
+      "description": "Brazil only"
     },
     {
       "id": "la--except-br",
@@ -16,7 +17,7 @@
       "id": "la_es_pt",
       "output": "la_es_pt.pmtiles",
       "areas": ["Latin America", "es_pt"],
-      "description": "Preview default — Latin America + Spain + Portugal"
+      "description": "Latin America + Spain + Portugal"
     },
     {
       "id": "br_es_pt",
@@ -46,36 +47,32 @@
       "id": "barcelona-poi",
       "output": "barcelona-poi.pmtiles",
       "areas": ["Barcelona"],
-      "includePoi": true,
-      "description": "Barcelona city — cycle layers + POIs"
+      "description": "Barcelona city"
     },
     {
       "id": "spain",
       "output": "spain.pmtiles",
       "areas": ["Spain"],
       "includePoi": false,
-      "description": "Spain"
+      "description": "Spain, cycle layers only (no POIs)"
     },
     {
       "id": "spain-poi",
       "output": "spain-poi.pmtiles",
       "areas": ["Spain"],
-      "includePoi": true,
-      "description": "Spain — cycle layers + POIs"
+      "description": "Spain"
     },
     {
       "id": "brazil-poi",
       "output": "brazil-poi.pmtiles",
       "areas": ["Brazil"],
-      "includePoi": true,
-      "description": "Brazil — cycle layers + POIs (non-standard)"
+      "description": "Production — Brazil (app default when REACT_APP_PMTILES_FILENAME is unset)"
     },
     {
       "id": "brazil-spain-poi",
       "output": "brazil-spain-poi.pmtiles",
       "areas": ["Brazil", "Spain"],
-      "includePoi": true,
-      "description": "Brazil + Spain — cycle layers + POIs (non-standard)"
+      "description": "Preview — Brazil + Spain"
     }
   ]
 }

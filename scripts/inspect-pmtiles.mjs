@@ -1,14 +1,37 @@
-import { PMTiles, FetchSource } from 'pmtiles';
+#!/usr/bin/env node
+/**
+ * Dev helper: print a PMTiles archive header and sample the features of one tile,
+ * to check which layers/properties actually made it into a build.
+ *
+ * Usage:
+ *   node scripts/inspect-pmtiles.mjs [filename|url] [lng lat zoom]
+ *
+ * Defaults to brazil-poi.pmtiles on the CicloMapa S3 bucket, sampled over Fortaleza.
+ */
+import { PMTiles } from 'pmtiles';
 import { VectorTile } from '@mapbox/vector-tile';
-import Protobuf from 'pbf';
+import { PbfReader } from 'pbf';
 
-const url = 'https://ciclomapa.s3.us-east-1.amazonaws.com/pmtiles/brazil-poi.pmtiles';
+const S3_BASE = 'https://ciclomapa.s3.us-east-1.amazonaws.com/pmtiles/';
+const [fileArg = 'brazil-poi.pmtiles', lngArg, latArg, zoomArg] = process.argv.slice(2);
+const url = /^https?:\/\//.test(fileArg) ? fileArg : S3_BASE + fileArg;
+
+// Fortaleza, Brazil (DEFAULT_AREA) ~ -3.7327, -38.5267
+const lng = lngArg != null ? Number(lngArg) : -38.5267;
+const lat = latArg != null ? Number(latArg) : -3.7327;
+const zoom = zoomArg != null ? Number(zoomArg) : 11;
+
 const p = new PMTiles(url);
 
 const header = await p.getHeader();
+console.log('url:', url);
 console.log('header:', JSON.stringify(header, null, 2));
 
-// Fortaleza, Brazil (DEFAULT_AREA) ~ -3.7327, -38.5267
+const metadata = await p.getMetadata();
+for (const layer of metadata.vector_layers || []) {
+  console.log(`\nvector layer "${layer.id}" fields:`, Object.keys(layer.fields || {}).join(', '));
+}
+
 function lngLatToTile(lng, lat, zoom) {
   const latRad = (lat * Math.PI) / 180;
   const n = 2 ** zoom;
@@ -17,9 +40,8 @@ function lngLatToTile(lng, lat, zoom) {
   return { x, y, z: zoom };
 }
 
-const zoom = 11;
-const { x, y, z } = lngLatToTile(-38.5267, -3.7327, zoom);
-console.log(`Fetching tile z=${z} x=${x} y=${y}`);
+const { x, y, z } = lngLatToTile(lng, lat, Math.min(zoom, header.maxZoom));
+console.log(`\nFetching tile z=${z} x=${x} y=${y}`);
 
 const tileResult = await p.getZxy(z, x, y);
 if (!tileResult) {
@@ -27,7 +49,7 @@ if (!tileResult) {
   process.exit(0);
 }
 
-const tile = new VectorTile(new Protobuf(tileResult.data));
+const tile = new VectorTile(new PbfReader(tileResult.data));
 console.log('Layers in tile:', Object.keys(tile.layers));
 
 for (const layerName of Object.keys(tile.layers)) {
