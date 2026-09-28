@@ -26,7 +26,7 @@ class LayersBar extends Component {
 
   getActiveLayers() {
     const { layers } = this.props;
-    return layers.filter((l) => !l.onlyDebug);
+    return layers.filter((l) => !l.onlyDebug && l.isAvailable !== false);
   }
 
   getLayerCategories() {
@@ -41,7 +41,7 @@ class LayersBar extends Component {
           l.name === 'Ciclofaixa' ||
           l.name === 'Ciclorrota'
       ),
-      // Baixa velocidade / Trilha / Proibido are omitted from PMTiles, so no "outras" category on mobile.
+      // No "outras vias" (Baixa velocidade / Trilha / Proibido) category on mobile for now.
     };
 
     return categories;

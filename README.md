@@ -51,7 +51,7 @@ Create a `.env` file in the project root (or set these in your environment) for 
 Generation already lives in `scripts/`:
 
 1. **`scripts/overpass-to-geojson.js`** — fetch one area from Overpass → GeoJSON (`yarn overpass -- --area "Brazil"`)
-2. **`scripts/generate-pmtiles.js`** — combine multiple areas into one `.pmtiles` via tippecanoe (`yarn generate-pmtiles -- --areas "Brazil" --output br.pmtiles`). By default excludes **Baixa velocidade**, **Trilha**, and **Proibido** (same as the app's non-PMTiles layers).
+2. **`scripts/generate-pmtiles.js`** — combine multiple areas into one `.pmtiles` via tippecanoe (`yarn generate-pmtiles -- --areas "Brazil" --output br.pmtiles`). Pass `--exclude-layers` (or `excludeLayers` in `pmtiles-builds.json`) to omit specific layers.
 
 To **batch the main regional builds and upload to S3**, use the thin wrapper on top of those scripts:
 

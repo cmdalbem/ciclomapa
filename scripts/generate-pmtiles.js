@@ -81,9 +81,6 @@ const AREA_ALIASES = {
   uk: ['United Kingdom'],
 };
 
-// PMtiles intentionally omit low-priority / routing-only layers (see OSMController.js).
-const DEFAULT_PMTILES_EXCLUDE_LAYERS = ['Baixa velocidade', 'Trilha', 'Proibido'];
-
 // Path to the overpass-to-geojson script
 const OVERPASS_SCRIPT = path.join(__dirname, 'overpass-to-geojson.js');
 
@@ -161,8 +158,8 @@ Options:
   --output <file>     Output PMtiles file path (default: all.pmtiles)
   --areas <list>      Comma-separated list of areas (alternative to positional args)
   --endpoint <url>    Overpass API endpoint (passed to overpass-to-geojson.js)
-  --include-layers    Comma-separated list of layer names to include (disables default exclusions)
-  --exclude-layers    Comma-separated list of extra layer names to exclude (defaults always exclude Baixa velocidade, Trilha, Proibido)
+  --include-layers    Comma-separated list of layer names to include (whitelist)
+  --exclude-layers    Comma-separated list of layer names to exclude
   --include-poi       Include POI (Point of Interest) layers
   --skip-geojson      Skip GeoJSON generation if files already exist
   --skip-existing-geojsons   Alias for --skip-geojson
@@ -190,12 +187,6 @@ Aliases:
   }
 
   config.areas = expandAreaAliases(config.areas);
-
-  if (!config.includeLayers) {
-    config.excludeLayers = [
-      ...new Set([...DEFAULT_PMTILES_EXCLUDE_LAYERS, ...(config.excludeLayers || [])]),
-    ];
-  }
 
   return config;
 }
@@ -287,8 +278,28 @@ async function checkTippecanoe() {
   });
 }
 
+// Which CicloMapa layers (by name) end up in the archive, mirroring the filtering in
+// overpass-to-geojson.js. The app reads this list back from the PMTiles metadata to
+// decide which layer toggles to show.
+async function resolveIncludedLayerNames(config) {
+  const layersPath = path.join(__dirname, '..', 'src', 'config', 'layers.json');
+  const layers = JSON.parse(await fs.readFile(layersPath, 'utf8'));
+  const toKey = (name) => name.toLowerCase();
+  const includeSet = config.includeLayers && new Set(config.includeLayers.map(toKey));
+  const excludeSet = config.excludeLayers && new Set(config.excludeLayers.map(toKey));
+
+  return layers
+    .filter((l) => l.filters && !l.onlyDebug)
+    .filter((l) => config.includePoi || l.type !== 'poi')
+    .filter((l) => !includeSet || includeSet.has(toKey(l.name)) || includeSet.has(slugify(l.name)))
+    .filter(
+      (l) => !excludeSet || (!excludeSet.has(toKey(l.name)) && !excludeSet.has(slugify(l.name)))
+    )
+    .map((l) => l.name);
+}
+
 // Run tippecanoe to generate PMtiles
-async function generatePMtiles(geojsonFiles, outputPath) {
+async function generatePMtiles(geojsonFiles, outputPath, includedLayerNames) {
   return new Promise((resolve, reject) => {
     // Check if tippecanoe is available
     checkTippecanoe().then((available) => {
@@ -299,6 +310,7 @@ async function generatePMtiles(geojsonFiles, outputPath) {
 
       console.log(`\n🗺️  Generating PMtiles from ${geojsonFiles.length} GeoJSON file(s)...`);
       console.log(`   Files: ${geojsonFiles.map((f) => path.basename(f)).join(', ')}`);
+      console.log(`   Layers: ${includedLayerNames.join(', ')}`);
 
       const args = [
         '-o',
@@ -308,6 +320,9 @@ async function generatePMtiles(geojsonFiles, outputPath) {
         '--generate-ids',
         '-l',
         'default',
+        // Stored in the archive's JSON metadata `description`; the app parses it.
+        '--description',
+        JSON.stringify({ ciclomapa: { layers: includedLayerNames } }),
         ...geojsonFiles,
       ];
 
@@ -342,6 +357,12 @@ async function fileExists(filePath) {
   } catch {
     return false;
   }
+}
+
+async function countGeoJSONFeatures(filePath) {
+  const raw = await fs.readFile(filePath, 'utf8');
+  const geoJson = JSON.parse(raw);
+  return Array.isArray(geoJson.features) ? geoJson.features.length : 0;
 }
 
 // Main function
@@ -414,19 +435,28 @@ async function main() {
       }
     }
 
-    // Verify all GeoJSON files exist
+    // Verify all GeoJSON files exist and have features
     console.log(`\n✅ Verifying GeoJSON files before PMtiles generation...`);
     const missingFiles = [];
+    const emptyFiles = [];
     const existingFiles = [];
     for (const file of geojsonFiles) {
       const exists = await fileExists(file);
       if (!exists) {
         missingFiles.push(path.basename(file));
         console.log(`   ❌ Missing: ${path.basename(file)} (${file})`);
-      } else {
-        existingFiles.push(file);
-        console.log(`   ✓ Found: ${path.basename(file)} (${file})`);
+        continue;
       }
+
+      const featureCount = await countGeoJSONFeatures(file);
+      if (featureCount === 0) {
+        emptyFiles.push(path.basename(file));
+        console.log(`   ❌ Empty (0 features): ${path.basename(file)} (${file})`);
+        continue;
+      }
+
+      existingFiles.push(file);
+      console.log(`   ✓ Found: ${path.basename(file)} (${featureCount} features)`);
     }
 
     if (missingFiles.length > 0) {
@@ -435,12 +465,20 @@ async function main() {
       throw new Error(`GeoJSON files not found: ${missingFiles.join(', ')}`);
     }
 
+    if (emptyFiles.length > 0) {
+      console.error(`\n❌ Error: ${emptyFiles.length} GeoJSON file(s) have 0 features:`);
+      emptyFiles.forEach((f) => console.error(`   - ${f}`));
+      throw new Error(
+        `Empty GeoJSON (no OSM data): ${emptyFiles.join(', ')}. Re-run without --skip-geojson.`
+      );
+    }
+
     console.log(
       `\n📊 Summary: ${existingFiles.length} GeoJSON file(s) ready for PMtiles generation`
     );
 
     // Generate PMtiles
-    await generatePMtiles(geojsonFiles, config.output);
+    await generatePMtiles(geojsonFiles, config.output, await resolveIncludedLayerNames(config));
 
     // Cleanup GeoJSON files if requested
     if (config.cleanup) {
@@ -476,6 +514,7 @@ module.exports = {
   main,
   generateGeoJSONForArea,
   generatePMtiles,
+  resolveIncludedLayerNames,
   expandAreaAliases,
   getExpectedGeoJSONFilename,
 };

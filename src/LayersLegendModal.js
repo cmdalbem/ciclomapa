@@ -13,7 +13,7 @@ import { HiOutlineXMark } from 'react-icons/hi2';
 import {
   ENABLE_COMMENTS,
   IS_MOBILE,
-  PMTILES_EXCLUDED_LAYER_NAMES,
+  OUTRAS_VIAS_LAYER_NAMES,
   ROUTE_COLORS,
   ROUTE_INFRASTRUCTURE_QUALITY_WEIGHTS,
 } from './config/constants.js';
@@ -182,7 +182,7 @@ class LayersLegendModal extends Component {
           l.name === 'Ciclorrota')
     );
     const outrasViasLayers = activeLayers.filter(
-      (l) => l.type === 'way' && PMTILES_EXCLUDED_LAYER_NAMES.has(l.name)
+      (l) => l.type === 'way' && OUTRAS_VIAS_LAYER_NAMES.has(l.name)
     );
 
     const categoryContainerClasses = 'grid grid-cols-1 items-stretch gap-4 md:grid-cols-2';
@@ -262,7 +262,7 @@ class LayersLegendModal extends Component {
                 </InfrastructureBadge>
               )}
             </div>
-            {PMTILES_EXCLUDED_LAYER_NAMES.has(layer.name) && (
+            {layer.isAvailable === false && (
               <p
                 className={`mb-0 mt-3 rounded-lg px-3 py-2.5 text-sm font-semibold leading-snug ${unavailableNoteClass}`}
                 role="note"

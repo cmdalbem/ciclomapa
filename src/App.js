@@ -38,7 +38,9 @@ import {
   ABOUT_MODAL_ALWAYS_AUTO_OPEN_IN_NON_PROD,
   THRESHOLD_NEW_VS_OLD_DATA_TOLERANCE,
   IS_MOBILE,
-  PMTILES_EXCLUDED_LAYER_NAMES,
+  PMTILES_FALLBACK_MISSING_LAYER_NAMES,
+  PMTILES_FILENAME,
+  USE_PMTILES_SOURCE,
   FORCE_RECALCULATE_LENGTHS_ALWAYS,
   DEFAULT_LENGTH_CALCULATE_STRATEGIES,
   MAP_STYLES,
@@ -80,6 +82,8 @@ class App extends Component {
   // Areas we already re-fetched from OSM once this session because the cached GeoJSON
   // had no admin boundary (see updateData()).
   _boundaryRefetchAttemptedAreas = new Set();
+  // Layer names present in the PMTiles archive (null until metadata is read).
+  pmtilesAvailableLayerNames = null;
   deferredCityFocus = null;
   // Fly-to target from the `?flyto=lat,lng[,zoom]` URL param; consumed when the map mounts.
   pendingFlyToTarget = null;
@@ -458,15 +462,46 @@ class App extends Component {
       });
     }
 
-    // Not in the tiles, so they can't render anywhere; keep them off even if an old
-    // localStorage state had them on.
+    // Layers missing from the tiles can't render anywhere: hide their toggle and keep
+    // them off even if an old localStorage state had them on. Until the archive
+    // metadata has been read we go with the fallback list.
+    const availableNames = this.pmtilesAvailableLayerNames;
     layers.forEach((l) => {
-      if (PMTILES_EXCLUDED_LAYER_NAMES.has(l.name)) {
-        l.isActive = false;
-      }
+      if (!l.filters) return; // e.g. comments: not sourced from the tiles at all
+      l.isAvailable = availableNames
+        ? availableNames.has(l.name)
+        : !PMTILES_FALLBACK_MISSING_LAYER_NAMES.has(l.name);
+      if (!l.isAvailable) l.isActive = false;
     });
 
     return layers;
+  }
+
+  // generate-pmtiles.js writes `{ ciclomapa: { layers: [...] } }` into the archive's
+  // metadata description. Reading it costs two small range requests (header + metadata).
+  async loadPmtilesAvailableLayers() {
+    const baseUrl = process.env.REACT_APP_PMTILES_URL;
+    if (!USE_PMTILES_SOURCE || !baseUrl) return;
+
+    try {
+      const { PMTiles } = await import('pmtiles');
+      const metadata = await new PMTiles(baseUrl + PMTILES_FILENAME).getMetadata();
+      const names = JSON.parse(metadata.description).ciclomapa.layers;
+      if (!Array.isArray(names)) throw new Error('no layer list');
+      this.pmtilesAvailableLayerNames = new Set(names);
+      console.debug('PMTiles layers:', names);
+    } catch (e) {
+      console.debug('PMTiles metadata has no CicloMapa layer list, using fallback.', e.message);
+      return;
+    }
+
+    this.setState((prev) => ({
+      layers: prev.layers.map((l) => {
+        if (!l.filters) return l;
+        const isAvailable = this.pmtilesAvailableLayerNames.has(l.name);
+        return { ...l, isAvailable, isActive: isAvailable && l.isActive };
+      }),
+    }));
   }
 
   getStateFromLocalStorage() {
@@ -1709,6 +1744,8 @@ class App extends Component {
     if (!this.state.mapBootReady) {
       this.scheduleWelcomeMapBootAfterPaint();
     }
+
+    this.loadPmtilesAvailableLayers();
 
     updateDocumentMeta(this.state.area, this.getPreferredCanonicalSlugForMeta(this.state.area));
 
