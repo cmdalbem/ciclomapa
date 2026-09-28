@@ -5,6 +5,7 @@ import { IS_MOBILE } from '../config/constants.js';
 import { API_COLORS, API_GROUPS, API_LABELS, API_TYPES, subscribe } from './apiTracker.js';
 import { BRAND_LOGO_URLS } from './brandLogos.js';
 import { DATA_SOURCE_STATUS, subscribeDataLoads } from './dataLoadTracker.js';
+import ViewportCitySamplesOverlay from './ViewportCitySamplesOverlay.jsx';
 import '@fontsource/jetbrains-mono/latin-400.css';
 import '@fontsource/jetbrains-mono/latin-500.css';
 import '@fontsource/jetbrains-mono/latin-700.css';
@@ -308,8 +309,24 @@ function writeStoredOpen(open) {
   }
 }
 
-export default function ApiDebugOverlay({ initiallyOpen = false }) {
+const SAMPLES_STORAGE_KEY = 'ciclomapa-debug-viewport-samples';
+
+export default function ApiDebugOverlay({ initiallyOpen = false, map = null }) {
   const [open, setOpen] = useState(() => readStoredOpen(initiallyOpen));
+  const [showViewportSamples, setShowViewportSamples] = useState(() => {
+    try {
+      return window.localStorage.getItem(SAMPLES_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SAMPLES_STORAGE_KEY, showViewportSamples ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [showViewportSamples]);
   const [collapsed, setCollapsed] = useState(IS_MOBILE);
   const [snapshot, setSnapshot] = useState({ entries: [], counts: {} });
   const [dataSnapshot, setDataSnapshot] = useState({ sources: {} });
@@ -345,104 +362,130 @@ export default function ApiDebugOverlay({ initiallyOpen = false }) {
     (group) => group.types.reduce((sum, t) => sum + (snapshot.counts[t] || 0), 0) > 0
   );
 
+  const samplesOverlay =
+    showViewportSamples && map ? <ViewportCitySamplesOverlay map={map} /> : null;
+
   if (!open) {
     return (
-      <button
-        type="button"
-        className={`fixed z-[99999] flex h-4 w-4 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-gray-500 opacity-40 hover:opacity-90 focus-visible:opacity-90 ${
-          IS_MOBILE ? 'right-0.5 bottom-[calc(2px+env(safe-area-inset-bottom,0px))]' : 'right-4'
-        }`}
-        style={IS_MOBILE ? undefined : { bottom: DESKTOP_BOTTOM_OFFSET_PX }}
-        onClick={() => setOpen(true)}
-        title="Open debug panel"
-        aria-label="Open debug panel"
-      >
-        <IconDebug className="h-3 w-3" />
-      </button>
+      <>
+        {samplesOverlay}
+        <button
+          type="button"
+          className={`fixed z-[99999] flex h-4 w-4 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-gray-500 opacity-40 hover:opacity-90 focus-visible:opacity-90 ${
+            IS_MOBILE ? 'right-0.5 bottom-[calc(2px+env(safe-area-inset-bottom,0px))]' : 'right-4'
+          }`}
+          style={IS_MOBILE ? undefined : { bottom: DESKTOP_BOTTOM_OFFSET_PX }}
+          onClick={() => setOpen(true)}
+          title="Open debug panel"
+          aria-label="Open debug panel"
+        >
+          <IconDebug className="h-3 w-3" />
+        </button>
+      </>
     );
   }
 
   return (
-    <div
-      className={`fixed z-[99999] overflow-hidden bg-gray-800 font-['Inter',system-ui,sans-serif] text-[10px] ${
-        IS_MOBILE
-          ? 'inset-x-0 bottom-0 w-full pb-[env(safe-area-inset-bottom,0px)]'
-          : 'right-4 rounded-lg shadow-lg'
-      }`}
-      style={IS_MOBILE ? undefined : { bottom: DESKTOP_BOTTOM_OFFSET_PX }}
-    >
+    <>
+      {samplesOverlay}
       <div
-        className="flex cursor-pointer select-none items-center gap-1.5 bg-gray-800 px-2 py-0.5 text-gray-100"
-        onClick={() => setCollapsed((c) => !c)}
+        className={`fixed z-[99999] overflow-hidden bg-gray-800 font-['Inter',system-ui,sans-serif] text-[10px] ${
+          IS_MOBILE
+            ? 'inset-x-0 bottom-0 w-full pb-[env(safe-area-inset-bottom,0px)]'
+            : 'right-4 rounded-lg shadow-lg'
+        }`}
+        style={IS_MOBILE ? undefined : { bottom: DESKTOP_BOTTOM_OFFSET_PX }}
       >
-        <CollapsedSummary counts={snapshot.counts} dataSources={dataSnapshot.sources} />
-        <IconChevron
-          className={`h-[13px] w-[13px] shrink-0 text-gray-500 transition-transform duration-200 ${!collapsed ? 'rotate-180' : ''}`}
-        />
-        <button
-          type="button"
-          className="m-0 flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center rounded-[3px] border-0 bg-transparent p-0 text-gray-500 hover:bg-gray-800 hover:text-gray-100"
-          onClick={(e) => {
-            e.stopPropagation();
-            setOpen(false);
-            setCollapsed(IS_MOBILE);
-          }}
-          title="Hide debug panel"
-          aria-label="Hide debug panel"
+        <div
+          className="flex cursor-pointer select-none items-center gap-1.5 bg-gray-800 px-2 py-0.5 text-gray-100"
+          onClick={() => setCollapsed((c) => !c)}
         >
-          <IconClose className="h-3 w-3" />
-        </button>
-      </div>
-
-      <div
-        className={`grid transition-[grid-template-rows] duration-[240ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${collapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}
-      >
-        <div className="overflow-hidden">
-          <div
-            className={`space-y-2 bg-gray-800 px-2 pb-2 pt-1 text-gray-300 transition duration-200 ${collapsed ? 'opacity-0 -translate-y-1' : 'opacity-100 translate-y-0 delay-[60ms]'} ${IS_MOBILE ? 'max-h-[55vh] overflow-y-auto' : ''}`}
+          <CollapsedSummary counts={snapshot.counts} dataSources={dataSnapshot.sources} />
+          <IconChevron
+            className={`h-[13px] w-[13px] shrink-0 text-gray-500 transition-transform duration-200 ${!collapsed ? 'rotate-180' : ''}`}
+          />
+          <button
+            type="button"
+            className="m-0 flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center rounded-[3px] border-0 bg-transparent p-0 text-gray-500 hover:bg-gray-800 hover:text-gray-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(false);
+              setCollapsed(IS_MOBILE);
+            }}
+            title="Hide debug panel"
+            aria-label="Hide debug panel"
           >
-            <h3 className="pt-1 text-[9px] font-semibold text-gray-400">Data Sources</h3>
-            <section className="overflow-hidden rounded-md bg-black">
-              {Object.values(dataSnapshot.sources).map((source) => (
-                <DataSourceRow key={source.key} source={source} />
-              ))}
-            </section>
+            <IconClose className="h-3 w-3" />
+          </button>
+        </div>
 
-            <h3 className="pt-1 text-[9px] font-semibold text-gray-400">API Calls</h3>
-            <section className="overflow-hidden rounded-md bg-black">
-              {activeGroups.length === 0 ? (
-                <div className="px-2 py-2.5 text-center text-gray-600">No calls yet</div>
-              ) : (
-                activeGroups.map((group) => (
-                  <GroupRow key={group.id} group={group} counts={snapshot.counts} />
-                ))
-              )}
-            </section>
+        <div
+          className={`grid transition-[grid-template-rows] duration-[240ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${collapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}
+        >
+          <div className="overflow-hidden">
+            <div
+              className={`space-y-2 bg-gray-800 px-2 pb-2 pt-1 text-gray-300 transition duration-200 ${collapsed ? 'opacity-0 -translate-y-1' : 'opacity-100 translate-y-0 delay-[60ms]'} ${IS_MOBILE ? 'max-h-[55vh] overflow-y-auto' : ''}`}
+            >
+              <h3 className="pt-1 text-[9px] font-semibold text-gray-400">Tools</h3>
+              <section className="overflow-hidden rounded-md bg-black">
+                <label
+                  className={`flex items-center gap-2 px-2.5 py-[5px] ${map ? 'cursor-pointer' : 'opacity-50'}`}
+                  title="Draws the 5 points guessPlaceFromViewport samples and the city each one resolves to. Geocodes on every moveend."
+                >
+                  <input
+                    type="checkbox"
+                    className="m-0 h-3 w-3 cursor-pointer accent-emerald-400"
+                    checked={showViewportSamples}
+                    disabled={!map}
+                    onChange={(e) => setShowViewportSamples(e.target.checked)}
+                  />
+                  <span className="flex-1 text-gray-200">Viewport city samples</span>
+                </label>
+              </section>
 
-            <h3 className="pt-1 text-[9px] font-semibold text-gray-400">Log</h3>
-            <section className="overflow-hidden rounded-md bg-black">
-              <div className="max-h-[200px] overflow-y-auto">
-                {snapshot.entries.length === 0 ? (
+              <h3 className="pt-1 text-[9px] font-semibold text-gray-400">Data Sources</h3>
+              <section className="overflow-hidden rounded-md bg-black">
+                {Object.values(dataSnapshot.sources).map((source) => (
+                  <DataSourceRow key={source.key} source={source} />
+                ))}
+              </section>
+
+              <h3 className="pt-1 text-[9px] font-semibold text-gray-400">API Calls</h3>
+              <section className="overflow-hidden rounded-md bg-black">
+                {activeGroups.length === 0 ? (
                   <div className="px-2 py-2.5 text-center text-gray-600">No calls yet</div>
                 ) : (
-                  snapshot.entries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className={`grid grid-cols-[12px_4rem_minmax(0,1fr)_3rem] items-center gap-x-1.5 border-b border-white border-opacity-5 px-2 py-[3px] last:border-b-0 transition-colors duration-300 ${flashIds.has(entry.id) ? 'bg-gray-800' : ''}`}
-                    >
-                      <LogService api={entry.api} />
-                      <span className="min-w-0 truncate text-gray-400">{entry.details}</span>
-                      <span className={`${MONO} text-right text-gray-600`}>
-                        {formatTime(entry.timestamp)}
-                      </span>
-                    </div>
+                  activeGroups.map((group) => (
+                    <GroupRow key={group.id} group={group} counts={snapshot.counts} />
                   ))
                 )}
-              </div>
-            </section>
+              </section>
+
+              <h3 className="pt-1 text-[9px] font-semibold text-gray-400">Log</h3>
+              <section className="overflow-hidden rounded-md bg-black">
+                <div className="max-h-[200px] overflow-y-auto">
+                  {snapshot.entries.length === 0 ? (
+                    <div className="px-2 py-2.5 text-center text-gray-600">No calls yet</div>
+                  ) : (
+                    snapshot.entries.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className={`grid grid-cols-[12px_4rem_minmax(0,1fr)_3rem] items-center gap-x-1.5 border-b border-white border-opacity-5 px-2 py-[3px] last:border-b-0 transition-colors duration-300 ${flashIds.has(entry.id) ? 'bg-gray-800' : ''}`}
+                      >
+                        <LogService api={entry.api} />
+                        <span className="min-w-0 truncate text-gray-400">{entry.details}</span>
+                        <span className={`${MONO} text-right text-gray-600`}>
+                          {formatTime(entry.timestamp)}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

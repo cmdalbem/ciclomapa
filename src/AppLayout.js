@@ -232,7 +232,7 @@ export default function AppLayout({
 
       {(!IS_PROD || state.debugMode) && (
         <Suspense fallback={null}>
-          <ApiDebugOverlay initiallyOpen={!!state.debugMode} />
+          <ApiDebugOverlay initiallyOpen={!!state.debugMode} map={state.map} />
         </Suspense>
       )}
     </div>
