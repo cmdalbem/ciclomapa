@@ -69,7 +69,7 @@ export async function reverseGeocodePlace(lngLat) {
  */
 // Fraction of the viewport span from center toward each corner. 0.25 sits halfway
 // to the edge; 0.5 would be the corners; smaller keeps samples tighter around center.
-const VIEWPORT_SAMPLE_RADIUS = 0.2;
+export const VIEWPORT_SAMPLE_RADIUS = 0.2;
 
 export function getViewportSamplePoints(center, bounds = null) {
   const points = [center];

@@ -7,11 +7,29 @@ if (typeof global.TextDecoder === 'undefined') {
   global.TextEncoder = TextEncoder;
 }
 
-// Polyfill for mapbox-gl (and other deps) in jsdom
-if (typeof global.TextDecoder === 'undefined') {
-  const { TextDecoder, TextEncoder } = require('util');
-  global.TextDecoder = TextDecoder;
-  global.TextEncoder = TextEncoder;
+// antd popups (Dropdown, Tooltip, Select) observe their trigger size.
+if (typeof global.ResizeObserver === 'undefined') {
+  global.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+// antd + IS_MOBILE read matchMedia; jsdom has none. Nothing matches by default.
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  window.matchMedia = (query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener() {},
+    removeListener() {},
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent() {
+      return false;
+    },
+  });
 }
 
 // JSDOM does not implement IntersectionObserver (used by LayersLegendModal and others in tests)

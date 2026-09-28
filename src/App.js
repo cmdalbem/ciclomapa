@@ -70,7 +70,7 @@ import './styles/App.less';
 
 const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 
-class App extends Component {
+export class App extends Component {
   geoJson;
   _storage = null;
   osmController = OSMController;
