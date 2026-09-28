@@ -9,16 +9,15 @@ import {
   AREA_ID_OVERRIDES,
   BLACKLISTED_CITIES_FOR_EXTRA_LAYERS,
   ENABLE_BOUNDARY_LAYER,
-  CICLOMAPA_USER_AGENT,
 } from './config/constants.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 import { slugify } from './utils/utils.js';
 
 import * as layersDefinitions from './config/layers.json';
 
+// Browsers forbid setting User-Agent on fetch; Referer is enough for OSM etiquette here.
 const OSM_FETCH_HEADERS = {
   Accept: 'application/json',
-  'User-Agent': CICLOMAPA_USER_AGENT,
 };
 
 class OSMController {
