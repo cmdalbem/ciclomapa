@@ -1499,19 +1499,26 @@ export class App extends Component {
   async syncAreaWithViewportThenLoadCityData() {
     const requestId = (this._viewportAreaSyncId = (this._viewportAreaSyncId || 0) + 1);
     const { lng, lat } = this.getCurrentViewport();
+    const areaWhenStarted = this.state.area;
 
     let viewportArea = null;
     try {
       const rev = await guessPlaceFromViewport({ lng, lat }, this.state.map?.getBounds?.(), {
-        currentArea: this.state.area,
+        currentArea: areaWhenStarted,
       });
       viewportArea = this.normalizeAreaLabelForDisplay(rev?.place_name?.trim());
     } catch (e) {
       console.debug('Viewport reverse geocode failed, keeping current area.', e?.message);
     }
 
-    // Panel closed / another sync started meanwhile.
-    if (requestId !== this._viewportAreaSyncId || !this.needsCityGeoJsonContext()) return;
+    // Panel closed / another sync started / user picked a city while we waited.
+    if (
+      requestId !== this._viewportAreaSyncId ||
+      !this.needsCityGeoJsonContext() ||
+      this.state.area !== areaWhenStarted
+    ) {
+      return;
+    }
 
     if (viewportArea && viewportArea !== this.state.area) {
       console.debug(`Viewport is over "${viewportArea}", switching from "${this.state.area}"`);

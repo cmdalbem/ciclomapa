@@ -212,6 +212,20 @@ describe('App GeoJSON gate and area sync', () => {
     await p;
     expect(app.state.area).not.toBe('Porto Alegre, Rio Grande do Sul, Brasil');
   });
+
+  it('drops a stale viewport sync if the area changed while geocoding', async () => {
+    const app = mountApp().current;
+    app._isDirectionsPanelOpen = true;
+    let resolve;
+    guessPlaceFromViewport.mockImplementation(() => new Promise((r) => (resolve = r)));
+    const p = app.syncAreaWithViewportThenLoadCityData();
+    act(() => {
+      app.setArea('Curitiba, Paraná, Brasil', { source: 'picker' });
+    });
+    resolve({ place_name: 'Porto Alegre, Rio Grande do Sul, Brasil' });
+    await p;
+    expect(app.state.area).toBe('Curitiba, Paraná, Brasil');
+  });
 });
 
 describe('App layers and PMTiles metadata', () => {
