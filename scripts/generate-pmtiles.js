@@ -365,6 +365,40 @@ async function countGeoJSONFeatures(filePath) {
   return Array.isArray(geoJson.features) ? geoJson.features.length : 0;
 }
 
+function layerNamesKey(names) {
+  return [...names]
+    .map((n) => n.toLowerCase())
+    .sort()
+    .join('\0');
+}
+
+// GeoJSON files stamp `ciclomapa.layers` when written. Metadata for the archive must
+// match those stamps so --skip-geojson can't advertise POI (or other) layers that
+// were never queried into the reused files.
+async function assertGeoJSONLayerStampMatches(geojsonFiles, expectedLayerNames) {
+  const expectedKey = layerNamesKey(expectedLayerNames);
+  for (const file of geojsonFiles) {
+    const raw = await fs.readFile(file, 'utf8');
+    const geoJson = JSON.parse(raw);
+    const stamped = geoJson.ciclomapa?.layers;
+    const label = path.basename(file);
+
+    if (!Array.isArray(stamped) || stamped.length === 0) {
+      throw new Error(
+        `${label} has no ciclomapa.layers stamp. Re-run without --skip-geojson so layer metadata matches what Tippecanoe will ingest.`
+      );
+    }
+
+    if (layerNamesKey(stamped) !== expectedKey) {
+      throw new Error(
+        `${label} was built with different layers than this run ` +
+          `(file: ${stamped.join(', ')}; this run: ${expectedLayerNames.join(', ')}). ` +
+          `Re-run without --skip-geojson.`
+      );
+    }
+  }
+}
+
 // Main function
 async function main() {
   try {
@@ -477,8 +511,11 @@ async function main() {
       `\n📊 Summary: ${existingFiles.length} GeoJSON file(s) ready for PMtiles generation`
     );
 
+    const includedLayerNames = await resolveIncludedLayerNames(config);
+    await assertGeoJSONLayerStampMatches(existingFiles, includedLayerNames);
+
     // Generate PMtiles
-    await generatePMtiles(geojsonFiles, config.output, await resolveIncludedLayerNames(config));
+    await generatePMtiles(geojsonFiles, config.output, includedLayerNames);
 
     // Cleanup GeoJSON files if requested
     if (config.cleanup) {
