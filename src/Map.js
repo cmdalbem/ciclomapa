@@ -30,6 +30,8 @@ import {
   NEAR_ROUTE_ENDPOINT_POI_RADIUS_KM,
   ROUTE_ENDPOINT_VISIBLE_POI_ICONS,
   PMTILES_FILENAME,
+  PMTILES_SOURCE_ID,
+  PMTILES_SOURCE_LAYER,
   LOW_ZOOM_WIDTH_DIVISOR,
   ROUTES_ACTIVE_LOW_ZOOM_WIDTH_DIVISOR,
   ROUTES_ACTIVE_HIGH_ZOOM_WIDTH_MULTIPLIER,
@@ -78,6 +80,9 @@ export function flyMapToCityFocus(map, centerLngLat, placeName) {
 /** GeoJSON source holding endpoint circles used alongside route-mode POI `within` filters */
 const ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID = 'route-endpoint-poi-zones';
 
+/** Suffix on every app data layer id built from the PMTiles source (e.g. `ciclovia--pmtiles`). */
+const PMTILES_LAYER_SUFFIX = '--pmtiles';
+
 const MISSING_BASEMAP_IMAGES = new Set([
   'turning-circle-outline',
   'turning-circle',
@@ -87,7 +92,7 @@ const MISSING_BASEMAP_IMAGES = new Set([
 
 /** Geo sources for app data layers; basemap (e.g. composite) is everything else. */
 const CICLOMAPA_DATA_SOURCES = new Set([
-  'pmtiles-source',
+  PMTILES_SOURCE_ID,
   'commentsSrc',
   'favoritesSrc',
   'route-selected',
@@ -277,9 +282,8 @@ class Map extends Component {
 
     const filters = this.convertFilterToMapboxFilter(l);
 
-    const sourceLayer = sourceId === 'osmdata' ? '' : 'default';
-    const sourceSuffix = sourceId === 'osmdata' ? '' : '--pmtiles';
-    const layerId = l.id + sourceSuffix;
+    const sourceLayer = PMTILES_SOURCE_LAYER;
+    const layerId = l.id + PMTILES_LAYER_SUFFIX;
 
     const layerUnderneathName = this.getLayerUnderneathName(this.map);
 
@@ -450,7 +454,9 @@ class Map extends Component {
   }
 
   initBoundaryLayer() {
-    if (!this.map) {
+    // Deferred GeoJSON can resolve before the style is ready, and addSource() would
+    // throw. initLayers() calls this again once the map is loaded.
+    if (!this.map || !this.map.isStyleLoaded()) {
       return;
     }
 
@@ -779,12 +785,10 @@ class Map extends Component {
     const layerUnderneathName = this.getLayerUnderneathName(this.map);
     const self = this;
 
-    const sourceLayer = sourceId === 'osmdata' ? '' : 'default';
-
-    const sourceSuffix = sourceId === 'osmdata' ? '' : '--pmtiles';
-    const interactiveLayerId = l.id + '--interactive' + sourceSuffix;
-    const normalLayerId = l.id + sourceSuffix;
-    const routesActiveLayerId = l.id + '--routes-active' + sourceSuffix;
+    const sourceLayer = PMTILES_SOURCE_LAYER;
+    const interactiveLayerId = l.id + '--interactive' + PMTILES_LAYER_SUFFIX;
+    const normalLayerId = l.id + PMTILES_LAYER_SUFFIX;
+    const routesActiveLayerId = l.id + '--routes-active' + PMTILES_LAYER_SUFFIX;
 
     const dashedLineStyle = { 'line-dasharray': [1, 1] };
     // const dashedLineStyle = {
@@ -1268,16 +1272,22 @@ class Map extends Component {
     await this.awaitStyleReady();
 
     if (USE_PMTILES_SOURCE) {
-      const PMTILES_URL = process.env.REACT_APP_PMTILES_URL + PMTILES_FILENAME;
+      const PMTILES_BASE_URL = process.env.REACT_APP_PMTILES_URL;
+      const PMTILES_URL = PMTILES_BASE_URL + PMTILES_FILENAME;
       const pmtilesLoadToken = startDataLoad('pmtiles', 'PMTiles', { file: PMTILES_FILENAME });
 
       try {
+        if (!PMTILES_BASE_URL) {
+          throw new Error('REACT_APP_PMTILES_URL is not set; skipping PMTiles source.');
+        }
+
         console.log('Loading PMTiles (native vector source):', PMTILES_URL);
 
-        this.map.addSource('pmtiles-source', {
+        this.map.addSource(PMTILES_SOURCE_ID, {
           type: 'vector',
           url: PMTILES_URL,
-          lineMetrics: true,
+          // osmtogeojson writes `properties.id` as "way/123"; use it as the feature id so
+          // hover/selected feature-state and popups work across tiles.
           promoteId: 'id',
         });
 
@@ -1287,7 +1297,7 @@ class Map extends Component {
         // addSource() only registers the tile source — actual tiles are fetched lazily,
         // so we listen once for the first successful load or failure to report real status.
         const onSourceData = (e) => {
-          if (e.sourceId === 'pmtiles-source' && e.isSourceLoaded) {
+          if (e.sourceId === PMTILES_SOURCE_ID && e.isSourceLoaded) {
             this.map.off('sourcedata', onSourceData);
             this.map.off('error', onPmtilesError);
             finishDataLoad('pmtiles', {
@@ -1297,7 +1307,7 @@ class Map extends Component {
           }
         };
         const onPmtilesError = (e) => {
-          if (e.sourceId === 'pmtiles-source') {
+          if (e.sourceId === PMTILES_SOURCE_ID) {
             this.map.off('sourcedata', onSourceData);
             this.map.off('error', onPmtilesError);
             finishDataLoad('pmtiles', {
@@ -1362,22 +1372,19 @@ class Map extends Component {
     // layers.json is ordered from most to least important, but we
     //   want the most important ones to be on top so we add in reverse.
     // Slice is used here to don't destructively reverse the original array.
-    layers
-      .slice()
-      .reverse()
-      .forEach((l) => {
-        if (!l.type || l.type === 'way') {
-          if (this.pmtilesLoadedSuccessfully) {
-            this.initCyclepathLayerForSource(l, 'pmtiles-source');
+    if (this.pmtilesLoadedSuccessfully) {
+      layers
+        .slice()
+        .reverse()
+        .forEach((l) => {
+          if (!l.type || l.type === 'way') {
+            this.initCyclepathLayerForSource(l, PMTILES_SOURCE_ID);
+          } else if (l.type === 'poi' && l.filters) {
+            this.initPOILayerForSource(l, PMTILES_SOURCE_ID);
           }
-        } else if (l.type === 'poi' && l.filters) {
-          if (this.pmtilesLoadedSuccessfully) {
-            this.initPOILayerForSource(l, 'pmtiles-source');
-          }
-        }
-      });
-
-    this.layersInitialized = true;
+        });
+      this.layersInitialized = true;
+    }
 
     if (map.getLayer('mapbox-satellite')) {
       map.setLayoutProperty(
@@ -1726,9 +1733,10 @@ class Map extends Component {
     }
 
     if (this.props.data !== prevProps.data) {
-      // Reset stored filters when data changes
-      this.originalRouteEndpointPoiFilters = null;
-
+      // Note: don't touch originalRouteEndpointPoiFilters here. GeoJSON isn't a map
+      // source anymore, and it typically arrives *after* the route panel opens; wiping
+      // the stored filters would leave the route-endpoint `within` filter stuck on the
+      // POI layers when the route is cleared.
       this.initBoundaryLayer();
     }
 
@@ -2316,7 +2324,7 @@ class Map extends Component {
         const originalFilter = this.convertFilterToMapboxFilter(layer);
         const endpointWithinFilter = ['all', originalFilter, spatialFilter];
 
-        const layerId = layer.id + '--pmtiles';
+        const layerId = layer.id + PMTILES_LAYER_SUFFIX;
         const circlesLayerId = layerId + 'circles';
         const polygonLayerId = layerId + 'polygon';
 
@@ -2353,7 +2361,7 @@ class Map extends Component {
         );
 
         routeEndpointPoiLayers.forEach((layer) => {
-          const layerId = layer.id + '--pmtiles';
+          const layerId = layer.id + PMTILES_LAYER_SUFFIX;
           const circlesLayerId = layerId + 'circles';
           const polygonLayerId = layerId + 'polygon';
 
@@ -2390,34 +2398,32 @@ class Map extends Component {
     // Update layer visibility
     this.props.layers.forEach((layer) => {
       if (layer.type === 'way') {
-        ['', '--pmtiles'].forEach((sourceSuffix) => {
-          const baseLayerId = layer.id + sourceSuffix;
-          const interactiveLayerId = layer.id + '--interactive' + sourceSuffix;
-          const routesActiveLayerId = layer.id + '--routes-active' + sourceSuffix;
-          const arrowLayerId = baseLayerId + '--arrows';
+        const baseLayerId = layer.id + PMTILES_LAYER_SUFFIX;
+        const interactiveLayerId = layer.id + '--interactive' + PMTILES_LAYER_SUFFIX;
+        const routesActiveLayerId = layer.id + '--routes-active' + PMTILES_LAYER_SUFFIX;
+        const arrowLayerId = baseLayerId + '--arrows';
 
-          // Swap between normal and routes-active variants:
-          //   - routesActiveLayerId (idx 1): visible only WITH routes (muted background)
-          //   - baseLayerId & interactiveLayerId (idx 0, 2): visible only WITHOUT routes
-          [baseLayerId, routesActiveLayerId, interactiveLayerId].forEach((id, idx) => {
-            if (!map.getLayer(id)) return;
-            const isRoutesActiveLayer = idx === 1;
-            const status = isRoutesActiveLayer
-              ? layer.isActive && hasRoutes
-                ? 'visible'
-                : 'none'
-              : layer.isActive && !hasRoutes
-                ? 'visible'
-                : 'none';
-            map.setLayoutProperty(id, 'visibility', status);
-          });
-
-          // Handle arrow layer visibility (same as base layer)
-          if (map.getLayer(arrowLayerId)) {
-            const status = layer.isActive && !hasRoutes ? 'visible' : 'none';
-            map.setLayoutProperty(arrowLayerId, 'visibility', status);
-          }
+        // Swap between normal and routes-active variants:
+        //   - routesActiveLayerId (idx 1): visible only WITH routes (muted background)
+        //   - baseLayerId & interactiveLayerId (idx 0, 2): visible only WITHOUT routes
+        [baseLayerId, routesActiveLayerId, interactiveLayerId].forEach((id, idx) => {
+          if (!map.getLayer(id)) return;
+          const isRoutesActiveLayer = idx === 1;
+          const status = isRoutesActiveLayer
+            ? layer.isActive && hasRoutes
+              ? 'visible'
+              : 'none'
+            : layer.isActive && !hasRoutes
+              ? 'visible'
+              : 'none';
+          map.setLayoutProperty(id, 'visibility', status);
         });
+
+        // Handle arrow layer visibility (same as base layer)
+        if (map.getLayer(arrowLayerId)) {
+          const status = layer.isActive && !hasRoutes ? 'visible' : 'none';
+          map.setLayoutProperty(arrowLayerId, 'visibility', status);
+        }
       } else if (layer.type === 'poi') {
         const isRouteEndpointPoiIcon = ROUTE_ENDPOINT_VISIBLE_POI_ICONS.includes(layer.icon);
         const status = !hasRoutes
@@ -2428,16 +2434,11 @@ class Map extends Component {
             ? 'visible'
             : 'none';
 
-        ['', '--pmtiles'].forEach((sourceSuffix) => {
-          [
-            layer.id + sourceSuffix + 'circles',
-            layer.id + sourceSuffix,
-            layer.id + sourceSuffix + 'polygon',
-          ].forEach((id) => {
-            if (map.getLayer(id)) {
-              map.setLayoutProperty(id, 'visibility', status);
-            }
-          });
+        const layerId = layer.id + PMTILES_LAYER_SUFFIX;
+        [layerId + 'circles', layerId, layerId + 'polygon'].forEach((id) => {
+          if (map.getLayer(id)) {
+            map.setLayoutProperty(id, 'visibility', status);
+          }
         });
       }
     });

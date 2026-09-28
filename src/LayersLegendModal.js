@@ -202,7 +202,7 @@ class LayersLegendModal extends Component {
 
     const { visible, isDarkMode } = this.props;
     const deferLegendImage = IS_MOBILE && !visible;
-    const mobileUnavailableNoteClass = isDarkMode
+    const unavailableNoteClass = isDarkMode
       ? 'border border-amber-400/50 bg-amber-500/20 text-amber-100'
       : 'border border-amber-700/25 bg-amber-100 text-amber-950';
 
@@ -264,10 +264,10 @@ class LayersLegendModal extends Component {
             </div>
             {PMTILES_EXCLUDED_LAYER_NAMES.has(layer.name) && (
               <p
-                className={`mb-0 mt-3 rounded-lg px-3 py-2.5 text-sm font-semibold leading-snug ${mobileUnavailableNoteClass}`}
+                className={`mb-0 mt-3 rounded-lg px-3 py-2.5 text-sm font-semibold leading-snug ${unavailableNoteClass}`}
                 role="note"
               >
-                Não exibida no mapa na versão para celular.
+                Ainda não exibida no mapa.
               </p>
             )}
             <p className="mb-0 mt-2 text-sm leading-normal text-gray-400">{layer.description}</p>

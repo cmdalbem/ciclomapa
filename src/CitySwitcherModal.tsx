@@ -1383,13 +1383,13 @@ function CitySwitcherModal({
   );
 
   const globalSearchPlaceholder = useMemo(() => {
-    const labelsPt = SUPPORTED_COUNTRIES.map((c) => c.labelPt);
+    const places = SUPPORTED_COUNTRIES.map((c) => c.inPt);
     const suffix =
-      labelsPt.length === 0
+      places.length === 0
         ? 'no mundo'
-        : labelsPt.length === 1
-          ? `em ${labelsPt[0]}`
-          : `em ${labelsPt.slice(0, -1).join(', ')} e ${labelsPt[labelsPt.length - 1]}`;
+        : places.length === 1
+          ? places[0]
+          : `${places.slice(0, -1).join(', ')} e ${places[places.length - 1]}`;
     return IS_PROD ? `Buscar ${suffix}` : 'Buscar no mundo';
   }, []);
 

@@ -59,8 +59,6 @@ export default function AppLayout({
               lng={state.lng}
               z={state.zoom}
               getViewport={handlers.getMapViewport}
-              downloadData={handlers.downloadData}
-              onMapMoved={handlers.onMapMoved}
               isSidebarOpen={state.isSidebarOpen}
               toggleSidebar={handlers.toggleSidebar}
               embedMode={state.embedMode}

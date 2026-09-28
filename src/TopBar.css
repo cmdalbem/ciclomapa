@@ -49,6 +49,7 @@
    search field, so a hair smaller for optical balance). Colors stay per-button. */
 .topbar-map-action.ant-btn {
   --topbar-map-action-size: calc(var(--ant-control-height, 32px) - 2px);
+
   width: var(--topbar-map-action-size);
   height: var(--topbar-map-action-size);
   min-width: var(--topbar-map-action-size);

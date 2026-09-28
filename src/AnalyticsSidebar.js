@@ -635,7 +635,7 @@ class AnalyticsSidebar extends Component {
               {this.props.loading ? (
                 <>
                   <p className="m-0 text-xs leading-snug opacity-70">
-                    Carregando dados do OpenStreetMap...
+                    Carregando dados desta cidade...
                   </p>
                   <Button
                     type="link"

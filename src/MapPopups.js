@@ -7,7 +7,12 @@ import Analytics from './Analytics.js';
 import { formatDistance, formatDuration } from './utils/routeUtils.js';
 import { formatTimeAgo } from './utils/utils.js';
 
-import { ENABLE_COMMENTS, IS_MOBILE } from './config/constants.js';
+import {
+  ENABLE_COMMENTS,
+  IS_MOBILE,
+  PMTILES_SOURCE_ID,
+  PMTILES_SOURCE_LAYER,
+} from './config/constants.js';
 import { getPlaceTypeIconElement } from './GooglePlacesGeocoder.js';
 import { isFavorite, isFavoriteById } from './favoritesStore';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
@@ -219,7 +224,11 @@ class MapPopups {
       if (this.selectedCycleway) {
         try {
           this.map.setFeatureState(
-            { source: 'pmtiles-source', sourceLayer: 'default', id: this.selectedCycleway },
+            {
+              source: PMTILES_SOURCE_ID,
+              sourceLayer: PMTILES_SOURCE_LAYER,
+              id: this.selectedCycleway,
+            },
             { selected: false, hover: false }
           );
         } catch (e) {}

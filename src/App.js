@@ -77,6 +77,9 @@ class App extends Component {
   // can avoid redundant Firestore/Overpass hits when data is deferred (see updateData()).
   _geoJsonLoadedArea = null;
   _geoJsonLoadingArea = null;
+  // Areas we already re-fetched from OSM once this session because the cached GeoJSON
+  // had no admin boundary (see updateData()).
+  _boundaryRefetchAttemptedAreas = new Set();
   deferredCityFocus = null;
   // Fly-to target from the `?flyto=lat,lng[,zoom]` URL param; consumed when the map mounts.
   pendingFlyToTarget = null;
@@ -455,13 +458,13 @@ class App extends Component {
       });
     }
 
-    if (IS_MOBILE) {
-      layers.forEach((l) => {
-        if (PMTILES_EXCLUDED_LAYER_NAMES.has(l.name)) {
-          l.isActive = false;
-        }
-      });
-    }
+    // Not in the tiles, so they can't render anywhere; keep them off even if an old
+    // localStorage state had them on.
+    layers.forEach((l) => {
+      if (PMTILES_EXCLUDED_LAYER_NAMES.has(l.name)) {
+        l.isActive = false;
+      }
+    });
 
     return layers;
   }
@@ -1211,13 +1214,25 @@ class App extends Component {
       backgroundUpdate: !!backgroundUpdate,
     });
 
-    this.currentOSMRequest = OSMController.getData({ area: areaName });
-    return this.currentOSMRequest
+    const request = OSMController.getData({ area: areaName });
+    this.currentOSMRequest = request;
+    return request
       .then((newData) => {
         finishDataLoad('geojson-osm', {
           token: osmLoadToken,
           meta: { area: areaName, features: newData.geoJson?.features?.length ?? 0 },
         });
+
+        if (this.currentOSMRequest === request) {
+          this.currentOSMRequest = null;
+        }
+
+        // User already switched city while this was in flight (we abort on city change,
+        // but be defensive): don't let the old city's data land on the new one.
+        if (areaName !== this.state.area) {
+          console.debug(`Ignoring OSM result for ${areaName}, current area is ${this.state.area}`);
+          return;
+        }
 
         this.geoJsonDiff(this.state.geoJson, newData.geoJson);
 
@@ -1273,30 +1288,26 @@ class App extends Component {
           }
 
           appNotification.destroy();
-
-          // notification.success({
-          //     message: 'OSM Request Completed',
-          //     description: `Successfully loaded data for ${city}`,
-          //     duration: 2
-          // });
         }
-
-        // Clear the current request reference
-        this.currentOSMRequest = null;
       })
       .catch((e) => {
         console.error(e);
-        this.setState({
-          loading: false,
-        });
 
         if (this._geoJsonLoadingArea === areaName) {
           this._geoJsonLoadingArea = null;
         }
 
-        appNotification.destroy();
+        // Only the request that is still current owns `loading` and the request ref.
+        // If we were aborted (city switch, forced refresh, cancel) a newer load has
+        // already taken over, or cancelDataLoad() reset things itself.
+        const isCurrentRequest = this.currentOSMRequest === request;
+        if (isCurrentRequest) {
+          this.currentOSMRequest = null;
+          if (areaName === this.state.area) {
+            this.setState({ loading: false });
+          }
+        }
 
-        // Check if the error is due to request abortion
         if (e.message === 'Request aborted') {
           console.debug('OSM request was cancelled due to a new request');
           finishDataLoad('geojson-osm', {
@@ -1304,113 +1315,124 @@ class App extends Component {
             status: 'aborted',
             meta: { area: areaName },
           });
-          // notification.warning({
-          //     message: 'OSM Request Aborted',
-          //     description: 'OSM request was cancelled due to a new request.',
-          //     duration: 2
-          // });
         } else {
           finishDataLoad('geojson-osm', {
             token: osmLoadToken,
             error: e,
             meta: { area: areaName },
           });
+          appNotification.destroy();
           appNotification.error({
             title: 'Ops',
             description:
               'O OSM está mal humorado neste momento e não conseguimos acessar os dados. Tente novamente mais tarde.',
           });
         }
-
-        // Clear the current request reference
-        this.currentOSMRequest = null;
       });
   }
 
   updateData(forceUpdate) {
-    if (this.state.area) {
-      if (forceUpdate) {
-        this.getDataFromOSM({ forceUpdate: true });
-      } else {
-        // Try to retrieve this area's geojson data from the database
-        const area = this.state.area;
-        const storageKey = this.getStorageKeyForArea(area);
-        const cacheLoadToken = startDataLoad('geojson-cache', 'GeoJSON (cache)', { area });
-        this.getStorage()
-          .load(area, { storageKey })
-          .then((data) => {
-            if (data) {
-              finishDataLoad('geojson-cache', {
-                token: cacheLoadToken,
-                meta: { area, features: data.geoJson?.features?.length ?? 0 },
-              });
-
-              const hasBoundaryFeature = ENABLE_BOUNDARY_LAYER
-                ? data.geoJson?.features?.some((f) => f.properties?.boundary === 'administrative')
-                : true;
-
-              if (!this.isDataFresh(data.updatedAt) || !hasBoundaryFeature) {
-                // Re-fetch when stale, or when cached GeoJSON lacks city boundary
-                // (older saves / PMTiles export scripts only stored cyclepath ways).
-                this.getDataFromOSM({ backgroundUpdate: true });
-              }
-
-              if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
-                console.debug('Recalculating lengths...');
-                const computedLengths = calculateLayersLengths(
-                  data.geoJson,
-                  this.state.layers,
-                  this.state.lengthCalculationStrategy
-                );
-                if (Object.keys(computedLengths).length > 0) {
-                  data.lengths = computedLengths;
-                }
-              }
-
-              this.setState({
-                geoJson: data.geoJson,
-                lengths: data.lengths,
-                dataUpdatedAt: new Date(data.updatedAt),
-              });
-
-              this._geoJsonLoadedArea = area;
-              if (this._geoJsonLoadingArea === area) {
-                this._geoJsonLoadingArea = null;
-              }
-            } else {
-              console.debug(`Couldn't find previously saved data for area ${area}, hitting OSM...`);
-
-              finishDataLoad('geojson-cache', {
-                token: cacheLoadToken,
-                status: 'empty',
-                meta: { area, features: 0 },
-              });
-
-              this.setState({
-                geoJson: null,
-                lengths: {},
-              });
-
-              this.getDataFromOSM();
-            }
-          })
-          .catch((e) => {
-            console.error(e);
-            finishDataLoad('geojson-cache', { token: cacheLoadToken, error: e, meta: { area } });
-
-            if (this._geoJsonLoadingArea === area) {
-              this._geoJsonLoadingArea = null;
-            }
-            // notification['error']({
-            //     message: 'Erro',
-            //     description:
-            //         'Ocorreu um erro ao acessar o banco de dados.',
-            // });
-          });
-      }
-    } else {
+    if (!this.state.area) {
       this.setState({ loading: false });
+      return;
     }
+
+    if (forceUpdate) {
+      this.getDataFromOSM({ forceUpdate: true });
+      return;
+    }
+
+    // Try to retrieve this area's geojson data from the database. This can't be
+    // aborted, so every completion below first checks the user hasn't moved to
+    // another city in the meantime.
+    const area = this.state.area;
+    const storageKey = this.getStorageKeyForArea(area);
+    const cacheLoadToken = startDataLoad('geojson-cache', 'GeoJSON (cache)', { area });
+    this.setState({ loading: true });
+    this.getStorage()
+      .load(area, { storageKey })
+      .then((data) => {
+        if (area !== this.state.area) {
+          console.debug(`Ignoring cached data for ${area}, current area is ${this.state.area}`);
+          finishDataLoad('geojson-cache', {
+            token: cacheLoadToken,
+            status: 'aborted',
+            meta: { area },
+          });
+          return;
+        }
+
+        if (!data) {
+          console.debug(`Couldn't find previously saved data for area ${area}, hitting OSM...`);
+          finishDataLoad('geojson-cache', {
+            token: cacheLoadToken,
+            status: 'empty',
+            meta: { area, features: 0 },
+          });
+          this.setState({ geoJson: null, lengths: {} });
+          this.getDataFromOSM({ areaName: area });
+          return;
+        }
+
+        finishDataLoad('geojson-cache', {
+          token: cacheLoadToken,
+          meta: { area, features: data.geoJson?.features?.length ?? 0 },
+        });
+
+        // Re-fetch when stale, or when cached GeoJSON lacks the city boundary (saves
+        // from before ENABLE_BOUNDARY_LAYER only stored cyclepath ways). The boundary
+        // retry happens at most once per city per session: if OSM has no matching
+        // admin boundary for this area we'd otherwise hit Overpass on every open.
+        const hasBoundaryFeature =
+          !ENABLE_BOUNDARY_LAYER ||
+          data.geoJson?.features?.some((f) => f.properties?.boundary === 'administrative');
+        const shouldRefetchForBoundary =
+          !hasBoundaryFeature && !this._boundaryRefetchAttemptedAreas.has(area);
+        const needsBackgroundRefetch =
+          !this.isDataFresh(data.updatedAt) || shouldRefetchForBoundary;
+
+        if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
+          console.debug('Recalculating lengths...');
+          const computedLengths = calculateLayersLengths(
+            data.geoJson,
+            this.state.layers,
+            this.state.lengthCalculationStrategy
+          );
+          if (Object.keys(computedLengths).length > 0) {
+            data.lengths = computedLengths;
+          }
+        }
+
+        this.setState({
+          geoJson: data.geoJson,
+          lengths: data.lengths,
+          dataUpdatedAt: new Date(data.updatedAt),
+          loading: needsBackgroundRefetch,
+        });
+
+        this._geoJsonLoadedArea = area;
+        if (this._geoJsonLoadingArea === area) {
+          this._geoJsonLoadingArea = null;
+        }
+
+        if (needsBackgroundRefetch) {
+          if (shouldRefetchForBoundary) {
+            this._boundaryRefetchAttemptedAreas.add(area);
+          }
+          this.getDataFromOSM({ areaName: area, backgroundUpdate: true });
+        }
+      })
+      .catch((e) => {
+        console.error(e);
+        finishDataLoad('geojson-cache', { token: cacheLoadToken, error: e, meta: { area } });
+
+        if (this._geoJsonLoadingArea === area) {
+          this._geoJsonLoadingArea = null;
+        }
+        if (area === this.state.area && !this.currentOSMRequest) {
+          this.setState({ loading: false });
+        }
+      });
   }
 
   // Map rendering runs entirely off the regional PMTiles, so per-city GeoJSON is only
@@ -1553,7 +1575,7 @@ class App extends Component {
       this.abortCurrentOSMRequest();
       this._geoJsonLoadedArea = null;
       this._geoJsonLoadingArea = null;
-      this.setState({ geoJson: null, lengths: {}, dataUpdatedAt: null });
+      this.setState({ geoJson: null, lengths: {}, dataUpdatedAt: null, loading: false });
       if (this.needsCityGeoJsonContext()) {
         this.ensureCityDataLoaded();
       }
@@ -1859,7 +1881,8 @@ class App extends Component {
   // Routing panel, and the city boundary outline. Idle map browsing stays on
   // PMTiles only; city/area itself is only changed via the picker / URL.
   needsCityGeoJsonContext() {
-    return this.state.isSidebarOpen || this._isDirectionsPanelOpen;
+    // isSidebarOpen is persisted, but the Analytics sidebar isn't rendered on mobile.
+    return (!IS_MOBILE && this.state.isSidebarOpen) || this._isDirectionsPanelOpen;
   }
 
   toggleDirectionsPanel() {
