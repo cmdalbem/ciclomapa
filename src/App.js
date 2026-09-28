@@ -57,7 +57,7 @@ import {
   shouldDeferMapBootUntilAfterPaint,
 } from './AboutModal.js';
 import { readFavorites, toggleFavorite } from './favoritesStore';
-import { reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
+import { guessPlaceFromViewport, reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 import userLocationCache from './features/geolocation/userLocationCache.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 import { startDataLoad, finishDataLoad } from './dev/dataLoadTracker.js';
@@ -94,6 +94,10 @@ class App extends Component {
   _unmounted = false;
   /** Mobile directions panel open state (kept off React state to avoid App-wide re-renders). */
   _isDirectionsPanelOpen = false;
+  // Monotonic id so a slow viewport reverse-geocode can't act on a stale panel state.
+  _viewportAreaSyncId = 0;
+  // Set by setArea({ source }), consumed once by the switch_city analytics event.
+  _pendingAreaChangeSource = null;
 
   getStorage() {
     if (!this._storage) {
@@ -364,7 +368,7 @@ class App extends Component {
   toggleSidebar(state) {
     this.setState({ isSidebarOpen: state }, () => {
       if (state) {
-        this.ensureCityDataLoaded();
+        this.syncAreaWithViewportThenLoadCityData();
       }
       // Boundary visibility follows the same Analytics/Routing gate as GeoJSON loading.
       this.mapComponent?.initBoundaryLayer?.();
@@ -603,7 +607,9 @@ class App extends Component {
     return definition.canonicalSlug || normalizedSlug;
   }
 
-  getKnownCanonicalSlugFromArea(area) {
+  // Canonical slug for `area` ONLY if it's in the pre-seeded catalog, else null. A null
+  // here means "not pre-seeded", never "not a supported city" (see docs/cities.md).
+  getCatalogCanonicalSlugFromArea(area) {
     if (!area || typeof area !== 'string') return null;
     const primaryLabel = area.split(',')[0]?.trim();
     if (!primaryLabel) return null;
@@ -615,7 +621,7 @@ class App extends Component {
   }
 
   getPreferredCanonicalSlugForMeta(area) {
-    return this.getKnownCanonicalSlugFromArea(area) || this.getCanonicalRouteCitySlug();
+    return this.getCatalogCanonicalSlugFromArea(area) || this.getCanonicalRouteCitySlug();
   }
 
   /** Single document title for sr-only h1 (matches route, not only geocoder area). */
@@ -627,8 +633,10 @@ class App extends Component {
     return primary ? `${primary} — CicloMapa` : 'CicloMapa';
   }
 
+  // Stable slug + label for catalog cities (storage keys, canonical URLs, display).
+  // Returns null for every other city; callers must treat that as "use the area as-is".
   getCanonicalCityIdentity(area) {
-    const canonicalSlug = this.getKnownCanonicalSlugFromArea(area);
+    const canonicalSlug = this.getCatalogCanonicalSlugFromArea(area);
     if (!canonicalSlug) return null;
 
     const staticLocation = getPredefinedCityStaticLocation(canonicalSlug);
@@ -734,7 +742,7 @@ class App extends Component {
   recordRecentlyVisitedCity(area) {
     if (!area) return;
     try {
-      const slug = this.getKnownCanonicalSlugFromArea(area) || this.getCitySlugFromArea(area);
+      const slug = this.getCatalogCanonicalSlugFromArea(area) || this.getCitySlugFromArea(area);
       if (!slug) return;
 
       const raw = window.localStorage.getItem(RECENT_CITIES_STORAGE_KEY);
@@ -1483,6 +1491,36 @@ class App extends Component {
     this.updateData();
   }
 
+  // The area doesn't follow the viewport while idly browsing (PMTiles render
+  // everywhere), so by the time Analytics/Routing opens the user may be looking at a
+  // different city than state.area. Guess the city from the viewport first; a real
+  // area change then goes through componentDidUpdate, which reloads GeoJSON when a
+  // panel that needs it is open. Falls back to the current area if geocoding fails.
+  async syncAreaWithViewportThenLoadCityData() {
+    const requestId = (this._viewportAreaSyncId = (this._viewportAreaSyncId || 0) + 1);
+    const { lng, lat } = this.getCurrentViewport();
+
+    let viewportArea = null;
+    try {
+      const rev = await guessPlaceFromViewport({ lng, lat }, this.state.map?.getBounds?.(), {
+        currentArea: this.state.area,
+      });
+      viewportArea = this.normalizeAreaLabelForDisplay(rev?.place_name?.trim());
+    } catch (e) {
+      console.debug('Viewport reverse geocode failed, keeping current area.', e?.message);
+    }
+
+    // Panel closed / another sync started meanwhile.
+    if (requestId !== this._viewportAreaSyncId || !this.needsCityGeoJsonContext()) return;
+
+    if (viewportArea && viewportArea !== this.state.area) {
+      console.debug(`Viewport is over "${viewportArea}", switching from "${this.state.area}"`);
+      this.setArea(viewportArea, { keepRoutePoints: true, source: 'viewport' });
+      return; // componentDidUpdate's area branch triggers ensureCityDataLoaded()
+    }
+    this.ensureCityDataLoaded();
+  }
+
   onMapStyleChange(newMapStyle) {
     this.setState({ mapStyle: newMapStyle });
   }
@@ -1590,9 +1628,13 @@ class App extends Component {
 
       console.debug(`Changed area from ${prevState.area} to ${this.state.area}`);
 
+      // 'picker' = the user chose a city (switcher, URL, search); 'viewport' = we
+      // switched automatically to the city under the map when a panel needed data.
       Analytics.event('switch_city', {
         city_name: this.state.area,
+        source: this._pendingAreaChangeSource || 'picker',
       });
+      this._pendingAreaChangeSource = null;
 
       if (this._preserveRoutePointsOnAreaChange) {
         this._preserveRoutePointsOnAreaChange = false;
@@ -1907,7 +1949,7 @@ class App extends Component {
   onDirectionsPanelToggle(isOpen) {
     this._isDirectionsPanelOpen = isOpen;
     if (isOpen) {
-      this.ensureCityDataLoaded();
+      this.syncAreaWithViewportThenLoadCityData();
     }
     // Directions open state is kept off React state (avoids App-wide re-renders), so
     // poke Map directly — same gate as Analytics for boundary visibility.
@@ -1945,6 +1987,7 @@ class App extends Component {
       // so that programmatic area switches (e.g. auto-switching to match a
       // selected route point) don't wipe out the user's from/to points.
       this._preserveRoutePointsOnAreaChange = options.keepRoutePoints === true;
+      this._pendingAreaChangeSource = options.source || null;
       this.setState({ area: normalizedArea });
     }
   }
