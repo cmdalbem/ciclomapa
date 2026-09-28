@@ -1301,7 +1301,16 @@ class DirectionsPanel extends Component {
             )}
 
             {!showResultsOnMobile && this.state.placesSearchError && (
-              <div className="mt-2 text-sm text-amber-200/90">{this.state.placesSearchError}</div>
+              <div
+                role="status"
+                className={`mt-2 rounded-lg border px-3 py-2 text-sm ${
+                  this.props.isDarkMode
+                    ? 'border-amber-400/50 bg-amber-500/20 text-amber-100'
+                    : 'border-amber-700/25 bg-amber-100 text-amber-950'
+                }`}
+              >
+                {this.state.placesSearchError}
+              </div>
             )}
 
             {directionsLoading && (
@@ -1342,7 +1351,14 @@ class DirectionsPanel extends Component {
               </div>
             )}
             {(directionsError || this.state.cityValidationError) && (
-              <div className="mt-3 p-2 bg-red-600 bg-opacity-20 border border-red-500 rounded text-red-200 text-sm">
+              <div
+                role="alert"
+                className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
+                  this.props.isDarkMode
+                    ? 'border-red-400/50 bg-red-500/20 text-red-100'
+                    : 'border-red-700/25 bg-red-100 text-red-950'
+                }`}
+              >
                 {directionsError && <div>Erro: {directionsError}</div>}
                 {this.state.cityValidationError && <div>{this.state.cityValidationError}</div>}
               </div>
