@@ -646,11 +646,17 @@ function convertToGeoJSON(osmData) {
 }
 
 // Save GeoJSON to file
-async function saveGeoJSON(geoJson, outputPath) {
-  const jsonString = JSON.stringify(geoJson, null, 2);
+async function saveGeoJSON(geoJson, outputPath, layerNames) {
+  const stamped = {
+    ...geoJson,
+    // So generate-pmtiles can refuse --skip-geojson reuse when layer options differ.
+    ciclomapa: { layers: layerNames },
+  };
+  const jsonString = JSON.stringify(stamped, null, 2);
   await fs.promises.writeFile(outputPath, jsonString, 'utf8');
   console.log(`✅ GeoJSON saved to: ${outputPath}`);
   console.log(`   Features: ${geoJson.features.length}`);
+  console.log(`   Layers: ${layerNames.join(', ')}`);
 }
 
 // Main function
@@ -727,7 +733,7 @@ async function main() {
     }
 
     console.log(`💾 Saving to ${config.output}...`);
-    await saveGeoJSON(geoJson, config.output);
+    await saveGeoJSON(geoJson, config.output, layers);
 
     console.log('');
     console.log('✨ Done!');
