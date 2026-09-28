@@ -28,6 +28,7 @@ console.log('url:', url);
 console.log('header:', JSON.stringify(header, null, 2));
 
 const metadata = await p.getMetadata();
+console.log('description:', metadata.description);
 for (const layer of metadata.vector_layers || []) {
   console.log(`\nvector layer "${layer.id}" fields:`, Object.keys(layer.fields || {}).join(', '));
 }

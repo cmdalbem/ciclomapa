@@ -1,5 +1,5 @@
 {
-  "_comment": "All builds include POI layers by default (the map renders POIs from the tiles only). Set \"includePoi\": false to opt out. Baixa velocidade / Trilha / Proibido are always excluded (see DEFAULT_PMTILES_EXCLUDE_LAYERS in generate-pmtiles.js).",
+  "_comment": "All builds include POI layers by default (the map renders POIs from the tiles only). Set \"includePoi\": false to opt out. Optionally set \"excludeLayers\": [\"Baixa velocidade\", \"Trilha\", \"Proibido\"] to drop specific way layers. The included layer names get stamped into the archive metadata so the app only shows toggles for layers that are really in the tiles.",
   "builds": [
     {
       "id": "br",

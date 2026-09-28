@@ -709,15 +709,22 @@ async function main() {
 
     console.log('');
     if (!osmData.elements || osmData.elements.length === 0) {
-      console.warn('⚠️  Warning: No data returned from Overpass API');
-    } else {
-      console.log(`📊 Received ${osmData.elements.length} OSM elements`);
+      throw new Error(
+        'No data returned from Overpass API (0 elements). Refusing to write an empty GeoJSON.'
+      );
     }
+    console.log(`📊 Received ${osmData.elements.length} OSM elements`);
 
     const convertSpinner = new Spinner('Converting to GeoJSON...');
     convertSpinner.start();
     const geoJson = convertToGeoJSON(osmData);
     convertSpinner.stop(`🔄 Converted to GeoJSON (${geoJson.features.length} features)`);
+
+    if (!geoJson.features || geoJson.features.length === 0) {
+      throw new Error(
+        'Overpass returned elements but GeoJSON has 0 features. Refusing to write an empty file.'
+      );
+    }
 
     console.log(`💾 Saving to ${config.output}...`);
     await saveGeoJSON(geoJson, config.output);

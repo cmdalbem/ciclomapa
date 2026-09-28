@@ -240,11 +240,20 @@ export const FORCE_RECALCULATE_LENGTHS_ALWAYS = URL_PARAMS.get('debug') === 'tru
 export const USE_PMTILES_SOURCE = true;
 
 /**
- * Way layers omitted from PMTiles builds (see DEFAULT_PMTILES_EXCLUDE_LAYERS in
- * scripts/generate-pmtiles.js). The map renders from PMTiles only, so these can't be
- * shown on any device: their filters are hidden and forced inactive.
+ * The map renders from PMTiles only, so a layer toggle is only useful if the archive
+ * actually contains that layer. generate-pmtiles.js stamps the included layer names
+ * into the archive metadata (`description` -> `{ ciclomapa: { layers: [...] } }`) and
+ * App reads it at startup. Archives built before that stamp existed have no list, so
+ * we fall back to assuming these were left out (that's what every build did back then).
  */
-export const PMTILES_EXCLUDED_LAYER_NAMES = new Set(['Baixa velocidade', 'Trilha', 'Proibido']);
+export const PMTILES_FALLBACK_MISSING_LAYER_NAMES = new Set([
+  'Baixa velocidade',
+  'Trilha',
+  'Proibido',
+]);
+
+/** Legend / layers panel grouping for the non-cycleway street layers. */
+export const OUTRAS_VIAS_LAYER_NAMES = new Set(['Baixa velocidade', 'Trilha', 'Proibido']);
 
 // Providers
 
