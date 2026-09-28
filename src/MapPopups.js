@@ -8,6 +8,7 @@ import { formatDistance, formatDuration } from './utils/routeUtils.js';
 import { formatTimeAgo } from './utils/utils.js';
 
 import {
+  CICLOMAPA_USER_AGENT,
   ENABLE_COMMENTS,
   IS_MOBILE,
   PMTILES_SOURCE_ID,
@@ -132,8 +133,6 @@ export function omitAddressTagsForDetailGrid(properties) {
   return out;
 }
 
-const NOMINATIM_UA = 'CicloMapa/3.0 (https://ciclomapa.app)';
-
 /** First segment of the app area label (e.g. "Porto Alegre, RS, Brasil" → "Porto Alegre"). */
 export function primaryCityFromAreaLabel(areaLabel) {
   if (!areaLabel || typeof areaLabel !== 'string') return '';
@@ -186,7 +185,7 @@ export async function reverseNominatimAddress(lat, lon, options = {}) {
     signal,
     headers: {
       Accept: 'application/json',
-      'User-Agent': NOMINATIM_UA,
+      'User-Agent': CICLOMAPA_USER_AGENT,
     },
   });
 

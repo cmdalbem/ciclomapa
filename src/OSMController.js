@@ -1,8 +1,6 @@
 /* eslint-disable no-loop-func */
 import osmtogeojson from 'osmtogeojson';
 
-import $ from 'jquery';
-
 import { appNotification } from './antdNotification';
 
 import {
@@ -11,11 +9,17 @@ import {
   AREA_ID_OVERRIDES,
   BLACKLISTED_CITIES_FOR_EXTRA_LAYERS,
   ENABLE_BOUNDARY_LAYER,
+  CICLOMAPA_USER_AGENT,
 } from './config/constants.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 import { slugify } from './utils/utils.js';
 
 import * as layersDefinitions from './config/layers.json';
+
+const OSM_FETCH_HEADERS = {
+  Accept: 'application/json',
+  'User-Agent': CICLOMAPA_USER_AGENT,
+};
 
 class OSMController {
   static async searchNominatim(query, options = {}) {
@@ -67,7 +71,7 @@ class OSMController {
     trackCall({ api: API_TYPES.NOMINATIM_SEARCH, details: query });
 
     const response = await fetch(url.toString(), {
-      headers: { Accept: 'application/json' },
+      headers: OSM_FETCH_HEADERS,
     });
     if (!response.ok) {
       throw new Error(`Nominatim search failed (${response.status})`);
@@ -256,12 +260,10 @@ class OSMController {
   }
 
   static getData(constraints) {
-    let abortController = new AbortController();
     let isAborted = false;
+    const serverControllers = [];
 
     const promise = new Promise((resolve, reject) => {
-      let geoJson;
-
       this.getAreaId(constraints.area)
         .then((areaId) => {
           if (isAborted) {
@@ -279,63 +281,88 @@ class OSMController {
 
           trackCall({ api: API_TYPES.OVERPASS, details: constraints.area });
 
-          let requests = [];
-          for (let i = 0; i < OVERPASS_SERVERS.length; i++) {
-            const endpoint = OVERPASS_SERVERS[i] + '?data=' + encodedQuery;
+          let pending = OVERPASS_SERVERS.length;
+          let resolved = false;
 
-            console.debug(`[SERVER #${i}] ${OVERPASS_SERVERS[i]}`);
+          OVERPASS_SERVERS.forEach((server, i) => {
+            const endpoint = server + '?data=' + encodedQuery;
+            const controller = new AbortController();
+            serverControllers[i] = controller;
 
-            requests[i] = $.getJSON(endpoint, (data) => {
-              if (isAborted) {
-                return;
-              }
+            console.debug(`[SERVER #${i}] ${server}`);
 
-              if (data.elements.length > 0) {
-                console.debug(`[SERVER #${i}] Success!`);
-                for (let r = 0; r < requests.length; r++) {
-                  if (r !== i) {
-                    console.debug(`[SERVER #${r}] Aborting`);
-                    requests[r].abort();
-                  }
+            fetch(endpoint, {
+              signal: controller.signal,
+              headers: OSM_FETCH_HEADERS,
+            })
+              .then(async (response) => {
+                if (!response.ok) {
+                  // Overpass often returns HTML error bodies (busy / timeout / rate limit).
+                  const body = (await response.text().catch(() => '')).slice(0, 240);
+                  throw new Error(
+                    `Overpass HTTP ${response.status} ${response.statusText}${body ? `: ${body}` : ''}`
+                  );
+                }
+                return response.json();
+              })
+              .then((data) => {
+                if (isAborted || resolved) {
+                  return;
                 }
 
-                console.debug('osm data: ', data);
-
-                // Convert all data to GeoJSON without filtering
-                geoJson = osmtogeojson({ elements: data.elements }, { flatProperties: true });
-
-                console.debug('converted to geoJSON: ', geoJson);
-
-                resolve({
-                  geoJson: geoJson,
-                });
-              } else {
-                console.debug(`[SERVER #${i}] Empty result`);
-
-                // Check if I'm the last one
-                let isLastRemainingRequest = true;
-                for (let r = 0; r < requests.length; r++) {
-                  if (r !== i) {
-                    if (requests[r].status === undefined) {
-                      isLastRemainingRequest = false;
+                if (data.elements && data.elements.length > 0) {
+                  console.debug(`[SERVER #${i}] Success!`);
+                  resolved = true;
+                  serverControllers.forEach((c, r) => {
+                    if (r !== i) {
+                      console.debug(`[SERVER #${r}] Aborting`);
+                      c.abort();
                     }
+                  });
+
+                  console.debug('osm data: ', data);
+
+                  const geoJson = osmtogeojson(
+                    { elements: data.elements },
+                    { flatProperties: true }
+                  );
+
+                  console.debug('converted to geoJSON: ', geoJson);
+
+                  resolve({
+                    geoJson: geoJson,
+                  });
+                } else {
+                  console.debug(`[SERVER #${i}] Empty result`);
+                  pending -= 1;
+                  if (pending === 0 && !resolved) {
+                    console.debug(
+                      `[SERVER #${i}] I was the last one, so probably the result is empty.`
+                    );
+                    resolve({
+                      geoJson: null,
+                    });
                   }
                 }
-                if (isLastRemainingRequest) {
-                  console.debug(
-                    `[SERVER #${i}] I was the last one, so probably the result is empty.`
+              })
+              .catch((e) => {
+                if (e.name === 'AbortError' || isAborted || resolved) {
+                  return;
+                }
+                // Per-server busy/timeouts are expected while we race fallbacks.
+                // Don't console.error or Sentry (captureConsole) treats them as app errors.
+                console.debug(`[SERVER #${i}] ${e.message || e}`);
+                pending -= 1;
+                if (pending === 0 && !resolved) {
+                  console.warn(
+                    `All Overpass servers failed or returned empty for "${constraints.area}"`
                   );
                   resolve({
                     geoJson: null,
                   });
                 }
-              }
-            }).fail((e) => {
-              if (e.statusText !== 'abort' && !isAborted) {
-                console.error(`[SERVER #${i}] Error:`, e);
-              }
-            });
-          }
+              });
+          });
         })
         .catch((e) => {
           if (!isAborted) {
@@ -349,7 +376,7 @@ class OSMController {
     promise.abort = () => {
       console.debug('OSM request aborted');
       isAborted = true;
-      abortController.abort();
+      serverControllers.forEach((controller) => controller.abort());
     };
 
     return promise;

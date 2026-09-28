@@ -2,6 +2,10 @@
  * OSM & Overpass
  */
 
+/** Identifies CicloMapa on Nominatim / Overpass (User-Agent). Browsers send Referer too. */
+export const CICLOMAPA_USER_AGENT =
+  'CicloMapa/3.0 (https://ciclomapa.app; contato@ciclomapa.org.br)';
+
 export const OSM_DATA_MAX_AGE_DAYS = 30;
 
 export const BLACKLISTED_CITIES_FOR_EXTRA_LAYERS = [
