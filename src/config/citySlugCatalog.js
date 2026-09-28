@@ -1,3 +1,22 @@
+/**
+ * Pre-seeded city catalog. READ THIS BEFORE USING IT AS A "LIST OF CITIES".
+ *
+ * CicloMapa works for ANY city: the area is resolved live via Nominatim/Overpass and
+ * unknown URL slugs are accepted. This file is just a hand-picked sample of larger
+ * cities that gives us, for those cities only:
+ *   - stable SEO slugs (`/sao-paulo`) and slug aliases (`canonicalSlug`)
+ *   - a static center + area label so the page can boot without geocoding
+ *   - the "top cities" grid in the city switcher (topCitiesCatalog.js)
+ *   - locale-independent storage keys / canonical display labels
+ *
+ * It is NOT:
+ *   - the set of supported cities
+ *   - a signal that a geocoder result is or isn't a real city
+ *   - something to rank, filter, or bias runtime guesses with
+ *
+ * "Not in the catalog" only ever means "no pre-seeded metadata for this one".
+ * Full write-up: docs/cities.md
+ */
 const PREDEFINED_CITY_CATALOG = {
   // Brazil
   'sao-paulo': {

@@ -103,7 +103,7 @@ Run `yarn test` before committing to ensure you don't introduce regressions.
 
 ## Design & UI
 
-For styling conventions, design tokens, and the BEM pilot, see [docs/styling.md](docs/styling.md). The source layout is described in [docs/structure.md](docs/structure.md).
+For styling conventions, design tokens, and the BEM pilot, see [docs/styling.md](docs/styling.md). The source layout is described in [docs/structure.md](docs/structure.md). How cities, areas and the slug catalog relate is in [docs/cities.md](docs/cities.md).
 
 ## Contact
 

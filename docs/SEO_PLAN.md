@@ -82,7 +82,7 @@ Note: this is now equally important for “AI search”/LLM discovery. Many AI a
 
 ### Goals
 
-1. **Governed slug list** — known cities (or allowed slugs) with optional Nominatim query / display name overrides. **Current behavior:** known slugs are canonicalized; unknown slugs still resolve as open slugs for UX/shareability.
+1. **Pre-seeded slug catalog** — a sample of larger cities (`src/config/citySlugCatalog.js`) with optional Nominatim query / display name overrides, so their URLs are stable and boot without geocoding. This is NOT an allow-list: every other city keeps working through Nominatim and its slug is derived on the fly ("open slug"). **Current behavior:** catalog slugs are canonicalized; open slugs resolve normally. See `docs/cities.md`.
 2. **One canonical policy** — either:
 
 - **Slug-only canonical** per city (e.g. `https://ciclomapa.app/sao-paulo-sp`), and optionally drop or narrow post-load replacement with `?lat=`; **or**
