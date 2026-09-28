@@ -569,12 +569,22 @@ async function executeOverpassQueryWithFallback(
   requestHeaders = {},
   spinner = null
 ) {
+  const assertHasElements = (osmData) => {
+    if (!osmData.elements || osmData.elements.length === 0) {
+      throw new Error(
+        'No data returned from Overpass API (0 elements). Refusing to write an empty GeoJSON.'
+      );
+    }
+  };
+
   // If a custom endpoint is provided, use only that one
   if (endpoint !== DEFAULT_OVERPASS_ENDPOINT) {
-    return executeOverpassQuery(query, endpoint, requestHeaders, spinner);
+    const result = await executeOverpassQuery(query, endpoint, requestHeaders, spinner);
+    assertHasElements(result);
+    return result;
   }
 
-  // Otherwise, try servers in sequence until one succeeds
+  // Otherwise, try servers in sequence until one succeeds with data
   const errors = [];
 
   for (let i = 0; i < OVERPASS_SERVERS.length; i++) {
@@ -601,6 +611,7 @@ async function executeOverpassQueryWithFallback(
       }
 
       const result = await executeOverpassQuery(query, server, requestHeaders, spinner);
+      assertHasElements(result);
 
       // Stop spinner before printing success message
       if (spinner) spinner.stop();
@@ -714,11 +725,6 @@ async function main() {
     );
 
     console.log('');
-    if (!osmData.elements || osmData.elements.length === 0) {
-      throw new Error(
-        'No data returned from Overpass API (0 elements). Refusing to write an empty GeoJSON.'
-      );
-    }
     console.log(`📊 Received ${osmData.elements.length} OSM elements`);
 
     const convertSpinner = new Spinner('Converting to GeoJSON...');
