@@ -107,9 +107,15 @@ function TopBar(props) {
     ]
   );
 
-  const parts = title.split(',');
-  const city = parts[0];
-  const state = parts[1];
+  const currentCityLabel = (title || '')
+    .split(',')
+    .slice(0, 2)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(', ');
+  const searchAriaLabel = currentCityLabel
+    ? `Buscar. Cidade atual: ${currentCityLabel}`
+    : 'Buscar cidade ou endereço';
 
   const collaborateMenu = {
     items: [
@@ -203,7 +209,7 @@ function TopBar(props) {
                       block={IS_MOBILE}
                       size={IS_MOBILE ? 'large' : 'middle'}
                       onClick={showCityPicker}
-                      aria-label={`Buscar. Cidade atual: ${city}, ${state}`}
+                      aria-label={searchAriaLabel}
                     >
                       <span className="flex items-center gap-1 m-0 sm:w-auto w-full min-w-0 font-normal">
                         <IconSearch className="opacity-60 flex-shrink-0 -ml-1" aria-hidden />

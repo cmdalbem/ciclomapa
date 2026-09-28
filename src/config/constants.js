@@ -109,12 +109,15 @@ export const ENABLE_COMMENTS = !IS_MOBILE;
 export const ENABLE_BOUNDARY_LAYER = true;
 export const ENABLE_SATELLITE_TOGGLE = false;
 
-const SUPPORTED_COUNTRIES_PROD = Object.freeze([{ code: 'br', labelPt: 'Brasil', flag: '🇧🇷' }]);
+// `inPt` is the label with its locative preposition ("Buscar no Brasil", "em Portugal").
+const SUPPORTED_COUNTRIES_PROD = Object.freeze([
+  { code: 'br', labelPt: 'Brasil', inPt: 'no Brasil', flag: '🇧🇷' },
+]);
 
 const SUPPORTED_COUNTRIES_PREVIEW = Object.freeze([
-  { code: 'br', labelPt: 'Brasil', flag: '🇧🇷' },
-  { code: 'pt', labelPt: 'Portugal', flag: '🇵🇹' },
-  { code: 'es', labelPt: 'Espanha', flag: '🇪🇸' },
+  { code: 'br', labelPt: 'Brasil', inPt: 'no Brasil', flag: '🇧🇷' },
+  { code: 'pt', labelPt: 'Portugal', inPt: 'em Portugal', flag: '🇵🇹' },
+  { code: 'es', labelPt: 'Espanha', inPt: 'na Espanha', flag: '🇪🇸' },
   // { code: 'ar', labelPt: 'Argentina', flag: '🇦🇷' },
   // { code: 'bo', labelPt: 'Bolívia', flag: '🇧🇴' },
   // { code: 'cl', labelPt: 'Chile', flag: '🇨🇱' },
@@ -191,8 +194,12 @@ export const INTERACTIVE_LAYERS_ZOOM_THRESHOLD = 15;
 export const COMMENTS_ZOOM_THRESHOLD = 13;
 export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 12;
 
-const DEFAULT_PMTILES_FILENAME = 'spain-poi.pmtiles';
+// The map has no GeoJSON fallback anymore, so this must be a build that includes POIs.
+const DEFAULT_PMTILES_FILENAME = 'brazil-poi.pmtiles';
 export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAULT_PMTILES_FILENAME;
+/** Mapbox source id for the PMTiles archive, and the single source-layer tippecanoe writes (`-l default`). */
+export const PMTILES_SOURCE_ID = 'pmtiles-source';
+export const PMTILES_SOURCE_LAYER = 'default';
 
 /*
  * Debug & local development
@@ -228,7 +235,11 @@ export const FORCE_RECALCULATE_LENGTHS_ALWAYS = URL_PARAMS.get('debug') === 'tru
 
 export const USE_PMTILES_SOURCE = true;
 
-/** Way layers omitted from PMTiles builds — not renderable when map uses PMTiles only. */
+/**
+ * Way layers omitted from PMTiles builds (see DEFAULT_PMTILES_EXCLUDE_LAYERS in
+ * scripts/generate-pmtiles.js). The map renders from PMTiles only, so these can't be
+ * shown on any device: their filters are hidden and forced inactive.
+ */
 export const PMTILES_EXCLUDED_LAYER_NAMES = new Set(['Baixa velocidade', 'Trilha', 'Proibido']);
 
 // Providers

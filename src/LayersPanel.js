@@ -168,7 +168,7 @@ class LayersPanel extends Component {
         >
           {layers
             .filter((l) => (embedMode ? l.isActive : true))
-            .filter((l) => !IS_MOBILE || !PMTILES_EXCLUDED_LAYER_NAMES.has(l.name))
+            .filter((l) => !PMTILES_EXCLUDED_LAYER_NAMES.has(l.name))
             .map((l) => (
               <Popover
                 placement="left"
