@@ -103,8 +103,9 @@ const CICLOMAPA_DATA_SOURCES = new Set([
   ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID,
 ]);
 
-const isE2E =
-  typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('e2e');
+function isE2EMode() {
+  return typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('e2e');
+}
 
 /** Built-in `Map`; the React component class name `Map` shadows `window.Map` inside methods. */
 const JsMap = window.Map;
@@ -2498,7 +2499,7 @@ class Map extends Component {
   }
 
   componentDidMount() {
-    if (isE2E) {
+    if (isE2EMode()) {
       console.info('E2E mode enabled: skipping Mapbox GL initialization');
       return;
     }
@@ -3065,7 +3066,7 @@ class Map extends Component {
           data-testid="map-container"
           ref={(el) => (this.mapContainer = el)}
           className={
-            isE2E || this.state.webglError
+            isE2EMode() || this.state.webglError
               ? 'h-[var(--viewport-height,100vh)] min-h-[var(--viewport-height,100vh)] w-full'
               : undefined
           }
@@ -3111,6 +3112,8 @@ class Map extends Component {
     );
   }
 }
+
+export { Map };
 
 // Wrapper component to use the directions context with the class component
 const MapWrapper = React.forwardRef((props, ref) => {
