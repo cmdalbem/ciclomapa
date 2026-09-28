@@ -24,4 +24,5 @@ npm-shrinkwrap.json
 test-results/
 playwright-report/
 blob-report/
+coverage/
 .pmtiles-work/
