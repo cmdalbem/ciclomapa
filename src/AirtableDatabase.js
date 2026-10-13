@@ -1,9 +1,6 @@
 import { removeAccents } from './utils/utils.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 
-const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY;
-const AIRTABLE_BASE_ID = process.env.REACT_APP_AIRTABLE_BASE_ID;
-
 const COMMENTS_TABLE_NAME = 'Comments';
 const METADATA_TABLE_NAME = 'Metadata';
 
@@ -41,14 +38,17 @@ class AirtableDatabase {
   }
 
   async fetchTable(tableName, view, offset, accumulator = []) {
-    if (!AIRTABLE_API_KEY) {
+    const apiKey = process.env.REACT_APP_AIRTABLE_API_KEY;
+    const baseId = process.env.REACT_APP_AIRTABLE_BASE_ID;
+    if (!apiKey || !baseId) {
       console.error('No AIRTABLE_API_KEY found');
       return;
     }
 
-    trackCall({ api: API_TYPES.AIRTABLE_READ, details: `${tableName}${view ? `/${view}` : ''}` });
+    const label = view ? `${tableName}/${view}` : tableName;
+    trackCall({ api: API_TYPES.AIRTABLE_READ, details: label });
 
-    let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}?`;
+    let queryUrl = `https://api.airtable.com/v0/${baseId}/${tableName}?`;
     if (view) {
       queryUrl += `&view=${view}`;
     }
@@ -58,11 +58,23 @@ class AirtableDatabase {
     const response = await fetch(queryUrl, {
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
     });
 
-    const data = await response.json();
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+
+    // 401s were logged as "zero records". captureConsole sends that warn to
+    // Sentry, so every page load looked like an empty table.
+    if (!response.ok || !data) {
+      console.debug(`fetchTable(${label}): HTTP ${response.status}`);
+      return;
+    }
 
     if (data.records && data.records.length > 0) {
       let accumulated = data.records;
@@ -70,33 +82,32 @@ class AirtableDatabase {
       accumulated = accumulated.concat(accumulator);
 
       if (data.offset) {
-        console.debug(
-          `%cfetchTable(${tableName}/${view}): offset detected, recursing...`,
-          debugStyles.blue
-        );
+        console.debug(`%cfetchTable(${label}): offset detected, recursing...`, debugStyles.blue);
         return this.fetchTable(tableName, view, data.offset, accumulated);
       } else {
-        console.debug(
-          `%cfetchTable(${tableName}/${view}): end of pagination, returning.`,
-          debugStyles.blue
-        );
+        console.debug(`%cfetchTable(${label}): end of pagination, returning.`, debugStyles.blue);
         return accumulated;
       }
-    } else {
-      console.warn(`%cfetchTable(${tableName}/${view}): zero records`, debugStyles.blue);
     }
   }
 
   async post(tableName, data) {
+    const apiKey = process.env.REACT_APP_AIRTABLE_API_KEY;
+    const baseId = process.env.REACT_APP_AIRTABLE_BASE_ID;
+    if (!apiKey || !baseId) {
+      console.error('No AIRTABLE_API_KEY found');
+      return;
+    }
+
     trackCall({ api: API_TYPES.AIRTABLE_WRITE, details: tableName });
 
-    let queryUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}`;
+    let queryUrl = `https://api.airtable.com/v0/${baseId}/${tableName}`;
 
     await fetch(queryUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(data),
     }).then((res) => {
