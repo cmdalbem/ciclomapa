@@ -9,13 +9,13 @@ import { getOsmUrl } from './utils/utils.js';
 const { TextArea } = Input;
 const { Text } = Typography;
 
-const DEFAULT_STATUS = 'Aberta';
-
 class CommentModal extends Component {
   defaultState = {
     text: '',
     tags: [],
     email: undefined,
+    website: '',
+    submitting: false,
   };
 
   constructor(props) {
@@ -25,6 +25,7 @@ class CommentModal extends Component {
     this.onTextChange = this.onTextChange.bind(this);
     this.onTagsChange = this.onTagsChange.bind(this);
     this.onEmailChange = this.onEmailChange.bind(this);
+    this.onWebsiteChange = this.onWebsiteChange.bind(this);
 
     this.state = this.defaultState;
   }
@@ -33,26 +34,35 @@ class CommentModal extends Component {
     this.setState(this.defaultState);
   }
 
-  handleOk = (e) => {
-    const { coords, location } = this.props;
+  handleOk = async () => {
+    if (this.state.submitting) return;
 
-    this.props.airtableDatabase
-      .create({
-        status: DEFAULT_STATUS,
+    const { coords, location } = this.props;
+    this.setState({ submitting: true });
+
+    try {
+      await this.props.airtableDatabase.create({
         latlong: `${coords.lat},${coords.lng}`,
         location: location,
         text: this.state.text,
         tags: this.state.tags,
         email: this.state.email,
-      })
-      .then(() => {
-        appNotification.success({
-          title: 'Novo comentário criado.',
-        });
-
-        this.props.afterCreate();
-        this.reset();
+        website: this.state.website,
       });
+
+      appNotification.success({
+        title: 'Novo comentário criado.',
+      });
+
+      this.props.afterCreate();
+      this.reset();
+    } catch {
+      appNotification.error({
+        title: 'Não foi possível enviar o comentário.',
+        description: 'Tente novamente em alguns instantes.',
+      });
+      this.setState({ submitting: false });
+    }
   };
 
   onTextChange = ({ target: { value } }) => {
@@ -64,6 +74,12 @@ class CommentModal extends Component {
   onEmailChange = ({ target: { value } }) => {
     this.setState({
       email: value,
+    });
+  };
+
+  onWebsiteChange = ({ target: { value } }) => {
+    this.setState({
+      website: value,
     });
   };
 
@@ -86,10 +102,11 @@ class CommentModal extends Component {
         onOk={this.handleOk}
         onCancel={this.props.onCancel}
         destroyOnHidden
-        // width={360}
         centered={true}
         okButtonProps={{
-          disabled: this.state.text.length === 0 || this.state.tags.length === 0,
+          disabled:
+            this.state.submitting || this.state.text.length === 0 || this.state.tags.length === 0,
+          loading: this.state.submitting,
         }}
         okText="Adicionar comentário"
         cancelText="Cancelar"
@@ -112,22 +129,6 @@ class CommentModal extends Component {
 
           <div>
             <Text className="text-white">Assunto</Text>
-
-            {/* <Select
-                            mode="multiple"
-                            allowClear
-                            style={{ width: '100%' }}
-                            placeholder="Selecione uma ou mais tags..."
-                            onChange={this.onTagsChange}
-                        >
-                            {
-                                this.props.tagsList.map(t =>
-                                    <Option key={t}>
-                                        {t}
-                                    </Option>
-                                )
-                            }
-                        </Select> */}
             <Checkbox.Group style={{ width: '100%' }} onChange={this.onTagsChange}>
               <Row>
                 {this.props.tagsList.map((t) => (
@@ -158,6 +159,19 @@ class CommentModal extends Component {
             <Input
               onChange={this.onEmailChange}
               placeholder="Opcional, somente visível para a equipe CicloMapa"
+            />
+          </div>
+
+          <div aria-hidden="true" className="absolute overflow-hidden" style={{ left: '-9999px' }}>
+            <label htmlFor="comment-website">Website</label>
+            <input
+              id="comment-website"
+              name="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={this.state.website}
+              onChange={this.onWebsiteChange}
             />
           </div>
         </Space>
