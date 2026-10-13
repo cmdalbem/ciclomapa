@@ -103,7 +103,7 @@
     "pmtiles": "^3.2.1",
     "postcss": "8.5.23",
     "prettier": "^3.4.2",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "tailwindcss": "3.4.17",
     "to-ico": "^1.1.5",
     "typescript": "^4.9.5",
