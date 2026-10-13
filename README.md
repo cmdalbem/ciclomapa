@@ -58,7 +58,7 @@ To **batch the main regional builds and upload to S3**, use the thin wrapper on 
 ```bash
 yarn pmtiles:list              # show regional builds (scripts/pmtiles-builds.json)
 yarn pmtiles:sync:dry-run      # preview generate + upload steps
-yarn pmtiles:sync --build br   # runs generate-pmtiles for Brazil, then uploads to S3
+yarn pmtiles:sync --build brazil-poi   # runs generate-pmtiles for Brazil, then uploads to S3
 ```
 
 Or generate locally without S3:

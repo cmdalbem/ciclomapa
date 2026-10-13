@@ -1,6 +1,6 @@
 name: PMtiles build & upload
 run-name: >-
-  PMtiles ${{ inputs.build || (github.event.schedule == '0 8 * * 0' && 'spain') || 'br' }}
+  PMtiles ${{ inputs.build || (github.event.schedule == '0 8 * * 0' && 'spain') || 'brazil-poi' }}
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ on:
         type: boolean
         default: false
   schedule:
-    # Daily 06:00 UTC → br
+    # Daily 06:00 UTC → brazil-poi
     - cron: '0 6 * * *'
     # Weekly Sunday 08:00 UTC → spain
     - cron: '0 8 * * 0'
@@ -61,7 +61,7 @@ jobs:
           elif [ "${{ github.event.schedule }}" = "0 8 * * 0" ]; then
             echo "build=spain" >> "$GITHUB_OUTPUT"
           else
-            echo "build=br" >> "$GITHUB_OUTPUT"
+            echo "build=brazil-poi" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build and upload PMtiles
