@@ -36,8 +36,7 @@ const fsp = require('fs').promises;
 const path = require('path');
 const { spawn } = require('child_process');
 
-const { HeadObjectCommand, S3Client } = require('@aws-sdk/client-s3');
-const { Upload } = require('@aws-sdk/lib-storage');
+const AWS = require('aws-sdk');
 const { PMTiles } = require('pmtiles');
 const { expandAreaAliases, getExpectedGeoJSONFilename } = require('./generate-pmtiles');
 
@@ -149,12 +148,11 @@ function getS3Config() {
 
 function getS3Client() {
   const { region } = getS3Config();
-  return new S3Client({
+  return new AWS.S3({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     region,
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    },
+    signatureVersion: 'v4',
   });
 }
 
@@ -228,7 +226,7 @@ async function inspectRemoteBuild(outputFilename) {
 
   const s3 = getS3Client();
   try {
-    const head = await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    const head = await s3.headObject({ Bucket: bucket, Key: key }).promise();
     let header = null;
     try {
       header = await inspectPmtilesHeader(url);
@@ -246,7 +244,7 @@ async function inspectRemoteBuild(outputFilename) {
       header,
     };
   } catch (error) {
-    if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+    if (error.code === 'NotFound' || error.statusCode === 404) {
       return { exists: false, key, url };
     }
     throw error;
@@ -458,17 +456,15 @@ async function uploadToS3(localPath, outputFilename, { dryRun }) {
   const s3 = getS3Client();
   console.log(`   Uploading ${formatBytes(size)} → s3://${bucket}/${key}`);
 
-  const upload = new Upload({
-    client: s3,
-    params: {
+  await s3
+    .upload({
       Bucket: bucket,
       Key: key,
       Body: fs.createReadStream(localPath),
       ContentType: 'application/vnd.pmtiles',
       CacheControl: 'public, max-age=3600',
-    },
-  });
-  await upload.done();
+    })
+    .promise();
 
   const publicUrl = `https://${bucket}.s3.${getS3Config().region}.amazonaws.com/${key}`;
   console.log(`   ✓ Uploaded: ${publicUrl}`);
