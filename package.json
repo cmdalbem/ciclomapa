@@ -111,10 +111,15 @@
     "vercel": "^48.0.1"
   },
   "jest": {
+    "transformIgnorePatterns": [
+      "[/\\\\]node_modules[/\\\\](?!(@ant-design|@rc-component|antd)[/\\\\]).+\\.(js|jsx|mjs|cjs|ts|tsx)$",
+      "^.+\\.module\\.(css|sass|scss|less)$"
+    ],
     "moduleNameMapper": {
       "\\.(png|jpg|jpeg|gif|webp|svg)$": "<rootDir>/src/__mocks__/fileMock.js",
       "^@rc-component/picker/locale/(.*)$": "<rootDir>/node_modules/@rc-component/picker/lib/locale/$1.js",
-      "^@rc-component/picker/generate/(.*)$": "<rootDir>/node_modules/@rc-component/picker/lib/generate/$1.js"
+      "^@rc-component/picker/generate/(.*)$": "<rootDir>/node_modules/@rc-component/picker/lib/generate/$1.js",
+      "^@rc-component/pagination/locale/(.*)$": "<rootDir>/node_modules/@rc-component/pagination/lib/locale/$1.js"
     }
   },
   "lint-staged": {
@@ -141,6 +146,8 @@
     "http-proxy-middleware": "2.0.10",
     "flatted": "3.4.2",
     "launch-editor": "2.14.1",
-    "@types/node": "20.11.30"
+    "@types/node": "20.11.30",
+    "@rc-component/pagination": "1.5.0",
+    "nwsapi": "2.2.23"
   }
 }

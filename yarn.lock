@@ -2949,10 +2949,10 @@
     "@rc-component/util" "^1.4.0"
     clsx "^2.1.1"
 
-"@rc-component/pagination@~1.4.0":
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/@rc-component/pagination/-/pagination-1.4.0.tgz#e2ea93d09c59e1aca88d849b76536c6435f46fb8"
-  integrity sha512-CW1g7P9V8u+e8JQdUsl2RWg+GCsoee0mtJjZUCCxn/vb3jzOwDKm6hAdwddHCVBfWJ58eGUBZz3IvnU8rRktjw==
+"@rc-component/pagination@1.5.0", "@rc-component/pagination@~1.4.0":
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/@rc-component/pagination/-/pagination-1.5.0.tgz#d7743cef1155efe1c0122500cdbde68679c4e991"
+  integrity sha512-OPx10ptTCe8sjPYzvSIHjSuFtwTuqPa8EOmZULz9U+zeNcBOIix8TpwQ1K8m5vLMc/z2srqIrSxz41e/+I1edg==
   dependencies:
     "@rc-component/util" "^1.11.1"
     clsx "^2.1.1"
@@ -11087,10 +11087,10 @@ nth-check@^2.0.1:
   dependencies:
     boolbase "^1.0.0"
 
-nwsapi@^2.2.0:
-  version "2.2.28"
-  resolved "https://registry.yarnpkg.com/nwsapi/-/nwsapi-2.2.28.tgz#f958de0c1ad3fc7c2575a3adb4a802e64587b094"
-  integrity sha512-IlVB7OS7qrOsVYlpnFIkETjMwT9jwvmocJmmM+GZU/PAB3uGi9Ezd7vcWhWBUnSc0ya4ppmQITOyP1ez9gg8cg==
+nwsapi@2.2.23, nwsapi@^2.2.0:
+  version "2.2.23"
+  resolved "https://registry.yarnpkg.com/nwsapi/-/nwsapi-2.2.23.tgz#59712c3a88e6de2bb0b6ccc1070397267019cf6c"
+  integrity sha512-7wfH4sLbt4M0gCDzGE6vzQBo0bfTKjU7Sfpqy/7gs1qBfYz2vEJH6vXcBKpO3+6Yu1telwd0t9HpyOoLEQQbIQ==
 
 oauth-sign@~0.9.0:
   version "0.9.0"
