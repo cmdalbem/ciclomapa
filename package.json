@@ -140,6 +140,7 @@
     "body-parser": "1.20.6",
     "http-proxy-middleware": "2.0.10",
     "flatted": "3.4.2",
-    "launch-editor": "2.14.1"
+    "launch-editor": "2.14.1",
+    "@types/node": "20.11.30"
   }
 }
