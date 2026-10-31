@@ -34,12 +34,10 @@ const osmtogeojson = require('osmtogeojson');
 const pkg = require('../package.json');
 
 const OVERPASS_SERVERS = [
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-  'https://overpass.private.coffee/api/interpreter',
   'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
-const OVERPASS_FALLBACK_ROUNDS = 3;
-const OVERPASS_RETRY_BASE_MS = 30_000;
 
 const DEFAULT_OVERPASS_ENDPOINT = OVERPASS_SERVERS[0];
 const DEFAULT_USER_AGENT = `${pkg.name}/${pkg.version} (+${pkg.homepage || 'https://ciclomapa.app'})`;
@@ -586,86 +584,65 @@ async function executeOverpassQueryWithFallback(
     return result;
   }
 
-  // Otherwise, try servers in sequence until one succeeds with data. If every mirror
-  // is at capacity, wait and walk the list again (busy servers ask for backoff).
+  // Otherwise, try servers in sequence until one succeeds with data
   const errors = [];
 
-  for (let round = 0; round < OVERPASS_FALLBACK_ROUNDS; round++) {
-    if (round > 0) {
-      const waitMs = OVERPASS_RETRY_BASE_MS * 2 ** (round - 1);
+  for (let i = 0; i < OVERPASS_SERVERS.length; i++) {
+    const server = OVERPASS_SERVERS[i];
+    const serverNumber = i + 1;
+
+    try {
+      if (i === 0) {
+        if (spinner) {
+          spinner.update(`Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}...`);
+        } else {
+          console.log(`   🔄 Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`);
+        }
+      } else {
+        // Stop spinner before printing failure message
+        if (spinner) spinner.stop();
+        console.log(`   ⚠️  Server ${i}/${OVERPASS_SERVERS.length} failed, trying next...`);
+        if (spinner) {
+          spinner.start();
+          spinner.update(`Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}...`);
+        } else {
+          console.log(`   🔄 Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`);
+        }
+      }
+
+      const result = await executeOverpassQuery(query, server, requestHeaders, spinner);
+      assertHasElements(result);
+
+      // Stop spinner before printing success message
       if (spinner) spinner.stop();
-      console.log(
-        `   ⏳ All ${OVERPASS_SERVERS.length} servers failed; waiting ${Math.round(waitMs / 1000)}s before retry ${round + 1}/${OVERPASS_FALLBACK_ROUNDS}...`
-      );
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
-      if (spinner) spinner.start();
-    }
+      if (i > 0) {
+        console.log(
+          `   ✓ Successfully used fallback server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
+        );
+      } else {
+        console.log(
+          `   ✓ Successfully used server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
+        );
+      }
 
-    for (let i = 0; i < OVERPASS_SERVERS.length; i++) {
-      const server = OVERPASS_SERVERS[i];
-      const serverNumber = i + 1;
+      return result;
+    } catch (error) {
+      errors.push({ server, error: error.message });
 
-      try {
-        if (i === 0 && round === 0) {
-          if (spinner) {
-            spinner.update(
-              `Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}...`
-            );
-          } else {
-            console.log(
-              `   🔄 Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
-            );
-          }
-        } else {
-          if (spinner) spinner.stop();
-          if (i > 0) {
-            console.log(`   ⚠️  Server ${i}/${OVERPASS_SERVERS.length} failed, trying next...`);
-          }
-          if (spinner) {
-            spinner.start();
-            spinner.update(
-              `Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}...`
-            );
-          } else {
-            console.log(
-              `   🔄 Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
-            );
-          }
-        }
+      // Stop spinner before printing error message
+      if (spinner) spinner.stop();
+      console.log(`   ❌ Server ${serverNumber}/${OVERPASS_SERVERS.length} failed: ${server}`);
+      console.log(`      Error: ${error.message}`);
 
-        const result = await executeOverpassQuery(query, server, requestHeaders, spinner);
-        assertHasElements(result);
-
-        if (spinner) spinner.stop();
-        if (i > 0 || round > 0) {
-          console.log(
-            `   ✓ Successfully used fallback server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
-          );
-        } else {
-          console.log(
-            `   ✓ Successfully used server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
-          );
-        }
-
-        return result;
-      } catch (error) {
-        errors.push({ server, round: round + 1, error: error.message });
-
-        if (spinner) spinner.stop();
-        console.log(`   ❌ Server ${serverNumber}/${OVERPASS_SERVERS.length} failed: ${server}`);
-        console.log(`      Error: ${error.message}`);
-
-        if (i < OVERPASS_SERVERS.length - 1) {
-          console.log(`   ↻ Routing to next server...`);
-        }
+      if (i < OVERPASS_SERVERS.length - 1) {
+        console.log(`   ↻ Routing to next server...`);
       }
     }
   }
 
+  // All servers failed
   console.log('');
-  const errorMessages = errors
-    .map((e, idx) => `   ${idx + 1}. [round ${e.round}] ${e.server}: ${e.error}`)
-    .join('\n');
+  const errorMessages = errors.map((e, idx) => `   ${idx + 1}. ${e.server}: ${e.error}`).join('\n');
   throw new Error(`All Overpass API servers failed:\n${errorMessages}`);
 }
 
