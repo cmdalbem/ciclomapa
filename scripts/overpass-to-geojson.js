@@ -34,10 +34,17 @@ const osmtogeojson = require('osmtogeojson');
 const pkg = require('../package.json');
 
 const OVERPASS_SERVERS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.private.coffee/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  // overpass-api.de goes last: it's the most overloaded public instance and has the
+  // strictest usage policy, so we only lean on it when the others are down.
+  'https://overpass-api.de/api/interpreter',
 ];
+
+// Country-wide queries regularly hit servers that are momentarily overloaded (502/504).
+// Retry the whole list a few times with exponential backoff before giving up.
+const OVERPASS_FALLBACK_ROUNDS = 3;
+const OVERPASS_RETRY_BASE_MS = 30_000;
 
 const DEFAULT_OVERPASS_ENDPOINT = OVERPASS_SERVERS[0];
 const DEFAULT_USER_AGENT = `${pkg.name}/${pkg.version} (+${pkg.homepage || 'https://ciclomapa.app'})`;
@@ -584,59 +591,78 @@ async function executeOverpassQueryWithFallback(
     return result;
   }
 
-  // Otherwise, try servers in sequence until one succeeds with data
+  // Otherwise, try servers in sequence until one succeeds with data, repeating the
+  // whole list with backoff when every server is busy.
   const errors = [];
 
-  for (let i = 0; i < OVERPASS_SERVERS.length; i++) {
-    const server = OVERPASS_SERVERS[i];
-    const serverNumber = i + 1;
+  for (let round = 1; round <= OVERPASS_FALLBACK_ROUNDS; round++) {
+    for (let i = 0; i < OVERPASS_SERVERS.length; i++) {
+      const server = OVERPASS_SERVERS[i];
+      const serverNumber = i + 1;
 
-    try {
-      if (i === 0) {
-        if (spinner) {
-          spinner.update(`Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}...`);
+      try {
+        if (i === 0) {
+          if (spinner) {
+            spinner.update(
+              `Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}...`
+            );
+          } else {
+            console.log(
+              `   🔄 Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
+            );
+          }
         } else {
-          console.log(`   🔄 Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`);
+          // Stop spinner before printing failure message
+          if (spinner) spinner.stop();
+          console.log(`   ⚠️  Server ${i}/${OVERPASS_SERVERS.length} failed, trying next...`);
+          if (spinner) {
+            spinner.start();
+            spinner.update(
+              `Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}...`
+            );
+          } else {
+            console.log(
+              `   🔄 Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
+            );
+          }
         }
-      } else {
-        // Stop spinner before printing failure message
+
+        const result = await executeOverpassQuery(query, server, requestHeaders, spinner);
+        assertHasElements(result);
+
+        // Stop spinner before printing success message
         if (spinner) spinner.stop();
-        console.log(`   ⚠️  Server ${i}/${OVERPASS_SERVERS.length} failed, trying next...`);
-        if (spinner) {
-          spinner.start();
-          spinner.update(`Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}...`);
+        if (i > 0) {
+          console.log(
+            `   ✓ Successfully used fallback server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
+          );
         } else {
-          console.log(`   🔄 Trying server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`);
+          console.log(
+            `   ✓ Successfully used server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
+          );
+        }
+
+        return result;
+      } catch (error) {
+        errors.push({ server, error: error.message });
+
+        // Stop spinner before printing error message
+        if (spinner) spinner.stop();
+        console.log(`   ❌ Server ${serverNumber}/${OVERPASS_SERVERS.length} failed: ${server}`);
+        console.log(`      Error: ${error.message}`);
+
+        if (i < OVERPASS_SERVERS.length - 1) {
+          console.log(`   ↻ Routing to next server...`);
         }
       }
+    }
 
-      const result = await executeOverpassQuery(query, server, requestHeaders, spinner);
-      assertHasElements(result);
-
-      // Stop spinner before printing success message
-      if (spinner) spinner.stop();
-      if (i > 0) {
-        console.log(
-          `   ✓ Successfully used fallback server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
-        );
-      } else {
-        console.log(
-          `   ✓ Successfully used server ${serverNumber}/${OVERPASS_SERVERS.length}: ${server}`
-        );
-      }
-
-      return result;
-    } catch (error) {
-      errors.push({ server, error: error.message });
-
-      // Stop spinner before printing error message
-      if (spinner) spinner.stop();
-      console.log(`   ❌ Server ${serverNumber}/${OVERPASS_SERVERS.length} failed: ${server}`);
-      console.log(`      Error: ${error.message}`);
-
-      if (i < OVERPASS_SERVERS.length - 1) {
-        console.log(`   ↻ Routing to next server...`);
-      }
+    if (round < OVERPASS_FALLBACK_ROUNDS) {
+      const waitMs = OVERPASS_RETRY_BASE_MS * 2 ** (round - 1);
+      console.log(
+        `   ⏳ Round ${round}/${OVERPASS_FALLBACK_ROUNDS} failed on all servers, waiting ${waitMs / 1000}s before trying again...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
     }
   }
 
