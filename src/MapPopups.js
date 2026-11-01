@@ -494,7 +494,7 @@ class MapPopups {
             <div style="
                 margin-top: .5em;
                 font-size: 18px;">
-                ${properties.text}
+                ${escapeHtml(properties.text)}
             </div>
         `;
 
@@ -513,7 +513,7 @@ class MapPopups {
       properties.tags.forEach((t) => {
         html += `
                     <div class="inline-block py-1 px-3 rounded-full bg-gray-800 text-gray-300 mt-2 text-xs">
-                        ${t}
+                        ${escapeHtml(t)}
                     </div>
                 `;
       });
