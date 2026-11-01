@@ -1,4 +1,4 @@
-import {
+import MapPopups, {
   escapeHtml,
   formatAddressLineFromOsmProperties,
   formatNominatimReverseLine,
@@ -6,11 +6,47 @@ import {
   primaryCityFromAreaLabel,
 } from './MapPopups.js';
 
+jest.mock('mapbox-gl', () => {
+  function Popup() {
+    this.setHTML = jest.fn().mockReturnThis();
+    this.setLngLat = jest.fn().mockReturnThis();
+    this.addTo = jest.fn().mockReturnThis();
+    this.remove = jest.fn();
+    this.on = jest.fn();
+  }
+  return { __esModule: true, default: { Popup } };
+});
+
 describe('MapPopups POI address helpers', () => {
   describe('escapeHtml', () => {
     it('escapes HTML special characters', () => {
       expect(escapeHtml('<a>')).toBe('&lt;a&gt;');
       expect(escapeHtml('A & B')).toBe('A &amp; B');
+    });
+  });
+
+  describe('showCommentPopup', () => {
+    it('HTML-escapes comment text and tags before setHTML', () => {
+      const popups = new MapPopups({});
+      popups.showCommentPopup({
+        features: [
+          {
+            geometry: { coordinates: [-46.6, -23.5] },
+            properties: {
+              createdAt: new Date().toISOString(),
+              text: '<img src=x onerror=alert(1)>',
+              tags: JSON.stringify(['ok', '<script>']),
+            },
+          },
+        ],
+      });
+
+      expect(popups.commentPopup.setHTML).toHaveBeenCalledTimes(1);
+      const html = popups.commentPopup.setHTML.mock.calls[0][0];
+      expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+      expect(html).not.toContain('<img src=x');
+      expect(html).toContain('&lt;script&gt;');
+      expect(html).toContain('ok');
     });
   });
 
