@@ -57,8 +57,8 @@ android {
         applicationId "app.ciclomapa"
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 4
-        versionName "4"
+        versionCode 5
+        versionName "5"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
