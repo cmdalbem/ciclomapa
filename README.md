@@ -88,11 +88,9 @@ yarn start
 
 Comments and city metadata go through Vercel Functions (`/api/airtable/*`). For those locally, use `yarn dev:vercel` with `AIRTABLE_API_KEY` and `AIRTABLE_BASE_ID` in `.env`. `vercel.json` points that at `yarn start` (CRACO). If Vercel falls back to `react-scripts start`, Less never compiles and the UI looks broken. Plain `yarn start` still runs the SPA, but those API routes 404.
 
-To deploy to production server:
+Production is on Vercel, which is what serves `/api/airtable/*`. Push to the connected branch or deploy with the Vercel CLI/dashboard, and set `AIRTABLE_API_KEY` / `AIRTABLE_BASE_ID` there (Production and Preview).
 
-```
-yarn run deploy
-```
+`yarn deploy` still publishes the static `build/` folder to GitHub Pages, but that host cannot run the API routes, so comments and city metadata will 404 on a Pages-only deploy.
 
 ## Contributing
 
