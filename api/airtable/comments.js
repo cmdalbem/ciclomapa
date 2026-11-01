@@ -11,7 +11,9 @@ const TAGS_LIST_COMMENT_ID = 44;
 const DEFAULT_STATUS = 'Aberta';
 const HONEYPOT_FIELD = 'website';
 const PRIVATE_FIELDS = ['email'];
-const GET_CACHE_CONTROL = 'public, s-maxage=60, stale-while-revalidate=300';
+// No shared cache: the map refetches this right after a user posts a comment,
+// and a CDN-cached list would hide the new comment for up to a minute.
+const GET_CACHE_CONTROL = 'no-store';
 
 const MAX_TEXT_LENGTH = 2000;
 const MAX_LOCATION_LENGTH = 300;
