@@ -114,6 +114,7 @@ describe('Airtable Vercel functions', () => {
     await commentsHandler({ method: 'GET' }, res);
 
     expect(res.statusCode).toBe(200);
+    expect(res.headers['Cache-Control']).toBe('no-store');
     expect(res.body.tagsList).toEqual(['Infraestrutura', 'Sinalização']);
     expect(res.body.comments).toHaveLength(1);
     expect(res.body.comments[0].fields.text).toBe('buraco');
