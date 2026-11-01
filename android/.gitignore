@@ -1,0 +1,11 @@
+# Signing key: never commit this. Back it up somewhere safe instead
+# (if lost, request an upload key reset in Play Console).
+android.keystore
+
+# Build artifacts
+.gradle/
+build/
+app/build/
+app-release-*
+local.properties
+node_modules/
