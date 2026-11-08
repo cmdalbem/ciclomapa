@@ -228,7 +228,7 @@ class MapPopups {
               sourceLayer: PMTILES_SOURCE_LAYER,
               id: this.selectedCycleway,
             },
-            { selected: false, hover: false }
+            { selected: false }
           );
         } catch (e) {}
       }

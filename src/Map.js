@@ -116,6 +116,7 @@ class Map extends Component {
 
   selectedCycleway;
   hoveredCycleway;
+  hoveredCyclewayLayerId;
   hoveredComment;
   hoveredPOI;
 
@@ -1052,7 +1053,7 @@ class Map extends Component {
           try {
             self.map.setFeatureState(
               { source: sourceId, sourceLayer: sourceLayer, id: self.selectedCycleway },
-              { selected: false, hover: false }
+              { selected: false }
             );
           } catch (err) {}
         }
@@ -1060,7 +1061,10 @@ class Map extends Component {
         try {
           self.map.setFeatureState(
             { source: sourceId, sourceLayer: sourceLayer, id: self.selectedCycleway },
-            { selected: true }
+            {
+              selected: true,
+              ...(self.hoveredCycleway === self.selectedCycleway ? { hover: true } : {}),
+            }
           );
         } catch (err) {}
 
@@ -1102,6 +1106,7 @@ class Map extends Component {
         }
 
         self.hoveredCycleway = e.features[0].id;
+        self.hoveredCyclewayLayerId = interactiveLayerId;
         self.map.setFeatureState(
           {
             source: sourceId,
@@ -1115,6 +1120,7 @@ class Map extends Component {
 
     this.map.on('mouseleave', interactiveLayerId, () => {
       console.debug('mouseleave', interactiveLayerId);
+      if (self.hoveredCyclewayLayerId !== interactiveLayerId) return;
       if (self.hoveredCycleway) {
         self.map.setFeatureState(
           {
@@ -1128,6 +1134,7 @@ class Map extends Component {
         self.map.getCanvas().style.cursor = '';
       }
       self.hoveredCycleway = null;
+      self.hoveredCyclewayLayerId = null;
     });
   }
 
