@@ -1133,6 +1133,17 @@ class Map extends Component {
 
   async initCommentsLayer() {
     const self = this;
+
+    let commentsData;
+    try {
+      commentsData = await this.airtableDatabase.getComments();
+    } catch (err) {
+      console.warn('Failed to load comments', err);
+      // Keep whatever is already on the map; a transient failure
+      // after create/refresh should not blank the layer.
+      return;
+    }
+
     if (this.state.comments.length > 0) {
       this.state.comments.forEach((c) => {
         if (c.marker) {
@@ -1140,15 +1151,9 @@ class Map extends Component {
         }
       });
 
-      this.map.removeLayer('comentarios');
-    }
-
-    let commentsData;
-    try {
-      commentsData = await this.airtableDatabase.getComments();
-    } catch (err) {
-      console.warn('Failed to load comments', err);
-      return;
+      if (this.map.getLayer('comentarios')) {
+        this.map.removeLayer('comentarios');
+      }
     }
 
     this.setState(commentsData, () => {
