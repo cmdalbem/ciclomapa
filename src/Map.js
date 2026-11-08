@@ -978,16 +978,19 @@ class Map extends Component {
               ? MAP_COLORS.DARK.HALO
               : MAP_COLORS.LIGHT.ICON_HALO,
           }),
+          // Must reference feature-state: line layers on this source set hover/selected,
+          // and mapbox-gl >= 3.21 crashes during pan/zoom if a sibling symbol layer's
+          // paint has no feature-state expression (github.com/mapbox/mapbox-gl-js/issues/13714).
           'icon-opacity': [
             'case',
             ['==', ['get', 'oneway:bicycle'], 'no'],
             0,
             ['==', ['get', 'oneway:bicycle'], 'yes'],
-            1,
+            ['case', ['boolean', ['feature-state', 'hover'], false], 0.7, 1],
             ['==', ['get', 'oneway'], 'no'],
             0,
             ['==', ['get', 'oneway'], 'yes'],
-            1,
+            ['case', ['boolean', ['feature-state', 'hover'], false], 0.7, 1],
             0,
           ],
         },
