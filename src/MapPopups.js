@@ -500,9 +500,10 @@ class MapPopups {
 
     if (properties.tags) {
       // Arrays and objects get serialized by Mapbox system
-      properties.tags = JSON.parse(properties.tags);
+      const tags = JSON.parse(properties.tags).filter((t) => t !== 'Outros');
 
-      html += `
+      if (tags.length > 0) {
+        html += `
                 <div style="
                     margin-top: 2em;
                     font-size: 14px;
@@ -510,15 +511,16 @@ class MapPopups {
                 ">
             `;
 
-      properties.tags.forEach((t) => {
-        html += `
+        tags.forEach((t) => {
+          html += `
                     <div class="inline-block py-1 px-3 rounded-full bg-gray-800 text-gray-300 mt-2 text-xs">
                         ${escapeHtml(t)}
                     </div>
                 `;
-      });
+        });
 
-      html += `</div>`;
+        html += `</div>`;
+      }
     }
 
     this.commentPopup.setLngLat(coords).setHTML(html).addTo(this.map);

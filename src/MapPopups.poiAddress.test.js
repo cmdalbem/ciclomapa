@@ -35,7 +35,7 @@ describe('MapPopups POI address helpers', () => {
             properties: {
               createdAt: new Date().toISOString(),
               text: '<img src=x onerror=alert(1)>',
-              tags: JSON.stringify(['ok', '<script>']),
+              tags: JSON.stringify(['ok', '<script>', 'Outros']),
             },
           },
         ],
@@ -47,6 +47,7 @@ describe('MapPopups POI address helpers', () => {
       expect(html).not.toContain('<img src=x');
       expect(html).toContain('&lt;script&gt;');
       expect(html).toContain('ok');
+      expect(html).not.toContain('Outros');
     });
   });
 
