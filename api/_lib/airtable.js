@@ -28,7 +28,10 @@ async function readAirtableJson(response) {
   }
 }
 
-async function fetchAirtableTable(tableName, { view } = {}) {
+async function fetchAirtableTable(
+  tableName,
+  { view, filterByFormula, fields, pageSize = 100 } = {}
+) {
   const { apiKey, baseId } = getAirtableConfig();
   const records = [];
   let offset;
@@ -38,6 +41,13 @@ async function fetchAirtableTable(tableName, { view } = {}) {
       `${AIRTABLE_API_BASE}/${encodeURIComponent(baseId)}/${encodeURIComponent(tableName)}`
     );
     if (view) url.searchParams.set('view', view);
+    if (filterByFormula) url.searchParams.set('filterByFormula', filterByFormula);
+    if (pageSize) url.searchParams.set('pageSize', String(pageSize));
+    if (Array.isArray(fields)) {
+      fields.forEach((field) => {
+        url.searchParams.append('fields[]', field);
+      });
+    }
     if (offset) url.searchParams.set('offset', offset);
 
     const response = await fetch(url, {

@@ -90,7 +90,7 @@ describe('Airtable Vercel functions', () => {
     expect(String(fetch.mock.calls[1][0])).toContain('offset=page2');
   });
 
-  it('GET comments strips email and solved records', async () => {
+  it('GET comments filters at Airtable and strips leftover private fields', async () => {
     fetch.mockResolvedValueOnce(
       jsonResponse(200, {
         records: [
@@ -104,8 +104,6 @@ describe('Airtable Vercel functions', () => {
               email: 'secret@example.com',
             },
           },
-          { id: 'done', fields: { status: 'Resolvida', latlong: '-30.04,-51.22', text: 'ok' } },
-          { id: 'noloc', fields: { status: 'Aberta', text: 'sem ponto' } },
         ],
       })
     );
@@ -119,6 +117,13 @@ describe('Airtable Vercel functions', () => {
     expect(res.body.comments).toHaveLength(1);
     expect(res.body.comments[0].fields.text).toBe('buraco');
     expect(res.body.comments[0].fields.email).toBeUndefined();
+
+    const requestUrl = String(fetch.mock.calls[0][0]);
+    expect(requestUrl).toContain('pageSize=100');
+    expect(requestUrl).toContain('filterByFormula=');
+    expect(decodeURIComponent(requestUrl)).toContain("NOT({status}='Resolvida')");
+    expect(decodeURIComponent(requestUrl)).toContain('{id}=44');
+    expect(requestUrl).toContain('fields');
   });
 
   it('GET comments?fresh=1 bypasses the shared CDN cache', async () => {

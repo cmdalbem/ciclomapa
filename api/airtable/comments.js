@@ -15,6 +15,10 @@ const PRIVATE_FIELDS = ['email'];
 // refetches with ?fresh=1 so that one request bypasses the edge cache.
 const GET_CACHE_CONTROL = 'public, s-maxage=300, stale-while-revalidate=3600';
 const FRESH_CACHE_CONTROL = 'no-store';
+// Pull only rows the map can show, plus the magic tags-list row (id=44).
+// Without this, a ~230-row table is 3 Airtable pages (max pageSize 100) per load.
+const COMMENTS_FILTER_FORMULA = `OR({id}=${TAGS_LIST_COMMENT_ID},AND(NOT({status}='Resolvida'),{latlong}!=''))`;
+const COMMENTS_FIELDS = ['id', 'status', 'latlong', 'location', 'text', 'tags', 'createdAt'];
 
 const MAX_TEXT_LENGTH = 2000;
 const MAX_LOCATION_LENGTH = 300;
@@ -160,7 +164,10 @@ function wantsFreshComments(req) {
 }
 
 async function handleGet(req, res) {
-  const records = await fetchAirtableTable(COMMENTS_TABLE_NAME);
+  const records = await fetchAirtableTable(COMMENTS_TABLE_NAME, {
+    filterByFormula: COMMENTS_FILTER_FORMULA,
+    fields: COMMENTS_FIELDS,
+  });
   const payload = buildCommentsResponse(records);
   const cacheControl = wantsFreshComments(req) ? FRESH_CACHE_CONTROL : GET_CACHE_CONTROL;
   sendJson(res, 200, payload, { 'Cache-Control': cacheControl });
