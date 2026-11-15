@@ -35,8 +35,8 @@ const WELCOME_SEEN_STORAGE_KEY = 'ciclomapa_welcomeSeen:v3';
  */
 export function shouldAutoOpenWelcomeAboutModal(options) {
   const fromMount = options?.fromMount === true;
-  const embedMode = options?.embedMode === true;
-  if (embedMode) return false;
+  // Truthy on purpose: callers may pass a boolean or the URL string "true".
+  if (options?.embedMode) return false;
 
   if (typeof window !== 'undefined') {
     try {

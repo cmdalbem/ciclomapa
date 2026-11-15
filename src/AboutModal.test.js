@@ -30,6 +30,12 @@ describe('welcome map boot', () => {
     expect(shouldDeferMapBootUntilAfterPaint(options)).toBe(false);
   });
 
+  it('does not auto-open welcome in embed mode (boolean or URL string)', () => {
+    expect(shouldAutoOpenWelcomeAboutModal({ fromMount: true, embedMode: true })).toBe(false);
+    expect(shouldAutoOpenWelcomeAboutModal({ fromMount: true, embedMode: 'true' })).toBe(false);
+    expect(shouldDeferMapBootUntilAfterPaint({ fromMount: true, embedMode: true })).toBe(false);
+  });
+
   it('scheduleAfterFirstPaint runs after two animation frames', () => {
     let rafCount = 0;
     jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {

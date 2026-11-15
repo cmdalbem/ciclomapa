@@ -244,7 +244,7 @@ export class App extends Component {
       }
     }
 
-    const embedMode = urlParams.embed;
+    const embedMode = urlFlagEnabled(urlParams.embed);
 
     // Avoid first-paint flicker: decide welcome modal state before initial render.
     const shouldAutoOpenWelcomeModal = shouldAutoOpenWelcomeAboutModal({
