@@ -91,6 +91,8 @@ describe('Airtable Vercel functions', () => {
   });
 
   it('GET comments filters at Airtable and strips leftover private fields', async () => {
+    const recent = new Date().toISOString();
+    const old = new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000).toISOString();
     fetch.mockResolvedValueOnce(
       jsonResponse(200, {
         records: [
@@ -102,6 +104,25 @@ describe('Airtable Vercel functions', () => {
               latlong: '-30.03,-51.21',
               text: 'buraco',
               email: 'secret@example.com',
+              createdAt: recent,
+            },
+          },
+          {
+            id: 'stale',
+            fields: {
+              status: 'Aberta',
+              latlong: '-30.04,-51.22',
+              text: 'comentario antigo',
+              createdAt: old,
+            },
+          },
+          {
+            id: 'invalid',
+            fields: {
+              status: 'Inválida',
+              latlong: '-30.05,-51.23',
+              text: 'lixo',
+              createdAt: recent,
             },
           },
         ],
@@ -121,7 +142,8 @@ describe('Airtable Vercel functions', () => {
     const requestUrl = String(fetch.mock.calls[0][0]);
     expect(requestUrl).toContain('pageSize=100');
     expect(requestUrl).toContain('filterByFormula=');
-    expect(decodeURIComponent(requestUrl)).toContain("NOT({status}='Resolvida')");
+    expect(decodeURIComponent(requestUrl)).toContain("{status}='Aberta'");
+    expect(decodeURIComponent(requestUrl)).toContain('IS_AFTER({createdAt}');
     expect(decodeURIComponent(requestUrl)).toContain('{id}=44');
     expect(requestUrl).toContain('fields');
   });

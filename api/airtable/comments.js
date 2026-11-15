@@ -15,10 +15,13 @@ const PRIVATE_FIELDS = ['email'];
 // refetches with ?fresh=1 so that one request bypasses the edge cache.
 const GET_CACHE_CONTROL = 'public, s-maxage=300, stale-while-revalidate=3600';
 const FRESH_CACHE_CONTROL = 'no-store';
-// Pull only rows the map can show, plus the magic tags-list row (id=44).
-// Without this, a ~230-row table is 3 Airtable pages (max pageSize 100) per load.
-const COMMENTS_FILTER_FORMULA = `OR({id}=${TAGS_LIST_COMMENT_ID},AND(NOT({status}='Resolvida'),{latlong}!=''))`;
+// Pull only recent open rows the map can show, plus the magic tags-list row (id=44).
+// Without this, a ~230-row table is 3 Airtable pages (max pageSize 100) per load,
+// and years-old unverified reports look like current map truth.
+const MAX_COMMENT_AGE_MONTHS = 24;
+const COMMENTS_FILTER_FORMULA = `OR({id}=${TAGS_LIST_COMMENT_ID},AND({status}='Aberta',{latlong}!='',IS_AFTER({createdAt},DATEADD(TODAY(),-${MAX_COMMENT_AGE_MONTHS},'months'))))`;
 const COMMENTS_FIELDS = ['id', 'status', 'latlong', 'location', 'text', 'tags', 'createdAt'];
+const MAX_COMMENT_AGE_MS = MAX_COMMENT_AGE_MONTHS * 30 * 24 * 60 * 60 * 1000;
 
 const MIN_TEXT_LENGTH = 20;
 const MAX_TEXT_LENGTH = 2000;
@@ -135,6 +138,14 @@ function validateCommentPayload(body) {
   return fields;
 }
 
+function isRecentComment(record) {
+  const createdAt = record?.fields?.createdAt;
+  if (!createdAt) return false;
+  const createdMs = Date.parse(createdAt);
+  if (!Number.isFinite(createdMs)) return false;
+  return Date.now() - createdMs <= MAX_COMMENT_AGE_MS;
+}
+
 function buildCommentsResponse(records) {
   const tagsListComment = records.find((c) => c?.fields?.id === TAGS_LIST_COMMENT_ID);
   if (!tagsListComment || !Array.isArray(tagsListComment.fields.tags)) {
@@ -144,8 +155,10 @@ function buildCommentsResponse(records) {
   }
 
   const comments = records
-    .filter((c) => c?.fields?.status !== 'Resolvida')
+    .filter((c) => c?.fields?.id !== TAGS_LIST_COMMENT_ID)
+    .filter((c) => c?.fields?.status === 'Aberta')
     .filter((c) => c?.fields?.latlong !== undefined)
+    .filter(isRecentComment)
     .map(stripPrivateFields);
 
   return {
