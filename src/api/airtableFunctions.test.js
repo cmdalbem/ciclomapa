@@ -162,6 +162,14 @@ describe('Airtable Vercel functions', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it('rejects comment text shorter than the minimum length', async () => {
+    const res = createRes();
+    await commentsHandler({ method: 'POST', body: { ...validComment, text: 'a' } }, res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid request' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('POST allowlists fields, forces status, and returns 201', async () => {
     fetch.mockResolvedValueOnce(jsonResponse(200, { records: [{ id: 'created' }] }));
 

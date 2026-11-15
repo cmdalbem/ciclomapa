@@ -9,6 +9,8 @@ import { getOsmUrl } from './utils/utils.js';
 const { TextArea } = Input;
 const { Text } = Typography;
 
+const MIN_TEXT_LENGTH = 20;
+
 class CommentModal extends Component {
   defaultState = {
     text: '',
@@ -105,7 +107,9 @@ class CommentModal extends Component {
         centered={true}
         okButtonProps={{
           disabled:
-            this.state.submitting || this.state.text.length === 0 || this.state.tags.length === 0,
+            this.state.submitting ||
+            this.state.text.trim().length < MIN_TEXT_LENGTH ||
+            this.state.tags.length === 0,
           loading: this.state.submitting,
         }}
         okText="Adicionar comentário"
@@ -152,6 +156,12 @@ class CommentModal extends Component {
               onChange={this.onTextChange}
               placeholder="Explique em mais detalhes o problema que você identificou."
             />
+            {this.state.text.trim().length > 0 &&
+              this.state.text.trim().length < MIN_TEXT_LENGTH && (
+                <Text type="secondary" className="text-white" style={{ opacity: 0.7 }}>
+                  Escreva pelo menos {MIN_TEXT_LENGTH} caracteres.
+                </Text>
+              )}
           </div>
 
           <div>

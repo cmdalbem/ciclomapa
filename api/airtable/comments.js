@@ -20,6 +20,7 @@ const FRESH_CACHE_CONTROL = 'no-store';
 const COMMENTS_FILTER_FORMULA = `OR({id}=${TAGS_LIST_COMMENT_ID},AND(NOT({status}='Resolvida'),{latlong}!=''))`;
 const COMMENTS_FIELDS = ['id', 'status', 'latlong', 'location', 'text', 'tags', 'createdAt'];
 
+const MIN_TEXT_LENGTH = 20;
 const MAX_TEXT_LENGTH = 2000;
 const MAX_LOCATION_LENGTH = 300;
 const MAX_EMAIL_LENGTH = 254;
@@ -91,11 +92,11 @@ function validateCommentPayload(body) {
     throw badRequest('Invalid request');
   }
 
-  if (typeof body.text !== 'string' || body.text.trim().length === 0) {
+  if (typeof body.text !== 'string') {
     throw badRequest('Invalid request');
   }
   const text = body.text.trim();
-  if (text.length > MAX_TEXT_LENGTH) {
+  if (text.length < MIN_TEXT_LENGTH || text.length > MAX_TEXT_LENGTH) {
     throw badRequest('Invalid request');
   }
 
