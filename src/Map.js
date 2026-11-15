@@ -193,7 +193,8 @@ class Map extends Component {
     Analytics.event('new_comment');
 
     this.hideCommentModal();
-    this.initCommentsLayer();
+    // Bypass the CDN cache so the poster sees their own comment immediately.
+    this.initCommentsLayer({ fresh: true });
   }
 
   onMapMoveEnded() {
@@ -1138,12 +1139,12 @@ class Map extends Component {
     });
   }
 
-  async initCommentsLayer() {
+  async initCommentsLayer({ fresh = false } = {}) {
     const self = this;
 
     let commentsData;
     try {
-      commentsData = await this.airtableDatabase.getComments();
+      commentsData = await this.airtableDatabase.getComments({ fresh });
     } catch (err) {
       console.warn('Failed to load comments', err);
       // Keep whatever is already on the map; a transient failure

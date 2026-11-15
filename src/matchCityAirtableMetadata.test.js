@@ -48,6 +48,20 @@ describe('AirtableDatabase same-origin client', () => {
     await expect(db.getComments()).rejects.toThrow('Airtable request failed');
   });
 
+  it('getComments({ fresh: true }) bypasses the CDN cache', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ comments: [], tagsList: [] }),
+    });
+
+    await expect(db.getComments({ fresh: true })).resolves.toEqual({
+      comments: [],
+      tagsList: [],
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/airtable/comments?fresh=1', undefined);
+  });
+
   it('create POSTs JSON and throws when the write fails', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,
