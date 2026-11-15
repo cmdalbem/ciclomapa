@@ -11,9 +11,10 @@ const TAGS_LIST_COMMENT_ID = 44;
 const DEFAULT_STATUS = 'Aberta';
 const HONEYPOT_FIELD = 'website';
 const PRIVATE_FIELDS = ['email'];
-// No shared cache: the map refetches this right after a user posts a comment,
-// and a CDN-cached list would hide the new comment for up to a minute.
-const GET_CACHE_CONTROL = 'no-store';
+// Shared CDN cache for normal map loads. After a user posts, the client
+// refetches with ?fresh=1 so that one request bypasses the edge cache.
+const GET_CACHE_CONTROL = 'public, s-maxage=300, stale-while-revalidate=3600';
+const FRESH_CACHE_CONTROL = 'no-store';
 
 const MAX_TEXT_LENGTH = 2000;
 const MAX_LOCATION_LENGTH = 300;
@@ -148,10 +149,21 @@ function buildCommentsResponse(records) {
   };
 }
 
-async function handleGet(res) {
+function wantsFreshComments(req) {
+  try {
+    const rawUrl = req.url || '/';
+    const url = new URL(rawUrl, 'http://localhost');
+    return url.searchParams.get('fresh') === '1';
+  } catch {
+    return false;
+  }
+}
+
+async function handleGet(req, res) {
   const records = await fetchAirtableTable(COMMENTS_TABLE_NAME);
   const payload = buildCommentsResponse(records);
-  sendJson(res, 200, payload, { 'Cache-Control': GET_CACHE_CONTROL });
+  const cacheControl = wantsFreshComments(req) ? FRESH_CACHE_CONTROL : GET_CACHE_CONTROL;
+  sendJson(res, 200, payload, { 'Cache-Control': cacheControl });
 }
 
 async function handlePost(req, res) {
@@ -164,7 +176,7 @@ async function handlePost(req, res) {
 module.exports = async function commentsHandler(req, res) {
   try {
     if (req.method === 'GET') {
-      await handleGet(res);
+      await handleGet(req, res);
       return;
     }
     if (req.method === 'POST') {

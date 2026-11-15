@@ -48,8 +48,9 @@ class AirtableDatabase {
     return this.request('/api/airtable/metadata');
   }
 
-  async getComments() {
-    return this.request('/api/airtable/comments');
+  async getComments({ fresh = false } = {}) {
+    const path = fresh ? '/api/airtable/comments?fresh=1' : '/api/airtable/comments';
+    return this.request(path);
   }
 
   async create(fields) {

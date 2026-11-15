@@ -111,14 +111,28 @@ describe('Airtable Vercel functions', () => {
     );
 
     const res = createRes();
-    await commentsHandler({ method: 'GET' }, res);
+    await commentsHandler({ method: 'GET', url: '/api/airtable/comments' }, res);
 
     expect(res.statusCode).toBe(200);
-    expect(res.headers['Cache-Control']).toBe('no-store');
+    expect(res.headers['Cache-Control']).toContain('s-maxage=300');
     expect(res.body.tagsList).toEqual(['Infraestrutura', 'Sinalização']);
     expect(res.body.comments).toHaveLength(1);
     expect(res.body.comments[0].fields.text).toBe('buraco');
     expect(res.body.comments[0].fields.email).toBeUndefined();
+  });
+
+  it('GET comments?fresh=1 bypasses the shared CDN cache', async () => {
+    fetch.mockResolvedValueOnce(
+      jsonResponse(200, {
+        records: [{ id: 'tags', fields: { id: 44, tags: ['Infraestrutura'] } }],
+      })
+    );
+
+    const res = createRes();
+    await commentsHandler({ method: 'GET', url: '/api/airtable/comments?fresh=1' }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['Cache-Control']).toBe('no-store');
   });
 
   it('rejects a filled honeypot without calling Airtable', async () => {
