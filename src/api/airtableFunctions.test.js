@@ -51,6 +51,7 @@ describe('Airtable Vercel functions', () => {
     else process.env.AIRTABLE_API_KEY = originalKey;
     if (originalBase === undefined) delete process.env.AIRTABLE_BASE_ID;
     else process.env.AIRTABLE_BASE_ID = originalBase;
+    jest.useRealTimers();
     jest.restoreAllMocks();
   });
 
@@ -146,6 +147,39 @@ describe('Airtable Vercel functions', () => {
     expect(decodeURIComponent(requestUrl)).toContain('IS_AFTER({createdAt}');
     expect(decodeURIComponent(requestUrl)).toContain('{id}=44');
     expect(requestUrl).toContain('fields');
+  });
+
+  it('GET comments keeps a Nov 20 2024 comment under the 24-month calendar cutoff', async () => {
+    // Fixed clock: under the old 720-day ms window this comment would be dropped,
+    // but DATEADD(TODAY(), -24, 'months') from 2026-11-15 keeps it.
+    jest.useFakeTimers({ advanceTimers: true });
+    jest.setSystemTime(new Date('2026-11-15T12:00:00.000Z'));
+
+    fetch.mockResolvedValueOnce(
+      jsonResponse(200, {
+        records: [
+          { id: 'tags', fields: { id: 44, tags: ['Infraestrutura'] } },
+          {
+            id: 'near-cutoff',
+            fields: {
+              status: 'Aberta',
+              latlong: '-30.03,-51.21',
+              text: 'ainda dentro da janela de 24 meses',
+              createdAt: '2024-11-20T00:00:00.000Z',
+            },
+          },
+        ],
+      })
+    );
+
+    const res = createRes();
+    await commentsHandler({ method: 'GET', url: '/api/airtable/comments' }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.comments).toHaveLength(1);
+    expect(res.body.comments[0].fields.text).toBe('ainda dentro da janela de 24 meses');
+
+    jest.useRealTimers();
   });
 
   it('GET comments?fresh=1 bypasses the shared CDN cache', async () => {

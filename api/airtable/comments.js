@@ -19,9 +19,19 @@ const FRESH_CACHE_CONTROL = 'no-store';
 // Without this, a ~230-row table is 3 Airtable pages (max pageSize 100) per load,
 // and years-old unverified reports look like current map truth.
 const MAX_COMMENT_AGE_MONTHS = 24;
+// Airtable filter and local post-filter share this calendar-month cutoff
+// (DATEADD(..., 'months') / commentAgeCutoffMs), not a fixed 30-day*N ms window.
 const COMMENTS_FILTER_FORMULA = `OR({id}=${TAGS_LIST_COMMENT_ID},AND({status}='Aberta',{latlong}!='',IS_AFTER({createdAt},DATEADD(TODAY(),-${MAX_COMMENT_AGE_MONTHS},'months'))))`;
 const COMMENTS_FIELDS = ['id', 'status', 'latlong', 'location', 'text', 'tags', 'createdAt'];
-const MAX_COMMENT_AGE_MS = MAX_COMMENT_AGE_MONTHS * 30 * 24 * 60 * 60 * 1000;
+
+/** UTC ms for DATEADD(TODAY(), -MAX_COMMENT_AGE_MONTHS, 'months'). */
+function commentAgeCutoffMs(now = new Date()) {
+  return Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth() - MAX_COMMENT_AGE_MONTHS,
+    now.getUTCDate()
+  );
+}
 
 const MIN_TEXT_LENGTH = 20;
 const MAX_TEXT_LENGTH = 2000;
@@ -138,12 +148,13 @@ function validateCommentPayload(body) {
   return fields;
 }
 
-function isRecentComment(record) {
+function isRecentComment(record, now = new Date()) {
   const createdAt = record?.fields?.createdAt;
   if (!createdAt) return false;
   const createdMs = Date.parse(createdAt);
   if (!Number.isFinite(createdMs)) return false;
-  return Date.now() - createdMs <= MAX_COMMENT_AGE_MS;
+  // Match formula IS_AFTER({createdAt}, DATEADD(...)): strict greater-than.
+  return createdMs > commentAgeCutoffMs(now);
 }
 
 function buildCommentsResponse(records) {
@@ -158,7 +169,7 @@ function buildCommentsResponse(records) {
     .filter((c) => c?.fields?.id !== TAGS_LIST_COMMENT_ID)
     .filter((c) => c?.fields?.status === 'Aberta')
     .filter((c) => c?.fields?.latlong !== undefined)
-    .filter(isRecentComment)
+    .filter((c) => isRecentComment(c))
     .map(stripPrivateFields);
 
   return {
