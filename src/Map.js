@@ -173,23 +173,37 @@ const CICLOMAPA_DATA_SOURCES = new Set([
   ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID,
 ]);
 
-/** Solid orange/gray full-route line (hidden when segmented paint is on). */
-const SOLID_ROUTE_LAYER_IDS = [
+/** Solid orange selected line (hidden when that route is drawn as typology segments). */
+const SELECTED_SOLID_ROUTE_LAYER_IDS = [
   'route-padding-selected',
   'route-selected',
   'route--border-selected',
+];
+
+/** Solid unselected alternatives — always a single color, never typology. */
+const UNSELECTED_SOLID_ROUTE_LAYER_IDS = [
   'route-paddings-unselected',
   'routes-unselected',
   'route--borders-unselected',
 ];
 
-/** Typed coverage / segmented paint layers. */
-const ROUTE_SEGMENT_LAYER_IDS = [
+const SOLID_ROUTE_LAYER_IDS = [
+  ...SELECTED_SOLID_ROUTE_LAYER_IDS,
+  ...UNSELECTED_SOLID_ROUTE_LAYER_IDS,
+];
+
+/** Typed coverage / segmented paint on the selected route only. */
+const SELECTED_SEGMENT_LAYER_IDS = [
   'overlapping-cyclepath-selected',
   'overlapping-cyclepath-selected--border',
+];
+
+const UNSELECTED_SEGMENT_LAYER_IDS = [
   'overlapping-cyclepaths-unselected',
   'overlapping-cyclepaths-unselected--border',
 ];
+
+const ROUTE_SEGMENT_LAYER_IDS = [...SELECTED_SEGMENT_LAYER_IDS, ...UNSELECTED_SEGMENT_LAYER_IDS];
 
 /** Layers drawn for calculated routes + coverage highlights (A/B markers stay). */
 const ROUTE_OVERLAY_LAYER_IDS = [...SOLID_ROUTE_LAYER_IDS, ...ROUTE_SEGMENT_LAYER_IDS];
@@ -2234,12 +2248,14 @@ class Map extends Component {
     source.setData({ type: 'FeatureCollection', features });
   }
 
-  /** Features for the solid orange/gray line; empty when segmented paint owns the route. */
+  /** Solid line features. Unselected always; selected only when it isn't drawn as segments. */
   buildSolidRouteFeatures(routes) {
-    if (this.props.segmentedRoutePaint) return [];
+    const selectedRouteIndex = this.props.selectedRouteIndex;
+    const segmented = Boolean(this.props.segmentedRoutePaint);
     return (routes?.routes || [])
       .slice()
       .reverse()
+      .filter((route) => !segmented || route.sortedIndex !== selectedRouteIndex)
       .map((route) => ({
         type: 'Feature',
         id: route.sortedIndex,
@@ -2265,9 +2281,8 @@ class Map extends Component {
     let featureId = 0;
 
     (routes?.routes || []).forEach((route) => {
-      // Segmented compare: only the selected route, so sibling engines don't
-      // leave an orange street underlay along the same corridor.
-      if (segmented && route.sortedIndex !== selectedRouteIndex) return;
+      // Colorize only the selected route; unselected stay on the solid layer.
+      if (route.sortedIndex !== selectedRouteIndex) return;
 
       let segments;
       if (segmented) {
@@ -2821,15 +2836,25 @@ class Map extends Component {
       return;
     }
 
-    const solidVisibility = this.props.segmentedRoutePaint ? 'none' : 'visible';
-    SOLID_ROUTE_LAYER_IDS.forEach((layerId) => {
+    const selectedSolidVisibility = this.props.segmentedRoutePaint ? 'none' : 'visible';
+    SELECTED_SOLID_ROUTE_LAYER_IDS.forEach((layerId) => {
       if (this.map.getLayer(layerId)) {
-        this.map.setLayoutProperty(layerId, 'visibility', solidVisibility);
+        this.map.setLayoutProperty(layerId, 'visibility', selectedSolidVisibility);
       }
     });
-    ROUTE_SEGMENT_LAYER_IDS.forEach((layerId) => {
+    UNSELECTED_SOLID_ROUTE_LAYER_IDS.forEach((layerId) => {
       if (this.map.getLayer(layerId)) {
         this.map.setLayoutProperty(layerId, 'visibility', 'visible');
+      }
+    });
+    SELECTED_SEGMENT_LAYER_IDS.forEach((layerId) => {
+      if (this.map.getLayer(layerId)) {
+        this.map.setLayoutProperty(layerId, 'visibility', 'visible');
+      }
+    });
+    UNSELECTED_SEGMENT_LAYER_IDS.forEach((layerId) => {
+      if (this.map.getLayer(layerId)) {
+        this.map.setLayoutProperty(layerId, 'visibility', 'none');
       }
     });
     this.updateRouteTooltips();
