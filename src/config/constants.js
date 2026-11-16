@@ -114,11 +114,12 @@ export const ENABLE_BOUNDARY_LAYER = true;
 export const ENABLE_SATELLITE_TOGGLE = false;
 
 // `inPt` is the label with its locative preposition ("Buscar no Brasil", "em Portugal").
-const SUPPORTED_COUNTRIES_PROD = Object.freeze([
+// Sitemap generation (`scripts/generate-sitemap.mjs`) always uses PROD, not preview.
+export const SUPPORTED_COUNTRIES_PROD = Object.freeze([
   { code: 'br', labelPt: 'Brasil', inPt: 'no Brasil', flag: '🇧🇷' },
 ]);
 
-const SUPPORTED_COUNTRIES_PREVIEW = Object.freeze([
+export const SUPPORTED_COUNTRIES_PREVIEW = Object.freeze([
   { code: 'br', labelPt: 'Brasil', inPt: 'no Brasil', flag: '🇧🇷' },
   { code: 'pt', labelPt: 'Portugal', inPt: 'em Portugal', flag: '🇵🇹' },
   { code: 'es', labelPt: 'Espanha', inPt: 'na Espanha', flag: '🇪🇸' },
