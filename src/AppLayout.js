@@ -10,6 +10,7 @@ import Map from './Map.js';
 import TopBar from './TopBar.js';
 import LayersPanel from './LayersPanel.js';
 import LayersBar from './LayersBar.js';
+import MapPmtilesCompareControl from './features/map/MapPmtilesCompareControl.tsx';
 import { IS_MOBILE, IS_PROD, ENABLE_SATELLITE_TOGGLE } from './config/constants.js';
 
 const AnalyticsSidebar = React.lazy(() => import('./AnalyticsSidebar.js'));
@@ -106,6 +107,9 @@ export default function AppLayout({
               cleanMode={state.cleanMode}
             />
           ) : null}
+          {!state.embedMode && !state.hideUI && !state.hideUIFromUrl && state.mapBootReady ? (
+            <MapPmtilesCompareControl />
+          ) : null}
 
           {!IS_MOBILE && !state.embedMode && (
             <aside
@@ -190,6 +194,7 @@ export default function AppLayout({
               onToPointChange={handlers.setToPoint}
               onClearRoutePoints={handlers.clearRoutePoints}
               onDirectionsPanelToggle={handlers.onDirectionsPanelToggle}
+              onRoutingProviderChange={handlers.onRoutingProviderChange}
               isDarkMode={state.isDarkMode}
               debugMode={state.debugMode}
               onAreaChange={handlers.setArea}
@@ -303,6 +308,7 @@ AppLayout.propTypes = {
     setToPoint: PropTypes.func,
     clearRoutePoints: PropTypes.func,
     onDirectionsPanelToggle: PropTypes.func,
+    onRoutingProviderChange: PropTypes.func,
     toggleDirectionsPanel: PropTypes.func,
     setArea: PropTypes.func,
     closeAboutModal: PropTypes.func,

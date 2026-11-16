@@ -44,6 +44,35 @@
       "description": "Barcelona city"
     },
     {
+      "id": "sao-paulo-zg",
+      "output": "sao-paulo-zg.pmtiles",
+      "areas": ["São Paulo"],
+      "maximumZoom": "g",
+      "description": "Disposable compare — São Paulo with tippecanoe -zg (old default guess)"
+    },
+    {
+      "id": "sao-paulo-z13",
+      "output": "sao-paulo-z13.pmtiles",
+      "areas": ["São Paulo"],
+      "maximumZoom": 13,
+      "description": "Disposable compare — São Paulo at maxzoom 13 (new display default)"
+    },
+    {
+      "id": "sao-paulo-analysis",
+      "output": "sao-paulo-analysis.pmtiles",
+      "areas": ["São Paulo"],
+      "maximumZoom": 15,
+      "description": "Disposable compare — São Paulo z15 + no tile size/feature limits"
+    },
+    {
+      "id": "spain-analysis",
+      "output": "spain-analysis.pmtiles",
+      "areas": ["Spain"],
+      "includePoi": false,
+      "maximumZoom": 15,
+      "description": "Spain high-zoom archive for route coverage scoring (not for map paint)"
+    },
+    {
       "id": "spain",
       "output": "spain.pmtiles",
       "areas": ["Spain"],

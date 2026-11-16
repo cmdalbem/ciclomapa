@@ -19,6 +19,9 @@ jest.mock(
 );
 jest.mock('./AnalyticsSidebar.js', () => () => <div data-testid="analytics" />);
 jest.mock('./DirectionsPanel.js', () => () => <div data-testid="directions" />);
+jest.mock('./features/map/MapPmtilesCompareControl.tsx', () => () => (
+  <div data-testid="map-pmtiles-compare" />
+));
 jest.mock('./CitySwitcherModal', () => () => <div data-testid="city-switcher" />);
 jest.mock(
   './LayersLegendModal.js',
@@ -60,6 +63,7 @@ const handlers = {
   setToPoint: jest.fn(),
   clearRoutePoints: jest.fn(),
   onDirectionsPanelToggle: jest.fn(),
+  onRoutingProviderChange: jest.fn(),
   setArea: jest.fn(),
   closeAboutModal: jest.fn(),
   closeLayersLegendModal: jest.fn(),
