@@ -374,6 +374,8 @@ export const GRAPHHOPPER_BASE_URL = 'https://graphhopper.com/api/1/route';
 
 export const BROUTER_LOCAL_BASE_URL = process.env.REACT_APP_BROUTER_LOCAL_BASE_URL || '';
 export const USE_BROUTER_LOCAL = Boolean(BROUTER_LOCAL_BASE_URL);
+/** Drop a BRouter alt if this fraction of its ~100m cells already sits on a kept route. 1 = keep all. */
+export const BROUTER_ALT_MAX_SHARE_DEFAULT = 0.65;
 
 export const VALHALLA_BASE_URL = 'https://valhalla1.openstreetmap.de/route';
 

@@ -7,6 +7,7 @@ import {
   GRAPHHOPPER_API_KEY,
   GRAPHHOPPER_BASE_URL,
   BROUTER_LOCAL_BASE_URL,
+  BROUTER_ALT_MAX_SHARE_DEFAULT,
   USE_BROUTER_LOCAL,
   VALHALLA_BASE_URL,
 } from './config/constants.js';
@@ -384,6 +385,48 @@ class ValhallaDirectionsProvider extends DirectionsProvider {
   }
 }
 
+// BRouter has no share_factor. Cheap stand-in: ~100m cells, drop an alt if
+// most of its cells already sit on a kept route. Four polylines, no turf.
+const BROUTER_ALT_CELL_DECIMALS = 3;
+
+function brouterRouteCells(coords) {
+  const cells = new Set();
+  for (let i = 0; i < coords.length; i++) {
+    const c = coords[i];
+    cells.add(
+      `${c[0].toFixed(BROUTER_ALT_CELL_DECIMALS)},${c[1].toFixed(BROUTER_ALT_CELL_DECIMALS)}`
+    );
+  }
+  return cells;
+}
+
+function brouterCellShare(a, b) {
+  if (!a.size || !b.size) return 0;
+  const [small, big] = a.size <= b.size ? [a, b] : [b, a];
+  let n = 0;
+  for (const cell of small) {
+    if (big.has(cell)) n++;
+  }
+  return n / small.size;
+}
+
+function dropSimilarBrouterRoutes(routes, maxShare) {
+  const cap =
+    typeof maxShare === 'number' && Number.isFinite(maxShare)
+      ? maxShare
+      : BROUTER_ALT_MAX_SHARE_DEFAULT;
+  if (!(cap < 1)) return routes;
+  const kept = [];
+  const grids = [];
+  for (let i = 0; i < routes.length; i++) {
+    const grid = brouterRouteCells(routes[i].geometry.coordinates);
+    if (grids.some((g) => brouterCellShare(grid, g) >= cap)) continue;
+    kept.push(routes[i]);
+    grids.push(grid);
+  }
+  return kept.length ? kept : routes.slice(0, 1);
+}
+
 class BRouterDirectionsProvider extends DirectionsProvider {
   constructor({ baseUrl = BROUTER_LOCAL_BASE_URL } = {}) {
     super();
@@ -479,8 +522,10 @@ class BRouterDirectionsProvider extends DirectionsProvider {
       throw new Error('Não foram encontradas rotas');
     }
 
+    const distinct = dropSimilarBrouterRoutes(routes, options.brouterProfile?.altMaxShare);
+
     return {
-      routes,
+      routes: distinct,
       waypoints: [{ coordinates: fromCoords }, { coordinates: toCoords }],
       bbox: this.calculateBbox(routes),
     };

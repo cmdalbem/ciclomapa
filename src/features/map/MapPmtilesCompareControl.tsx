@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Segmented, Select } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Segmented, Select, Slider } from 'antd';
 import {
   useDirections,
   type MapPmtilesKind,
@@ -49,7 +49,14 @@ export default function MapPmtilesCompareControl({ onJumpToCitySlug }: Props) {
     setHideRouteOverlay,
     segmentedRoutePaint,
     setSegmentedRoutePaint,
+    brouterAltMaxShare,
+    setBrouterAltMaxShare,
   } = useDirections();
+
+  const [shareDraft, setShareDraft] = useState(brouterAltMaxShare);
+  useEffect(() => {
+    setShareDraft(brouterAltMaxShare);
+  }, [brouterAltMaxShare]);
 
   const region = PMTILES_POC_REGIONS[mapPmtilesPocRegion];
   const files = region?.filenames;
@@ -181,6 +188,31 @@ export default function MapPmtilesCompareControl({ onJumpToCitySlug }: Props) {
           popupMatchSelectWidth={false}
           className="cm-map-pmtiles-compare__select"
         />
+      </div>
+      <div
+        className="cm-map-pmtiles-compare__row"
+        role="group"
+        aria-label="Máxima fração de células em comum entre alternativas do BRouter. 1 mantém todas."
+      >
+        <span className="cm-map-pmtiles-compare__label">Share</span>
+        <Slider
+          min={0}
+          max={1}
+          step={0.05}
+          value={shareDraft}
+          onChange={(value) => {
+            if (typeof value === 'number' && Number.isFinite(value)) setShareDraft(value);
+          }}
+          onChangeComplete={(value) => {
+            if (typeof value !== 'number' || !Number.isFinite(value)) return;
+            const next = Math.min(1, Math.max(0, value));
+            setShareDraft(next);
+            if (next !== brouterAltMaxShare) setBrouterAltMaxShare(next);
+          }}
+          tooltip={{ formatter: (value) => Number(value).toFixed(2) }}
+          className="cm-map-pmtiles-compare__slider"
+        />
+        <span className="cm-map-pmtiles-compare__share-val">{shareDraft.toFixed(2)}</span>
       </div>
       <div
         className="cm-map-pmtiles-compare__row"

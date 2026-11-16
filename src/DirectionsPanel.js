@@ -267,6 +267,7 @@ class DirectionsPanel extends Component {
     const geoJsonBecameReady =
       !USE_PMTILES_ROUTE_COVERAGE && this.props.geoJson && this.props.geoJson !== prevProps.geoJson;
     const providerChanged = this.props.routingProvider !== prevProps.routingProvider;
+    const altShareChanged = this.props.brouterAltMaxShare !== prevProps.brouterAltMaxShare;
     if (providerChanged) {
       writeDirectionsUrlParams({ provider: this.props.routingProvider });
       this.props.onRoutingProviderChange?.(this.props.routingProvider);
@@ -279,6 +280,7 @@ class DirectionsPanel extends Component {
       (pointsChanged ||
         geoJsonBecameReady ||
         providerChanged ||
+        altShareChanged ||
         // Map often mounts after URL OD is already on props; treat that as a kick.
         (Boolean(this.props.map) && !prevProps.map));
 
@@ -760,7 +762,7 @@ class DirectionsPanel extends Component {
 
   cancelDirectionsCalculation({ keepLoading = false } = {}) {
     this.directionsRequestId += 1;
-    this._inflightCoordsKey = null;
+    this._inflightRequestKey = null;
     if (this.directionsAbortController) {
       this.directionsAbortController.abort();
       this.directionsAbortController = null;
@@ -770,8 +772,26 @@ class DirectionsPanel extends Component {
     }
   }
 
+  directionsRequestKey(fromCoords, toCoords) {
+    const profile = this.getBrouterProfile();
+    return [
+      fromCoords[0],
+      fromCoords[1],
+      toCoords[0],
+      toCoords[1],
+      this.props.routingProvider,
+      profile.consider_elevation,
+      profile.unpavedPenalty,
+      profile.consider_noise,
+      profile.consider_river,
+      profile.consider_forest,
+      profile.routingObjective,
+      profile.altMaxShare,
+    ].join('|');
+  }
+
   async calculateDirections(fromCoords, toCoords, provider) {
-    this._inflightCoordsKey = `${fromCoords[0]},${fromCoords[1]}|${toCoords[0]},${toCoords[1]}`;
+    this._inflightRequestKey = this.directionsRequestKey(fromCoords, toCoords);
     // Drop any previous in-flight calc before starting a new one.
     if (this.directionsAbortController) {
       this.directionsAbortController.abort();
@@ -845,9 +865,9 @@ class DirectionsPanel extends Component {
       const fromCoords = this.props.fromPoint.result.center;
       const toCoords = this.props.toPoint.result.center;
 
-      const coordsKey = `${fromCoords[0]},${fromCoords[1]}|${toCoords[0]},${toCoords[1]}`;
+      const requestKey = this.directionsRequestKey(fromCoords, toCoords);
       if (
-        coordsKey === this._inflightCoordsKey &&
+        requestKey === this._inflightRequestKey &&
         (this.props.directionsLoading || this.props.directions)
       ) {
         return;
@@ -1079,6 +1099,7 @@ class DirectionsPanel extends Component {
       consider_river: this.state.consider_river,
       consider_forest: this.state.consider_forest,
       routingObjective: brouterRoutingObjectiveFromSort(this.state.routeSortMode),
+      altMaxShare: this.props.brouterAltMaxShare,
     };
   }
 
@@ -1881,6 +1902,7 @@ const DirectionsPanelWrapper = React.forwardRef((props, ref) => {
       setVisibleRouteIndices={directionsContext.setVisibleRouteIndices}
       mapPmtilesPocRegion={directionsContext.mapPmtilesPocRegion}
       routingProvider={directionsContext.routingProvider}
+      brouterAltMaxShare={directionsContext.brouterAltMaxShare}
       geoJson={props.geoJson}
       layers={props.layers}
     />

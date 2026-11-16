@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import type { DirectionsData } from '../types/directions';
 import {
+  BROUTER_ALT_MAX_SHARE_DEFAULT,
   HYBRID_MAX_RESULTS,
   MAP_PMTILES_COMPARE_KINDS,
   MAP_PMTILES_POC_REGION_IDS,
@@ -92,6 +93,9 @@ export interface DirectionsContextValue {
   /** Which routing engine the panel / hybrid mix uses. */
   routingProvider: string;
   setRoutingProvider: (provider: string) => void;
+  /** BRouter alt filter: drop if this fraction of ~100m cells already sits on a kept route. */
+  brouterAltMaxShare: number;
+  setBrouterAltMaxShare: (share: number) => void;
   setRoutePointsMode: (isSetting: boolean) => void;
   clearDirections: () => void;
   selectRoute: (routeIndex: number | null) => void;
@@ -144,6 +148,7 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
   });
   const [maxRoutesShown, setMaxRoutesShown] = useState(initialMaxRoutesShown);
   const [routingProvider, setRoutingProvider] = useState(initialRoutingProvider);
+  const [brouterAltMaxShare, setBrouterAltMaxShare] = useState(BROUTER_ALT_MAX_SHARE_DEFAULT);
   const [visibleRouteIndices, setVisibleRouteIndices] = useState<number[] | null>(null);
   const [elevationHoverLngLat, setElevationHoverLngLat] = useState<[number, number] | null>(null);
 
@@ -248,6 +253,8 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
       setLaneSideOffsetEnabled,
       routingProvider,
       setRoutingProvider,
+      brouterAltMaxShare,
+      setBrouterAltMaxShare,
       setRoutePointsMode,
       clearDirections,
       selectRoute,
@@ -276,6 +283,7 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
       mapPmtilesPocRegion,
       laneSideOffsetEnabled,
       routingProvider,
+      brouterAltMaxShare,
       setRoutePointsMode,
       clearDirections,
       selectRoute,

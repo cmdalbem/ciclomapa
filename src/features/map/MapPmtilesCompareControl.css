@@ -57,6 +57,44 @@
   min-width: 8.5rem;
 }
 
+.cm-map-pmtiles-compare__slider.ant-slider {
+  flex: 1;
+  min-width: 72px;
+  margin: 0;
+}
+
+.cm-map-pmtiles-compare__slider .ant-slider-rail {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.cm-map-pmtiles-compare__slider .ant-slider-track {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.cm-map-pmtiles-compare__slider .ant-slider-handle::after {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7);
+}
+
+.cm-map-pmtiles-compare__share-val {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+  min-width: 2.2em;
+  text-align: right;
+}
+
+.theme-light .cm-map-pmtiles-compare__slider .ant-slider-rail {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.theme-light .cm-map-pmtiles-compare__slider .ant-slider-track {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.theme-light .cm-map-pmtiles-compare__slider .ant-slider-handle::after {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+
 .cm-map-pmtiles-compare__select .ant-select-selector {
   background: rgba(255, 255, 255, 0.08) !important;
   border: none !important;
