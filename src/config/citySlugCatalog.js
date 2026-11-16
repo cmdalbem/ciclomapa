@@ -912,9 +912,24 @@ export function getCanonicalCitySlug(slug) {
   return definition.canonicalSlug || normalized;
 }
 
-export function getSeoCitySlugs() {
+/**
+ * Canonical catalog slugs intended for SEO (aliases with `canonicalSlug` excluded).
+ * Pass `countryCodes` (e.g. production `SUPPORTED_COUNTRIES_PROD`) to limit by catalog
+ * `countrycodes`; omit to return every canonical catalog slug.
+ *
+ * @param {string[] | undefined} countryCodes
+ * @returns {string[]}
+ */
+export function getSeoCitySlugs(countryCodes) {
+  const allowed = countryCodes?.length
+    ? new Set(countryCodes.map((code) => String(code).toLowerCase()))
+    : null;
   return Object.entries(PREDEFINED_CITY_CATALOG)
     .filter(([, value]) => !value.canonicalSlug)
+    .filter(([, value]) => {
+      if (!allowed) return true;
+      return (value.countrycodes || []).some((code) => allowed.has(code));
+    })
     .map(([slug]) => slug);
 }
 

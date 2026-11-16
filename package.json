@@ -44,6 +44,7 @@
   },
   "scripts": {
     "start": "craco start",
+    "prebuild": "node scripts/generate-sitemap.mjs",
     "build": "craco build",
     "test": "craco test",
     "e2e": "playwright test",
@@ -62,6 +63,7 @@
     "pmtiles:list": "node scripts/sync-pmtiles-to-s3.js --list-builds",
     "pmtiles:sync": "node scripts/sync-pmtiles-to-s3.js",
     "pmtiles:sync:dry-run": "node scripts/sync-pmtiles-to-s3.js --dry-run",
+    "generate-sitemap": "node scripts/generate-sitemap.mjs",
     "generate-pwa-icons": "node scripts/generate-pwa-icons.js",
     "prepare": "husky || true"
   },
