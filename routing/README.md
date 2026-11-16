@@ -6,21 +6,26 @@ Needs Java 17+ (`java -version`). Docker Desktop on this Mac profile is locked t
 
 ## BRouter
 
-Tiles live in `routing/brouter/segments4/` (5×5°). [`run-local.sh`](brouter/run-local.sh) downloads:
+Tiles live in `routing/brouter/segments4/` (5×5°). [`run-local.sh`](brouter/run-local.sh) pulls:
 
-| Tile      | Area                 |
-| --------- | -------------------- |
-| `W50_S25` | São Paulo            |
-| `E0_N40`  | Barcelona / NE Spain |
+| Coverage                         | Notes                                      |
+| -------------------------------- | ------------------------------------------ |
+| Whole Brazil (`W75..W35` × `S35..N5`) | ~81 candidates; empty ocean tiles 404/skip |
+| Barcelona / NE Spain (`E0_N40`)  | Spain PoC                                  |
+
+First Brazil download is chunky (many `.rd5` files). Re-runs only fetch what's missing. Heap defaults to 2g (`BROUTER_XMX=4g` if long cross-country routes OOM).
 
 ```bash
-chmod +x routing/brouter/run-local.sh
 ./routing/brouter/run-local.sh
 ```
 
-Barcelona smoke test:
+Smoke tests:
 
 ```bash
+# São Paulo
+curl -s "http://localhost:17777/brouter?lonlats=-46.6334,-23.5507|-46.6558,-23.5614&profile=ciclomapa&alternativeidx=0&format=geojson" | head
+
+# Barcelona
 curl -s "http://localhost:17777/brouter?lonlats=2.1686,41.3874|2.1744,41.4036&profile=ciclomapa&alternativeidx=0&format=geojson" | head
 ```
 
@@ -36,17 +41,10 @@ Profile: `routing/brouter/profiles2/ciclomapa.brf` (costs mirrored from `ROUTE_I
 
 Jar + segment tiles stay out of git.
 
-## Trying Barcelona in the app
+## Trying PoCs in the app
 
-1. BRouter running with `E0_N40`.
-2. `.env` PMTiles pointed at Spain archives (not São Paulo):
+1. BRouter running (Brazil tiles + `E0_N40` for Spain).
+2. Bottom-right **PoC** control: **Off** (env tiles) / **SP** / **BR** / **ES**.
+3. Set Serviço to **BRouter** or **Combinado**, pick an OD.
 
-```
-REACT_APP_PMTILES_FILENAME=spain-poi.pmtiles
-REACT_APP_PMTILES_ZG_FILENAME=spain-poi.pmtiles
-REACT_APP_PMTILES_Z13_FILENAME=spain-poi.pmtiles
-REACT_APP_PMTILES_ANALYSIS_FILENAME=spain-analysis.pmtiles
-```
-
-3. Restart `yarn start`.
-4. Open Barcelona, set Serviço to **BRouter** or **Combinado**, pick an OD.
+BR jumps to Brasília and loads `brazil-poi.pmtiles`. ES jumps to Barcelona and loads the Spain archives. SP keeps the zg/z13/z15 tile compare.

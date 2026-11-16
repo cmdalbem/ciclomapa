@@ -6,12 +6,21 @@ cd "$(dirname "$0")"
 JAR=brouter-all.jar
 ZIP_URL=https://github.com/abrensch/brouter/releases/download/v1.7.10/brouter-1.7.10.zip
 PORT="${BROUTER_PORT:-17777}"
+# Brazil-wide routing needs more heap than a single-city PoC.
+XMX="${BROUTER_XMX:-2g}"
 
-# 5x5° tiles (SW corner in the name). Keep whatever cities you need side by side.
-TILES=(
-  "W50_S25" # São Paulo
-  "E0_N40"  # Barcelona / NE Spain
-)
+# 5x5° tiles (SW corner in the name). PoC coverage: whole Brazil + Barcelona.
+TILES=()
+
+# Brazil bbox ~ W74..W35, S34..N5 → 9×9 grid. Ocean squares 404; we skip those.
+BR_LONS=(W75 W70 W65 W60 W55 W50 W45 W40 W35)
+BR_LATS=(S35 S30 S25 S20 S15 S10 S5 N0 N5)
+for lon in "${BR_LONS[@]}"; do
+  for lat in "${BR_LATS[@]}"; do
+    TILES+=("${lon}_${lat}")
+  done
+done
+TILES+=("E0_N40") # Barcelona / NE Spain
 
 if ! command -v java >/dev/null; then
   echo "Need Java 17+. brew install openjdk@17"
@@ -26,13 +35,24 @@ if [[ ! -f "$JAR" ]]; then
 fi
 
 mkdir -p segments4
+echo "Ensuring BRouter segment tiles (${#TILES[@]} candidates; missing ocean tiles are skipped) ..."
+downloaded=0
+skipped=0
 for tile in "${TILES[@]}"; do
   path="segments4/${tile}.rd5"
-  if [[ ! -f "$path" ]]; then
-    echo "Downloading BRouter tile ${tile}.rd5 ..."
-    curl -L --retry 3 -o "$path" "https://brouter.de/brouter/segments4/${tile}.rd5"
+  if [[ -f "$path" && -s "$path" ]]; then
+    continue
+  fi
+  echo "Downloading BRouter tile ${tile}.rd5 ..."
+  if curl -fL --retry 3 -o "$path" "https://brouter.de/brouter/segments4/${tile}.rd5"; then
+    downloaded=$((downloaded + 1))
+  else
+    rm -f "$path"
+    echo "  skip ${tile} (not on server)"
+    skipped=$((skipped + 1))
   fi
 done
+echo "Tiles ready (downloaded ${downloaded}, skipped ${skipped} this run)."
 
 mkdir -p customprofiles
 
@@ -44,7 +64,8 @@ mkdir -p profiles2/_debug/p _debug
 ln -sfn ../../ciclomapa.brf profiles2/_debug/p/ciclomapa.brf
 : > _debug/debug.txt
 
-echo "Starting BRouter on :$PORT (tiles: ${TILES[*]}) ..."
+present=(segments4/*.rd5)
+echo "Starting BRouter on :$PORT (${#present[@]} .rd5 on disk, -Xmx${XMX}) ..."
 echo "Verbose engine log → $(pwd)/_debug/debug.txt (mirrored below)"
 echo "HTTP access lines still print on stdout as usual."
 echo "----"
@@ -57,7 +78,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # debugThreadPool=true → extra contention/thread pool lines on stdout
-java -Xmx1g -Xms256m \
+java -Xmx"$XMX" -Xms256m \
   -DmaxRunningTime=120 \
   -DdebugThreadPool=true \
   -cp "$JAR" btools.server.RouteServer \

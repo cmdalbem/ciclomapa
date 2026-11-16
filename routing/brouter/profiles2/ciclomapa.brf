@@ -62,6 +62,11 @@ assign correctMisplacedViaPointsDistance = 400 # %correctMisplacedViaPointsDista
 assign processUnusedTags            = true # dump OSM tags into WayTags so the app can classify like layers.json
 
 assign unpavedPenalty = 1.0 # %unpavedPenalty% | Extra penalty multiplier applied to the non-probablyGood cost of track/road/path/footway ways depending on tracktype grade | number
+# When dirt is preferred (unpavedPenalty < 1), make paved streets more expensive. 0.25 → 4x.
+assign pavedBoost = if greater 1 unpavedPenalty then divide 1 unpavedPenalty else 1
+
+# 0=protection (default CicloMapa), 1=fast, 2=short. App sends profile:routingObjective.
+assign routingObjective = 0 # %routingObjective% | 0=protection 1=fast 2=short | number
 
 ---context:way   # following code refers to way-tags
 
@@ -346,42 +351,108 @@ assign costfactor
 
   #
   # Protected typology (layers.json / score pesos). Terminal: do not fall through.
-  # Costs ≈ 1/peso relative to ciclovia=1.
+  # Costs ≈ 1/peso relative to ciclovia=1 when routingObjective is 0 (protection).
+  # Fast (1): mute typology gaps. Short (2): flatten toward distance.
   #
   else if ( is_ciclovia ) then 1.0
   else if ( is_calcada ) then 1.0
-  else if ( is_ciclofaixa ) then 1.25
-  else if ( is_ciclorrota ) then 2.5
-  else if ( is_ldcr ) then 2.5
+  else if ( is_ciclofaixa ) then
+    ( if equal routingObjective 0 then 1.25 else 1.05 )
+  else if ( is_ciclorrota ) then
+    ( if equal routingObjective 0 then 2.5 else if equal routingObjective 1 then 1.3 else 1.1 )
+  else if ( is_ldcr ) then
+    ( if equal routingObjective 0 then 2.5 else if equal routingObjective 1 then 1.3 else 1.1 )
 
   #
-  # Bare street / everything else (score peso Rua = 0). Brazil bias: expensive.
+  # Bare street / everything else (score peso Rua = 0). Brazil bias when protecting.
   #
-  else if ( highway=pedestrian ) then ( if isbike then 4 else 8 )
-  else if ( highway=bridleway ) then 8
+  else if ( highway=pedestrian ) then
+  (
+    if equal routingObjective 2 then ( if isbike then 1.2 else 1.5 )
+    else if equal routingObjective 1 then ( if isbike then 2.5 else 4 )
+    else ( if isbike then 4 else 8 )
+  )
+  else if ( highway=bridleway ) then
+    ( if equal routingObjective 2 then 1.4 else if equal routingObjective 1 then 4 else 8 )
   else if ( highway=cycleway ) then 1.0
-  else if ( isresidentialorliving ) then ( if isunpaved then 8 else 6 )
-  else if ( highway=service ) then ( if isunpaved then 9 else 7 )
+  else if ( isresidentialorliving ) then
+  (
+    if equal routingObjective 2 then ( if isunpaved then 1.4 else multiply 1.1 pavedBoost )
+    else if equal routingObjective 1 then ( if isunpaved then 3 else multiply 2 pavedBoost )
+    else ( if isunpaved then 8 else multiply 6 pavedBoost )
+  )
+  else if ( highway=service ) then
+  (
+    if equal routingObjective 2 then ( if isunpaved then 1.5 else multiply 1.15 pavedBoost )
+    else if equal routingObjective 1 then ( if isunpaved then 3.5 else multiply 2.5 pavedBoost )
+    else ( if isunpaved then 9 else multiply 7 pavedBoost )
+  )
   else if ( highway=track|road|path|footway ) then
   (
-    if      ( tracktype=grade1 ) then ( if probablyGood then 5.0 else add 5.0 multiply 0.3 unpavedPenalty )
-    else if ( tracktype=grade2 ) then ( if probablyGood then 6.0 else add 6.0 multiply 0.9 unpavedPenalty )
-    else if ( tracktype=grade3 ) then ( if probablyGood then 8.0 else add 8.0 multiply 1.5 unpavedPenalty )
-    else if ( tracktype=grade4 ) then ( if probablyGood then 10 else add 10 multiply 3.0 unpavedPenalty )
-    else if ( tracktype=grade5 ) then ( if probablyGood then 12 else add 12 multiply 2.0 unpavedPenalty )
-    else                              ( if probablyGood then 5.0 else add 5.0 multiply 4.0 unpavedPenalty )
+    if equal routingObjective 2 then
+    (
+      if      ( tracktype=grade1 ) then ( if probablyGood then 1.15 else add 1.15 multiply 0.15 unpavedPenalty )
+      else if ( tracktype=grade2 ) then ( if probablyGood then 1.25 else add 1.25 multiply 0.25 unpavedPenalty )
+      else if ( tracktype=grade3 ) then ( if probablyGood then 1.35 else add 1.35 multiply 0.4 unpavedPenalty )
+      else if ( tracktype=grade4 ) then ( if probablyGood then 1.5 else add 1.5 multiply 0.6 unpavedPenalty )
+      else if ( tracktype=grade5 ) then ( if probablyGood then 1.6 else add 1.6 multiply 0.8 unpavedPenalty )
+      else                              ( if probablyGood then 1.2 else add 1.2 multiply 0.5 unpavedPenalty )
+    )
+    else if equal routingObjective 1 then
+    (
+      if      ( tracktype=grade1 ) then ( if probablyGood then 2.5 else add 2.5 multiply 0.2 unpavedPenalty )
+      else if ( tracktype=grade2 ) then ( if probablyGood then 3.0 else add 3.0 multiply 0.4 unpavedPenalty )
+      else if ( tracktype=grade3 ) then ( if probablyGood then 4.0 else add 4.0 multiply 0.7 unpavedPenalty )
+      else if ( tracktype=grade4 ) then ( if probablyGood then 5.0 else add 5.0 multiply 1.2 unpavedPenalty )
+      else if ( tracktype=grade5 ) then ( if probablyGood then 6.0 else add 6.0 multiply 1.5 unpavedPenalty )
+      else                              ( if probablyGood then 2.5 else add 2.5 multiply 1.5 unpavedPenalty )
+    )
+    else
+    (
+      if      ( tracktype=grade1 ) then ( if probablyGood then 5.0 else add 5.0 multiply 0.3 unpavedPenalty )
+      else if ( tracktype=grade2 ) then ( if probablyGood then 6.0 else add 6.0 multiply 0.9 unpavedPenalty )
+      else if ( tracktype=grade3 ) then ( if probablyGood then 8.0 else add 8.0 multiply 1.5 unpavedPenalty )
+      else if ( tracktype=grade4 ) then ( if probablyGood then 10 else add 10 multiply 3.0 unpavedPenalty )
+      else if ( tracktype=grade5 ) then ( if probablyGood then 12 else add 12 multiply 2.0 unpavedPenalty )
+      else                              ( if probablyGood then 5.0 else add 5.0 multiply 4.0 unpavedPenalty )
+    )
   )
   else if ( highway=trunk|trunk_link ) then
-    ( if isbike then 10 else ( if avoid_unsafe then 24 else 20 ) )
+  (
+    if equal routingObjective 2 then ( if isbike then multiply 1.25 pavedBoost else multiply 1.6 pavedBoost )
+    else if equal routingObjective 1 then ( if isbike then multiply 3.5 pavedBoost else multiply 6 pavedBoost )
+    else ( if isbike then multiply 10 pavedBoost else ( if avoid_unsafe then multiply 24 pavedBoost else multiply 20 pavedBoost ) )
+  )
   else if ( highway=primary|primary_link ) then
-    ( if isbike then 8 else ( if avoid_unsafe then 18 else 16 ) )
+  (
+    if equal routingObjective 2 then ( if isbike then multiply 1.2 pavedBoost else multiply 1.5 pavedBoost )
+    else if equal routingObjective 1 then ( if isbike then multiply 3 pavedBoost else multiply 5 pavedBoost )
+    else ( if isbike then multiply 8 pavedBoost else ( if avoid_unsafe then multiply 18 pavedBoost else multiply 16 pavedBoost ) )
+  )
   else if ( highway=secondary|secondary_link ) then
-    ( if isbike then 7 else ( if avoid_unsafe then 14 else 12 ) )
+  (
+    if equal routingObjective 2 then ( if isbike then multiply 1.15 pavedBoost else multiply 1.4 pavedBoost )
+    else if equal routingObjective 1 then ( if isbike then multiply 2.5 pavedBoost else multiply 4 pavedBoost )
+    else ( if isbike then multiply 7 pavedBoost else ( if avoid_unsafe then multiply 14 pavedBoost else multiply 12 pavedBoost ) )
+  )
   else if ( highway=tertiary|tertiary_link ) then
-    ( if isbike then 6 else ( if avoid_unsafe then 10 else 8 ) )
+  (
+    if equal routingObjective 2 then ( if isbike then multiply 1.1 pavedBoost else multiply 1.3 pavedBoost )
+    else if equal routingObjective 1 then ( if isbike then multiply 2 pavedBoost else multiply 3.5 pavedBoost )
+    else ( if isbike then multiply 6 pavedBoost else ( if avoid_unsafe then multiply 10 pavedBoost else multiply 8 pavedBoost ) )
+  )
   else if ( highway=unclassified ) then
-    ( if isbike then 6 else ( if avoid_unsafe then 10 else 8 ) )
-  else ( if stick_to_cycleroutes then 12 else 10 )
+  (
+    if equal routingObjective 2 then ( if isbike then multiply 1.1 pavedBoost else multiply 1.3 pavedBoost )
+    else if equal routingObjective 1 then ( if isbike then multiply 2 pavedBoost else multiply 3.5 pavedBoost )
+    else ( if isbike then multiply 6 pavedBoost else ( if avoid_unsafe then multiply 10 pavedBoost else multiply 8 pavedBoost ) )
+  )
+  else
+  (
+    if equal routingObjective 2 then 1.2
+    else if equal routingObjective 1 then ( if stick_to_cycleroutes then 5 else 4 )
+    else ( if stick_to_cycleroutes then 12 else 10 )
+  )
 
 
 # way priorities used for voice hint generation
