@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import { Button, Dropdown } from 'antd';
 import { HiChevronDown as IconCaretDown } from 'react-icons/hi';
 
-export default function RouteSortDropdown({ currentKey, onChange, items }) {
+export default function RouteSortDropdown({
+  currentKey,
+  onChange,
+  items,
+  label = 'Ordenar por:',
+  placement = 'bottomRight',
+}) {
   const [open, setOpen] = useState(false);
 
   const defaultItems = [
@@ -12,7 +18,8 @@ export default function RouteSortDropdown({ currentKey, onChange, items }) {
   ];
 
   const effectiveItems = items && items.length ? items : defaultItems;
-  const current = effectiveItems.find((i) => i.key === currentKey) || effectiveItems[0];
+  const current =
+    effectiveItems.find((i) => String(i.key) === String(currentKey)) || effectiveItems[0];
 
   return (
     <Dropdown
@@ -21,22 +28,23 @@ export default function RouteSortDropdown({ currentKey, onChange, items }) {
       trigger={['click']}
       menu={{
         items: effectiveItems,
+        selectedKeys: [String(current.key)],
         onClick: ({ key }) => {
           onChange(key);
           setOpen(false);
         },
       }}
-      placement="bottomRight"
+      placement={placement}
     >
-      <div className="flex items-center md:mb-1 mb-0 md:text-sm text-xs">
-        <span className="opacity-50">Ordenar por:</span>
+      <div className="cm-panel-mini-dd flex items-center md:text-sm text-xs">
+        {label ? <span className="opacity-50">{label}</span> : null}
         <Button
           type="text"
           size="small"
-          className="opacity-80 hover:opacity-100 md:my-1 md:text-sm text-xs"
+          className="opacity-80 hover:opacity-100 md:text-sm text-xs"
         >
           <span className="font-medium">{current.label}</span>
-          <IconCaretDown className="inline-block text-white opacity-60" />
+          <IconCaretDown className="inline-block opacity-60" />
         </Button>
       </div>
     </Dropdown>

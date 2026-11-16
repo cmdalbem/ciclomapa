@@ -81,6 +81,8 @@ export const HYBRID_MAX_RESULTS = IS_MOBILE
   ? HYBRID_MAX_RESULTS_MOBILE
   : HYBRID_MAX_RESULTS_DESKTOP;
 export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
+/** Total climb (m) at/above which route cards tint ↑ elevation as a soft warning. */
+export const ROUTE_ASCEND_WARNING_M = 100;
 
 /**
  * Route score weights by infrastructure type (keys match `coverageByType` labels where
@@ -103,6 +105,12 @@ export const MAX_RECENT_ITEMS_STORED = 10;
 export const MAX_RECENT_ITEMS_DISPLAY = IS_MOBILE ? 3 : 5;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
 export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = true;
+/**
+ * Score routes against cyclepaths read from the PMTiles archive along the route
+ * corridor, instead of the current city's Overpass GeoJSON. Unlocks cross-city
+ * routing without a backend. Prototype: leave on while evaluating score fidelity.
+ */
+export const USE_PMTILES_ROUTE_COVERAGE = true;
 // Auto-fill the route panel's origin with the user's current location when
 // they open it. Mobile-only by default; flip to `true` to also enable on
 // desktop (will require a one-time permission prompt for new users).
@@ -199,12 +207,46 @@ export const INTERACTIVE_LAYERS_ZOOM_THRESHOLD = 15;
 export const COMMENTS_ZOOM_THRESHOLD = 13;
 export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 12;
 
+// Disposable São Paulo maxzoom compare: zg (old tippecanoe guess) / z13 (new default) / analysis (z15 no limits).
+export const PMTILES_COMPARE_KIND = {
+  zg: 'zg',
+  z13: 'z13',
+  analysis: 'analysis',
+};
+/** Ordered kinds for the disposable São Paulo maxzoom compare. */
+export const MAP_PMTILES_COMPARE_KINDS = [
+  PMTILES_COMPARE_KIND.zg,
+  PMTILES_COMPARE_KIND.z13,
+  PMTILES_COMPARE_KIND.analysis,
+];
+export const PMTILES_COMPARE_FILENAMES = {
+  zg: process.env.REACT_APP_PMTILES_ZG_FILENAME || 'sao-paulo-zg.pmtiles',
+  z13: process.env.REACT_APP_PMTILES_Z13_FILENAME || 'sao-paulo-z13.pmtiles',
+  analysis: process.env.REACT_APP_PMTILES_ANALYSIS_FILENAME || 'sao-paulo-analysis.pmtiles',
+};
+
 // The map has no GeoJSON fallback anymore, so this must be a build that includes POIs.
-const DEFAULT_PMTILES_FILENAME = 'brazil-poi.pmtiles';
+const DEFAULT_PMTILES_FILENAME = PMTILES_COMPARE_FILENAMES.z13;
 export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAULT_PMTILES_FILENAME;
+/** High-zoom / no-limit archive (also used for route coverage scoring compare). */
+export const PMTILES_ANALYSIS_FILENAME = PMTILES_COMPARE_FILENAMES.analysis;
+
+export function filenameForMapPmtilesKind(kind) {
+  return PMTILES_COMPARE_FILENAMES[kind] || PMTILES_FILENAME;
+}
 /** Mapbox source id for the PMTiles archive, and the single source-layer tippecanoe writes (`-l default`). */
 export const PMTILES_SOURCE_ID = 'pmtiles-source';
 export const PMTILES_SOURCE_LAYER = 'default';
+
+/** Per-compare-kind vector source id (all stay loaded; toggles only flip layer visibility). */
+export function pmtilesSourceIdForKind(kind) {
+  return `${PMTILES_SOURCE_ID}--${kind}`;
+}
+
+/** Layer id suffix for a compare kind, e.g. `--pmtiles--z13`. */
+export function pmtilesLayerSuffixForKind(kind) {
+  return `--pmtiles--${kind}`;
+}
 
 /*
  * Debug & local development
@@ -263,6 +305,9 @@ export const OPENROUTESERVICE_BASE_URL = 'https://api.openrouteservice.org/v2/di
 
 export const GRAPHHOPPER_API_KEY = process.env.REACT_APP_GRAPHHOPPER_API_KEY;
 export const GRAPHHOPPER_BASE_URL = 'https://graphhopper.com/api/1/route';
+
+export const BROUTER_LOCAL_BASE_URL = process.env.REACT_APP_BROUTER_LOCAL_BASE_URL || '';
+export const USE_BROUTER_LOCAL = Boolean(BROUTER_LOCAL_BASE_URL);
 
 export const VALHALLA_BASE_URL = 'https://valhalla1.openstreetmap.de/route';
 

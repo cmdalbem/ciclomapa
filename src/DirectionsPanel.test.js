@@ -35,6 +35,7 @@ const defaultProps = {
   onToPointChange: noop,
   onClearRoutePoints: noop,
   onDirectionsPanelToggle: noop,
+  onRoutingProviderChange: noop,
   isDarkMode: false,
   debugMode: false,
   onAreaChange: noop,
