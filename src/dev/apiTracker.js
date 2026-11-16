@@ -21,6 +21,7 @@ export const API_TYPES = {
   GRAPHHOPPER: 'graphhopper',
   VALHALLA: 'valhalla',
   ORS: 'openrouteservice',
+  BROUTER: 'brouter',
   // Airtable
   AIRTABLE_READ: 'airtable-read',
   AIRTABLE_WRITE: 'airtable-write',
@@ -41,6 +42,7 @@ export const API_LABELS = {
   [API_TYPES.GRAPHHOPPER]: 'GraphHopper',
   [API_TYPES.VALHALLA]: 'Valhalla',
   [API_TYPES.ORS]: 'OpenRouteService',
+  [API_TYPES.BROUTER]: 'BRouter',
   [API_TYPES.AIRTABLE_READ]: 'Read',
   [API_TYPES.AIRTABLE_WRITE]: 'Write',
   [API_TYPES.FIREBASE_READ]: 'Read',
@@ -59,6 +61,7 @@ export const API_COLORS = {
   [API_TYPES.GRAPHHOPPER]: '#a78bfa',
   [API_TYPES.VALHALLA]: '#8b5cf6',
   [API_TYPES.ORS]: '#7c3aed',
+  [API_TYPES.BROUTER]: '#c084fc',
   [API_TYPES.AIRTABLE_READ]: '#38bdf8',
   [API_TYPES.AIRTABLE_WRITE]: '#0ea5e9',
   [API_TYPES.FIREBASE_READ]: '#fb923c',
@@ -115,7 +118,7 @@ export const API_GROUPS = [
     color: '#8b5cf6',
     // Multiple alternate engines — show each active service by name in the slim bar
     summaryPerType: true,
-    types: [API_TYPES.GRAPHHOPPER, API_TYPES.VALHALLA, API_TYPES.ORS],
+    types: [API_TYPES.GRAPHHOPPER, API_TYPES.VALHALLA, API_TYPES.ORS, API_TYPES.BROUTER],
   },
 ];
 
