@@ -1,7 +1,17 @@
 import React, { useEffect } from 'react';
-import { Segmented } from 'antd';
-import { useDirections, type MapPmtilesKind } from '../../contexts/DirectionsContext';
-import { MAP_PMTILES_COMPARE_KINDS, PMTILES_COMPARE_KIND } from '../../config/constants';
+import { Segmented, Select } from 'antd';
+import {
+  useDirections,
+  type MapPmtilesKind,
+  type MapPmtilesPocRegion,
+} from '../../contexts/DirectionsContext';
+import {
+  MAP_PMTILES_COMPARE_KINDS,
+  MAP_PMTILES_POC_REGION_IDS,
+  PMTILES_COMPARE_KIND,
+  PMTILES_POC_REGIONS,
+} from '../../config/constants';
+import { getDirectionsProviderOptions } from '../../utils/routeUtils.js';
 import './MapPmtilesCompareControl.css';
 
 function isTypingTarget(target: EventTarget | null) {
@@ -16,13 +26,35 @@ function isTypingTarget(target: EventTarget | null) {
   );
 }
 
+type Props = {
+  /** Jump the map to the PoC city's catalog slug when the region changes. */
+  onJumpToCitySlug?: (citySlug: string) => void;
+};
+
 /**
- * Disposable on-map controls for São Paulo PMTiles maxzoom + lane offset compare.
+ * Disposable on-map controls for PMTiles PoC region + maxzoom + lane offset compare.
  * Shortcuts: 1/2/3 = zg/z13/z15+, O = toggle offset.
  */
-export default function MapPmtilesCompareControl() {
-  const { mapPmtilesKind, setMapPmtilesKind, laneSideOffsetEnabled, setLaneSideOffsetEnabled } =
-    useDirections();
+export default function MapPmtilesCompareControl({ onJumpToCitySlug }: Props) {
+  const {
+    mapPmtilesKind,
+    setMapPmtilesKind,
+    mapPmtilesPocRegion,
+    setMapPmtilesPocRegion,
+    laneSideOffsetEnabled,
+    setLaneSideOffsetEnabled,
+    routingProvider,
+    setRoutingProvider,
+    hideRouteOverlay,
+    setHideRouteOverlay,
+    segmentedRoutePaint,
+    setSegmentedRoutePaint,
+  } = useDirections();
+
+  const region = PMTILES_POC_REGIONS[mapPmtilesPocRegion];
+  const files = region?.filenames;
+  // Tile zg/z13/z15 compare is only meaningful when those files differ (SP PoC).
+  const hasDistinctTileVariants = Boolean(files && files.zg !== files.z13);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -30,7 +62,7 @@ export default function MapPmtilesCompareControl() {
       if (isTypingTarget(event.target)) return;
 
       const key = event.key.toLowerCase();
-      if (key === '1' || key === '2' || key === '3') {
+      if (hasDistinctTileVariants && (key === '1' || key === '2' || key === '3')) {
         const kind = MAP_PMTILES_COMPARE_KINDS[Number(key) - 1] as MapPmtilesKind | undefined;
         if (!kind) return;
         event.preventDefault();
@@ -45,28 +77,80 @@ export default function MapPmtilesCompareControl() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [laneSideOffsetEnabled, setLaneSideOffsetEnabled, setMapPmtilesKind]);
+  }, [hasDistinctTileVariants, laneSideOffsetEnabled, setLaneSideOffsetEnabled, setMapPmtilesKind]);
+
+  const handleRegionChange = (value: string | number) => {
+    const regionId = String(value) as MapPmtilesPocRegion;
+    if (!MAP_PMTILES_POC_REGION_IDS.includes(regionId) || regionId === mapPmtilesPocRegion) {
+      return;
+    }
+    setMapPmtilesPocRegion(regionId);
+    const citySlug = PMTILES_POC_REGIONS[regionId]?.citySlug;
+    if (citySlug && onJumpToCitySlug) {
+      onJumpToCitySlug(citySlug);
+    }
+  };
 
   return (
     <div className="cm-map-pmtiles-compare glass-bg">
       <div
         className="cm-map-pmtiles-compare__row"
         role="group"
-        aria-label="Versão dos tiles no mapa. Atalhos 1, 2 e 3."
+        aria-label="PoC de tiles: desligado, São Paulo, Brasil ou Espanha"
       >
-        <span className="cm-map-pmtiles-compare__label">Tiles</span>
+        <span className="cm-map-pmtiles-compare__label">PoC</span>
         <Segmented
           size="small"
-          value={mapPmtilesKind}
-          onChange={(value) => setMapPmtilesKind(value as MapPmtilesKind)}
-          options={[
-            { value: PMTILES_COMPARE_KIND.zg, label: 'zg 1' },
-            { value: PMTILES_COMPARE_KIND.z13, label: 'z13 2' },
-            { value: PMTILES_COMPARE_KIND.analysis, label: 'z15+ 3' },
-          ]}
+          value={mapPmtilesPocRegion}
+          onChange={handleRegionChange}
+          options={MAP_PMTILES_POC_REGION_IDS.map((id) => ({
+            value: id,
+            label: PMTILES_POC_REGIONS[id].label,
+          }))}
           className="cm-map-pmtiles-compare__segmented"
         />
       </div>
+      {hasDistinctTileVariants ? (
+        <div
+          className="cm-map-pmtiles-compare__row"
+          role="group"
+          aria-label="Versão dos tiles no mapa. Atalhos 1, 2 e 3."
+        >
+          <span className="cm-map-pmtiles-compare__label">Tiles</span>
+          <Segmented
+            size="small"
+            value={mapPmtilesKind}
+            onChange={(value) => setMapPmtilesKind(value as MapPmtilesKind)}
+            options={[
+              {
+                value: PMTILES_COMPARE_KIND.zg,
+                label: (
+                  <span className="cm-map-pmtiles-compare__opt">
+                    zg <kbd className="cm-map-pmtiles-compare__kbd">1</kbd>
+                  </span>
+                ),
+              },
+              {
+                value: PMTILES_COMPARE_KIND.z13,
+                label: (
+                  <span className="cm-map-pmtiles-compare__opt">
+                    z13 <kbd className="cm-map-pmtiles-compare__kbd">2</kbd>
+                  </span>
+                ),
+              },
+              {
+                value: PMTILES_COMPARE_KIND.analysis,
+                label: (
+                  <span className="cm-map-pmtiles-compare__opt">
+                    z15+ <kbd className="cm-map-pmtiles-compare__kbd">3</kbd>
+                  </span>
+                ),
+              },
+            ]}
+            className="cm-map-pmtiles-compare__segmented"
+          />
+        </div>
+      ) : null}
       <div
         className="cm-map-pmtiles-compare__row"
         role="group"
@@ -83,9 +167,54 @@ export default function MapPmtilesCompareControl() {
           ]}
           className="cm-map-pmtiles-compare__segmented"
         />
-        <span className="cm-map-pmtiles-compare__hint" aria-hidden="true">
+        <kbd className="cm-map-pmtiles-compare__kbd" aria-hidden="true">
           O
-        </span>
+        </kbd>
+      </div>
+      <div className="cm-map-pmtiles-compare__row" role="group" aria-label="Motor de rotas">
+        <span className="cm-map-pmtiles-compare__label">Rota</span>
+        <Select
+          size="small"
+          value={routingProvider}
+          onChange={(value) => setRoutingProvider(String(value))}
+          options={getDirectionsProviderOptions()}
+          popupMatchSelectWidth={false}
+          className="cm-map-pmtiles-compare__select"
+        />
+      </div>
+      <div
+        className="cm-map-pmtiles-compare__row"
+        role="group"
+        aria-label="Ocultar rota calculada no mapa"
+      >
+        <span className="cm-map-pmtiles-compare__label">Ocultar</span>
+        <Segmented
+          size="small"
+          value={hideRouteOverlay ? 'on' : 'off'}
+          onChange={(value) => setHideRouteOverlay(value === 'on')}
+          options={[
+            { value: 'off', label: 'Off' },
+            { value: 'on', label: 'On' },
+          ]}
+          className="cm-map-pmtiles-compare__segmented"
+        />
+      </div>
+      <div
+        className="cm-map-pmtiles-compare__row"
+        role="group"
+        aria-label="Desenhar rota em segmentos coloridos em vez de laranja + sobreposição"
+      >
+        <span className="cm-map-pmtiles-compare__label">Segs</span>
+        <Segmented
+          size="small"
+          value={segmentedRoutePaint ? 'on' : 'off'}
+          onChange={(value) => setSegmentedRoutePaint(value === 'on')}
+          options={[
+            { value: 'off', label: 'Off' },
+            { value: 'on', label: 'On' },
+          ]}
+          className="cm-map-pmtiles-compare__segmented"
+        />
       </div>
     </div>
   );

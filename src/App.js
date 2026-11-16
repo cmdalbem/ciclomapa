@@ -2021,6 +2021,12 @@ export class App extends Component {
     }
   }
 
+  /** Disposable PMTiles PoC control: fly to SP / Barcelona when switching archives. */
+  jumpToPmtilesPocCity = (citySlug) => {
+    this.lastResolvedCitySlug = null;
+    return this.resolveCitySlugToAreaAndViewport(citySlug);
+  };
+
   clearGlobalSearchPin = () => {
     this.setState({ globalSearchPin: null });
   };
@@ -2123,6 +2129,7 @@ export class App extends Component {
       onRoutingProviderChange: this.onRoutingProviderChange,
       toggleDirectionsPanel: this.toggleDirectionsPanel,
       setArea: this.setArea,
+      jumpToPmtilesPocCity: this.jumpToPmtilesPocCity,
       openLayersLegendModal: this.openLayersLegendModal,
       closeAboutModal: this.closeAboutModal,
       openCityPicker: this.openCityPicker,

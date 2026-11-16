@@ -219,6 +219,60 @@ export const MAP_PMTILES_COMPARE_KINDS = [
   PMTILES_COMPARE_KIND.z13,
   PMTILES_COMPARE_KIND.analysis,
 ];
+
+/** Disposable map/routing PoC: Off = normal env tiles; otherwise preset archives. */
+export const PMTILES_POC_REGION = {
+  off: 'off',
+  saoPaulo: 'sao-paulo',
+  brazil: 'brazil',
+  spain: 'spain',
+};
+export const PMTILES_POC_REGIONS = {
+  [PMTILES_POC_REGION.off]: {
+    id: PMTILES_POC_REGION.off,
+    label: 'Off',
+    citySlug: null,
+  },
+  [PMTILES_POC_REGION.saoPaulo]: {
+    id: PMTILES_POC_REGION.saoPaulo,
+    label: 'SP',
+    citySlug: 'sao-paulo',
+    filenames: {
+      zg: 'sao-paulo-zg.pmtiles',
+      z13: 'sao-paulo-z13.pmtiles',
+      analysis: 'sao-paulo-analysis.pmtiles',
+    },
+  },
+  [PMTILES_POC_REGION.brazil]: {
+    id: PMTILES_POC_REGION.brazil,
+    label: 'BR',
+    // Country-wide archive; Brasília is a sane starting viewpoint.
+    citySlug: 'brasilia',
+    filenames: {
+      zg: 'brazil-poi.pmtiles',
+      z13: 'brazil-poi.pmtiles',
+      analysis: 'brazil-poi.pmtiles',
+    },
+  },
+  [PMTILES_POC_REGION.spain]: {
+    id: PMTILES_POC_REGION.spain,
+    label: 'ES',
+    citySlug: 'barcelona',
+    filenames: {
+      // Spain only has display + analysis builds; reuse display for zg/z13 slots.
+      zg: 'spain-poi.pmtiles',
+      z13: 'spain-poi.pmtiles',
+      analysis: 'spain-analysis.pmtiles',
+    },
+  },
+};
+export const MAP_PMTILES_POC_REGION_IDS = [
+  PMTILES_POC_REGION.off,
+  PMTILES_POC_REGION.saoPaulo,
+  PMTILES_POC_REGION.brazil,
+  PMTILES_POC_REGION.spain,
+];
+
 export const PMTILES_COMPARE_FILENAMES = {
   zg: process.env.REACT_APP_PMTILES_ZG_FILENAME || 'sao-paulo-zg.pmtiles',
   z13: process.env.REACT_APP_PMTILES_Z13_FILENAME || 'sao-paulo-z13.pmtiles',
@@ -231,8 +285,20 @@ export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAUL
 /** High-zoom / no-limit archive (also used for route coverage scoring compare). */
 export const PMTILES_ANALYSIS_FILENAME = PMTILES_COMPARE_FILENAMES.analysis;
 
-export function filenameForMapPmtilesKind(kind) {
-  return PMTILES_COMPARE_FILENAMES[kind] || PMTILES_FILENAME;
+/** Filenames for a PoC region. `off` / unknown → normal env display + analysis archives. */
+export function filenamesForPmtilesPocRegion(regionId) {
+  const preset = PMTILES_POC_REGIONS[regionId]?.filenames;
+  if (preset) return preset;
+  return {
+    zg: PMTILES_FILENAME,
+    z13: PMTILES_FILENAME,
+    analysis: PMTILES_ANALYSIS_FILENAME || PMTILES_FILENAME,
+  };
+}
+
+export function filenameForMapPmtilesKind(kind, regionId) {
+  const files = filenamesForPmtilesPocRegion(regionId);
+  return files[kind] || files.z13;
 }
 /** Mapbox source id for the PMTiles archive, and the single source-layer tippecanoe writes (`-l default`). */
 export const PMTILES_SOURCE_ID = 'pmtiles-source';

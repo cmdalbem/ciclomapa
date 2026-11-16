@@ -7,11 +7,7 @@ import { VectorTile } from '@mapbox/vector-tile';
 import { PbfReader } from 'pbf';
 import { PMTiles } from 'pmtiles';
 
-import {
-  PMTILES_FILENAME,
-  PMTILES_ANALYSIS_FILENAME,
-  PMTILES_SOURCE_LAYER,
-} from '../../config/constants.js';
+import { filenamesForPmtilesPocRegion, PMTILES_SOURCE_LAYER } from '../../config/constants.js';
 import { computeTypologies } from '../../utils/geojsonUtils.js';
 
 type LngLat = [number, number];
@@ -249,8 +245,13 @@ async function loadTileFeatures(
 
 export type CorridorArchiveKind = 'display' | 'analysis';
 
-export function filenameForArchiveKind(kind: CorridorArchiveKind): string {
-  return kind === 'analysis' ? PMTILES_ANALYSIS_FILENAME : PMTILES_FILENAME;
+export function filenameForArchiveKind(
+  kind: CorridorArchiveKind,
+  pocRegionId?: string | null
+): string {
+  // `off` / missing → env defaults via filenamesForPmtilesPocRegion.
+  const files = filenamesForPmtilesPocRegion(pocRegionId);
+  return kind === 'analysis' ? files.analysis : files.z13;
 }
 
 /**
@@ -264,11 +265,17 @@ export async function loadCorridorCyclepaths(
     signal,
     archive = 'display',
     filename,
-  }: { signal?: AbortSignal; archive?: CorridorArchiveKind; filename?: string } = {}
+    pocRegionId,
+  }: {
+    signal?: AbortSignal;
+    archive?: CorridorArchiveKind;
+    filename?: string;
+    pocRegionId?: string | null;
+  } = {}
 ): Promise<GeoJSON.FeatureCollection | null> {
   signal?.throwIfAborted?.();
 
-  const archiveFilename = filename || filenameForArchiveKind(archive);
+  const archiveFilename = filename || filenameForArchiveKind(archive, pocRegionId);
   const state = await getPmtiles(archiveFilename);
   if (!state) return null;
 

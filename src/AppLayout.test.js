@@ -65,6 +65,7 @@ const handlers = {
   onDirectionsPanelToggle: jest.fn(),
   onRoutingProviderChange: jest.fn(),
   setArea: jest.fn(),
+  jumpToPmtilesPocCity: jest.fn(),
   closeAboutModal: jest.fn(),
   closeLayersLegendModal: jest.fn(),
   openPrivacyPolicyModal: jest.fn(),

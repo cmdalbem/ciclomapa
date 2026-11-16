@@ -145,7 +145,7 @@ class DirectionsManager {
     geoJson,
     layers,
     isDarkMode,
-    { signal, brouterProfile } = {}
+    { signal, brouterProfile, pmtilesPocRegion } = {}
   ) {
     if (!this.directionsService) {
       await this.initialize();
@@ -213,7 +213,11 @@ class DirectionsManager {
         const { loadCorridorCyclepaths } = await import('./features/directions/pmtilesCorridor');
         const loadArchive = async (archive) => {
           try {
-            return await loadCorridorCyclepaths(directions.routes, layers, { signal, archive });
+            return await loadCorridorCyclepaths(directions.routes, layers, {
+              signal,
+              archive,
+              pocRegionId: pmtilesPocRegion,
+            });
           } catch (err) {
             if (err?.name === 'AbortError') throw err;
             console.warn(`PMTiles corridor (${archive}) failed:`, err);
@@ -390,6 +394,7 @@ class DirectionsManager {
         pathDetails: route.pathDetails || null,
         brouterMessages: route.brouterMessages || null,
         ascend: route.ascend ?? null,
+        netElev: route.netElev ?? null,
         elevationProfile: route.elevationProfile || null,
       }));
 

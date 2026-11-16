@@ -97,6 +97,7 @@ export default function AppLayout({
               isDarkMode={state.isDarkMode}
               setMapRef={handlers.setMapRef}
               directionsPanelRef={directionsPanelRef}
+              fromPoint={state.fromPoint}
               toPoint={state.toPoint}
               isTrackingUserLocation={state.isTrackingUserLocation}
               onTrackingUserLocationChange={handlers.onTrackingUserLocationChange}
@@ -108,7 +109,7 @@ export default function AppLayout({
             />
           ) : null}
           {!state.embedMode && !state.hideUI && !state.hideUIFromUrl && state.mapBootReady ? (
-            <MapPmtilesCompareControl />
+            <MapPmtilesCompareControl onJumpToCitySlug={handlers.jumpToPmtilesPocCity} />
           ) : null}
 
           {!IS_MOBILE && !state.embedMode && (
@@ -311,6 +312,7 @@ AppLayout.propTypes = {
     onRoutingProviderChange: PropTypes.func,
     toggleDirectionsPanel: PropTypes.func,
     setArea: PropTypes.func,
+    jumpToPmtilesPocCity: PropTypes.func,
     closeAboutModal: PropTypes.func,
     openCityPicker: PropTypes.func,
     closeLayersLegendModal: PropTypes.func,

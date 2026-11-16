@@ -1,13 +1,58 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import type { DirectionsData } from '../types/directions';
-import { HYBRID_MAX_RESULTS } from '../config/constants.js';
-import { readDirectionsUrlParams } from '../utils/routeUtils.js';
+import {
+  HYBRID_MAX_RESULTS,
+  MAP_PMTILES_COMPARE_KINDS,
+  MAP_PMTILES_POC_REGION_IDS,
+} from '../config/constants.js';
+import { getDirectionsProviderOptions, readDirectionsUrlParams } from '../utils/routeUtils.js';
 /** Disposable São Paulo PMTiles maxzoom compare kinds. */
 export type MapPmtilesKind = 'zg' | 'z13' | 'analysis';
+/** Disposable PoC: off = normal env tiles; otherwise preset archives. */
+export type MapPmtilesPocRegion = 'off' | 'sao-paulo' | 'brazil' | 'spain';
+
+const MAP_PMTILES_POC_STORAGE_KEY = 'ciclomapa_mapPmtilesPoc:v1';
 
 function initialMaxRoutesShown(): number {
   const fromUrl = readDirectionsUrlParams().maxRoutes;
   return fromUrl != null ? fromUrl : HYBRID_MAX_RESULTS;
+}
+
+function initialRoutingProvider(): string {
+  const fromUrl = readDirectionsUrlParams().provider;
+  const allowed = new Set(getDirectionsProviderOptions().map((o) => o.value));
+  return fromUrl && allowed.has(fromUrl) ? fromUrl : 'hybrid';
+}
+
+function readStoredMapPmtilesPoc(): {
+  region: MapPmtilesPocRegion;
+  kind: MapPmtilesKind;
+  laneOffset: boolean;
+} {
+  const defaults = {
+    region: 'off' as MapPmtilesPocRegion,
+    kind: 'z13' as MapPmtilesKind,
+    laneOffset: false,
+  };
+  if (typeof window === 'undefined') return defaults;
+  try {
+    const raw = window.localStorage.getItem(MAP_PMTILES_POC_STORAGE_KEY);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw);
+    const region = MAP_PMTILES_POC_REGION_IDS.includes(parsed?.region)
+      ? (parsed.region as MapPmtilesPocRegion)
+      : defaults.region;
+    const kind = MAP_PMTILES_COMPARE_KINDS.includes(parsed?.kind)
+      ? (parsed.kind as MapPmtilesKind)
+      : defaults.kind;
+    return {
+      region,
+      kind,
+      laneOffset: Boolean(parsed?.laneOffset),
+    };
+  } catch {
+    return defaults;
+  }
 }
 
 /**
@@ -35,12 +80,18 @@ export interface DirectionsContextValue {
   /** Disposable compare aid: which São Paulo PMTiles archive the map paints. */
   mapPmtilesKind: MapPmtilesKind;
   setMapPmtilesKind: (kind: MapPmtilesKind) => void;
+  /** Disposable PoC: Off (normal env tiles) / São Paulo / Spain. */
+  mapPmtilesPocRegion: MapPmtilesPocRegion;
+  setMapPmtilesPocRegion: (region: MapPmtilesPocRegion) => void;
   /**
    * Disposable compare aid: when true, cycleway:left/right lanes get line-offset
    * toward their tagged roadside. Temporarily defaults off so geometry sits on the way.
    */
   laneSideOffsetEnabled: boolean;
   setLaneSideOffsetEnabled: (enabled: boolean) => void;
+  /** Which routing engine the panel / hybrid mix uses. */
+  routingProvider: string;
+  setRoutingProvider: (provider: string) => void;
   setRoutePointsMode: (isSetting: boolean) => void;
   clearDirections: () => void;
   selectRoute: (routeIndex: number | null) => void;
@@ -54,6 +105,9 @@ export interface DirectionsContextValue {
   /** Original indices into `directions.routes` that the panel is showing (drives map paint). */
   visibleRouteIndices: number[] | null;
   setVisibleRouteIndices: (indices: number[] | null) => void;
+  /** Point along the selected route while scrubbing the elevation chart ([lng, lat]). */
+  elevationHoverLngLat: [number, number] | null;
+  setElevationHoverLngLat: (lngLat: [number, number] | null) => void;
 }
 
 const DirectionsContext = createContext<DirectionsContextValue | null>(null);
@@ -79,15 +133,39 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
   const [isSettingRoutePoints, setIsSettingRoutePoints] = useState(false);
   const [hideRouteOverlay, setHideRouteOverlay] = useState(false);
   const [segmentedRoutePaint, setSegmentedRoutePaint] = useState(false);
-  const [mapPmtilesKind, setMapPmtilesKind] = useState<MapPmtilesKind>('z13');
-  const [laneSideOffsetEnabled, setLaneSideOffsetEnabled] = useState(false);
+  const [mapPmtilesKind, setMapPmtilesKind] = useState<MapPmtilesKind>(() => {
+    return readStoredMapPmtilesPoc().kind;
+  });
+  const [mapPmtilesPocRegion, setMapPmtilesPocRegion] = useState<MapPmtilesPocRegion>(() => {
+    return readStoredMapPmtilesPoc().region;
+  });
+  const [laneSideOffsetEnabled, setLaneSideOffsetEnabled] = useState(() => {
+    return readStoredMapPmtilesPoc().laneOffset;
+  });
   const [maxRoutesShown, setMaxRoutesShown] = useState(initialMaxRoutesShown);
+  const [routingProvider, setRoutingProvider] = useState(initialRoutingProvider);
   const [visibleRouteIndices, setVisibleRouteIndices] = useState<number[] | null>(null);
+  const [elevationHoverLngLat, setElevationHoverLngLat] = useState<[number, number] | null>(null);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        MAP_PMTILES_POC_STORAGE_KEY,
+        JSON.stringify({
+          region: mapPmtilesPocRegion,
+          kind: mapPmtilesKind,
+          laneOffset: laneSideOffsetEnabled,
+        })
+      );
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }, [mapPmtilesPocRegion, mapPmtilesKind, laneSideOffsetEnabled]);
 
   const isInRouteMode = useMemo(() => {
     const hasActiveRoutes = Boolean(directions?.routes?.length);
-    return Boolean(hasActiveRoutes || isSettingRoutePoints);
-  }, [directions, isSettingRoutePoints]);
+    return Boolean(hasActiveRoutes || isSettingRoutePoints || directionsLoading);
+  }, [directions, isSettingRoutePoints, directionsLoading]);
 
   const setRoutePointsMode = useCallback((isSetting: boolean) => {
     setIsSettingRoutePoints(isSetting);
@@ -102,13 +180,13 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
     setIsSettingRoutePoints(false);
     setHideRouteOverlay(false);
     setSegmentedRoutePaint(false);
-    setMapPmtilesKind('z13');
-    setLaneSideOffsetEnabled(false);
     setVisibleRouteIndices(null);
+    setElevationHoverLngLat(null);
   }, []);
 
   const selectRoute = useCallback((routeIndex: number | null) => {
     setSelectedRouteIndex(routeIndex);
+    setElevationHoverLngLat(null);
   }, []);
 
   const hoverRoute = useCallback((routeIndex: number | null) => {
@@ -134,6 +212,11 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
     setDirectionsLoading(loading);
     if (loading) {
       setHideRouteOverlay(false);
+      setDirections(null);
+      setSelectedRouteIndex(null);
+      setHoveredRouteIndex(null);
+      setVisibleRouteIndices(null);
+      setElevationHoverLngLat(null);
     }
   }, []);
 
@@ -159,8 +242,12 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
       setSegmentedRoutePaint,
       mapPmtilesKind,
       setMapPmtilesKind,
+      mapPmtilesPocRegion,
+      setMapPmtilesPocRegion,
       laneSideOffsetEnabled,
       setLaneSideOffsetEnabled,
+      routingProvider,
+      setRoutingProvider,
       setRoutePointsMode,
       clearDirections,
       selectRoute,
@@ -172,6 +259,8 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
       setMaxRoutesShown,
       visibleRouteIndices,
       setVisibleRouteIndices,
+      elevationHoverLngLat,
+      setElevationHoverLngLat,
     }),
     [
       directions,
@@ -184,7 +273,9 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
       hideRouteOverlay,
       segmentedRoutePaint,
       mapPmtilesKind,
+      mapPmtilesPocRegion,
       laneSideOffsetEnabled,
+      routingProvider,
       setRoutePointsMode,
       clearDirections,
       selectRoute,
@@ -194,6 +285,7 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
       setError,
       maxRoutesShown,
       visibleRouteIndices,
+      elevationHoverLngLat,
     ]
   );
 
