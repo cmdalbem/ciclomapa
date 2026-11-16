@@ -5,6 +5,7 @@ import {
   HYBRID_MAX_RESULTS,
   MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY,
   ROUTE_INFRASTRUCTURE_QUALITY_WEIGHTS,
+  USE_BROUTER_LOCAL,
 } from '../config/constants.js';
 import InfrastructureBadge from '../components/InfrastructureBadge';
 
@@ -196,7 +197,11 @@ export const formatDistance = (distance) => {
 
 export const formatDuration = (duration) => {
   if (!duration) return 'N/A';
-  return `${Math.round(duration / 60)} min`;
+  const totalMin = Math.round(duration / 60);
+  if (totalMin < 60) return `${totalMin} min`;
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  return mins === 0 ? `${hours}h` : `${hours}h ${mins}min`;
 };
 
 /** Query keys for directions prefs (App.updateURL leaves unknown keys alone). */
@@ -221,6 +226,27 @@ export const BROUTER_PROFILE_DEFAULTS = {
   consider_forest: false,
 };
 
+/** Surface chip: BRouter `unpavedPenalty` multiplier (<1 favors dirt, >1 favors asphalt). */
+export const BROUTER_SURFACE_OPTIONS = [
+  { value: 4, label: 'Só asfalto', shortLabel: 'Só asfalto' },
+  { value: 2, label: 'Prefiro asfalto', shortLabel: 'Pref. asfalto' },
+  { value: 1, label: 'Qualquer terreno', shortLabel: 'Qualquer terreno' },
+  { value: 0.5, label: 'Prefiro terra', shortLabel: 'Pref. terra' },
+  { value: 0.25, label: 'Só terra', shortLabel: 'Só terra' },
+];
+
+/** Objective dropdown: maps UI sort keys → ciclomapa.brf `routingObjective`. */
+export const BROUTER_OBJECTIVE_OPTIONS = [
+  { key: 'score', label: 'Mais protegida', routingObjective: 0 },
+  { key: 'fastest', label: 'Mais rápida', routingObjective: 1 },
+  { key: 'shortest', label: 'Mais curta', routingObjective: 2 },
+];
+
+export function brouterRoutingObjectiveFromSort(sortKey) {
+  const opt = BROUTER_OBJECTIVE_OPTIONS.find((o) => o.key === sortKey);
+  return opt ? opt.routingObjective : 0;
+}
+
 function parseUrlFlag(raw) {
   if (raw == null) return null;
   if (raw === '1' || raw === 'true') return true;
@@ -229,6 +255,16 @@ function parseUrlFlag(raw) {
 }
 
 const DIRECTIONS_PROVIDER_IDS = new Set(['hybrid', 'valhalla', 'graphhopper', 'brouter', 'mapbox']);
+
+export function getDirectionsProviderOptions() {
+  return [
+    { value: 'hybrid', label: 'Combinado' },
+    { value: 'valhalla', label: 'Valhalla' },
+    { value: 'graphhopper', label: 'GraphHopper' },
+    ...(USE_BROUTER_LOCAL ? [{ value: 'brouter', label: 'BRouter' }] : []),
+    { value: 'mapbox', label: 'Mapbox' },
+  ];
+}
 const DIRECTIONS_SORT_IDS = new Set(['score', 'fastest', 'shortest']);
 const DIRECTIONS_COVERAGE_IDS = new Set([
   'cityOriginal',

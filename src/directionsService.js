@@ -269,6 +269,11 @@ class GraphHopperDirectionsProvider extends DirectionsProvider {
       if (path.ascend !== undefined && path.descend !== undefined) {
         route.ascend = path.ascend;
         route.descend = path.descend;
+        const a = Number(path.ascend);
+        const d = Number(path.descend);
+        if (Number.isFinite(a) && Number.isFinite(d)) {
+          route.netElev = a - d;
+        }
       }
 
       return route;
@@ -417,6 +422,12 @@ class BRouterDirectionsProvider extends DirectionsProvider {
         params.set('profile:consider_noise', br.consider_noise ? '1' : '0');
         params.set('profile:consider_river', br.consider_river ? '1' : '0');
         params.set('profile:consider_forest', br.consider_forest ? '1' : '0');
+        // 0=protection, 1=fast, 2=short (ciclomapa.brf routingObjective)
+        const objective =
+          typeof br.routingObjective === 'number' && Number.isFinite(br.routingObjective)
+            ? br.routingObjective
+            : 0;
+        params.set('profile:routingObjective', String(objective));
         const response = await fetch(`${this.baseUrl}/brouter?${params}`, {
           method: 'GET',
           signal: options.signal,
@@ -442,6 +453,9 @@ class BRouterDirectionsProvider extends DirectionsProvider {
       const filteredAscend = Number(props['filtered ascend']);
       const profile = [];
       const last = raw.length - 1;
+      const z0 = Number(raw[0][2]);
+      const z1 = Number(raw[last][2]);
+      const netElev = Number.isFinite(z0) && Number.isFinite(z1) ? z1 - z0 : null;
       const sampleCount = Math.min(48, raw.length);
       for (let i = 0; i < sampleCount; i++) {
         const idx = sampleCount === 1 ? 0 : Math.round((i / (sampleCount - 1)) * last);
@@ -454,7 +468,9 @@ class BRouterDirectionsProvider extends DirectionsProvider {
         duration: Number.isFinite(durationS) ? durationS : 0,
         weight: Number.isFinite(durationS) ? durationS : 0,
         brouterMessages: props.messages || null,
+        // Total climb (filtered ascend). Card shows this, not net elev.
         ascend: Number.isFinite(filteredAscend) ? filteredAscend : null,
+        netElev,
         elevationProfile: profile.length >= 2 ? profile : null,
       });
     });
