@@ -7,19 +7,19 @@ import {
   HiX as IconClose,
   HiOutlineArrowLeft as IconBack,
   HiChevronDown as IconCaretDown,
+  HiInformationCircle as IconInfoCircle,
+  HiOutlineInformationCircle as IconInfoOutline,
 } from 'react-icons/hi';
 import { HiOutlineArrowsUpDown as IconSwap } from 'react-icons/hi2';
 import { LuBike, LuLeaf, LuMountain, LuShield, LuTimer, LuVolumeX } from 'react-icons/lu';
 import { TbRoad, TbRuler } from 'react-icons/tb';
 import { MdOutlineTerrain } from 'react-icons/md';
-import { HiInformationCircle as IconInfoCircle } from 'react-icons/hi';
 import mapboxgl from 'mapbox-gl';
 
 import './DirectionsPanel.css';
 
 import {
   IS_MOBILE,
-  HYBRID_MAX_RESULTS,
   ENABLE_MAP_CLICK_TO_SET_POINTS,
   ENABLE_AUTO_AREA_CHANGE_ON_POINT,
   ENABLE_AUTOFILL_ORIGIN_ON_PANEL_OPEN,
@@ -1787,8 +1787,8 @@ class DirectionsPanel extends Component {
                 ) : (
                   <span className="text-sm opacity-70">Calculando rotas…</span>
                 )}
-                {Array.from({ length: HYBRID_MAX_RESULTS }, (_, i) => (
-                  <div key={i} className="rounded-lg p-2 md:p-3 -m-2 flex justify-between gap-1">
+                {Array.from({ length: 3 }, (_, i) => (
+                  <div key={i} className="cm-route-option flex justify-between gap-1">
                     <div className="flex items-start min-w-0 flex-1">
                       <div
                         className="w-8 h-8 md:w-9 md:h-9 rounded-md bg-white bg-opacity-10 animate-pulse-2x flex-shrink-0 mr-2"
@@ -1855,7 +1855,7 @@ class DirectionsPanel extends Component {
                       this.props.openLayersLegendModal('routes-section')
                     }
                   >
-                    <IconInfoCircle aria-hidden />
+                    <IconInfoOutline className="cm-panel__footer-action-icon" aria-hidden />
                     Leia mais sobre os níveis de proteção das rotas
                   </button>
                 )}

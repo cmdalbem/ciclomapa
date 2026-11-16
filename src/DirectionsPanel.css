@@ -69,9 +69,14 @@
   justify-content: center;
 }
 
-/* Provider chips on each route row */
+/* Full-bleed selectable rows (cancels .cm-panel__body p-4) */
 #directionsPanel .cm-route-option {
   background: transparent;
+  margin-left: -1rem;
+  margin-right: -1rem;
+  padding: 10px 16px;
+  border-radius: 0;
+  cursor: pointer;
   animation: cm-route-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: background 180ms ease;
 }
@@ -167,16 +172,8 @@
 #directionsPanel .cm-route-elev {
   display: block;
   min-width: 0;
-  margin: 6px -0.5rem 0;
+  margin: 8px -16px -2px;
   overflow: visible;
-}
-
-@media (min-width: 768px) {
-  #directionsPanel .cm-route-elev {
-    margin-left: -0.75rem;
-    margin-right: -0.75rem;
-    margin-bottom: -4px;
-  }
 }
 
 #directionsPanel .cm-route-elev__hit {
@@ -312,7 +309,7 @@
 }
 
 #directionsPanel .cm-panel__controls {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 #directionsPanel .cm-panel__results {
@@ -320,10 +317,11 @@
 }
 
 #directionsPanel .cm-panel__footer-action {
-  margin-top: 8px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  margin-top: 16px;
+  margin-bottom: -8px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -331,6 +329,12 @@
   font-size: var(--font-size-xs);
   line-height: 1.4;
   color: var(--color-text-muted, rgb(107 114 128));
+}
+
+#directionsPanel .cm-panel__footer-action-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 #directionsPanel .cm-panel__footer-action:hover {

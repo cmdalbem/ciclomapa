@@ -142,7 +142,7 @@ export default function RoutesList({
   const { setElevationHoverLngLat } = useDirections();
 
   return (
-    <div className="space-y-2">
+    <div className="cm-route-list space-y-2">
       {routes.map((route, index) => {
         const originalIndex = route._originalIndex !== undefined ? route._originalIndex : index;
         const isSelected = selectedRouteIndex === originalIndex;
@@ -151,7 +151,7 @@ export default function RoutesList({
         return (
           <div
             key={index}
-            className={`cm-route-option rounded-lg p-2 md:p-3 -m-2 cursor-pointer${
+            className={`cm-route-option${
               isSelected ? ' cm-route-option--selected' : ''
             }${hoveredRouteIndex === originalIndex ? ' cm-route-option--hover' : ''}`}
             onMouseEnter={() => onRouteHover(originalIndex)}
