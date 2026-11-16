@@ -29,13 +29,13 @@ import {
   ROUTE_UNSELECTED_LIGHT_BORDER_OPACITY,
   NEAR_ROUTE_ENDPOINT_POI_RADIUS_KM,
   ROUTE_ENDPOINT_VISIBLE_POI_ICONS,
-  PMTILES_FILENAME,
   PMTILES_SOURCE_ID,
   PMTILES_SOURCE_LAYER,
   filenameForMapPmtilesKind,
   PMTILES_COMPARE_KIND,
-  PMTILES_COMPARE_FILENAMES,
   MAP_PMTILES_COMPARE_KINDS,
+  PMTILES_POC_REGION,
+  filenamesForPmtilesPocRegion,
   pmtilesSourceIdForKind,
   pmtilesLayerSuffixForKind,
   LOW_ZOOM_WIDTH_DIVISOR,
@@ -168,6 +168,7 @@ const CICLOMAPA_DATA_SOURCES = new Set([
   'routes-unselected',
   'overlapping-cyclepaths-selected',
   'overlapping-cyclepaths-unselected',
+  'route-calculating',
   'boundaryLineSrc',
   ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID,
 ]);
@@ -195,6 +196,29 @@ const ROUTE_OVERLAY_LAYER_IDS = [...SOLID_ROUTE_LAYER_IDS, ...ROUTE_SEGMENT_LAYE
 
 function isE2EMode() {
   return typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('e2e');
+}
+
+/** Slight quadratic arc between A and B so the calculating hint isn't a ruler. */
+export function curvedLineBetween(from, to, steps = 24) {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const dist = Math.hypot(dx, dy) || 1;
+  // Perpendicular offset ~8% of the span, capped so mega hops don't balloon.
+  const mag = Math.min(0.08 * dist, 0.35);
+  const nx = (-dy / dist) * mag;
+  const ny = (dx / dist) * mag;
+  const cx = (from[0] + to[0]) / 2 + nx;
+  const cy = (from[1] + to[1]) / 2 + ny;
+  const coords = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const u = 1 - t;
+    coords.push([
+      u * u * from[0] + 2 * u * t * cx + t * t * to[0],
+      u * u * from[1] + 2 * u * t * cy + t * t * to[1],
+    ]);
+  }
+  return coords;
 }
 
 /** Built-in `Map`; the React component class name `Map` shadows `window.Map` inside methods. */
@@ -1345,8 +1369,36 @@ class Map extends Component {
     return this.props.mapPmtilesKind || PMTILES_COMPARE_KIND.z13;
   }
 
+  activePmtilesPocRegion() {
+    return this.props.mapPmtilesPocRegion || PMTILES_POC_REGION.off;
+  }
+
   activePmtilesLayerSuffix() {
     return pmtilesLayerSuffixForKind(this.activePmtilesKind());
+  }
+
+  filenameForActivePmtilesKind(kind) {
+    return filenameForMapPmtilesKind(kind, this.activePmtilesPocRegion());
+  }
+
+  removePmtilesCompareLayersForKind(kind) {
+    if (!this.map || !Array.isArray(this.props.layers)) return;
+    const suffix = pmtilesLayerSuffixForKind(kind);
+    this.props.layers.forEach((layer) => {
+      if (!layer?.id) return;
+      const ids =
+        layer.type === 'poi'
+          ? [layer.id + suffix + 'circles', layer.id + suffix, layer.id + suffix + 'polygon']
+          : [
+              layer.id + '--interactive' + suffix,
+              layer.id + suffix,
+              layer.id + '--routes-active' + suffix,
+              layer.id + suffix + '--arrows',
+            ];
+      ids.forEach((id) => {
+        if (this.map.getLayer(id)) this.map.removeLayer(id);
+      });
+    });
   }
 
   async initializeDataSources() {
@@ -1355,7 +1407,7 @@ class Map extends Component {
     if (USE_PMTILES_SOURCE) {
       const PMTILES_BASE_URL = process.env.REACT_APP_PMTILES_URL;
       const defaultKind = this.activePmtilesKind();
-      const defaultFilename = filenameForMapPmtilesKind(defaultKind);
+      const defaultFilename = this.filenameForActivePmtilesKind(defaultKind);
       const pmtilesLoadToken = startDataLoad('pmtiles', 'PMTiles', { file: defaultFilename });
 
       try {
@@ -1367,7 +1419,7 @@ class Map extends Component {
         MAP_PMTILES_COMPARE_KINDS.forEach((kind) => {
           const sourceId = pmtilesSourceIdForKind(kind);
           if (this.map.getSource(sourceId)) return;
-          const url = PMTILES_BASE_URL + filenameForMapPmtilesKind(kind);
+          const url = PMTILES_BASE_URL + this.filenameForActivePmtilesKind(kind);
           console.log('Loading PMTiles compare source:', kind, url);
           this.map.addSource(sourceId, {
             type: 'vector',
@@ -1813,6 +1865,10 @@ class Map extends Component {
     map.addSource('routes-unselected', emptySource);
     map.addSource('overlapping-cyclepaths-selected', emptySource);
     map.addSource('overlapping-cyclepaths-unselected', emptySource);
+    map.addSource('route-calculating', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
 
     // Order here is important for layer stacking
     this.createRouteLayerSet(map, 'routes-unselected', 'bottom');
@@ -1820,7 +1876,24 @@ class Map extends Component {
     this.createRouteLayerSet(map, 'route-selected', 'top');
     this.createCyclepathLayerSet(map, 'overlapping-cyclepaths-selected', 'top');
 
+    // Soft curved hint while OD is set and a calc is in flight (above solid routes).
+    map.addLayer({
+      id: 'route-calculating-line',
+      type: 'line',
+      source: 'route-calculating',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': 'rgba(255,255,255,0.85)',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 8, 2.4, 14, 3.4],
+        'line-opacity': 0.7,
+        'line-dasharray': [0, 1.8],
+        'line-dasharray-transition': { duration: 0 },
+        'line-opacity-transition': { duration: 0 },
+      },
+    });
+
     this.setupRouteEventHandlers(map);
+    this.applyRouteCalculatingOverlay();
   }
 
   componentDidUpdate(prevProps) {
@@ -1931,6 +2004,7 @@ class Map extends Component {
     if (
       this.props.hideRouteOverlay !== prevProps.hideRouteOverlay ||
       this.props.segmentedRoutePaint !== prevProps.segmentedRoutePaint ||
+      this.props.directionsLoading !== prevProps.directionsLoading ||
       routesChanged
     ) {
       if (this.props.segmentedRoutePaint !== prevProps.segmentedRoutePaint && !routesChanged) {
@@ -1943,12 +2017,34 @@ class Map extends Component {
       this.swapPmtilesArchive(this.props.mapPmtilesKind);
     }
 
+    if (this.props.mapPmtilesPocRegion !== prevProps.mapPmtilesPocRegion) {
+      this.reloadPmtilesPocRegion(this.props.mapPmtilesPocRegion);
+    }
+
     if (this.props.laneSideOffsetEnabled !== prevProps.laneSideOffsetEnabled) {
       this.applyLaneSideOffset(this.props.laneSideOffsetEnabled);
     }
 
     if (this.props.globalSearchPin !== prevProps.globalSearchPin) {
       this.applyGlobalSearchPin(this.props.globalSearchPin);
+    }
+
+    if (this.props.elevationHoverLngLat !== prevProps.elevationHoverLngLat) {
+      this.applyElevationHoverMarker(this.props.elevationHoverLngLat);
+    }
+
+    if (
+      this.props.directionsLoading !== prevProps.directionsLoading ||
+      this.props.fromPoint !== prevProps.fromPoint ||
+      this.props.toPoint !== prevProps.toPoint
+    ) {
+      this.applyRouteCalculatingOverlay({
+        // Don't yank the camera when the user is just nudging A/B.
+        fitBounds:
+          this.props.directionsLoading &&
+          !prevProps.directionsLoading &&
+          !prevProps.routes?.routes?.length,
+      });
     }
 
     if (this.props.favorites !== prevProps.favorites) {
@@ -1959,6 +2055,125 @@ class Map extends Component {
       this.applyCleanModeBasemapLabels();
       this.updateLayerVisibility();
     }
+  }
+
+  applyRouteCalculatingOverlay({ fitBounds = false } = {}) {
+    const map = this.map;
+    if (!map?.getSource('route-calculating')) return;
+
+    const pair = (value) => {
+      if (Array.isArray(value) && value.length >= 2) {
+        const lng = Number(value[0]);
+        const lat = Number(value[1]);
+        return Number.isFinite(lng) && Number.isFinite(lat) ? [lng, lat] : null;
+      }
+      const lng = Number(value?.lng);
+      const lat = Number(value?.lat);
+      return Number.isFinite(lng) && Number.isFinite(lat) ? [lng, lat] : null;
+    };
+    const from = pair(this.props.fromPoint?.result?.center);
+    const to = pair(this.props.toPoint?.result?.center);
+    const show = this.props.directionsLoading && from && to;
+
+    if (!show) {
+      map.getSource('route-calculating').setData({ type: 'FeatureCollection', features: [] });
+      this.stopRouteCalculatingDashAnimation();
+      return;
+    }
+
+    if (map.getLayer('route-calculating-line')) {
+      map.setLayoutProperty('route-calculating-line', 'visibility', 'visible');
+      try {
+        map.moveLayer('route-calculating-line');
+      } catch (e) {
+        /* already on top or style mid-reload */
+      }
+    }
+
+    map.getSource('route-calculating').setData({
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: curvedLineBetween(from, to),
+          },
+        },
+      ],
+    });
+    this.startRouteCalculatingDashAnimation();
+
+    if (fitBounds) {
+      const padding = IS_MOBILE
+        ? { top: 32, bottom: 250, left: 32, right: 32 }
+        : { top: 100, bottom: 100, left: 500, right: 100 };
+      try {
+        map.fitBounds([from, to], { padding, duration: 800, maxZoom: 14 });
+      } catch (e) {
+        console.debug('fitBounds for calculating overlay failed', e);
+      }
+    }
+  }
+
+  startRouteCalculatingDashAnimation() {
+    if (this._routeCalculatingDashRaf) return;
+    const started = performance.now();
+    const DASH = 0.01;
+    const GAP = 1.8;
+    const PERIOD = DASH + GAP;
+    const tick = (now) => {
+      if (!this.map?.getLayer('route-calculating-line')) {
+        this._routeCalculatingDashRaf = null;
+        return;
+      }
+      const elapsed = now - started;
+      // Mapbox has no dashoffset; this is the constant-sum pattern from their ant-path
+      // example so the loop doesn't hitch when it wraps.
+      const pos = ((elapsed / 1400) % 1) * PERIOD;
+      const dasharray = pos < DASH ? [pos, GAP, DASH - pos] : [0, pos - DASH, DASH, PERIOD - pos];
+      const opacity = 0.5 + 0.22 * (0.5 + 0.5 * Math.sin((elapsed / 2400) * Math.PI * 2));
+      try {
+        this.map.setPaintProperty('route-calculating-line', 'line-opacity', opacity);
+        this.map.setPaintProperty('route-calculating-line', 'line-dasharray', dasharray);
+      } catch (e) {
+        /* style may be mid-reload */
+      }
+      this._routeCalculatingDashRaf = requestAnimationFrame(tick);
+    };
+    this._routeCalculatingDashRaf = requestAnimationFrame(tick);
+  }
+
+  stopRouteCalculatingDashAnimation() {
+    if (this._routeCalculatingDashRaf) {
+      cancelAnimationFrame(this._routeCalculatingDashRaf);
+      this._routeCalculatingDashRaf = null;
+    }
+  }
+
+  applyElevationHoverMarker(lngLat) {
+    if (!this.map) return;
+
+    if (!lngLat || !Number.isFinite(lngLat[0]) || !Number.isFinite(lngLat[1])) {
+      if (this.elevationHoverMarker) {
+        this.elevationHoverMarker.remove();
+        this.elevationHoverMarker = null;
+      }
+      return;
+    }
+
+    if (this.elevationHoverMarker) {
+      this.elevationHoverMarker.setLngLat(lngLat);
+      return;
+    }
+
+    const el = document.createElement('div');
+    el.className = 'elevation-hover-marker';
+    el.setAttribute('aria-hidden', 'true');
+    this.elevationHoverMarker = new mapboxgl.Marker({ element: el, draggable: false })
+      .setLngLat(lngLat)
+      .addTo(this.map);
   }
 
   applyGlobalSearchPin(pin) {
@@ -2596,7 +2811,7 @@ class Map extends Component {
 
   applyRouteOverlayVisibility() {
     if (!this.map) return;
-    if (this.props.hideRouteOverlay) {
+    if (this.props.hideRouteOverlay || this.props.directionsLoading) {
       ROUTE_OVERLAY_LAYER_IDS.forEach((layerId) => {
         if (this.map.getLayer(layerId)) {
           this.map.setLayoutProperty(layerId, 'visibility', 'none');
@@ -2685,10 +2900,56 @@ class Map extends Component {
     console.debug(
       'Showing PMTiles compare archive',
       _kind,
-      PMTILES_COMPARE_FILENAMES[_kind] || filenameForMapPmtilesKind(_kind)
+      this.filenameForActivePmtilesKind(_kind)
     );
     this.updateLayerVisibility();
     this.applyRouteOverlayVisibility();
+  }
+
+  /**
+   * Disposable PoC: tear down zg/z13/analysis sources and rebuild them for SP or Spain.
+   */
+  reloadPmtilesPocRegion(regionId = this.activePmtilesPocRegion()) {
+    if (!this.map || !USE_PMTILES_SOURCE || !this.layersInitialized) return;
+    const PMTILES_BASE_URL = process.env.REACT_APP_PMTILES_URL;
+    if (!PMTILES_BASE_URL) return;
+
+    const files = filenamesForPmtilesPocRegion(regionId);
+    console.debug('Reloading PMTiles PoC region', regionId, files);
+
+    MAP_PMTILES_COMPARE_KINDS.forEach((kind) => {
+      const sourceId = pmtilesSourceIdForKind(kind);
+      this.removePmtilesCompareLayersForKind(kind);
+      if (this.map.getSource(sourceId)) {
+        this.map.removeSource(sourceId);
+      }
+      this.map.addSource(sourceId, {
+        type: 'vector',
+        url: PMTILES_BASE_URL + (files[kind] || files.z13),
+        promoteId: 'id',
+      });
+    });
+
+    const layers = this.props.layers || [];
+    MAP_PMTILES_COMPARE_KINDS.forEach((kind) => {
+      const sourceId = pmtilesSourceIdForKind(kind);
+      const layerSuffix = pmtilesLayerSuffixForKind(kind);
+      layers
+        .slice()
+        .reverse()
+        .forEach((l) => {
+          if (!l.type || l.type === 'way') {
+            this.initCyclepathLayerForSource(l, sourceId, layerSuffix);
+          } else if (l.type === 'poi' && l.filters) {
+            this.initPOILayerForSource(l, sourceId, layerSuffix);
+          }
+        });
+    });
+
+    this.pmtilesLoadedSuccessfully = true;
+    this.updateLayerVisibility();
+    this.applyLaneSideOffset();
+    this.warmComparePmtilesArchives();
   }
 
   updateRouteTooltips() {
@@ -3255,6 +3516,15 @@ class Map extends Component {
       }
       this.globalSearchMarker = null;
     }
+    if (this.elevationHoverMarker) {
+      try {
+        this.elevationHoverMarker.remove();
+      } catch (e) {
+        /* ignore */
+      }
+      this.elevationHoverMarker = null;
+    }
+    this.stopRouteCalculatingDashAnimation();
     if (this.popups) {
       this.popups.searchResultPopup?.off?.('close', this._onSearchResultPopupClosed);
     }
@@ -3388,7 +3658,10 @@ const MapWrapper = React.forwardRef((props, ref) => {
       hideRouteOverlay={directionsContext.hideRouteOverlay}
       segmentedRoutePaint={directionsContext.segmentedRoutePaint}
       mapPmtilesKind={directionsContext.mapPmtilesKind}
+      mapPmtilesPocRegion={directionsContext.mapPmtilesPocRegion}
       laneSideOffsetEnabled={directionsContext.laneSideOffsetEnabled}
+      elevationHoverLngLat={directionsContext.elevationHoverLngLat}
+      directionsLoading={directionsContext.directionsLoading}
     />
   );
 });

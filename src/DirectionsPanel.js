@@ -2,11 +2,15 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import debounce from 'lodash.debounce';
 import { useDirections } from './contexts/DirectionsContext';
-import { Button, Dropdown, Segmented, Switch, Tooltip } from 'antd';
-import { HiX as IconClose, HiOutlineArrowLeft as IconBack } from 'react-icons/hi';
+import { Button, Dropdown, Segmented, Tooltip } from 'antd';
+import {
+  HiX as IconClose,
+  HiOutlineArrowLeft as IconBack,
+  HiChevronDown as IconCaretDown,
+} from 'react-icons/hi';
 import { HiOutlineArrowsUpDown as IconSwap } from 'react-icons/hi2';
-import { LuBike, LuLeaf, LuMountain, LuVolumeX } from 'react-icons/lu';
-import { TbRoad } from 'react-icons/tb';
+import { LuBike, LuLeaf, LuMountain, LuShield, LuTimer, LuVolumeX } from 'react-icons/lu';
+import { TbRoad, TbRuler } from 'react-icons/tb';
 import { MdOutlineTerrain } from 'react-icons/md';
 import { HiInformationCircle as IconInfoCircle } from 'react-icons/hi';
 import mapboxgl from 'mapbox-gl';
@@ -53,7 +57,10 @@ import {
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
 import {
+  BROUTER_OBJECTIVE_OPTIONS,
   BROUTER_PROFILE_DEFAULTS,
+  BROUTER_SURFACE_OPTIONS,
+  brouterRoutingObjectiveFromSort,
   readDirectionsUrlParams,
   writeDirectionsUrlParams,
 } from './utils/routeUtils.js';
@@ -65,21 +72,17 @@ class DirectionsPanel extends Component {
   constructor(props) {
     super(props);
     const urlPrefs = readDirectionsUrlParams();
-    const providerOptions = new Set(this.getProviderOptions().map((o) => o.value));
-    const urlProvider =
-      urlPrefs.provider && providerOptions.has(urlPrefs.provider) ? urlPrefs.provider : null;
 
     this.state = {
       collapsed: true,
       fromGeocoderAttached: false,
       toGeocoderAttached: false,
       focusedInput: null,
-      selectedProvider: urlProvider || 'hybrid',
       routeSortMode: urlPrefs.sort || 'score',
       preferredCoverageSource: urlPrefs.coverage || null,
       consider_elevation:
         urlPrefs.consider_elevation ?? BROUTER_PROFILE_DEFAULTS.consider_elevation,
-      unpavedPenalty: [1, 2, 4].includes(urlPrefs.unpavedPenalty)
+      unpavedPenalty: BROUTER_SURFACE_OPTIONS.some((o) => o.value === urlPrefs.unpavedPenalty)
         ? urlPrefs.unpavedPenalty
         : BROUTER_PROFILE_DEFAULTS.unpavedPenalty,
       consider_noise: urlPrefs.consider_noise ?? BROUTER_PROFILE_DEFAULTS.consider_noise,
@@ -131,7 +134,6 @@ class DirectionsPanel extends Component {
     this.calculateDirections = this.calculateDirections.bind(this);
     this.cancelDirectionsCalculation = this.cancelDirectionsCalculation.bind(this);
     this.swapOriginDestination = this.swapOriginDestination.bind(this);
-    this.handleProviderChange = this.handleProviderChange.bind(this);
     this.handleCoverageSourceChange = this.handleCoverageSourceChange.bind(this);
     this.handleRouteSortChange = this.handleRouteSortChange.bind(this);
     this.handleBrouterPrefChange = this.handleBrouterPrefChange.bind(this);
@@ -183,12 +185,9 @@ class DirectionsPanel extends Component {
 
   componentDidMount() {
     this.setupMapClickListener();
-
-    // Store initial points for later processing
-    this.pendingInitialPoints = {
-      from: this.props.fromPoint,
-      to: this.props.toPoint,
-    };
+    if (this.props.map) {
+      this.syncMarkersWithProps();
+    }
 
     // Initialize search input values if points are already set (e.g., from URL)
     if (
@@ -202,7 +201,7 @@ class DirectionsPanel extends Component {
       this.setState({ toSearchValue: this.getInputDisplayValue(this.props.toPoint) });
     }
 
-    this.props.onRoutingProviderChange?.(this.state.selectedProvider);
+    this.props.onRoutingProviderChange?.(this.props.routingProvider);
 
     // Auto-expand the panel when route points are loaded from URL
     if (this.props.fromPoint && this.props.toPoint) {
@@ -210,6 +209,9 @@ class DirectionsPanel extends Component {
       if (this.props.onDirectionsPanelToggle) {
         this.props.onDirectionsPanelToggle(true);
       }
+      // Points can already be set on first paint (URL boot). componentDidUpdate
+      // only fires on *changes*, so kick the calc here or it sits idle.
+      this.requestDirectionsCalculation();
     }
   }
 
@@ -217,6 +219,7 @@ class DirectionsPanel extends Component {
     if (this.props.map && !prevProps.map) {
       console.debug('Map became available, setting up map click listener');
       this.setupMapClickListener();
+      this.syncMarkersWithProps();
     }
 
     if (this.props.map && prevProps.map && this.props.map !== prevProps.map) {
@@ -263,15 +266,27 @@ class DirectionsPanel extends Component {
     const coverageReady = USE_PMTILES_ROUTE_COVERAGE || this.props.geoJson;
     const geoJsonBecameReady =
       !USE_PMTILES_ROUTE_COVERAGE && this.props.geoJson && this.props.geoJson !== prevProps.geoJson;
+    const providerChanged = this.props.routingProvider !== prevProps.routingProvider;
+    if (providerChanged) {
+      writeDirectionsUrlParams({ provider: this.props.routingProvider });
+      this.props.onRoutingProviderChange?.(this.props.routingProvider);
+    }
+
     const shouldCalculateDirections =
       this.props.fromPoint &&
       this.props.toPoint &&
       coverageReady &&
-      (pointsChanged || geoJsonBecameReady);
+      (pointsChanged ||
+        geoJsonBecameReady ||
+        providerChanged ||
+        // Map often mounts after URL OD is already on props; treat that as a kick.
+        (Boolean(this.props.map) && !prevProps.map));
 
     if (shouldCalculateDirections) {
       console.debug('Conditions met for directions calculation');
       this.requestDirectionsCalculation();
+    } else if (pointsChanged && (!this.props.fromPoint || !this.props.toPoint)) {
+      this.clearDirectionsOnly();
     } else if (
       USE_PMTILES_ROUTE_COVERAGE &&
       this.props.geoJson &&
@@ -308,7 +323,7 @@ class DirectionsPanel extends Component {
     if (!this.props.map) return;
 
     const { fromPoint, toPoint } = this.props;
-    if (fromPoint) {
+    if (fromPoint?.result?.center) {
       const fromCoords = fromPoint.result.center;
       if (this.fromMarker) {
         this.fromMarker.setLngLat(fromCoords).addTo(this.props.map);
@@ -325,7 +340,7 @@ class DirectionsPanel extends Component {
       this.setState({ fromSearchValue: '' });
     }
 
-    if (toPoint) {
+    if (toPoint?.result?.center) {
       const toCoords = toPoint.result.center;
       if (this.toMarker) {
         this.toMarker.setLngLat(toCoords).addTo(this.props.map);
@@ -601,6 +616,14 @@ class DirectionsPanel extends Component {
     marker.addTo(this.props.map);
     marker.on('dragstart', () => {
       this.isDraggingMarker = true;
+      if (this.props.fromPoint && this.props.toPoint) {
+        this.cancelDirectionsCalculation({ keepLoading: true });
+        this.props.setLoading?.(true);
+        this.syncCalculatingHintFromMarkers();
+      }
+    });
+    marker.on('drag', () => {
+      if (this.isDraggingMarker) this.syncCalculatingHintFromMarkers();
     });
     marker.on('dragend', () => this.handleMarkerDrag(marker, type));
 
@@ -735,18 +758,20 @@ class DirectionsPanel extends Component {
     this.reverseGeocode(coords, inputType, isAutoTriggered, requestId, { simplifyAddress: true });
   }
 
-  cancelDirectionsCalculation() {
+  cancelDirectionsCalculation({ keepLoading = false } = {}) {
     this.directionsRequestId += 1;
+    this._inflightCoordsKey = null;
     if (this.directionsAbortController) {
       this.directionsAbortController.abort();
       this.directionsAbortController = null;
     }
-    if (this.props.setLoading) {
+    if (!keepLoading && this.props.setLoading) {
       this.props.setLoading(false);
     }
   }
 
   async calculateDirections(fromCoords, toCoords, provider) {
+    this._inflightCoordsKey = `${fromCoords[0]},${fromCoords[1]}|${toCoords[0]},${toCoords[1]}`;
     // Drop any previous in-flight calc before starting a new one.
     if (this.directionsAbortController) {
       this.directionsAbortController.abort();
@@ -771,7 +796,11 @@ class DirectionsPanel extends Component {
         this.props.geoJson,
         this.props.layers,
         this.props.isDarkMode,
-        { signal: controller.signal, brouterProfile: this.getBrouterProfile() }
+        {
+          signal: controller.signal,
+          brouterProfile: this.getBrouterProfile(),
+          pmtilesPocRegion: this.props.mapPmtilesPocRegion,
+        }
       );
 
       if (requestId !== this.directionsRequestId) {
@@ -816,8 +845,16 @@ class DirectionsPanel extends Component {
       const fromCoords = this.props.fromPoint.result.center;
       const toCoords = this.props.toPoint.result.center;
 
+      const coordsKey = `${fromCoords[0]},${fromCoords[1]}|${toCoords[0]},${toCoords[1]}`;
+      if (
+        coordsKey === this._inflightCoordsKey &&
+        (this.props.directionsLoading || this.props.directions)
+      ) {
+        return;
+      }
+
       console.debug('Requesting directions calculation from:', fromCoords, 'to:', toCoords);
-      this.calculateDirections(fromCoords, toCoords, this.state.selectedProvider);
+      this.calculateDirections(fromCoords, toCoords, this.props.routingProvider);
     } else {
       console.debug('No from or to point, skipping directions calculation');
     }
@@ -864,19 +901,6 @@ class DirectionsPanel extends Component {
       fromSearchValue: this.getInputDisplayValue(toPoint),
       toSearchValue: this.getInputDisplayValue(fromPoint),
     });
-  }
-
-  handleProviderChange(provider) {
-    this.setState({ selectedProvider: provider });
-    writeDirectionsUrlParams({ provider });
-    this.props.onRoutingProviderChange?.(provider);
-
-    // Recalculate directions with the new provider if we have both points
-    if (this.props.fromPoint && this.props.toPoint) {
-      const fromCoords = this.props.fromPoint.result.center;
-      const toCoords = this.props.toPoint.result.center;
-      this.calculateDirections(fromCoords, toCoords, provider);
-    }
   }
 
   handleCoverageSourceChange(source) {
@@ -1047,38 +1071,6 @@ class DirectionsPanel extends Component {
     );
   }
 
-  renderHideRouteOverlayToggle() {
-    if (!this.props.setHideRouteOverlay) return null;
-
-    return (
-      <div className="flex items-center justify-between gap-2 mt-2 mb-2">
-        <span className="text-xs opacity-60 flex-shrink-0">Ocultar rota</span>
-        <Switch
-          size="small"
-          checked={Boolean(this.props.hideRouteOverlay)}
-          onChange={(checked) => this.props.setHideRouteOverlay(checked)}
-          aria-label="Ocultar rota calculada no mapa"
-        />
-      </div>
-    );
-  }
-
-  renderSegmentedRoutePaintToggle() {
-    if (!this.props.setSegmentedRoutePaint) return null;
-
-    return (
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-xs opacity-60 flex-shrink-0">Segmentos (rua+infra)</span>
-        <Switch
-          size="small"
-          checked={Boolean(this.props.segmentedRoutePaint)}
-          onChange={(checked) => this.props.setSegmentedRoutePaint(checked)}
-          aria-label="Desenhar rota em segmentos coloridos em vez de laranja + sobreposição"
-        />
-      </div>
-    );
-  }
-
   getBrouterProfile() {
     return {
       consider_elevation: this.state.consider_elevation,
@@ -1086,34 +1078,26 @@ class DirectionsPanel extends Component {
       consider_noise: this.state.consider_noise,
       consider_river: this.state.consider_river,
       consider_forest: this.state.consider_forest,
+      routingObjective: brouterRoutingObjectiveFromSort(this.state.routeSortMode),
     };
   }
 
   handleBrouterPrefChange(patch) {
     this.setState(patch, () => {
-      writeDirectionsUrlParams(this.getBrouterProfile());
+      writeDirectionsUrlParams({
+        ...this.getBrouterProfile(),
+        sort: this.state.routeSortMode,
+      });
       if (this.props.fromPoint && this.props.toPoint) {
         const fromCoords = this.props.fromPoint.result.center;
         const toCoords = this.props.toPoint.result.center;
-        this.calculateDirections(fromCoords, toCoords, this.state.selectedProvider);
+        this.calculateDirections(fromCoords, toCoords, this.props.routingProvider);
       }
     });
   }
 
   handleRouteSortChange(sortMode) {
-    this.setState({ routeSortMode: sortMode });
-    writeDirectionsUrlParams({ sort: sortMode });
-
-    const originalRoutes =
-      this.props.directions && this.props.directions.routes ? this.props.directions.routes : [];
-    if (originalRoutes.length > 0) {
-      const sorted = this.getSortedRoutes(originalRoutes, sortMode);
-      const first = sorted[0];
-      const originalIndex = originalRoutes.findIndex((r) => r === first);
-      if (originalIndex !== -1) {
-        this.selectRoute(originalIndex);
-      }
-    }
+    this.handleBrouterPrefChange({ routeSortMode: sortMode });
   }
 
   getSortedRoutes(routes, mode = this.state.routeSortMode) {
@@ -1184,11 +1168,53 @@ class DirectionsPanel extends Component {
     this.selectRoute(routeIndex);
   }
 
+  syncCalculatingHintFromMarkers() {
+    const map = this.props.map;
+    const source = map?.getSource?.('route-calculating');
+    const from = this.fromMarker?.getLngLat?.();
+    const to = this.toMarker?.getLngLat?.();
+    if (!source || !from || !to) return;
+    source.setData({
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [from.lng, from.lat],
+              [to.lng, to.lat],
+            ],
+          },
+        },
+      ],
+    });
+  }
+
   handleMarkerDrag(marker, type) {
     const coordinates = marker.getLngLat();
+    const lngLat = [coordinates.lng, coordinates.lat];
     console.debug(`${type} marker dragged to:`, coordinates);
 
-    this.reverseGeocode(coordinates, type);
+    const prev = type === 'from' ? this.props.fromPoint : this.props.toPoint;
+    const newPoint = {
+      result: applyDirectionsInputLabelToResult(
+        {
+          ...(prev?.result || {}),
+          center: lngLat,
+        },
+        { area: this.props.area }
+      ),
+    };
+
+    if (type === 'from') {
+      this.props.onFromPointChange(newPoint);
+    } else {
+      this.props.onToPointChange(newPoint);
+    }
+
+    this.reverseGeocode(coordinates, type, false, null, { keepDroppedCenter: true });
   }
 
   async reverseGeocode(
@@ -1196,7 +1222,7 @@ class DirectionsPanel extends Component {
     type,
     isAutoTriggered = false,
     requestId = null,
-    { simplifyAddress = false } = {}
+    { simplifyAddress = false, keepDroppedCenter = false } = {}
   ) {
     if (!coordinates) return;
 
@@ -1241,8 +1267,8 @@ class DirectionsPanel extends Component {
       const newPoint = {
         result: applyDirectionsInputLabelToResult(
           {
-            center: lngLat,
             ...result,
+            center: keepDroppedCenter ? lngLat : result.center || lngLat,
             place_name: address,
           },
           { area: this.props.area }
@@ -1415,156 +1441,127 @@ class DirectionsPanel extends Component {
     }
   }
 
-  getProviderOptions() {
-    return [
-      { value: 'hybrid', label: 'Combinado' },
-      { value: 'valhalla', label: 'Valhalla' },
-      { value: 'graphhopper', label: 'GraphHopper' },
-      ...(USE_BROUTER_LOCAL ? [{ value: 'brouter', label: 'BRouter' }] : []),
-      { value: 'mapbox', label: 'Mapbox' },
-    ];
-  }
-
-  renderProviderDropdown() {
-    return (
-      <RouteSortDropdown
-        label=""
-        currentKey={this.state.selectedProvider}
-        onChange={this.handleProviderChange}
-        items={this.getProviderOptions().map((o) => ({ key: o.value, label: o.label }))}
-        placement="bottomRight"
-      />
-    );
-  }
-
-  renderCalcOptions({ includeProvider = false } = {}) {
-    const provider = includeProvider ? this.renderProviderDropdown() : null;
+  renderCalcOptions() {
     const prefs = USE_BROUTER_LOCAL ? this.renderBrouterPrefs() : null;
-    if (!provider && !prefs) return null;
-    return (
-      <div className={`directions-route-options${prefs ? ' mb-2' : ''}`}>
-        {provider}
-        {prefs}
-      </div>
-    );
+    if (!prefs) return null;
+    return <div className="directions-route-options">{prefs}</div>;
   }
 
   renderResultOptions() {
+    if (this.props.routingProvider !== 'hybrid') return null;
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-0 mb-3">
         <RouteSortDropdown
-          currentKey={this.state.routeSortMode}
-          onChange={this.handleRouteSortChange}
+          label=""
+          currentKey={String(this.props.maxRoutesShown)}
+          onChange={(key) => {
+            const n = Number(key);
+            this.props.setMaxRoutesShown?.(n);
+            writeDirectionsUrlParams({ maxRoutes: n });
+          }}
+          items={[
+            { key: '5', label: 'Max 5' },
+            { key: '8', label: 'Max 8' },
+            { key: '12', label: 'Max 12' },
+            { key: '20', label: 'Max 20' },
+            { key: '0', label: 'Max todas' },
+          ]}
         />
-        {this.state.selectedProvider === 'hybrid' ? (
-          <RouteSortDropdown
-            label=""
-            currentKey={String(this.props.maxRoutesShown)}
-            onChange={(key) => {
-              const n = Number(key);
-              this.props.setMaxRoutesShown?.(n);
-              writeDirectionsUrlParams({ maxRoutes: n });
-            }}
-            items={[
-              { key: '5', label: 'Max 5' },
-              { key: '8', label: 'Max 8' },
-              { key: '12', label: 'Max 12' },
-              { key: '20', label: 'Max 20' },
-              { key: '0', label: 'Max todas' },
-            ]}
-          />
-        ) : null}
       </div>
     );
   }
 
   renderBrouterPrefs() {
-    if (this.state.selectedProvider !== 'brouter' && this.state.selectedProvider !== 'hybrid') {
+    if (this.props.routingProvider !== 'brouter' && this.props.routingProvider !== 'hybrid') {
       return null;
     }
-    const unpavedOn = this.state.unpavedPenalty > 1;
-    // Engine knobs are "avoid X"; chips are positive ("include X"). Invert elev/noise for the UI.
+    // Engine knobs are "avoid X"; chips are positive ("include X"). Invert elev for the UI.
     const allowHills = !this.state.consider_elevation;
+    const surface =
+      BROUTER_SURFACE_OPTIONS.find((o) => o.value === this.state.unpavedPenalty) ||
+      BROUTER_SURFACE_OPTIONS.find((o) => o.value === BROUTER_PROFILE_DEFAULTS.unpavedPenalty);
+    const SurfaceIcon = surface.value >= 2 ? TbRoad : MdOutlineTerrain;
+    const objective =
+      BROUTER_OBJECTIVE_OPTIONS.find((o) => o.key === this.state.routeSortMode) ||
+      BROUTER_OBJECTIVE_OPTIONS[0];
+    const ObjectiveIcon =
+      objective.key === 'fastest' ? LuTimer : objective.key === 'shortest' ? TbRuler : LuShield;
 
     const toggleChip = (pref) => {
       const Icon = pref.icon;
       return (
-        <Tooltip key={pref.key} title={pref.title} mouseEnterDelay={0.3}>
-          <button
-            type="button"
-            className={`cm-brouter-pref${pref.on ? ' cm-brouter-pref--on' : ''}`}
-            aria-pressed={pref.on}
-            aria-label={pref.title}
-            onClick={pref.onClick}
-          >
-            <Icon className="cm-brouter-pref__icon" aria-hidden />
-            <span className="cm-brouter-pref__text">{pref.label}</span>
-          </button>
-        </Tooltip>
+        <button
+          key={pref.key}
+          type="button"
+          className={`cm-brouter-pref${pref.on ? ' cm-brouter-pref--on' : ''}`}
+          aria-pressed={pref.on}
+          aria-label={pref.title}
+          onClick={pref.onClick}
+        >
+          <Icon className="cm-brouter-pref__icon" aria-hidden />
+          <span className="cm-brouter-pref__text">{pref.label}</span>
+        </button>
       );
     };
 
+    const dropdownChip = ({ key, label, title, icon: Icon, menu }) => (
+      <Dropdown key={key} trigger={['click']} placement="bottomLeft" menu={menu}>
+        <button
+          type="button"
+          className="cm-brouter-pref cm-brouter-pref--dropdown"
+          aria-haspopup="listbox"
+          aria-label={title}
+        >
+          <Icon className="cm-brouter-pref__icon" aria-hidden />
+          <span className="cm-brouter-pref__text">
+            {label}
+            <IconCaretDown className="cm-brouter-pref__caret" aria-hidden />
+          </span>
+        </button>
+      </Dropdown>
+    );
+
     return (
       <div className="cm-brouter-prefs">
-        <div className="cm-brouter-prefs__chips">
+        <div className="cm-brouter-prefs__dropdowns">
+          {dropdownChip({
+            key: 'objective',
+            label: objective.label,
+            title: 'Priorizar na rota',
+            icon: ObjectiveIcon,
+            menu: {
+              items: BROUTER_OBJECTIVE_OPTIONS.map((o) => ({
+                key: o.key,
+                label: o.label,
+              })),
+              selectedKeys: [objective.key],
+              onClick: ({ key }) => this.handleRouteSortChange(key),
+            },
+          })}
+          {dropdownChip({
+            key: 'surface',
+            label: surface.shortLabel,
+            title: surface.label,
+            icon: SurfaceIcon,
+            menu: {
+              items: BROUTER_SURFACE_OPTIONS.map((o) => ({
+                key: String(o.value),
+                label: o.label,
+              })),
+              selectedKeys: [String(surface.value)],
+              onClick: ({ key }) => this.handleBrouterPrefChange({ unpavedPenalty: Number(key) }),
+            },
+          })}
+        </div>
+        <div className="cm-brouter-prefs__toggles">
           {toggleChip({
             key: 'elev',
-            label: 'Subidas',
+            label: 'Permitir subidas',
             title: 'Permitir subidas',
             icon: LuMountain,
             on: allowHills,
             onClick: () => this.handleBrouterPrefChange({ consider_elevation: allowHills }),
           })}
-          <Dropdown
-            trigger={['click']}
-            placement="bottomLeft"
-            menu={{
-              items: [
-                { key: '1', label: 'Qualquer terreno' },
-                { key: '2', label: 'Preferir asfalto' },
-                { key: '4', label: 'Só asfalto' },
-              ],
-              selectedKeys: [String(this.state.unpavedPenalty)],
-              onClick: ({ key }) => this.handleBrouterPrefChange({ unpavedPenalty: Number(key) }),
-            }}
-          >
-            <Tooltip
-              title={
-                this.state.unpavedPenalty === 4
-                  ? 'Só asfalto'
-                  : this.state.unpavedPenalty === 2
-                    ? 'Preferir asfalto'
-                    : 'Qualquer terreno'
-              }
-              mouseEnterDelay={0.3}
-            >
-              <button
-                type="button"
-                className={`cm-brouter-pref${unpavedOn ? ' cm-brouter-pref--on' : ''}`}
-                aria-haspopup="listbox"
-                aria-label={
-                  this.state.unpavedPenalty === 4
-                    ? 'Só asfalto'
-                    : this.state.unpavedPenalty === 2
-                      ? 'Preferir asfalto'
-                      : 'Qualquer terreno'
-                }
-              >
-                {unpavedOn ? (
-                  <TbRoad className="cm-brouter-pref__icon" aria-hidden />
-                ) : (
-                  <MdOutlineTerrain className="cm-brouter-pref__icon" aria-hidden />
-                )}
-                <span className="cm-brouter-pref__text">
-                  {this.state.unpavedPenalty === 4
-                    ? 'Só asfalto'
-                    : this.state.unpavedPenalty === 2
-                      ? 'Pref. asfalto'
-                      : 'Qualquer terreno'}
-                </span>
-              </button>
-            </Tooltip>
-          </Dropdown>
           {toggleChip({
             key: 'noise',
             label: 'Evitar ruído',
@@ -1648,7 +1645,7 @@ class DirectionsPanel extends Component {
           <div className="cm-panel__body p-4">
             <div
               id="directionsPanel--header"
-              className="cm-panel__header flex justify-between items-start md:mb-0 mb-2"
+              className="cm-panel__header flex justify-between items-start"
             >
               {showResultsOnMobile ? (
                 <div className="flex w-full items-center justify-between gap-2">
@@ -1685,7 +1682,6 @@ class DirectionsPanel extends Component {
                     className="flex items-center -mr-1 flex-shrink-0"
                     style={{ marginTop: '-5px' }}
                   >
-                    {this.renderProviderDropdown()}
                     <div className="flex items-center opacity-50">
                       {this.props.openLayersLegendModal && (
                         <Button
@@ -1710,39 +1706,40 @@ class DirectionsPanel extends Component {
                 </>
               )}
             </div>
-            {!showResultsOnMobile && this.renderCalcOptions()}
-
             {!showResultsOnMobile && (
-              <div className="cm-route-points mt-1">
-                <div className="cm-route-points__inputs">
-                  <LocationSearchInput
-                    inputType="from"
-                    parentComponent={this}
-                    className="w-full cm-route-points__input cm-route-points__input--from"
-                  />
-                  <LocationSearchInput
-                    inputType="to"
-                    parentComponent={this}
-                    className="w-full cm-route-points__input cm-route-points__input--to"
-                  />
+              <div className="cm-panel__controls">
+                {this.renderCalcOptions()}
+                <div className="cm-route-points">
+                  <div className="cm-route-points__inputs">
+                    <LocationSearchInput
+                      inputType="from"
+                      parentComponent={this}
+                      className="w-full cm-route-points__input cm-route-points__input--from"
+                    />
+                    <LocationSearchInput
+                      inputType="to"
+                      parentComponent={this}
+                      className="w-full cm-route-points__input cm-route-points__input--to"
+                    />
+                  </div>
+                  <Tooltip title="Trocar origem e destino" mouseEnterDelay={0.3}>
+                    <Button
+                      type="text"
+                      shape="circle"
+                      disabled={!this.props.fromPoint || !this.props.toPoint}
+                      icon={
+                        <IconSwap
+                          style={{
+                            display: 'inline-block',
+                          }}
+                        />
+                      }
+                      onClick={this.swapOriginDestination}
+                      className="swap-button cm-route-points__swap"
+                      aria-label="Trocar origem e destino"
+                    />
+                  </Tooltip>
                 </div>
-                <Tooltip title="Trocar origem e destino" mouseEnterDelay={0.3}>
-                  <Button
-                    type="text"
-                    shape="circle"
-                    disabled={!this.props.fromPoint || !this.props.toPoint}
-                    icon={
-                      <IconSwap
-                        style={{
-                          display: 'inline-block',
-                        }}
-                      />
-                    }
-                    onClick={this.swapOriginDestination}
-                    className="swap-button cm-route-points__swap"
-                    aria-label="Trocar origem e destino"
-                  />
-                </Tooltip>
               </div>
             )}
 
@@ -1762,24 +1759,13 @@ class DirectionsPanel extends Component {
             {directionsLoading && (
               <div
                 id="directionsPanel--results"
-                className="cm-panel__results directionsPanel--results md:mt-3 md:space-y-2 space-y-2"
+                className="cm-panel__results directionsPanel--results md:space-y-2 space-y-2"
               >
-                <div className="flex mb-2 items-center justify-between gap-2">
-                  {!IS_MOBILE ? (
-                    this.renderResultOptions()
-                  ) : (
-                    <span className="text-sm opacity-70">Calculando rotas…</span>
-                  )}
-                  <Button
-                    type="text"
-                    size="small"
-                    className="text-white opacity-70 hover:opacity-100 flex-shrink-0 -mr-1"
-                    onClick={this.cancelDirectionsCalculation}
-                    aria-label="Cancelar cálculo de rota"
-                  >
-                    Cancelar
-                  </Button>
-                </div>
+                {!IS_MOBILE ? (
+                  this.renderResultOptions()
+                ) : (
+                  <span className="text-sm opacity-70">Calculando rotas…</span>
+                )}
                 {Array.from({ length: HYBRID_MAX_RESULTS }, (_, i) => (
                   <div key={i} className="rounded-lg p-2 md:p-3 -m-2 flex justify-between gap-1">
                     <div className="flex items-start min-w-0 flex-1">
@@ -1802,6 +1788,14 @@ class DirectionsPanel extends Component {
                     </div>
                   </div>
                 ))}
+                <button
+                  type="button"
+                  className="cm-panel__footer-action"
+                  onClick={this.cancelDirectionsCalculation}
+                  aria-label="Cancelar cálculo de rota"
+                >
+                  Cancelar
+                </button>
               </div>
             )}
             {(directionsError || this.state.cityValidationError) && (
@@ -1818,8 +1812,8 @@ class DirectionsPanel extends Component {
               </div>
             )}
             {directions && !directionsLoading && (
-              <div id="directionsPanel--results" className="mt-2 md:mt-3">
-                {showResultsOnMobile && this.renderCalcOptions({ includeProvider: true })}
+              <div id="directionsPanel--results" className="cm-panel__results">
+                {showResultsOnMobile && this.renderCalcOptions()}
                 {this.renderResultOptions()}
                 {this.renderCoverageSourceSwitcher()}
                 <RoutesList
@@ -1832,21 +1826,18 @@ class DirectionsPanel extends Component {
                 />
 
                 {!IS_MOBILE && (
-                  <div className="mt-2 text-gray-500 hover:text-white text-xs flex flex-col">
-                    <div
-                      className="cursor-pointer flex items-center mb-0"
-                      onClick={() =>
-                        this.props.openLayersLegendModal &&
-                        this.props.openLayersLegendModal('routes-section')
-                      }
-                    >
-                      <IconInfoCircle className="mr-1" />
-                      <span>Leia mais sobre os níveis de proteção das rotas</span>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    className="cm-panel__footer-action"
+                    onClick={() =>
+                      this.props.openLayersLegendModal &&
+                      this.props.openLayersLegendModal('routes-section')
+                    }
+                  >
+                    <IconInfoCircle aria-hidden />
+                    Leia mais sobre os níveis de proteção das rotas
+                  </button>
                 )}
-                {this.renderHideRouteOverlayToggle()}
-                {this.renderSegmentedRoutePaintToggle()}
               </div>
             )}
           </div>
@@ -1888,6 +1879,8 @@ const DirectionsPanelWrapper = React.forwardRef((props, ref) => {
       setMaxRoutesShown={directionsContext.setMaxRoutesShown}
       visibleRouteIndices={directionsContext.visibleRouteIndices}
       setVisibleRouteIndices={directionsContext.setVisibleRouteIndices}
+      mapPmtilesPocRegion={directionsContext.mapPmtilesPocRegion}
+      routingProvider={directionsContext.routingProvider}
       geoJson={props.geoJson}
       layers={props.layers}
     />

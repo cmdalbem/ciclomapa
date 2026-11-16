@@ -2,12 +2,13 @@ import React, { useId, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import { ROUTE_ASCEND_WARNING_M } from '../../../config/constants.js';
+import { useDirections } from '../../../contexts/DirectionsContext';
 import { formatDistance, formatDuration } from '../../../utils/routeUtils.js';
 import { LuBike as IconBike } from 'react-icons/lu';
 
 const nullableNumber = PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]);
 
-function ElevationSparkline({ samples, scoreWidth, width = 320, height = 48 }) {
+function ElevationSparkline({ samples, coordinates, onHoverLngLat, width = 320, height = 48 }) {
   const gradId = useId().replace(/:/g, '');
   const [hover, setHover] = useState(null);
   if (!samples || samples.length < 2) return null;
@@ -26,9 +27,9 @@ function ElevationSparkline({ samples, scoreWidth, width = 320, height = 48 }) {
   const min = Math.min(...plotted);
   const max = Math.max(...plotted);
   const span = max - min || 1;
-  const padX = 2;
-  const padTop = 8;
-  const padBottom = 3;
+  const padX = 0;
+  const padTop = 10;
+  const padBottom = 5;
   const innerH = height - padTop - padBottom;
   const coords = plotted.map((ele, i) => {
     const x = padX + (i / (plotted.length - 1)) * (width - padX * 2);
@@ -40,6 +41,11 @@ function ElevationSparkline({ samples, scoreWidth, width = 320, height = 48 }) {
   const first = coords[0];
   const area = `${line} L ${last[0].toFixed(1)} ${height} L ${first[0].toFixed(1)} ${height} Z`;
 
+  const clearHover = () => {
+    setHover(null);
+    onHoverLngLat?.(null);
+  };
+
   const handleMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     if (rect.width <= 0) return;
@@ -49,63 +55,69 @@ function ElevationSparkline({ samples, scoreWidth, width = 320, height = 48 }) {
     if (elev == null || Number.isNaN(elev)) return;
     const yRatio = padTop / height + (1 - (elev - min) / span) * (innerH / height);
     setHover({ t, elev, yRatio });
+
+    if (coordinates?.length >= 2 && onHoverLngLat) {
+      const cIdx = Math.round(t * (coordinates.length - 1));
+      const c = coordinates[cIdx];
+      if (c && Number.isFinite(c[0]) && Number.isFinite(c[1])) {
+        onHoverLngLat([c[0], c[1]]);
+      }
+    }
   };
 
-  const minLabel = Math.round(min);
-  const maxLabel = Math.round(max);
-
   return (
-    <div className="cm-route-elev__frame">
-      <div className="cm-route-elev__yaxis" aria-hidden="true">
-        <span className="cm-route-elev__yaxis-val">{maxLabel} m</span>
-        <span className="cm-route-elev__yaxis-sizer">{scoreWidth ?? '00'}</span>
-        {maxLabel !== minLabel ? (
-          <span className="cm-route-elev__yaxis-val">{minLabel} m</span>
-        ) : (
-          <span className="cm-route-elev__yaxis-val" />
-        )}
-      </div>
-      <div
-        className="cm-route-elev__hit"
-        onMouseMove={handleMove}
-        onMouseLeave={() => setHover(null)}
-        onClick={(e) => e.stopPropagation()}
+    <div
+      className="cm-route-elev__hit"
+      onMouseMove={handleMove}
+      onMouseLeave={clearHover}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <svg
+        className="cm-route-elev__chart"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        aria-hidden="true"
       >
-        <svg
-          className="cm-route-elev__chart"
-          viewBox={`0 0 ${width} ${height}`}
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <defs>
-            <linearGradient id={`cm-elev-fill-${gradId}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" className="cm-route-elev__grad-top" />
-              <stop offset="100%" className="cm-route-elev__grad-bottom" />
-            </linearGradient>
-          </defs>
-          <path className="cm-route-elev__fill" d={area} fill={`url(#cm-elev-fill-${gradId})`} />
-          <path className="cm-route-elev__line" d={line} />
-        </svg>
-        {hover ? (
-          <>
-            <div className="cm-route-elev__scrub" style={{ left: `${hover.t * 100}%` }} />
-            <div
-              className="cm-route-elev__dot"
-              style={{ left: `${hover.t * 100}%`, top: `${hover.yRatio * 100}%` }}
-            />
-            <div className="cm-route-elev__tip" style={{ left: `${hover.t * 100}%` }}>
-              {Math.round(hover.elev)} m
-            </div>
-          </>
-        ) : null}
-      </div>
+        <defs>
+          <linearGradient id={`cm-elev-fill-${gradId}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" className="cm-route-elev__grad-top" />
+            <stop offset="100%" className="cm-route-elev__grad-bottom" />
+          </linearGradient>
+        </defs>
+        <path className="cm-route-elev__fill" d={area} fill={`url(#cm-elev-fill-${gradId})`} />
+        <path className="cm-route-elev__line" d={line} />
+      </svg>
+      {hover ? (
+        <>
+          <div className="cm-route-elev__scrub" style={{ left: `${hover.t * 100}%` }} />
+          <div
+            className="cm-route-elev__dot"
+            style={{ left: `${hover.t * 100}%`, top: `${hover.yRatio * 100}%` }}
+          />
+          <div
+            className="cm-route-elev__tip"
+            style={{
+              left: `${hover.t * 100}%`,
+              transform:
+                hover.t < 0.08
+                  ? 'translate(0, -110%)'
+                  : hover.t > 0.92
+                    ? 'translate(-100%, -110%)'
+                    : 'translate(-50%, -110%)',
+            }}
+          >
+            {Math.round(hover.elev)} m
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
 
 ElevationSparkline.propTypes = {
   samples: PropTypes.arrayOf(PropTypes.number),
-  scoreWidth: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  coordinates: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.number)),
+  onHoverLngLat: PropTypes.func,
   width: PropTypes.number,
   height: PropTypes.number,
 };
@@ -127,6 +139,8 @@ export default function RoutesList({
   onRouteLeave,
   onRouteClick,
 }) {
+  const { setElevationHoverLngLat } = useDirections();
+
   return (
     <div className="space-y-2">
       {routes.map((route, index) => {
@@ -137,9 +151,9 @@ export default function RoutesList({
         return (
           <div
             key={index}
-            className={`rounded-lg p-2 md:p-3 -m-2 cursor-pointer transition-colors ${
-              isSelected ? 'bg-black bg-opacity-70' : ''
-            } ${hoveredRouteIndex === originalIndex ? 'bg-black bg-opacity-40 opacity-100' : ''}`}
+            className={`cm-route-option rounded-lg p-2 md:p-3 -m-2 cursor-pointer${
+              isSelected ? ' cm-route-option--selected' : ''
+            }${hoveredRouteIndex === originalIndex ? ' cm-route-option--hover' : ''}`}
             onMouseEnter={() => onRouteHover(originalIndex)}
             onMouseLeave={onRouteLeave}
             onClick={() => onRouteClick(originalIndex)}
@@ -183,29 +197,40 @@ export default function RoutesList({
                   {formatDuration(route.duration)}
                 </span>
                 <span className="md:text-sm text-xs text-gray-400 text-right">
-                  {route.ascend != null ? (
-                    <>
-                      <span
-                        className={
-                          route.ascend >= ROUTE_ASCEND_WARNING_M
-                            ? 'cm-route-ascend--warn'
-                            : undefined
-                        }
-                      >
-                        ↑ {Math.round(route.ascend)} m
-                      </span>
-                      {' · '}
-                    </>
-                  ) : null}
+                  {(() => {
+                    let climb = route.ascend;
+                    if (
+                      (climb == null || !Number.isFinite(climb)) &&
+                      route.elevationProfile?.length >= 2
+                    ) {
+                      climb = 0;
+                      for (let i = 1; i < route.elevationProfile.length; i++) {
+                        const step = route.elevationProfile[i] - route.elevationProfile[i - 1];
+                        if (step > 0) climb += step;
+                      }
+                    }
+                    if (climb == null || !Number.isFinite(climb)) return null;
+                    const meters = Math.round(Math.abs(climb));
+                    const warnClimb = meters >= ROUTE_ASCEND_WARNING_M;
+                    return (
+                      <>
+                        <span className={warnClimb ? 'cm-route-ascend--warn' : undefined}>
+                          ↑ {meters} m
+                        </span>
+                        {' · '}
+                      </>
+                    );
+                  })()}
                   {formatDistance(route.distance)}
                 </span>
               </div>
             </div>
             {showElevation ? (
-              <div className="cm-route-elev mt-1.5">
+              <div className="cm-route-elev">
                 <ElevationSparkline
                   samples={route.elevationProfile}
-                  scoreWidth={route.score != null ? route.score : '00'}
+                  coordinates={route.geometry?.coordinates}
+                  onHoverLngLat={setElevationHoverLngLat}
                 />
               </div>
             ) : null}
