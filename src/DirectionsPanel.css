@@ -724,6 +724,18 @@ body.theme-light {
     display: none;
   }
 
+  #directionsPanel .cm-route-option {
+    margin-left: 0;
+    margin-right: 0;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  #directionsPanel .cm-route-elev {
+    margin: 8px -10px -8px;
+  }
+
   #directionsPanel .ant-input-affix-wrapper {
     height: calc(var(--spacing-panel) + var(--font-size-xl));
     font-size: var(--font-size-xs);

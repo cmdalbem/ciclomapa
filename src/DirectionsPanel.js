@@ -1834,7 +1834,6 @@ class DirectionsPanel extends Component {
             )}
             {directions && !directionsLoading && (
               <div id="directionsPanel--results" className="cm-panel__results">
-                {showResultsOnMobile && this.renderCalcOptions()}
                 {this.renderResultOptions()}
                 {this.renderCoverageSourceSwitcher()}
                 <RoutesList
