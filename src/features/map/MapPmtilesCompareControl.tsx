@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Segmented, Select, Slider } from 'antd';
 import {
+  HiOutlineAdjustmentsHorizontal as HiOutlineAdjustmentsHorizontalIcon,
+  HiOutlineXMark as HiOutlineXMarkIcon,
+} from 'react-icons/hi2';
+import {
   useDirections,
   type MapPmtilesKind,
   type MapPmtilesPocRegion,
@@ -13,6 +17,11 @@ import {
 } from '../../config/constants';
 import { getDirectionsProviderOptions } from '../../utils/routeUtils.js';
 import './MapPmtilesCompareControl.css';
+
+const IconPoc = HiOutlineAdjustmentsHorizontalIcon as unknown as React.FC<
+  React.SVGProps<SVGElement>
+>;
+const IconClose = HiOutlineXMarkIcon as unknown as React.FC<React.SVGProps<SVGElement>>;
 
 function isTypingTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
@@ -53,6 +62,7 @@ export default function MapPmtilesCompareControl({ onJumpToCitySlug }: Props) {
     setBrouterAltMaxShare,
   } = useDirections();
 
+  const [hidden, setHidden] = useState(false);
   const [shareDraft, setShareDraft] = useState(brouterAltMaxShare);
   useEffect(() => {
     setShareDraft(brouterAltMaxShare);
@@ -98,6 +108,20 @@ export default function MapPmtilesCompareControl({ onJumpToCitySlug }: Props) {
     }
   };
 
+  if (hidden) {
+    return (
+      <button
+        type="button"
+        className="cm-map-pmtiles-compare__trigger"
+        onClick={() => setHidden(false)}
+        title="Abrir painel PoC"
+        aria-label="Abrir painel PoC"
+      >
+        <IconPoc aria-hidden />
+      </button>
+    );
+  }
+
   return (
     <div className="cm-map-pmtiles-compare glass-bg">
       <div
@@ -116,6 +140,15 @@ export default function MapPmtilesCompareControl({ onJumpToCitySlug }: Props) {
           }))}
           className="cm-map-pmtiles-compare__segmented"
         />
+        <button
+          type="button"
+          className="cm-map-pmtiles-compare__close"
+          onClick={() => setHidden(true)}
+          title="Fechar painel PoC"
+          aria-label="Fechar painel PoC"
+        >
+          <IconClose aria-hidden />
+        </button>
       </div>
       {hasDistinctTileVariants ? (
         <div
