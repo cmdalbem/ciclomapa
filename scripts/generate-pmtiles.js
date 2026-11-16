@@ -13,6 +13,7 @@
  *   --include-layers    Comma-separated list of layer names to include
  *   --exclude-layers    Comma-separated list of layer names to exclude
  *   --include-poi       Include POI (Point of Interest) layers
+ *   --maximum-zoom <n>  Tippecanoe max zoom (default: 13). Use 15+ for analysis archives.
  *   --skip-geojson      Skip GeoJSON generation if files already exist
  *   --skip-existing-geojsons   Alias for --skip-geojson
  *   --cleanup           Remove GeoJSON files after PMtiles generation
@@ -112,6 +113,7 @@ function parseArgs() {
     includeLayers: null,
     excludeLayers: null,
     includePoi: false,
+    maximumZoom: null,
     skipGeoJSON: false,
     cleanup: false,
   };
@@ -141,6 +143,8 @@ function parseArgs() {
         .filter(Boolean);
     } else if (arg === '--include-poi') {
       config.includePoi = true;
+    } else if (arg === '--maximum-zoom' && i + 1 < args.length) {
+      config.maximumZoom = args[++i];
     } else if (arg === '--skip-geojson') {
       config.skipGeoJSON = true;
     } else if (arg === '--skip-existing-geojsons') {
@@ -161,6 +165,7 @@ Options:
   --include-layers    Comma-separated list of layer names to include (whitelist)
   --exclude-layers    Comma-separated list of layer names to exclude
   --include-poi       Include POI (Point of Interest) layers
+  --maximum-zoom <n>  Tippecanoe max zoom (default: 13). Use 15+ for analysis (no tile size limits).
   --skip-geojson      Skip GeoJSON generation if files already exist
   --skip-existing-geojsons   Alias for --skip-geojson
   --cleanup           Remove GeoJSON files after PMtiles generation
@@ -169,6 +174,7 @@ Options:
 Examples:
   node scripts/generate-pmtiles.js "Brazil" "Spain"
   node scripts/generate-pmtiles.js --areas "Brazil,Spain" --output world.pmtiles
+  node scripts/generate-pmtiles.js "Barcelona" --maximum-zoom 15 --output barcelona-analysis.pmtiles
   node scripts/generate-pmtiles.js "Brazil" "Spain" --cleanup
 
 Aliases:
@@ -299,7 +305,7 @@ async function resolveIncludedLayerNames(config) {
 }
 
 // Run tippecanoe to generate PMtiles
-async function generatePMtiles(geojsonFiles, outputPath, includedLayerNames) {
+async function generatePMtiles(geojsonFiles, outputPath, includedLayerNames, options = {}) {
   return new Promise((resolve, reject) => {
     // Check if tippecanoe is available
     checkTippecanoe().then((available) => {
@@ -308,23 +314,40 @@ async function generatePMtiles(geojsonFiles, outputPath, includedLayerNames) {
         return;
       }
 
+      // Display default is z13 (tippecanoe -zg was guessing ~11–12 for country bundles).
+      // Analysis builds pass 15+ and get unlimited tile size below.
+      const maximumZoom =
+        options.maximumZoom != null && String(options.maximumZoom).length > 0
+          ? String(options.maximumZoom)
+          : '13';
+      const analysisDetail = maximumZoom !== 'g' && Number(maximumZoom) >= 15;
+
       console.log(`\n🗺️  Generating PMtiles from ${geojsonFiles.length} GeoJSON file(s)...`);
       console.log(`   Files: ${geojsonFiles.map((f) => path.basename(f)).join(', ')}`);
       console.log(`   Layers: ${includedLayerNames.join(', ')}`);
+      console.log(
+        `   Max zoom: ${maximumZoom}${analysisDetail ? ' (analysis / no tile size limit)' : ''}`
+      );
 
       const args = [
         '-o',
         outputPath,
         '--force',
-        '--maximum-zoom=g',
+        `--maximum-zoom=${maximumZoom}`,
         '--generate-ids',
         '-l',
         'default',
         // Stored in the archive's JSON metadata `description`; the app parses it.
         '--description',
         JSON.stringify({ ciclomapa: { layers: includedLayerNames } }),
-        ...geojsonFiles,
       ];
+
+      // Analysis builds only: keep geometry, don't drop/simplify away to fit tile size.
+      if (analysisDetail) {
+        args.push('--no-tile-size-limit', '--no-feature-limit');
+      }
+
+      args.push(...geojsonFiles);
 
       const commandPreview = ['tippecanoe', ...args].map(shellQuote).join(' ');
       console.log(`   Command: ${commandPreview}`);
@@ -515,7 +538,9 @@ async function main() {
     await assertGeoJSONLayerStampMatches(existingFiles, includedLayerNames);
 
     // Generate PMtiles
-    await generatePMtiles(geojsonFiles, config.output, includedLayerNames);
+    await generatePMtiles(geojsonFiles, config.output, includedLayerNames, {
+      maximumZoom: config.maximumZoom,
+    });
 
     // Cleanup GeoJSON files if requested
     if (config.cleanup) {

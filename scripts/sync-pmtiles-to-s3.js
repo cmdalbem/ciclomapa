@@ -485,6 +485,9 @@ async function runGeneratePMtiles(build, localOutputPath, options) {
   if (Array.isArray(build.excludeLayers) && build.excludeLayers.length > 0) {
     args.push('--exclude-layers', build.excludeLayers.join(','));
   }
+  if (build.maximumZoom != null && build.maximumZoom !== '') {
+    args.push('--maximum-zoom', String(build.maximumZoom));
+  }
 
   const buildDir = workDirForBuild(build);
   await fsp.mkdir(buildDir, { recursive: true });
@@ -577,6 +580,9 @@ async function main() {
       console.log(`    output: ${build.output}`);
       console.log(`    areas:  ${build.areas.join(', ')}`);
       console.log(`    POIs:   ${build.includePoi !== false ? 'included' : 'excluded'}`);
+      if (build.maximumZoom != null) {
+        console.log(`    maxZoom: ${build.maximumZoom}`);
+      }
       if (Array.isArray(build.excludeLayers) && build.excludeLayers.length > 0) {
         console.log(`    exclude: ${build.excludeLayers.join(', ')}`);
       }
