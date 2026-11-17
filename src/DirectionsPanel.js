@@ -102,6 +102,7 @@ class DirectionsPanel extends Component {
     // Monotonic id; lets us discard a slow geolocation response if the user
     // typed in the origin field or selected something in the meantime.
     this.geolocationRequestId = 0;
+    this.markerGeocodeSeq = { from: 0, to: 0 };
     this.placesSearchSeq = 0;
     // Same idea for in-flight route calc: cancel bumps this and aborts fetches.
     this.directionsRequestId = 0;
@@ -446,6 +447,7 @@ class DirectionsPanel extends Component {
     if (this.state.geolocatingInput === inputType) {
       this.cancelActiveGeolocation();
     }
+    this.markerGeocodeSeq[inputType] += 1;
 
     if (this.blurTimeout) {
       clearTimeout(this.blurTimeout);
@@ -1094,7 +1096,12 @@ class DirectionsPanel extends Component {
       this.props.onToPointChange(newPoint);
     }
 
-    this.reverseGeocode(coordinates, type, false, null, { keepDroppedCenter: true });
+    this.markerGeocodeSeq[type] += 1;
+    const seq = this.markerGeocodeSeq[type];
+    this.reverseGeocode(coordinates, type, false, null, {
+      keepDroppedCenter: true,
+      isStale: () => this.markerGeocodeSeq[type] !== seq,
+    });
   }
 
   async reverseGeocode(
@@ -1102,14 +1109,16 @@ class DirectionsPanel extends Component {
     type,
     isAutoTriggered = false,
     requestId = null,
-    { simplifyAddress = false, keepDroppedCenter = false } = {}
+    { simplifyAddress = false, keepDroppedCenter = false, isStale } = {}
   ) {
     if (!coordinates) return;
 
     const lngLat = [coordinates.lng, coordinates.lat];
     console.debug(`Reverse geocoding for ${type} point:`, lngLat);
 
-    const isCancelled = () => requestId !== null && this.isStaleGeolocationRequest(requestId);
+    const isCancelled = () =>
+      (typeof isStale === 'function' && isStale()) ||
+      (requestId !== null && this.isStaleGeolocationRequest(requestId));
 
     try {
       await ensureGooglePlacesReady();
