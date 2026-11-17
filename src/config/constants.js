@@ -75,12 +75,14 @@ export const IS_PROD = window.location.hostname === 'ciclomapa.app';
 
 // Settings
 
-export const HYBRID_MAX_RESULTS_DESKTOP = 5;
-export const HYBRID_MAX_RESULTS_MOBILE = 3;
-export const HYBRID_MAX_RESULTS = IS_MOBILE
-  ? HYBRID_MAX_RESULTS_MOBILE
-  : HYBRID_MAX_RESULTS_DESKTOP;
+export const DIRECTIONS_MAX_RESULTS_DESKTOP = 5;
+export const DIRECTIONS_MAX_RESULTS_MOBILE = 3;
+export const DIRECTIONS_MAX_RESULTS = IS_MOBILE
+  ? DIRECTIONS_MAX_RESULTS_MOBILE
+  : DIRECTIONS_MAX_RESULTS_DESKTOP;
 export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
+/** Total climb (m) at/above which route cards tint ↑ elevation as a soft warning. */
+export const ROUTE_ASCEND_WARNING_M = 100;
 
 /**
  * Route score weights by infrastructure type (keys match `coverageByType` labels where
@@ -199,12 +201,36 @@ export const INTERACTIVE_LAYERS_ZOOM_THRESHOLD = 15;
 export const COMMENTS_ZOOM_THRESHOLD = 13;
 export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 12;
 
-// The map has no GeoJSON fallback anymore, so this must be a build that includes POIs.
+export const PMTILES_COMPARE_KIND = {
+  z13: 'z13',
+};
+export const MAP_PMTILES_COMPARE_KINDS = [PMTILES_COMPARE_KIND.z13];
+
 const DEFAULT_PMTILES_FILENAME = 'brazil-poi.pmtiles';
 export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAULT_PMTILES_FILENAME;
+
+export function filenameForMapPmtilesKind() {
+  return PMTILES_FILENAME;
+}
+
+export const PMTILES_POC_REGION = { off: 'off' };
+
+export function filenamesForPmtilesPocRegion() {
+  return { z13: PMTILES_FILENAME };
+}
 /** Mapbox source id for the PMTiles archive, and the single source-layer tippecanoe writes (`-l default`). */
 export const PMTILES_SOURCE_ID = 'pmtiles-source';
 export const PMTILES_SOURCE_LAYER = 'default';
+
+/** Per-compare-kind vector source id (all stay loaded; toggles only flip layer visibility). */
+export function pmtilesSourceIdForKind(kind) {
+  return `${PMTILES_SOURCE_ID}--${kind}`;
+}
+
+/** Layer id suffix for a compare kind, e.g. `--pmtiles--z13`. */
+export function pmtilesLayerSuffixForKind(kind) {
+  return `--pmtiles--${kind}`;
+}
 
 /*
  * Debug & local development
@@ -256,15 +282,10 @@ export const PMTILES_FALLBACK_MISSING_LAYER_NAMES = new Set([
 /** Legend / layers panel grouping for the non-cycleway street layers. */
 export const OUTRAS_VIAS_LAYER_NAMES = new Set(['Baixa velocidade', 'Trilha', 'Proibido']);
 
-// Providers
-
-export const OPENROUTESERVICE_API_KEY = process.env.REACT_APP_OPENROUTESERVICE_API_KEY;
-export const OPENROUTESERVICE_BASE_URL = 'https://api.openrouteservice.org/v2/directions';
-
-export const GRAPHHOPPER_API_KEY = process.env.REACT_APP_GRAPHHOPPER_API_KEY;
-export const GRAPHHOPPER_BASE_URL = 'https://graphhopper.com/api/1/route';
-
-export const VALHALLA_BASE_URL = 'https://valhalla1.openstreetmap.de/route';
+export const BROUTER_BASE_URL =
+  process.env.REACT_APP_BROUTER_BASE_URL || 'https://brouter.ciclomapa.app';
+/** Drop a BRouter alt if this fraction of its ~100m cells already sits on a kept route. 1 = keep all. */
+export const BROUTER_ALT_MAX_SHARE_DEFAULT = 0.65;
 
 /*
  * Mapbox

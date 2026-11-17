@@ -6,7 +6,17 @@ import skmeans from 'skmeans';
 import turfLength from '@turf/length';
 import turfDistance from '@turf/distance';
 import turfLineOverlap from '@turf/line-overlap';
+import nearestPointOnLine from '@turf/nearest-point-on-line';
 import { IS_MOBILE, LENGTH_COUNTED_LAYER_IDS } from '../config/constants.js';
+
+/** Lateral search radius for nearest-cyclepath coverage (~8 m). */
+export const COVERAGE_MAX_LATERAL_KM = 0.008;
+/** Max absolute heading difference (also treats opposite as aligned). */
+export const COVERAGE_MAX_HEADING_DEG = 35;
+/** Sample spacing along the route when attributing coverage. */
+export const COVERAGE_SAMPLE_STEP_KM = 0.012;
+/** Original city-GeoJSON matcher: turf lineOverlap tolerance (~1 m). */
+export const COVERAGE_OVERLAP_TOLERANCE_KM = 0.001;
 
 // 0 = all segments have exactly the same angle
 const MIN_AVG_ANGLE_TRESHOLD = 20;
@@ -101,8 +111,7 @@ export function computeTypologies(data, layers) {
             });
 
             if (
-              (typeof filter[0] === 'object' && partsToMatch[0] && partsToMatch[1]) ||
-              partsToMatch[0]
+              typeof filter[0] === 'object' ? partsToMatch[0] && partsToMatch[1] : partsToMatch[0]
             ) {
               match = true;
 
@@ -465,14 +474,215 @@ export function calculateLayersLengths(geoJson, layers, strategy) {
   return lengths;
 }
 
+/** Smallest angle between two headings, treating opposite directions as aligned. */
+function alignedHeadingDiffDeg(a, b) {
+  let d = Math.abs(a - b) % 360;
+  if (d > 180) d = 360 - d;
+  return Math.min(d, 180 - d);
+}
+
+function lineStringBbox(coords) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const c of coords) {
+    if (c[0] < minX) minX = c[0];
+    if (c[1] < minY) minY = c[1];
+    if (c[0] > maxX) maxX = c[0];
+    if (c[1] > maxY) maxY = c[1];
+  }
+  return [minX, minY, maxX, maxY];
+}
+
 /**
- * Calculate the percentage of a route that is covered by cyclepaths
- * @param {Object} route - GeoJSON LineString representing the route
- * @param {Object} geoJson - GeoJSON FeatureCollection containing all cyclepath data
- * @param {Array} layers - Array of layer definitions from layers.json
- * @returns {Object} - { coverage: number, coverageByType: Object, overlappingCyclepaths: Array }
+ * Walk a LineString and emit sample points every `stepKm` along its length.
+ * Each sample carries the local segment bearing for heading checks.
  */
-export function calculateCyclepathCoverage(route, geoJson, layers) {
+function sampleLineString(coords, stepKm) {
+  const samples = [];
+  let cum = 0;
+  let nextAt = 0;
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const a = coords[i];
+    const b = coords[i + 1];
+    const segLen = turfDistance(a, b, { units: 'kilometers' });
+    if (segLen < 1e-12) continue;
+    const bearing = angleBetweenPoints(a, b);
+
+    while (nextAt <= cum + segLen + 1e-12) {
+      const t = Math.min(1, Math.max(0, (nextAt - cum) / segLen));
+      samples.push({
+        coordinates: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t],
+        bearing,
+        along: nextAt,
+      });
+      nextAt += stepKm;
+    }
+    cum += segLen;
+  }
+
+  return { samples, routeLength: cum };
+}
+
+export const ROUTE_PAINT_STREET_TYPE = 'street';
+
+function emptyCoverageResult() {
+  return {
+    coverage: 0,
+    coverageByType: {},
+    overlappingCyclepaths: [],
+    routePaintSegments: [],
+  };
+}
+
+function makePaintSegmentFeature(type, coords, lengthKm, index) {
+  return {
+    type: 'Feature',
+    geometry: { type: 'LineString', coordinates: coords },
+    properties: {
+      debug_cyclepath_name: type,
+      debug_cyclepath_type: type,
+      debug_segment_index: index,
+      debug_segment_length_km: lengthKm,
+    },
+  };
+}
+
+function filterCyclepathLineStrings(geoJson, layers) {
+  const cyclepathLayerNames = layers
+    .filter((layer) => LENGTH_COUNTED_LAYER_IDS.includes(layer.id))
+    .map((layer) => layer.name);
+
+  if (cyclepathLayerNames.length === 0) {
+    console.error('No cyclepath layer names found');
+    return { cyclepathLayerNames: [], cyclepathFeatures: [] };
+  }
+
+  const cyclepathFeatures = (geoJson?.features || []).filter(
+    (feature) =>
+      feature.properties?.type &&
+      cyclepathLayerNames.includes(feature.properties.type) &&
+      feature.geometry?.type === 'LineString' &&
+      feature.geometry.coordinates?.length >= 2
+  );
+
+  return { cyclepathLayerNames, cyclepathFeatures };
+}
+
+function coveragePercentages(lengthByType, routeLength) {
+  const coverageByTypePercentages = {};
+  Object.keys(lengthByType).forEach((type) => {
+    coverageByTypePercentages[type] = Math.min(
+      Math.max((lengthByType[type] / routeLength) * 100, 0),
+      100
+    );
+  });
+  return coverageByTypePercentages;
+}
+
+/**
+ * Original coverage matcher: sum every turf lineOverlap against the route.
+ * Can double-count parallel lanes that both fall within `tolerance`.
+ * Kept for A/B compare against the nearest-only matcher.
+ */
+export function calculateCyclepathCoverageByOverlap(
+  route,
+  geoJson,
+  layers,
+  { tolerance = COVERAGE_OVERLAP_TOLERANCE_KM } = {}
+) {
+  if (!route || !geoJson || !layers) {
+    console.error('Missing data for cyclepath coverage calculation:', {
+      route: !!route,
+      geoJson: !!geoJson,
+      layers: !!layers,
+    });
+    return emptyCoverageResult();
+  }
+
+  const { cyclepathLayerNames, cyclepathFeatures } = filterCyclepathLineStrings(geoJson, layers);
+  if (cyclepathLayerNames.length === 0) return emptyCoverageResult();
+  if (cyclepathFeatures.length === 0) {
+    console.error('No cyclepath features found after filtering');
+    return emptyCoverageResult();
+  }
+
+  const coverageByType = {};
+  cyclepathLayerNames.forEach((layerName) => {
+    coverageByType[layerName] = 0;
+  });
+
+  const routeLength = turfLength(route, { units: 'kilometers' });
+  if (routeLength === 0) return emptyCoverageResult();
+
+  let totalOverlapLength = 0;
+  const overlapSegments = [];
+
+  cyclepathFeatures.forEach((cyclepath, index) => {
+    try {
+      const overlap = turfLineOverlap(route, cyclepath, { tolerance });
+      if (!overlap?.features?.length) return;
+
+      overlap.features.forEach((segment, segIndex) => {
+        const segmentLength = turfLength(segment, { units: 'kilometers' });
+        totalOverlapLength += segmentLength;
+
+        const cyclepathType = cyclepath.properties.type;
+        if (coverageByType.hasOwnProperty(cyclepathType)) {
+          coverageByType[cyclepathType] += segmentLength;
+        }
+
+        overlapSegments.push({
+          ...segment,
+          properties: {
+            debug_cyclepath_index: index,
+            debug_cyclepath_name:
+              cyclepath.properties.name || cyclepath.properties.ref || 'Unnamed',
+            debug_cyclepath_type: cyclepath.properties.type,
+            debug_segment_index: segIndex,
+            debug_segment_length_km: segmentLength,
+          },
+        });
+      });
+    } catch (error) {
+      console.error('Error calculating overlap with cyclepath:', error);
+    }
+  });
+
+  return {
+    coverage: Math.min(Math.max((totalOverlapLength / routeLength) * 100, 0), 100),
+    coverageByType: coveragePercentages(coverageByType, routeLength),
+    overlappingCyclepaths: overlapSegments,
+  };
+}
+
+/**
+ * Coverage via nearest-only attribution: sample the route, pick the closest
+ * cyclepath within a moderate lateral radius whose heading roughly matches,
+ * and count that length once. Avoids double-counting parallel lanes that
+ * lineOverlap would both match under a wide tolerance.
+ *
+ * @param {Object} route - GeoJSON LineString geometry (or Feature)
+ * @param {Object} geoJson - GeoJSON FeatureCollection containing cyclepath data
+ * @param {Array} layers - Layer definitions from layers.json
+ * @param {Object} [options]
+ * @param {number} [options.maxLateralKm]
+ * @param {number} [options.maxHeadingDeg]
+ * @param {number} [options.sampleStepKm]
+ * @returns {Object} - { coverage, coverageByType, overlappingCyclepaths }
+ */
+export function calculateCyclepathCoverage(
+  route,
+  geoJson,
+  layers,
+  {
+    maxLateralKm = COVERAGE_MAX_LATERAL_KM,
+    maxHeadingDeg = COVERAGE_MAX_HEADING_DEG,
+    sampleStepKm = COVERAGE_SAMPLE_STEP_KM,
+  } = {}
+) {
   if (!route || !geoJson || !layers) {
     console.error('Missing data for cyclepath coverage calculation:', {
       route: !!route,
@@ -482,8 +692,11 @@ export function calculateCyclepathCoverage(route, geoJson, layers) {
     return { coverage: 0, coverageByType: {}, overlappingCyclepaths: [] };
   }
 
-  // Get cyclepath layer names from layers.json
-  // Only consider layers that are ACTUAL cycling infrastructure!
+  const routeCoords = route.type === 'Feature' ? route.geometry?.coordinates : route.coordinates;
+  if (!routeCoords || routeCoords.length < 2) {
+    return { coverage: 0, coverageByType: {}, overlappingCyclepaths: [] };
+  }
+
   const cyclepathLayerNames = layers
     .filter((layer) => LENGTH_COUNTED_LAYER_IDS.includes(layer.id))
     .map((layer) => layer.name);
@@ -493,75 +706,151 @@ export function calculateCyclepathCoverage(route, geoJson, layers) {
     return { coverage: 0, coverageByType: {}, overlappingCyclepaths: [] };
   }
 
-  // Filter cyclepath features from geoJson (data is already processed)
-  const cyclepathFeatures = geoJson.features.filter(
-    (feature) =>
-      feature.properties &&
-      feature.properties.type &&
-      cyclepathLayerNames.includes(feature.properties.type) &&
-      feature.geometry &&
-      feature.geometry.type === 'LineString'
-  );
+  // ~meters → degrees pad for bbox prefilter (generous; heading/distance do the real cut)
+  const padDeg = (maxLateralKm * 1000) / 80_000;
+  const cyclepathFeatures = [];
+  for (const feature of geoJson.features) {
+    if (
+      !feature.properties?.type ||
+      !cyclepathLayerNames.includes(feature.properties.type) ||
+      !feature.geometry ||
+      feature.geometry.type !== 'LineString' ||
+      !feature.geometry.coordinates?.length
+    ) {
+      continue;
+    }
+    cyclepathFeatures.push({
+      feature,
+      bbox: lineStringBbox(feature.geometry.coordinates),
+    });
+  }
 
   if (cyclepathFeatures.length === 0) {
     console.error('No cyclepath features found after filtering');
     return { coverage: 0, coverageByType: {}, overlappingCyclepaths: [] };
   }
 
-  let totalOverlapLength = 0;
-  const overlapSegments = [];
   const coverageByType = {};
-
-  // Initialize coverage tracking for each infrastructure type
   cyclepathLayerNames.forEach((layerName) => {
     coverageByType[layerName] = 0;
   });
 
-  // Calculate total route length
-  const routeLength = turfLength(route, { units: 'kilometers' });
-  if (routeLength === 0) {
+  const { samples, routeLength } = sampleLineString(routeCoords, sampleStepKm);
+  if (routeLength === 0 || samples.length === 0) {
     return { coverage: 0, coverageByType: {}, overlappingCyclepaths: [] };
   }
 
-  // Check overlap with each cyclepath
-  cyclepathFeatures.forEach((cyclepath, index) => {
-    try {
-      const overlap = turfLineOverlap(route, cyclepath, { tolerance: 0.001 });
+  let totalCoveredLength = 0;
+  const matched = []; // per-sample winner for building debug segments
 
-      if (overlap && overlap.features && overlap.features.length > 0) {
-        overlap.features.forEach((segment, segIndex) => {
-          const segmentLength = turfLength(segment, { units: 'kilometers' });
-          totalOverlapLength += segmentLength;
+  for (let s = 0; s < samples.length; s++) {
+    const sample = samples[s];
+    const nextAlong = s + 1 < samples.length ? samples[s + 1].along : routeLength;
+    const segmentLen = Math.max(0, nextAlong - sample.along);
+    const [lng, lat] = sample.coordinates;
+    const point = {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: sample.coordinates },
+      properties: {},
+    };
 
-          // Track coverage by infrastructure type
-          const cyclepathType = cyclepath.properties.type;
-          if (coverageByType.hasOwnProperty(cyclepathType)) {
-            coverageByType[cyclepathType] += segmentLength;
-          }
-
-          // Store overlap segment for debug visualization
-          overlapSegments.push({
-            ...segment,
-            properties: {
-              debug_cyclepath_index: index,
-              debug_cyclepath_name:
-                cyclepath.properties.name || cyclepath.properties.ref || 'Unnamed',
-              debug_cyclepath_type: cyclepath.properties.type,
-              debug_segment_index: segIndex,
-              debug_segment_length_km: segmentLength,
-            },
-          });
-        });
+    let best = null;
+    for (let ci = 0; ci < cyclepathFeatures.length; ci++) {
+      const { feature, bbox } = cyclepathFeatures[ci];
+      if (
+        lng < bbox[0] - padDeg ||
+        lng > bbox[2] + padDeg ||
+        lat < bbox[1] - padDeg ||
+        lat > bbox[3] + padDeg
+      ) {
+        continue;
       }
-    } catch (error) {
-      console.error('Error calculating overlap with cyclepath:', error);
+
+      let snapped;
+      try {
+        snapped = nearestPointOnLine(feature, point, { units: 'kilometers' });
+      } catch {
+        continue;
+      }
+      const dist = snapped?.properties?.dist;
+      if (dist == null || dist > maxLateralKm) continue;
+
+      const idx = Math.min(snapped.properties.index ?? 0, feature.geometry.coordinates.length - 2);
+      const cpBearing = angleBetweenPoints(
+        feature.geometry.coordinates[idx],
+        feature.geometry.coordinates[idx + 1]
+      );
+      if (alignedHeadingDiffDeg(sample.bearing, cpBearing) > maxHeadingDeg) continue;
+
+      if (!best || dist < best.dist) {
+        best = { dist, feature, index: ci, snapped };
+      }
     }
-  });
 
-  // Calculate coverage percentages
-  const coveragePercentage = (totalOverlapLength / routeLength) * 100;
+    const endCoords =
+      s + 1 < samples.length ? samples[s + 1].coordinates : routeCoords[routeCoords.length - 1];
 
-  // Convert coverage by type to percentages
+    if (best && segmentLen > 0) {
+      totalCoveredLength += segmentLen;
+      const cyclepathType = best.feature.properties.type;
+      if (coverageByType.hasOwnProperty(cyclepathType)) {
+        coverageByType[cyclepathType] += segmentLen;
+      }
+      matched.push({
+        startCoords: sample.coordinates,
+        endCoords,
+        segmentLen,
+        cyclepathIndex: best.index,
+        cyclepath: best.feature,
+      });
+    } else {
+      matched.push(null);
+    }
+  }
+
+  // Stitch consecutive samples that hit the same cyclepath into debug LineStrings
+  const overlapSegments = [];
+  let run = null;
+  const flushRun = () => {
+    if (!run || run.coords.length < 2) {
+      run = null;
+      return;
+    }
+    overlapSegments.push({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: run.coords },
+      properties: {
+        debug_cyclepath_index: run.cyclepathIndex,
+        debug_cyclepath_name:
+          run.cyclepath.properties.name || run.cyclepath.properties.ref || 'Unnamed',
+        debug_cyclepath_type: run.cyclepath.properties.type,
+        debug_segment_index: overlapSegments.length,
+        debug_segment_length_km: run.lengthKm,
+      },
+    });
+    run = null;
+  };
+
+  for (const hit of matched) {
+    if (!hit) {
+      flushRun();
+      continue;
+    }
+    if (!run || run.cyclepathIndex !== hit.cyclepathIndex) {
+      flushRun();
+      run = {
+        cyclepathIndex: hit.cyclepathIndex,
+        cyclepath: hit.cyclepath,
+        coords: [hit.startCoords, hit.endCoords],
+        lengthKm: hit.segmentLen,
+      };
+    } else {
+      run.coords.push(hit.endCoords);
+      run.lengthKm += hit.segmentLen;
+    }
+  }
+  flushRun();
+
   const coverageByTypePercentages = {};
   Object.keys(coverageByType).forEach((type) => {
     coverageByTypePercentages[type] = Math.min(
@@ -571,8 +860,267 @@ export function calculateCyclepathCoverage(route, geoJson, layers) {
   });
 
   return {
-    coverage: Math.min(Math.max(coveragePercentage, 0), 100), // Clamp between 0 and 100
+    coverage: Math.min(Math.max((totalCoveredLength / routeLength) * 100, 0), 100),
     coverageByType: coverageByTypePercentages,
-    overlappingCyclepaths: overlapSegments, // Return the overlap segments instead of full cyclepaths
+    overlappingCyclepaths: overlapSegments,
+  };
+}
+
+/** GraphHopper details intervals: [fromIndex, toIndex) into the route coordinates. */
+function detailValueAt(intervals, index) {
+  if (!Array.isArray(intervals)) return null;
+  for (const entry of intervals) {
+    if (!Array.isArray(entry) || entry.length < 3) continue;
+    const [from, to, value] = entry;
+    if (index >= from && index < to) return value;
+  }
+  return null;
+}
+
+function typologyFromGhDetails(roadClass, bikeNetwork) {
+  const rc = String(roadClass || '').toLowerCase();
+  const net = String(bikeNetwork || '').toLowerCase();
+  if (rc === 'cycleway') return 'Ciclovia';
+  if (net && net !== 'missing' && net !== 'other') return 'Ciclorrota';
+  return null;
+}
+
+/**
+ * Coverage from GraphHopper path details (no geometric snap).
+ * Stock GH only distinguishes dedicated cycleway vs signed bike network.
+ */
+export function calculateCyclepathCoverageFromPathDetails(route, pathDetails, layers) {
+  const coords = route?.type === 'Feature' ? route.geometry?.coordinates : route?.coordinates;
+  if (!coords || coords.length < 2 || !pathDetails || !layers) {
+    return emptyCoverageResult();
+  }
+
+  const { cyclepathLayerNames } = filterCyclepathLineStrings({ features: [] }, layers);
+  const coverageByType = {};
+  cyclepathLayerNames.forEach((name) => {
+    coverageByType[name] = 0;
+  });
+
+  const routeLength = turfLength(
+    { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} },
+    { units: 'kilometers' }
+  );
+  if (routeLength === 0) return emptyCoverageResult();
+
+  const roadClass = pathDetails.road_class;
+  const bikeNetwork = pathDetails.bike_network;
+  let totalCovered = 0;
+  const paintSegments = [];
+  let run = null;
+
+  const flush = () => {
+    if (!run || run.coords.length < 2) {
+      run = null;
+      return;
+    }
+    paintSegments.push(
+      makePaintSegmentFeature(run.type, run.coords, run.lengthKm, paintSegments.length)
+    );
+    run = null;
+  };
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const infraType = typologyFromGhDetails(
+      detailValueAt(roadClass, i),
+      detailValueAt(bikeNetwork, i)
+    );
+    const segLen = turfDistance(coords[i], coords[i + 1], { units: 'kilometers' });
+    if (segLen <= 0) continue;
+    const paintType = infraType || ROUTE_PAINT_STREET_TYPE;
+    if (infraType) {
+      totalCovered += segLen;
+      if (coverageByType.hasOwnProperty(infraType)) coverageByType[infraType] += segLen;
+    }
+    if (!run || run.type !== paintType) {
+      flush();
+      run = { type: paintType, coords: [coords[i], coords[i + 1]], lengthKm: segLen };
+    } else {
+      run.coords.push(coords[i + 1]);
+      run.lengthKm += segLen;
+    }
+  }
+  flush();
+
+  return {
+    coverage: Math.min(Math.max((totalCovered / routeLength) * 100, 0), 100),
+    coverageByType: coveragePercentages(coverageByType, routeLength),
+    overlappingCyclepaths: paintSegments.filter(
+      (f) => f.properties.debug_cyclepath_type !== ROUTE_PAINT_STREET_TYPE
+    ),
+    routePaintSegments: paintSegments,
+  };
+}
+
+export function parseOsmTagString(tagString) {
+  const properties = {};
+  if (!tagString) return properties;
+  for (const part of String(tagString).split(/\s+/)) {
+    const eq = part.indexOf('=');
+    if (eq > 0) properties[part.slice(0, eq)] = part.slice(eq + 1);
+  }
+  return properties;
+}
+
+function typologyFromOsmProperties(properties, layers) {
+  const collection = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: { ...properties },
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [0, 0],
+            [0.0001, 0],
+          ],
+        },
+      },
+    ],
+  };
+  computeTypologies(collection, layers);
+  return collection.features[0].properties.type || null;
+}
+
+/**
+ * Walk a LineString and return the sub-linestring covering [startKm, endKm]
+ * along its length (kilometers).
+ */
+function sliceLineStringByDistanceKm(coords, startKm, endKm) {
+  if (!coords || coords.length < 2 || endKm <= startKm) return null;
+
+  const out = [];
+  let cum = 0;
+  let started = false;
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const a = coords[i];
+    const b = coords[i + 1];
+    const segLen = turfDistance(a, b, { units: 'kilometers' });
+    if (segLen < 1e-12) continue;
+    const segEnd = cum + segLen;
+
+    if (!started && segEnd > startKm) {
+      const t = Math.min(1, Math.max(0, (startKm - cum) / segLen));
+      out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+      started = true;
+    }
+
+    if (started) {
+      if (segEnd >= endKm) {
+        const t = Math.min(1, Math.max(0, (endKm - cum) / segLen));
+        out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+        break;
+      }
+      out.push(b);
+    }
+
+    cum = segEnd;
+  }
+
+  return out.length >= 2 ? out : null;
+}
+
+/**
+ * Coverage from BRouter message rows (WayTags + Distance). No geometric snap.
+ * Distance is meters. Paint highlights by slicing the dense route geometry so we
+ * don't chord straight between sparse message nodes (that looked "off street").
+ *
+ * @param {Array} messages - BRouter properties.messages
+ * @param {Array} layers
+ * @param {Object} [routeGeometry] - LineString geometry from the same BRouter response
+ */
+export function calculateCyclepathCoverageFromBrouterMessages(messages, layers, routeGeometry) {
+  if (!Array.isArray(messages) || messages.length < 2 || !layers) {
+    return emptyCoverageResult();
+  }
+
+  const header = messages[0];
+  const wayIdx = header.indexOf('WayTags');
+  const distIdx = header.indexOf('Distance');
+  if (wayIdx < 0 || distIdx < 0) return emptyCoverageResult();
+
+  const routeCoords =
+    routeGeometry?.type === 'LineString' ? routeGeometry.coordinates : routeGeometry?.coordinates;
+  const useRouteGeom = Array.isArray(routeCoords) && routeCoords.length >= 2;
+
+  const { cyclepathLayerNames } = filterCyclepathLineStrings({ features: [] }, layers);
+  const coverageByType = {};
+  cyclepathLayerNames.forEach((name) => {
+    coverageByType[name] = 0;
+  });
+
+  let routeLengthKm = 0;
+  let totalCovered = 0;
+  const paintSegments = [];
+  let run = null; // { type, startKm, endKm, lengthKm }
+
+  const flush = () => {
+    if (!run || run.endKm <= run.startKm) {
+      run = null;
+      return;
+    }
+    const coords = useRouteGeom
+      ? sliceLineStringByDistanceKm(routeCoords, run.startKm, run.endKm)
+      : null;
+    if (!coords || coords.length < 2) {
+      run = null;
+      return;
+    }
+    paintSegments.push(
+      makePaintSegmentFeature(run.type, coords, run.lengthKm, paintSegments.length)
+    );
+    run = null;
+  };
+
+  let cumKm = 0;
+  for (let i = 1; i < messages.length; i++) {
+    const row = messages[i];
+    if (!Array.isArray(row)) continue;
+    const distM = Number(row[distIdx]);
+    const segKm = Number.isFinite(distM) ? distM / 1000 : 0;
+    if (segKm <= 0) continue;
+    const startKm = cumKm;
+    cumKm += segKm;
+    routeLengthKm = cumKm;
+
+    let infraType = null;
+    try {
+      infraType = typologyFromOsmProperties(parseOsmTagString(row[wayIdx]), layers);
+    } catch (err) {
+      console.warn('BR tags typology failed for message row', err);
+    }
+    if (infraType && !cyclepathLayerNames.includes(infraType)) infraType = null;
+
+    const paintType = infraType || ROUTE_PAINT_STREET_TYPE;
+    if (infraType) {
+      if (coverageByType.hasOwnProperty(infraType)) coverageByType[infraType] += segKm;
+      totalCovered += segKm;
+    }
+
+    if (!run || run.type !== paintType) {
+      flush();
+      run = { type: paintType, startKm, endKm: cumKm, lengthKm: segKm };
+    } else {
+      run.endKm = cumKm;
+      run.lengthKm += segKm;
+    }
+  }
+  flush();
+
+  if (routeLengthKm === 0) return emptyCoverageResult();
+
+  return {
+    coverage: Math.min(Math.max((totalCovered / routeLengthKm) * 100, 0), 100),
+    coverageByType: coveragePercentages(coverageByType, routeLengthKm),
+    overlappingCyclepaths: paintSegments.filter(
+      (f) => f.properties.debug_cyclepath_type !== ROUTE_PAINT_STREET_TYPE
+    ),
+    routePaintSegments: useRouteGeom ? paintSegments : [],
   };
 }

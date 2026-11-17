@@ -1,10 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import type { DirectionsData } from '../types/directions';
-
-/**
- * Context for managing directions/route state across components
- * Eliminates prop drilling between DirectionsPanel, App, and Map
- */
+import { DIRECTIONS_MAX_RESULTS } from '../config/constants.js';
 
 export interface DirectionsContextValue {
   directions: DirectionsData | null;
@@ -18,9 +14,14 @@ export interface DirectionsContextValue {
   clearDirections: () => void;
   selectRoute: (routeIndex: number | null) => void;
   hoverRoute: (routeIndex: number | null) => void;
-  setDirectionsData: (data: DirectionsData) => void;
+  setDirectionsData: (data: DirectionsData, options?: { preserveSelection?: boolean }) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: unknown) => void;
+  maxRoutesShown: number;
+  visibleRouteIndices: number[] | null;
+  setVisibleRouteIndices: (indices: number[] | null) => void;
+  elevationHoverLngLat: [number, number] | null;
+  setElevationHoverLngLat: (lngLat: [number, number] | null) => void;
 }
 
 const DirectionsContext = createContext<DirectionsContextValue | null>(null);
@@ -44,11 +45,14 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
   const [directionsLoading, setDirectionsLoading] = useState(false);
   const [directionsError, setDirectionsError] = useState<unknown>(null);
   const [isSettingRoutePoints, setIsSettingRoutePoints] = useState(false);
+  const [visibleRouteIndices, setVisibleRouteIndices] = useState<number[] | null>(null);
+  const [elevationHoverLngLat, setElevationHoverLngLat] = useState<[number, number] | null>(null);
+  const maxRoutesShown = DIRECTIONS_MAX_RESULTS;
 
   const isInRouteMode = useMemo(() => {
     const hasActiveRoutes = Boolean(directions?.routes?.length);
-    return Boolean(hasActiveRoutes || isSettingRoutePoints);
-  }, [directions, isSettingRoutePoints]);
+    return Boolean(hasActiveRoutes || isSettingRoutePoints || directionsLoading);
+  }, [directions, isSettingRoutePoints, directionsLoading]);
 
   const setRoutePointsMode = useCallback((isSetting: boolean) => {
     setIsSettingRoutePoints(isSetting);
@@ -61,25 +65,43 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
     setDirectionsError(null);
     setDirectionsLoading(false);
     setIsSettingRoutePoints(false);
+    setVisibleRouteIndices(null);
+    setElevationHoverLngLat(null);
   }, []);
 
   const selectRoute = useCallback((routeIndex: number | null) => {
     setSelectedRouteIndex(routeIndex);
+    setElevationHoverLngLat(null);
   }, []);
 
   const hoverRoute = useCallback((routeIndex: number | null) => {
     setHoveredRouteIndex(routeIndex);
   }, []);
 
-  const setDirectionsData = useCallback((data: DirectionsData) => {
-    setDirections(data);
-    setSelectedRouteIndex(data.routes.length > 0 ? 0 : null);
-    setDirectionsError(null);
-    setDirectionsLoading(false);
-  }, []);
+  const setDirectionsData = useCallback(
+    (data: DirectionsData, options?: { preserveSelection?: boolean }) => {
+      setDirections(data);
+      setSelectedRouteIndex((prev) => {
+        if (options?.preserveSelection && prev != null && data.routes[prev]) {
+          return prev;
+        }
+        return data.routes.length > 0 ? 0 : null;
+      });
+      setDirectionsError(null);
+      setDirectionsLoading(false);
+    },
+    []
+  );
 
   const setLoading = useCallback((loading: boolean) => {
     setDirectionsLoading(loading);
+    if (loading) {
+      setDirections(null);
+      setSelectedRouteIndex(null);
+      setHoveredRouteIndex(null);
+      setVisibleRouteIndices(null);
+      setElevationHoverLngLat(null);
+    }
   }, []);
 
   const setError = useCallback((error: unknown) => {
@@ -105,6 +127,11 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
       setDirectionsData,
       setLoading,
       setError,
+      maxRoutesShown,
+      visibleRouteIndices,
+      setVisibleRouteIndices,
+      elevationHoverLngLat,
+      setElevationHoverLngLat,
     }),
     [
       directions,
@@ -121,6 +148,9 @@ export const DirectionsProvider: React.FC<DirectionsProviderProps> = ({ children
       setDirectionsData,
       setLoading,
       setError,
+      maxRoutesShown,
+      visibleRouteIndices,
+      elevationHoverLngLat,
     ]
   );
 

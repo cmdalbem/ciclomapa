@@ -11,6 +11,17 @@ const BRAND_TOKEN = {
   fontFamily: "'Inter', system-ui, sans-serif",
 };
 
+const LIGHT_EXTRA = {
+  // Black `colorPrimary` makes antd's generated primary-bg scale charcoal
+  // (#404040). Selected dropdown rows then look like a dark-mode chip on a
+  // light menu. Keep filled primary buttons black; use a light wash for
+  // primary-container and selected-item backgrounds.
+  colorPrimaryBg: 'rgba(0, 0, 0, 0.04)',
+  colorPrimaryBgHover: 'rgba(0, 0, 0, 0.08)',
+  controlItemBgActive: 'rgba(0, 0, 0, 0.06)',
+  controlItemBgActiveHover: 'rgba(0, 0, 0, 0.1)',
+};
+
 const DARK_EXTRA = {
   // colorPrimary: '#b6f9d1',
   // colorPrimary: '#4ea76f',
@@ -36,7 +47,7 @@ export function getAntdTheme(isDarkMode) {
     algorithm: isDarkMode ? darkAlgorithm : defaultAlgorithm,
     token: {
       ...BRAND_TOKEN,
-      ...(isDarkMode ? DARK_EXTRA : {}),
+      ...(isDarkMode ? DARK_EXTRA : LIGHT_EXTRA),
     },
   };
 }

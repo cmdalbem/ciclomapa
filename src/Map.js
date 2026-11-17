@@ -29,9 +29,15 @@ import {
   ROUTE_UNSELECTED_LIGHT_BORDER_OPACITY,
   NEAR_ROUTE_ENDPOINT_POI_RADIUS_KM,
   ROUTE_ENDPOINT_VISIBLE_POI_ICONS,
-  PMTILES_FILENAME,
   PMTILES_SOURCE_ID,
   PMTILES_SOURCE_LAYER,
+  filenameForMapPmtilesKind,
+  PMTILES_COMPARE_KIND,
+  MAP_PMTILES_COMPARE_KINDS,
+  PMTILES_POC_REGION,
+  filenamesForPmtilesPocRegion,
+  pmtilesSourceIdForKind,
+  pmtilesLayerSuffixForKind,
   LOW_ZOOM_WIDTH_DIVISOR,
   ROUTES_ACTIVE_LOW_ZOOM_WIDTH_DIVISOR,
   ROUTES_ACTIVE_HIGH_ZOOM_WIDTH_MULTIPLIER,
@@ -80,8 +86,70 @@ export function flyMapToCityFocus(map, centerLngLat, placeName) {
 /** GeoJSON source holding endpoint circles used alongside route-mode POI `within` filters */
 const ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID = 'route-endpoint-poi-zones';
 
-/** Suffix on every app data layer id built from the PMTiles source (e.g. `ciclovia--pmtiles`). */
+/**
+ * Legacy bare suffix; compare builds use `pmtilesLayerSuffixForKind(kind)` instead
+ * (`--pmtiles--zg` / `--pmtiles--z13` / `--pmtiles--analysis`).
+ */
 const PMTILES_LAYER_SUFFIX = '--pmtiles';
+
+/**
+ * OSM roadside cycleway=* values that live on the highway centerline and need a
+ * line-offset. Excludes `no` / `separate` (separate geometries already sit correctly).
+ */
+const ROADSIDE_CYCLEWAY_VALUES = [
+  'lane',
+  'opposite_lane',
+  'track',
+  'opposite_track',
+  'shared_lane',
+  'buffered_lane',
+  'share_busway',
+  'opposite_share_busway',
+  'sidepath',
+];
+
+function isRoadsideCyclewayExpr(key) {
+  return ['in', ['get', key], ['literal', ROADSIDE_CYCLEWAY_VALUES]];
+}
+
+/** Mapbox paint expression: nudge cycleway:left/right infra off the carriageway centerline. */
+function buildLaneSideLineOffset(lineWidth) {
+  return [
+    'interpolate',
+    ['exponential', 1.5],
+    ['zoom'],
+    10,
+    [
+      'case',
+      isRoadsideCyclewayExpr('cycleway:right'),
+      Math.max(1, lineWidth / 4),
+      isRoadsideCyclewayExpr('cycleway:left'),
+      Math.min(-1, -lineWidth / 4),
+      0,
+    ],
+    18,
+    [
+      'case',
+      isRoadsideCyclewayExpr('cycleway:right'),
+      lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+      isRoadsideCyclewayExpr('cycleway:left'),
+      -lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+      0,
+    ],
+  ];
+}
+
+/** Mapbox layout expression: keep oneway arrows centered on the offset lane line. */
+function buildLaneSideIconOffset() {
+  return [
+    'case',
+    isRoadsideCyclewayExpr('cycleway:right'),
+    [0, 44],
+    isRoadsideCyclewayExpr('cycleway:left'),
+    [0, -44],
+    [0, 0],
+  ];
+}
 
 const MISSING_BASEMAP_IMAGES = new Set([
   'turning-circle-outline',
@@ -93,19 +161,107 @@ const MISSING_BASEMAP_IMAGES = new Set([
 /** Geo sources for app data layers; basemap (e.g. composite) is everything else. */
 const CICLOMAPA_DATA_SOURCES = new Set([
   PMTILES_SOURCE_ID,
+  ...MAP_PMTILES_COMPARE_KINDS.map((kind) => pmtilesSourceIdForKind(kind)),
   'commentsSrc',
   'favoritesSrc',
   'route-selected',
   'routes-unselected',
   'overlapping-cyclepaths-selected',
   'overlapping-cyclepaths-unselected',
+  'route-calculating',
   'boundaryLineSrc',
   ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID,
 ]);
 
+/** Solid orange selected line (hidden when that route is drawn as typology segments). */
+const SELECTED_SOLID_ROUTE_LAYER_IDS = [
+  'route-padding-selected',
+  'route-selected',
+  'route--border-selected',
+];
+
+/** Solid unselected alternatives — always a single color, never typology. */
+const UNSELECTED_SOLID_ROUTE_LAYER_IDS = [
+  'routes-unselected--interactive',
+  'route-paddings-unselected',
+  'route--borders-unselected',
+  'routes-unselected',
+];
+
+const ROUTE_HOVER_LAYER_IDS = [...UNSELECTED_SOLID_ROUTE_LAYER_IDS, 'route-selected'];
+
+const SOLID_ROUTE_LAYER_IDS = [
+  ...SELECTED_SOLID_ROUTE_LAYER_IDS,
+  ...UNSELECTED_SOLID_ROUTE_LAYER_IDS,
+];
+
+/** Typed coverage / segmented paint on the selected route only. */
+const SELECTED_SEGMENT_LAYER_IDS = [
+  'overlapping-cyclepath-selected',
+  'overlapping-cyclepath-selected--border',
+];
+
+const UNSELECTED_SEGMENT_LAYER_IDS = [
+  'overlapping-cyclepaths-unselected',
+  'overlapping-cyclepaths-unselected--border',
+];
+
+const ROUTE_SEGMENT_LAYER_IDS = [...SELECTED_SEGMENT_LAYER_IDS, ...UNSELECTED_SEGMENT_LAYER_IDS];
+
+/** Layers drawn for calculated routes + coverage highlights (A/B markers stay). */
+const ROUTE_OVERLAY_LAYER_IDS = [...SOLID_ROUTE_LAYER_IDS, ...ROUTE_SEGMENT_LAYER_IDS];
+
 function isE2EMode() {
   return typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('e2e');
 }
+
+/** Slight quadratic arc between A and B so the calculating hint isn't a ruler. */
+export function curvedLineBetween(from, to, steps = 24) {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const dist = Math.hypot(dx, dy) || 1;
+  // Perpendicular offset ~8% of the span, capped so mega hops don't balloon.
+  const mag = Math.min(0.08 * dist, 0.35);
+  // Always bulge north (or east if the chord is vertical) so a westbound
+  // A→B doesn't sag south, which reads as the long way around.
+  let nx = -dy / dist;
+  let ny = dx / dist;
+  if (ny < 0 || (ny === 0 && nx < 0)) {
+    nx = -nx;
+    ny = -ny;
+  }
+  const cx = (from[0] + to[0]) / 2 + nx * mag;
+  const cy = (from[1] + to[1]) / 2 + ny * mag;
+  const coords = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const u = 1 - t;
+    coords.push([
+      u * u * from[0] + 2 * u * t * cx + t * t * to[0],
+      u * u * from[1] + 2 * u * t * cy + t * t * to[1],
+    ]);
+  }
+  return coords;
+}
+
+export function parseRoutePointCenter(value) {
+  if (Array.isArray(value) && value.length >= 2) {
+    const lng = Number(value[0]);
+    const lat = Number(value[1]);
+    return Number.isFinite(lng) && Number.isFinite(lat) ? [lng, lat] : null;
+  }
+  const lng = Number(value?.lng);
+  const lat = Number(value?.lat);
+  return Number.isFinite(lng) && Number.isFinite(lat) ? [lng, lat] : null;
+}
+
+export function routeCalculatingLineColor(isDarkMode) {
+  return isDarkMode ? 'rgba(255,255,255,0.92)' : 'rgba(28,28,28,0.82)';
+}
+
+const ROUTE_CALCULATING_LINE_ID = 'route-calculating-line';
+const ROUTE_CALCULATING_SOURCE_ID = 'route-calculating';
+const ROUTE_CALCULATING_DASH = [1.4, 2.2];
 
 /** Built-in `Map`; the React component class name `Map` shadows `window.Map` inside methods. */
 const JsMap = window.Map;
@@ -280,13 +436,14 @@ class Map extends Component {
     }
   }
 
-  initPOILayerForSource(l, sourceId) {
+  initPOILayerForSource(l, sourceId, layerSuffix = PMTILES_LAYER_SUFFIX) {
     if (!this.map.getSource(sourceId)) return;
 
     const filters = this.convertFilterToMapboxFilter(l);
 
     const sourceLayer = PMTILES_SOURCE_LAYER;
-    const layerId = l.id + PMTILES_LAYER_SUFFIX;
+    const layerId = l.id + layerSuffix;
+    if (this.map.getLayer(layerId) || this.map.getLayer(layerId + 'circles')) return;
 
     const layerUnderneathName = this.getLayerUnderneathName(this.map);
 
@@ -471,7 +628,13 @@ class Map extends Component {
 
     // Same gate as live area geocoding / deferred GeoJSON: only draw while Analytics
     // or Routing actually needs city context. Closing both panels clears the layer above.
-    if (!ENABLE_BOUNDARY_LAYER || !this.props.needsCityGeoJsonContext?.()) {
+    // Also skip in route mode: local/hybrid (and metro ODs) aren't tied to one municipality,
+    // so the city vignette is misleading (e.g. Esplugues lit while routing across BCN).
+    if (
+      !ENABLE_BOUNDARY_LAYER ||
+      !this.props.needsCityGeoJsonContext?.() ||
+      this.props.isInRouteMode
+    ) {
       return;
     }
 
@@ -780,7 +943,7 @@ class Map extends Component {
     });
   }
 
-  initCyclepathLayerForSource(l, sourceId) {
+  initCyclepathLayerForSource(l, sourceId, layerSuffix = PMTILES_LAYER_SUFFIX) {
     if (!this.map.getSource(sourceId)) return;
 
     const filters = this.convertFilterToMapboxFilter(l);
@@ -789,9 +952,10 @@ class Map extends Component {
     const self = this;
 
     const sourceLayer = PMTILES_SOURCE_LAYER;
-    const interactiveLayerId = l.id + '--interactive' + PMTILES_LAYER_SUFFIX;
-    const normalLayerId = l.id + PMTILES_LAYER_SUFFIX;
-    const routesActiveLayerId = l.id + '--routes-active' + PMTILES_LAYER_SUFFIX;
+    const interactiveLayerId = l.id + '--interactive' + layerSuffix;
+    const normalLayerId = l.id + layerSuffix;
+    const routesActiveLayerId = l.id + '--routes-active' + layerSuffix;
+    if (this.map.getLayer(normalLayerId) || this.map.getLayer(interactiveLayerId)) return;
 
     const dashedLineStyle = { 'line-dasharray': [1, 1] };
     // const dashedLineStyle = {
@@ -823,29 +987,9 @@ class Map extends Component {
             1, // Selected
             0,
           ],
-          'line-offset': [
-            'interpolate',
-            ['exponential', 1.5],
-            ['zoom'],
-            10,
-            [
-              'case',
-              ['==', ['get', 'cycleway:right'], 'lane'],
-              Math.max(1, l.style.lineWidth / 4),
-              ['==', ['get', 'cycleway:left'], 'lane'],
-              Math.min(-1, -l.style.lineWidth / 4),
-              0,
-            ],
-            18,
-            [
-              'case',
-              ['==', ['get', 'cycleway:right'], 'lane'],
-              l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-              ['==', ['get', 'cycleway:left'], 'lane'],
-              -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-              0,
-            ],
-          ],
+          'line-offset': this.props.laneSideOffsetEnabled
+            ? buildLaneSideLineOffset(l.style.lineWidth)
+            : 0,
           'line-color': adjustColorBrightness(
             l.style.lineColor,
             this.props.isDarkMode ? -0.7 : 0.7
@@ -881,29 +1025,9 @@ class Map extends Component {
               adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.0 : -0.1, 'hsl'), // Default
             ],
           ],
-          'line-offset': [
-            'interpolate',
-            ['exponential', 1.5],
-            ['zoom'],
-            10,
-            [
-              'case',
-              ['==', ['get', 'cycleway:right'], 'lane'],
-              Math.max(1, l.style.lineWidth / 4),
-              ['==', ['get', 'cycleway:left'], 'lane'],
-              Math.min(-1, -l.style.lineWidth / 4),
-              0,
-            ],
-            18,
-            [
-              'case',
-              ['==', ['get', 'cycleway:right'], 'lane'],
-              l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-              ['==', ['get', 'cycleway:left'], 'lane'],
-              -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-              0,
-            ],
-          ],
+          'line-offset': this.props.laneSideOffsetEnabled
+            ? buildLaneSideLineOffset(l.style.lineWidth)
+            : 0,
           'line-width': [
             'interpolate',
             ['exponential', 1.5],
@@ -957,14 +1081,7 @@ class Map extends Component {
           'icon-allow-overlap': true,
           'icon-ignore-placement': true,
           'icon-padding': 4,
-          'icon-offset': [
-            'case',
-            ['==', ['get', 'cycleway:right'], 'lane'],
-            [0, 44],
-            ['==', ['get', 'cycleway:left'], 'lane'],
-            [0, -44],
-            [0, 0],
-          ],
+          'icon-offset': this.props.laneSideOffsetEnabled ? buildLaneSideIconOffset() : [0, 0],
         },
         paint: {
           'icon-occlusion-opacity': 1,
@@ -1070,7 +1187,7 @@ class Map extends Component {
         } catch (err) {}
 
         const layer = self.props.layers.find((l) => l.id === e.features[0].layer.id.split('--')[0]);
-        self.popups.showCyclewayPopup(e, layer);
+        self.popups.showCyclewayPopup(e, layer, sourceId);
         if (IS_MOBILE && e.features && e.features[0]) {
           const bb = turfBbox(e.features[0]); // [minX, minY, maxX, maxY]
           const bounds = new mapboxgl.LngLatBounds([bb[0], bb[1]], [bb[2], bb[3]]);
@@ -1290,52 +1407,92 @@ class Map extends Component {
     });
   }
 
+  activePmtilesKind() {
+    return this.props.mapPmtilesKind || PMTILES_COMPARE_KIND.z13;
+  }
+
+  activePmtilesPocRegion() {
+    return this.props.mapPmtilesPocRegion || PMTILES_POC_REGION.off;
+  }
+
+  activePmtilesLayerSuffix() {
+    return pmtilesLayerSuffixForKind(this.activePmtilesKind());
+  }
+
+  filenameForActivePmtilesKind(kind) {
+    return filenameForMapPmtilesKind(kind, this.activePmtilesPocRegion());
+  }
+
+  removePmtilesCompareLayersForKind(kind) {
+    if (!this.map || !Array.isArray(this.props.layers)) return;
+    const suffix = pmtilesLayerSuffixForKind(kind);
+    this.props.layers.forEach((layer) => {
+      if (!layer?.id) return;
+      const ids =
+        layer.type === 'poi'
+          ? [layer.id + suffix + 'circles', layer.id + suffix, layer.id + suffix + 'polygon']
+          : [
+              layer.id + '--interactive' + suffix,
+              layer.id + suffix,
+              layer.id + '--routes-active' + suffix,
+              layer.id + suffix + '--arrows',
+            ];
+      ids.forEach((id) => {
+        if (this.map.getLayer(id)) this.map.removeLayer(id);
+      });
+    });
+  }
+
   async initializeDataSources() {
     await this.awaitStyleReady();
 
     if (USE_PMTILES_SOURCE) {
       const PMTILES_BASE_URL = process.env.REACT_APP_PMTILES_URL;
-      const PMTILES_URL = PMTILES_BASE_URL + PMTILES_FILENAME;
-      const pmtilesLoadToken = startDataLoad('pmtiles', 'PMTiles', { file: PMTILES_FILENAME });
+      const defaultKind = this.activePmtilesKind();
+      const defaultFilename = this.filenameForActivePmtilesKind(defaultKind);
+      const pmtilesLoadToken = startDataLoad('pmtiles', 'PMTiles', { file: defaultFilename });
 
       try {
         if (!PMTILES_BASE_URL) {
           throw new Error('REACT_APP_PMTILES_URL is not set; skipping PMTiles source.');
         }
 
-        console.log('Loading PMTiles (native vector source):', PMTILES_URL);
-
-        this.map.addSource(PMTILES_SOURCE_ID, {
-          type: 'vector',
-          url: PMTILES_URL,
-          // osmtogeojson writes `properties.id` as "way/123"; use it as the feature id so
-          // hover/selected feature-state and popups work across tiles.
-          promoteId: 'id',
+        // Keep every compare archive as its own source so toggles only flip layer visibility.
+        MAP_PMTILES_COMPARE_KINDS.forEach((kind) => {
+          const sourceId = pmtilesSourceIdForKind(kind);
+          if (this.map.getSource(sourceId)) return;
+          const url = PMTILES_BASE_URL + this.filenameForActivePmtilesKind(kind);
+          console.log('Loading PMTiles compare source:', kind, url);
+          this.map.addSource(sourceId, {
+            type: 'vector',
+            url,
+            // osmtogeojson writes `properties.id` as "way/123"; use it as the feature id so
+            // hover/selected feature-state and popups work across tiles.
+            promoteId: 'id',
+          });
         });
 
-        console.log('PMTiles source added successfully');
         this.pmtilesLoadedSuccessfully = true;
 
-        // addSource() only registers the tile source — actual tiles are fetched lazily,
-        // so we listen once for the first successful load or failure to report real status.
+        const defaultSourceId = pmtilesSourceIdForKind(defaultKind);
         const onSourceData = (e) => {
-          if (e.sourceId === PMTILES_SOURCE_ID && e.isSourceLoaded) {
+          if (e.sourceId === defaultSourceId && e.isSourceLoaded) {
             this.map.off('sourcedata', onSourceData);
             this.map.off('error', onPmtilesError);
             finishDataLoad('pmtiles', {
               token: pmtilesLoadToken,
-              meta: { file: PMTILES_FILENAME },
+              meta: { file: defaultFilename },
             });
           }
         };
         const onPmtilesError = (e) => {
-          if (e.sourceId === PMTILES_SOURCE_ID) {
+          if (e.sourceId === defaultSourceId) {
             this.map.off('sourcedata', onSourceData);
             this.map.off('error', onPmtilesError);
             finishDataLoad('pmtiles', {
               token: pmtilesLoadToken,
               error: e.error,
-              meta: { file: PMTILES_FILENAME },
+              meta: { file: defaultFilename },
             });
           }
         };
@@ -1347,7 +1504,7 @@ class Map extends Component {
         finishDataLoad('pmtiles', {
           token: pmtilesLoadToken,
           error,
-          meta: { file: PMTILES_FILENAME },
+          meta: { file: defaultFilename },
         });
       }
     }
@@ -1395,18 +1552,25 @@ class Map extends Component {
     //   want the most important ones to be on top so we add in reverse.
     // Slice is used here to don't destructively reverse the original array.
     if (this.pmtilesLoadedSuccessfully) {
-      layers
-        .slice()
-        .reverse()
-        .forEach((l) => {
-          if (!l.type || l.type === 'way') {
-            this.initCyclepathLayerForSource(l, PMTILES_SOURCE_ID);
-          } else if (l.type === 'poi' && l.filters) {
-            this.initPOILayerForSource(l, PMTILES_SOURCE_ID);
-          }
-        });
-      this.layersInitialized = true;
+      // One layer stack per compare archive; swapPmtilesArchive only toggles visibility.
+      MAP_PMTILES_COMPARE_KINDS.forEach((kind) => {
+        const sourceId = pmtilesSourceIdForKind(kind);
+        const layerSuffix = pmtilesLayerSuffixForKind(kind);
+        layers
+          .slice()
+          .reverse()
+          .forEach((l) => {
+            if (!l.type || l.type === 'way') {
+              this.initCyclepathLayerForSource(l, sourceId, layerSuffix);
+            } else if (l.type === 'poi' && l.filters) {
+              this.initPOILayerForSource(l, sourceId, layerSuffix);
+            }
+          });
+      });
+      this.warmComparePmtilesArchives();
     }
+
+    this.layersInitialized = true;
 
     if (map.getLayer('mapbox-satellite')) {
       map.setLayoutProperty(
@@ -1424,101 +1588,113 @@ class Map extends Component {
     const isUnselected = layerType !== 'top';
     const isLightMode = !this.props.isDarkMode;
 
-    // 1. Padding layer
-    map.addLayer(
-      {
-        id: `route-padding${suffix}`,
-        type: 'line',
-        source: sourceId,
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-          'line-elevation-reference': 'ground',
-        },
-        paint: {
-          'line-occlusion-opacity': 1,
-          'line-color': this.props.isDarkMode
-            ? MAP_COLORS.DARK.ROUTE_PADDING_LINE
-            : MAP_COLORS.LIGHT.ROUTE_PADDING_LINE,
-          'line-width': ROUTE_LINE_PADDING_WIDTH,
-          'line-gap-width': ROUTE_LINE_PADDING_GAP_WIDTH,
-        },
-        filter: ['==', '$type', 'LineString'],
+    const paddingLayer = {
+      id: `route-padding${suffix}`,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+        'line-elevation-reference': 'ground',
       },
-      layerUnderneathName
+      paint: {
+        'line-occlusion-opacity': 1,
+        'line-color': this.props.isDarkMode
+          ? MAP_COLORS.DARK.ROUTE_PADDING_LINE
+          : MAP_COLORS.LIGHT.ROUTE_PADDING_LINE,
+        'line-width': ROUTE_LINE_PADDING_WIDTH,
+        'line-gap-width': ROUTE_LINE_PADDING_GAP_WIDTH,
+      },
+      filter: ['==', '$type', 'LineString'],
+    };
+
+    const unselectedColor = this.props.isDarkMode
+      ? ROUTE_COLORS.DARK.UNSELECTED
+      : ROUTE_COLORS.LIGHT.UNSELECTED;
+    const unselectedHoverColor = adjustColorBrightness(
+      unselectedColor,
+      this.props.isDarkMode ? 0.3 : -0.3
     );
 
-    // 3. Main route layer
-    map.addLayer(
-      {
-        id: `route${suffix}`,
-        type: 'line',
-        source: sourceId,
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-          'line-elevation-reference': 'ground',
-        },
-        paint: {
-          'line-occlusion-opacity': 1,
-          'line-color':
-            layerType === 'top'
-              ? this.props.isDarkMode
-                ? ROUTE_COLORS.DARK.SELECTED
-                : ROUTE_COLORS.LIGHT.SELECTED
-              : this.props.isDarkMode
-                ? ROUTE_COLORS.DARK.UNSELECTED
-                : ROUTE_COLORS.LIGHT.UNSELECTED,
-          'line-width': ROUTE_LINE_WIDTH,
-        },
-        filter: ['==', '$type', 'LineString'],
+    const fillLayer = {
+      id: `route${suffix}`,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+        'line-elevation-reference': 'ground',
       },
-      layerUnderneathName
-    );
+      paint: {
+        'line-occlusion-opacity': 1,
+        'line-color': isUnselected
+          ? [
+              'case',
+              ['boolean', ['feature-state', 'hover'], false],
+              unselectedHoverColor,
+              unselectedColor,
+            ]
+          : this.props.isDarkMode
+            ? ROUTE_COLORS.DARK.SELECTED
+            : ROUTE_COLORS.LIGHT.SELECTED,
+        'line-width': ROUTE_LINE_WIDTH,
+        'line-color-transition': { duration: 120 },
+      },
+      filter: ['==', '$type', 'LineString'],
+    };
 
-    // 2. Border layer
-    map.addLayer(
-      {
-        id: `route--border${suffix}`,
-        type: 'line',
-        source: sourceId,
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-          'line-elevation-reference': 'ground',
-        },
-        paint: {
-          'line-occlusion-opacity': 1,
-          'line-color':
-            layerType === 'top'
-              ? this.props.isDarkMode
-                ? MAP_COLORS.DARK.ROUTE_BORDER
-                : MAP_COLORS.LIGHT.ROUTE_BORDER
-              : this.props.isDarkMode
-                ? MAP_COLORS.DARK.ROUTE_BORDER
-                : MAP_COLORS.LIGHT.ROUTE_BORDER,
-          // : [
-          //     'case',
-          //     ['boolean', ['feature-state', 'hover'], false],
-          //         this.props.isDarkMode ? '#ffffff' : '#1a1a1a', // On hover
-          //         this.props.isDarkMode ? '#ffffff' : '#000000', // Default
-          // ],
-          // Improve contrast for unselected alternative routes on the light basemap:
-          // enable a visible outline only for the unselected layer in light mode.
-          'line-width':
-            isUnselected && isLightMode
-              ? ROUTE_UNSELECTED_LIGHT_BORDER_WIDTH
-              : ROUTE_LINE_BORDER_WIDTH,
-          'line-opacity':
-            isUnselected && isLightMode
-              ? ROUTE_UNSELECTED_LIGHT_BORDER_OPACITY
-              : ROUTE_LINE_BORDER_OPACITY,
-          'line-gap-width': ROUTE_LINE_GAP_WIDTH,
-        },
-        filter: ['==', '$type', 'LineString'],
+    const hitLayer = isUnselected
+      ? {
+          id: 'routes-unselected--interactive',
+          type: 'line',
+          source: sourceId,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+            'line-elevation-reference': 'ground',
+          },
+          paint: {
+            'line-color': unselectedColor,
+            'line-width': 28,
+            'line-opacity': 0,
+          },
+          filter: ['==', '$type', 'LineString'],
+        }
+      : null;
+
+    const borderLayer = {
+      id: `route--border${suffix}`,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+        'line-elevation-reference': 'ground',
       },
-      layerUnderneathName
-    );
+      paint: {
+        'line-occlusion-opacity': 1,
+        'line-color': this.props.isDarkMode
+          ? MAP_COLORS.DARK.ROUTE_BORDER
+          : MAP_COLORS.LIGHT.ROUTE_BORDER,
+        'line-width':
+          isUnselected && isLightMode
+            ? ROUTE_UNSELECTED_LIGHT_BORDER_WIDTH
+            : ROUTE_LINE_BORDER_WIDTH,
+        'line-opacity':
+          isUnselected && isLightMode
+            ? ROUTE_UNSELECTED_LIGHT_BORDER_OPACITY
+            : ROUTE_LINE_BORDER_OPACITY,
+        'line-gap-width': ROUTE_LINE_GAP_WIDTH,
+      },
+      filter: ['==', '$type', 'LineString'],
+    };
+
+    // Unselected: fat invisible hit target under casings/fills (same trick as
+    // lanes). Casings under fills so overlapping alts merge. Selected outline on top.
+    const stack = isUnselected
+      ? [hitLayer, paddingLayer, borderLayer, fillLayer]
+      : [paddingLayer, fillLayer, borderLayer];
+    stack.forEach((layer) => map.addLayer(layer, layerUnderneathName));
   }
 
   createCyclepathLayerSet(map, sourceId, layerType) {
@@ -1573,6 +1749,8 @@ class Map extends Component {
                   this.props.isDarkMode
                     ? cyclepathTypeToLayer['Calçada compartilhada'].style.lineColorDark
                     : cyclepathTypeToLayer['Calçada compartilhada'].style.lineColor,
+                  ['==', ['get', 'type'], 'street'],
+                  this.props.isDarkMode ? ROUTE_COLORS.DARK.SELECTED : ROUTE_COLORS.LIGHT.SELECTED,
                   MAP_COLORS.CYCLEPATH_FALLBACK, // Default fallback color
                 ]
               : [
@@ -1615,6 +1793,10 @@ class Map extends Component {
                         cyclepathTypeToLayer['Calçada compartilhada'].style.lineColor,
                         0.6
                       ),
+                  ['==', ['get', 'type'], 'street'],
+                  this.props.isDarkMode
+                    ? ROUTE_COLORS.DARK.UNSELECTED
+                    : ROUTE_COLORS.LIGHT.UNSELECTED,
                   MAP_COLORS.CYCLEPATH_FALLBACK, // Default fallback color
                 ],
           'line-width': ROUTE_LINE_WIDTH,
@@ -1664,59 +1846,41 @@ class Map extends Component {
   setupRouteEventHandlers(map) {
     const self = this;
 
-    // Set up click handlers for both top and bottom layers
-    ['route-selected', 'routes-unselected'].forEach((layerId) => {
+    const hoverLayers = ROUTE_HOVER_LAYER_IDS.filter((layerId) => map.getLayer(layerId));
+
+    hoverLayers.forEach((layerId) => {
       map.on('click', layerId, (e) => {
-        if (e.features && e.features.length > 0) {
-          const routeIndex = e.features[0].properties.routeIndex;
-          if (self.props.onRouteSelected) {
-            self.props.onRouteSelected(routeIndex);
-          }
-        }
+        const routeIndex = e.features?.[0]?.properties?.routeIndex;
+        if (routeIndex == null) return;
+        self.props.onRouteSelected?.(routeIndex);
       });
     });
 
-    // Track currently hovered route
     this.currentHoveredRoute = null;
 
-    // Set up hover handlers for both top and bottom layers
-    ['route-selected', 'routes-unselected'].forEach((layerId) => {
-      map.on('mouseenter', layerId, (e) => {
+    hoverLayers.forEach((layerId) => {
+      map.on('mousemove', layerId, (e) => {
         map.getCanvas().style.cursor = 'pointer';
-
-        // if (e.features && e.features.length > 0) {
-        //     const routeIndex = e.features[0].properties.routeIndex;
-        //     this.currentHoveredRoute = routeIndex;
-
-        //     // Determine which source this layer belongs to
-        //     const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
-        //     map.setFeatureState(
-        //         { source: sourceId, id: routeIndex },
-        //         { hover: true }
-        //     );
-
-        //     if (self.props.onRouteHovered) {
-        //         self.props.onRouteHovered(routeIndex);
-        //     }
-        // }
+        const routeIndex = e.features?.[0]?.properties?.routeIndex;
+        if (routeIndex == null || self.currentHoveredRoute === routeIndex) return;
+        self.currentHoveredRoute = routeIndex;
+        self.props.onRouteHovered?.(routeIndex);
       });
 
       map.on('mouseleave', layerId, (e) => {
         map.getCanvas().style.cursor = '';
-
-        // if (this.currentHoveredRoute !== null) {
-        //     // Determine which source this layer belongs to
-        //     const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
-        //     map.setFeatureState(
-        //         { source: sourceId, id: this.currentHoveredRoute },
-        //         { hover: false }
-        //     );
-        //     this.currentHoveredRoute = null;
-        // }
-
-        // if (self.props.onRouteUnhovered) {
-        //     self.props.onRouteUnhovered();
-        // }
+        const point = e.point;
+        requestAnimationFrame(() => {
+          if (!self.map) return;
+          const layers = hoverLayers.filter((id) => self.map.getLayer(id));
+          const stillOnRoute =
+            point && layers.length
+              ? self.map.queryRenderedFeatures(point, { layers }).length > 0
+              : false;
+          if (stillOnRoute) return;
+          self.currentHoveredRoute = null;
+          self.props.onRouteHovered?.(null);
+        });
       });
     });
   }
@@ -1725,18 +1889,30 @@ class Map extends Component {
     const map = this.map;
     if (!map || map.getSource('route-selected')) return;
 
-    const emptySource = {
-      type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features: [],
-      },
-    };
+    const emptyCollection = { type: 'FeatureCollection', features: [] };
 
-    map.addSource('route-selected', emptySource);
-    map.addSource('routes-unselected', emptySource);
-    map.addSource('overlapping-cyclepaths-selected', emptySource);
-    map.addSource('overlapping-cyclepaths-unselected', emptySource);
+    map.addSource('route-selected', {
+      type: 'geojson',
+      promoteId: 'routeIndex',
+      data: emptyCollection,
+    });
+    map.addSource('routes-unselected', {
+      type: 'geojson',
+      promoteId: 'routeIndex',
+      data: emptyCollection,
+    });
+    map.addSource('overlapping-cyclepaths-selected', {
+      type: 'geojson',
+      data: emptyCollection,
+    });
+    map.addSource('overlapping-cyclepaths-unselected', {
+      type: 'geojson',
+      data: emptyCollection,
+    });
+    map.addSource(ROUTE_CALCULATING_SOURCE_ID, {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
 
     // Order here is important for layer stacking
     this.createRouteLayerSet(map, 'routes-unselected', 'bottom');
@@ -1744,7 +1920,24 @@ class Map extends Component {
     this.createRouteLayerSet(map, 'route-selected', 'top');
     this.createCyclepathLayerSet(map, 'overlapping-cyclepaths-selected', 'top');
 
+    // Soft curved hint while OD is set and a calc is in flight (above solid routes).
+    // Dasharray stays static: animating it in GL JS keeps flickering.
+    map.addLayer({
+      id: ROUTE_CALCULATING_LINE_ID,
+      type: 'line',
+      source: ROUTE_CALCULATING_SOURCE_ID,
+      layout: { 'line-cap': 'round', 'line-join': 'round', visibility: 'none' },
+      paint: {
+        'line-color': routeCalculatingLineColor(this.props.isDarkMode),
+        'line-width': 3.5,
+        'line-opacity': 0.7,
+        'line-dasharray': ROUTE_CALCULATING_DASH,
+        'line-opacity-transition': { duration: 0 },
+      },
+    });
+
     this.setupRouteEventHandlers(map);
+    this.applyRouteCalculatingOverlay();
   }
 
   componentDidUpdate(prevProps) {
@@ -1754,7 +1947,10 @@ class Map extends Component {
       return;
     }
 
-    if (this.props.data !== prevProps.data) {
+    if (
+      this.props.data !== prevProps.data ||
+      this.props.isInRouteMode !== prevProps.isInRouteMode
+    ) {
       // Note: don't touch originalRouteEndpointPoiFilters here. GeoJSON isn't a map
       // source anymore, and it typically arrives *after* the route panel opens; wiping
       // the stored filters would leave the route-endpoint `within` filter stuck on the
@@ -1827,7 +2023,15 @@ class Map extends Component {
     const hoveredRouteChanged = this.props.hoveredRouteIndex !== prevProps.hoveredRouteIndex;
 
     if (routesChanged) {
-      this.updateRoutesLayer(this.props.routes);
+      // Cobertura toggles rewrite scores/overlaps but keep the same geometries + bbox.
+      // Don't refit the camera in that case; it makes A/B compare miserable.
+      const prevRoutes = prevProps.routes;
+      const nextRoutes = this.props.routes;
+      const sameRouteGeometry =
+        prevRoutes?.bbox === nextRoutes?.bbox &&
+        prevRoutes?.routes?.length === nextRoutes?.routes?.length &&
+        Boolean(prevRoutes?.routes?.every((r, i) => r.geometry === nextRoutes.routes[i]?.geometry));
+      this.updateRoutesLayer(nextRoutes, { fitBounds: !sameRouteGeometry });
       this.updateRouteTooltips();
     }
 
@@ -1841,8 +2045,51 @@ class Map extends Component {
       this.updateHoveredRoute(this.props.hoveredRouteIndex);
     }
 
+    if (
+      this.props.hideRouteOverlay !== prevProps.hideRouteOverlay ||
+      this.props.segmentedRoutePaint !== prevProps.segmentedRoutePaint ||
+      this.props.directionsLoading !== prevProps.directionsLoading ||
+      routesChanged
+    ) {
+      if (this.props.segmentedRoutePaint !== prevProps.segmentedRoutePaint && !routesChanged) {
+        this.updateRoutesLayer(this.props.routes, { fitBounds: false });
+      }
+      this.applyRouteOverlayVisibility();
+    }
+
+    if (this.props.mapPmtilesKind !== prevProps.mapPmtilesKind) {
+      this.swapPmtilesArchive(this.props.mapPmtilesKind);
+    }
+
+    if (this.props.mapPmtilesPocRegion !== prevProps.mapPmtilesPocRegion) {
+      this.reloadPmtilesPocRegion(this.props.mapPmtilesPocRegion);
+    }
+
+    if (this.props.laneSideOffsetEnabled !== prevProps.laneSideOffsetEnabled) {
+      this.applyLaneSideOffset(this.props.laneSideOffsetEnabled);
+    }
+
     if (this.props.globalSearchPin !== prevProps.globalSearchPin) {
       this.applyGlobalSearchPin(this.props.globalSearchPin);
+    }
+
+    if (this.props.elevationHoverLngLat !== prevProps.elevationHoverLngLat) {
+      this.applyElevationHoverMarker(this.props.elevationHoverLngLat);
+    }
+
+    if (
+      this.props.directionsLoading !== prevProps.directionsLoading ||
+      this.props.fromPoint !== prevProps.fromPoint ||
+      this.props.toPoint !== prevProps.toPoint ||
+      this.props.isDarkMode !== prevProps.isDarkMode
+    ) {
+      this.applyRouteCalculatingOverlay({
+        // Don't yank the camera when the user is just nudging A/B.
+        fitBounds:
+          this.props.directionsLoading &&
+          !prevProps.directionsLoading &&
+          !prevProps.routes?.routes?.length,
+      });
     }
 
     if (this.props.favorites !== prevProps.favorites) {
@@ -1853,6 +2100,122 @@ class Map extends Component {
       this.applyCleanModeBasemapLabels();
       this.updateLayerVisibility();
     }
+  }
+
+  applyRouteCalculatingOverlay({ fitBounds = false } = {}) {
+    const map = this.map;
+    if (!map?.getSource(ROUTE_CALCULATING_SOURCE_ID)) return;
+
+    const from = parseRoutePointCenter(this.props.fromPoint?.result?.center);
+    const to = parseRoutePointCenter(this.props.toPoint?.result?.center);
+    const show = Boolean(this.props.directionsLoading && from && to);
+    const hasLine = Boolean(map.getLayer(ROUTE_CALCULATING_LINE_ID));
+
+    if (!show) {
+      map.getSource(ROUTE_CALCULATING_SOURCE_ID).setData({
+        type: 'FeatureCollection',
+        features: [],
+      });
+      if (hasLine) {
+        map.setLayoutProperty(ROUTE_CALCULATING_LINE_ID, 'visibility', 'none');
+      }
+      this.stopRouteCalculatingPulse();
+      return;
+    }
+
+    if (hasLine) {
+      map.setLayoutProperty(ROUTE_CALCULATING_LINE_ID, 'visibility', 'visible');
+      map.setPaintProperty(
+        ROUTE_CALCULATING_LINE_ID,
+        'line-color',
+        routeCalculatingLineColor(this.props.isDarkMode)
+      );
+      try {
+        map.moveLayer(ROUTE_CALCULATING_LINE_ID);
+      } catch (e) {
+        /* already on top or style mid-reload */
+      }
+    }
+
+    map.getSource(ROUTE_CALCULATING_SOURCE_ID).setData({
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: curvedLineBetween(from, to),
+          },
+        },
+      ],
+    });
+    this.startRouteCalculatingPulse();
+
+    if (fitBounds) {
+      const padding = IS_MOBILE
+        ? { top: 32, bottom: 250, left: 32, right: 32 }
+        : { top: 100, bottom: 100, left: 500, right: 100 };
+      try {
+        map.fitBounds([from, to], {
+          padding,
+          duration: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : 800,
+          maxZoom: 14,
+        });
+      } catch (e) {
+        console.debug('fitBounds for calculating overlay failed', e);
+      }
+    }
+  }
+
+  startRouteCalculatingPulse() {
+    if (this._routeCalculatingDashRaf) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const tick = (now) => {
+      if (!this.map?.getLayer(ROUTE_CALCULATING_LINE_ID)) {
+        this._routeCalculatingDashRaf = null;
+        return;
+      }
+      const opacity = 0.42 + 0.38 * (0.5 + 0.5 * Math.sin((now / 1100) * Math.PI * 2));
+      try {
+        this.map.setPaintProperty(ROUTE_CALCULATING_LINE_ID, 'line-opacity', opacity);
+      } catch (e) {
+        /* style may be mid-reload */
+      }
+      this._routeCalculatingDashRaf = requestAnimationFrame(tick);
+    };
+    this._routeCalculatingDashRaf = requestAnimationFrame(tick);
+  }
+
+  stopRouteCalculatingPulse() {
+    if (this._routeCalculatingDashRaf) {
+      cancelAnimationFrame(this._routeCalculatingDashRaf);
+      this._routeCalculatingDashRaf = null;
+    }
+  }
+
+  applyElevationHoverMarker(lngLat) {
+    if (!this.map) return;
+
+    if (!lngLat || !Number.isFinite(lngLat[0]) || !Number.isFinite(lngLat[1])) {
+      if (this.elevationHoverMarker) {
+        this.elevationHoverMarker.remove();
+        this.elevationHoverMarker = null;
+      }
+      return;
+    }
+
+    if (this.elevationHoverMarker) {
+      this.elevationHoverMarker.setLngLat(lngLat);
+      return;
+    }
+
+    const el = document.createElement('div');
+    el.className = 'elevation-hover-marker';
+    el.setAttribute('aria-hidden', 'true');
+    this.elevationHoverMarker = new mapboxgl.Marker({ element: el, draggable: false })
+      .setLngLat(lngLat)
+      .addTo(this.map);
   }
 
   applyGlobalSearchPin(pin) {
@@ -1913,7 +2276,78 @@ class Map extends Component {
     source.setData({ type: 'FeatureCollection', features });
   }
 
-  updateRoutesLayer(routes) {
+  /** Solid line features. Unselected always; selected only when it isn't drawn as segments. */
+  buildSolidRouteFeatures(routes) {
+    const selectedRouteIndex = this.props.selectedRouteIndex;
+    const segmented = Boolean(this.props.segmentedRoutePaint);
+    return (routes?.routes || [])
+      .slice()
+      .reverse()
+      .filter((route) => !segmented || route.sortedIndex !== selectedRouteIndex)
+      .map((route) => ({
+        type: 'Feature',
+        id: route.sortedIndex,
+        properties: {
+          routeIndex: route.sortedIndex,
+          distance: route.distance,
+          duration: route.duration,
+        },
+        geometry: route.geometry,
+      }));
+  }
+
+  /**
+   * Segments fed to the colored line source.
+   * Before: infra overlaps only (orange solid route still underneath).
+   * After: contiguous street+infra partition only — never "full orange under
+   * overlaps" (that was recreating the old double-draw).
+   */
+  buildRoutePaintFeatures(routes) {
+    const segmented = Boolean(this.props.segmentedRoutePaint);
+    const selectedRouteIndex = this.props.selectedRouteIndex;
+    const features = [];
+    let featureId = 0;
+
+    (routes?.routes || []).forEach((route) => {
+      // Colorize only the selected route; unselected stay on the solid layer.
+      if (route.sortedIndex !== selectedRouteIndex) return;
+
+      let segments;
+      if (segmented) {
+        // Prefer a real tag partition (even if Cobertura is still on Near/Tiles).
+        // Important: active Near/Tiles sets routePaintSegments to [] which is
+        // truthy, so we must check .length or we skip BR/GH and only paint
+        // infra overlaps (white gaps where street should be).
+        const taggedPaint = [
+          route.routePaintSegments,
+          route.coverageVariants?.brTags?.routePaintSegments,
+          route.coverageVariants?.ghDetails?.routePaintSegments,
+        ].find((segs) => segs?.length > 0);
+        segments = taggedPaint || route.overlappingCyclepaths || [];
+      } else {
+        segments = route.overlappingCyclepaths || [];
+      }
+
+      segments.forEach((segment) => {
+        if (!segment?.geometry?.coordinates || segment.geometry.coordinates.length < 2) return;
+        const props = segment.properties || {};
+        features.push({
+          type: 'Feature',
+          id: featureId++,
+          properties: {
+            ...props,
+            routeIndex: route.sortedIndex,
+            type: props.debug_cyclepath_type || props.type || 'Unknown',
+          },
+          geometry: segment.geometry,
+        });
+      });
+    });
+
+    return features;
+  }
+
+  updateRoutesLayer(routes, { fitBounds = true } = {}) {
     const map = this.map;
     if (!map) return;
 
@@ -1924,28 +2358,10 @@ class Map extends Component {
     }
 
     if (routes && routes.routes && routes.routes.length > 0) {
-      // Create GeoJSON features for all routes
-      const routeFeatures = routes.routes
-        .slice()
-        .reverse()
-        .map((route) => ({
-          type: 'Feature',
-          id: route.sortedIndex, // Add explicit ID for feature state
-          properties: {
-            routeIndex: route.sortedIndex,
-            distance: route.distance,
-            duration: route.duration,
-          },
-          geometry: route.geometry,
-        }));
-
-      // Distribute routes between top and bottom layers based on current selection
-      this.distributeRoutesBetweenLayers(routeFeatures);
-
-      // Update overlapping cyclepaths with unified data
+      this.distributeRoutesBetweenLayers(this.buildSolidRouteFeatures(routes));
       this.updateOverlappingCyclepathsFromUnifiedData(routes);
 
-      if (routes.bbox) {
+      if (fitBounds && routes.bbox) {
         const padding = IS_MOBILE
           ? { top: 32, bottom: 250, left: 32, right: 32 }
           : { top: 100, bottom: 100, left: 500, right: 100 };
@@ -2185,32 +2601,7 @@ class Map extends Component {
       return;
     }
 
-    let allOverlappingCyclepaths = [];
-    let featureId = 0;
-
-    if (routes && routes.routes && routes.routes.length > 0) {
-      // Process unified routes data
-      routes.routes.forEach((route, routeIndex) => {
-        if (route && route.overlappingCyclepaths && route.overlappingCyclepaths.length > 0) {
-          route.overlappingCyclepaths.forEach((segment) => {
-            allOverlappingCyclepaths.push({
-              type: 'Feature',
-              id: featureId++,
-              properties: {
-                ...segment.properties,
-                routeIndex: route.sortedIndex, // Use sortedIndex for consistency
-                // Use debug_cyclepath_type for styling since these are overlap segments
-                type: segment.properties.debug_cyclepath_type || 'Unknown',
-              },
-              geometry: segment.geometry,
-            });
-          });
-        }
-      });
-    }
-
-    // Distribute cyclepaths between top and bottom layers based on current selection
-    this.distributeCyclepathsBetweenLayers(allOverlappingCyclepaths);
+    this.distributeCyclepathsBetweenLayers(this.buildRoutePaintFeatures(routes));
   }
 
   updateSelectedRoute(selectedRouteIndex) {
@@ -2229,24 +2620,8 @@ class Map extends Component {
     });
 
     // Redistribute routes between layers based on new selection
-    // We need to reconstruct the route features from the original routes data
     if (this.props.routes && this.props.routes.routes) {
-      const routeFeatures = this.props.routes.routes
-        .slice()
-        .reverse()
-        .map((route) => ({
-          type: 'Feature',
-          id: route.sortedIndex,
-          properties: {
-            routeIndex: route.sortedIndex,
-            distance: route.distance,
-            duration: route.duration,
-          },
-          geometry: route.geometry,
-        }));
-      this.distributeRoutesBetweenLayers(routeFeatures);
-
-      // Also redistribute cyclepaths when route selection changes
+      this.distributeRoutesBetweenLayers(this.buildSolidRouteFeatures(this.props.routes));
       this.updateOverlappingCyclepathsFromUnifiedData(this.props.routes);
     }
 
@@ -2346,7 +2721,8 @@ class Map extends Component {
         const originalFilter = this.convertFilterToMapboxFilter(layer);
         const endpointWithinFilter = ['all', originalFilter, spatialFilter];
 
-        const layerId = layer.id + PMTILES_LAYER_SUFFIX;
+        // Only the active compare stack is interactive/visible for POIs.
+        const layerId = layer.id + this.activePmtilesLayerSuffix();
         const circlesLayerId = layerId + 'circles';
         const polygonLayerId = layerId + 'polygon';
 
@@ -2383,7 +2759,7 @@ class Map extends Component {
         );
 
         routeEndpointPoiLayers.forEach((layer) => {
-          const layerId = layer.id + PMTILES_LAYER_SUFFIX;
+          const layerId = layer.id + this.activePmtilesLayerSuffix();
           const circlesLayerId = layerId + 'circles';
           const polygonLayerId = layerId + 'polygon';
 
@@ -2410,59 +2786,64 @@ class Map extends Component {
   updateLayerVisibility() {
     const map = this.map;
     if (!map) return;
+    // Avoid clobbering the brief all-visible warm-up that prefetches compare tiles.
+    if (this._compareArchivesWarming) return;
 
     const hasRoutes = this.props.routes?.routes?.length > 0;
     const fromCoords = this.props.fromPoint?.result?.center;
     const toCoords = this.props.toPoint?.result?.center;
+    const activeKind = this.activePmtilesKind();
 
     this.updateRouteEndpointPoiFilters(hasRoutes, fromCoords, toCoords);
 
-    // Update layer visibility
+    // Update layer visibility across every compare archive stack.
     this.props.layers.forEach((layer) => {
-      if (layer.type === 'way') {
-        const baseLayerId = layer.id + PMTILES_LAYER_SUFFIX;
-        const interactiveLayerId = layer.id + '--interactive' + PMTILES_LAYER_SUFFIX;
-        const routesActiveLayerId = layer.id + '--routes-active' + PMTILES_LAYER_SUFFIX;
-        const arrowLayerId = baseLayerId + '--arrows';
+      MAP_PMTILES_COMPARE_KINDS.forEach((kind) => {
+        const suffix = pmtilesLayerSuffixForKind(kind);
+        const kindActive = kind === activeKind;
 
-        // Swap between normal and routes-active variants:
-        //   - routesActiveLayerId (idx 1): visible only WITH routes (muted background)
-        //   - baseLayerId & interactiveLayerId (idx 0, 2): visible only WITHOUT routes
-        [baseLayerId, routesActiveLayerId, interactiveLayerId].forEach((id, idx) => {
-          if (!map.getLayer(id)) return;
-          const isRoutesActiveLayer = idx === 1;
-          const status = isRoutesActiveLayer
-            ? layer.isActive && hasRoutes
-              ? 'visible'
-              : 'none'
-            : layer.isActive && !hasRoutes
+        if (layer.type === 'way') {
+          const baseLayerId = layer.id + suffix;
+          const interactiveLayerId = layer.id + '--interactive' + suffix;
+          const routesActiveLayerId = layer.id + '--routes-active' + suffix;
+          const arrowLayerId = baseLayerId + '--arrows';
+
+          // Swap between normal and routes-active variants:
+          //   - routesActiveLayerId (idx 1): visible only WITH routes (muted background)
+          //   - baseLayerId & interactiveLayerId (idx 0, 2): visible only WITHOUT routes
+          [baseLayerId, routesActiveLayerId, interactiveLayerId].forEach((id, idx) => {
+            if (!map.getLayer(id)) return;
+            const isRoutesActiveLayer = idx === 1;
+            const status =
+              kindActive &&
+              (isRoutesActiveLayer ? layer.isActive && hasRoutes : layer.isActive && !hasRoutes)
+                ? 'visible'
+                : 'none';
+            map.setLayoutProperty(id, 'visibility', status);
+          });
+
+          if (map.getLayer(arrowLayerId)) {
+            const status = kindActive && layer.isActive && !hasRoutes ? 'visible' : 'none';
+            map.setLayoutProperty(arrowLayerId, 'visibility', status);
+          }
+        } else if (layer.type === 'poi') {
+          const isRouteEndpointPoiIcon = ROUTE_ENDPOINT_VISIBLE_POI_ICONS.includes(layer.icon);
+          const status =
+            kindActive &&
+            (!hasRoutes
+              ? layer.isActive
+              : isRouteEndpointPoiIcon && (fromCoords || toCoords) && layer.isActive)
               ? 'visible'
               : 'none';
-          map.setLayoutProperty(id, 'visibility', status);
-        });
 
-        // Handle arrow layer visibility (same as base layer)
-        if (map.getLayer(arrowLayerId)) {
-          const status = layer.isActive && !hasRoutes ? 'visible' : 'none';
-          map.setLayoutProperty(arrowLayerId, 'visibility', status);
+          const layerId = layer.id + suffix;
+          [layerId + 'circles', layerId, layerId + 'polygon'].forEach((id) => {
+            if (map.getLayer(id)) {
+              map.setLayoutProperty(id, 'visibility', status);
+            }
+          });
         }
-      } else if (layer.type === 'poi') {
-        const isRouteEndpointPoiIcon = ROUTE_ENDPOINT_VISIBLE_POI_ICONS.includes(layer.icon);
-        const status = !hasRoutes
-          ? layer.isActive
-            ? 'visible'
-            : 'none'
-          : isRouteEndpointPoiIcon && (fromCoords || toCoords) && layer.isActive
-            ? 'visible'
-            : 'none';
-
-        const layerId = layer.id + PMTILES_LAYER_SUFFIX;
-        [layerId + 'circles', layerId, layerId + 'polygon'].forEach((id) => {
-          if (map.getLayer(id)) {
-            map.setLayoutProperty(id, 'visibility', status);
-          }
-        });
-      }
+      });
     });
 
     if (map.getLayer('comentarios')) {
@@ -2471,7 +2852,164 @@ class Map extends Component {
     }
   }
 
+  applyRouteOverlayVisibility() {
+    if (!this.map) return;
+    if (this.props.hideRouteOverlay || this.props.directionsLoading) {
+      ROUTE_OVERLAY_LAYER_IDS.forEach((layerId) => {
+        if (this.map.getLayer(layerId)) {
+          this.map.setLayoutProperty(layerId, 'visibility', 'none');
+        }
+      });
+      this.popups?.clearRouteTooltips?.();
+      return;
+    }
+
+    const selectedSolidVisibility = this.props.segmentedRoutePaint ? 'none' : 'visible';
+    SELECTED_SOLID_ROUTE_LAYER_IDS.forEach((layerId) => {
+      if (this.map.getLayer(layerId)) {
+        this.map.setLayoutProperty(layerId, 'visibility', selectedSolidVisibility);
+      }
+    });
+    UNSELECTED_SOLID_ROUTE_LAYER_IDS.forEach((layerId) => {
+      if (this.map.getLayer(layerId)) {
+        this.map.setLayoutProperty(layerId, 'visibility', 'visible');
+      }
+    });
+    SELECTED_SEGMENT_LAYER_IDS.forEach((layerId) => {
+      if (this.map.getLayer(layerId)) {
+        this.map.setLayoutProperty(layerId, 'visibility', 'visible');
+      }
+    });
+    UNSELECTED_SEGMENT_LAYER_IDS.forEach((layerId) => {
+      if (this.map.getLayer(layerId)) {
+        this.map.setLayoutProperty(layerId, 'visibility', 'none');
+      }
+    });
+    this.updateRouteTooltips();
+  }
+
+  /** Disposable compare aid: toggle cycleway lane roadside line-offset / arrow icon-offset. */
+  applyLaneSideOffset(enabled = this.props.laneSideOffsetEnabled) {
+    if (!this.map || !Array.isArray(this.props.layers)) return;
+
+    this.props.layers.forEach((layer) => {
+      if (!layer?.id || (layer.type && layer.type !== 'way')) return;
+      const lineWidth = layer.style?.lineWidth;
+      if (lineWidth == null) return;
+
+      const lineOffset = enabled ? buildLaneSideLineOffset(lineWidth) : 0;
+      const iconOffset = enabled ? buildLaneSideIconOffset() : [0, 0];
+
+      MAP_PMTILES_COMPARE_KINDS.forEach((kind) => {
+        const suffix = pmtilesLayerSuffixForKind(kind);
+        const interactiveLayerId = layer.id + '--interactive' + suffix;
+        const normalLayerId = layer.id + suffix;
+        const arrowLayerId = normalLayerId + '--arrows';
+
+        if (this.map.getLayer(interactiveLayerId)) {
+          this.map.setPaintProperty(interactiveLayerId, 'line-offset', lineOffset);
+        }
+        if (this.map.getLayer(normalLayerId)) {
+          this.map.setPaintProperty(normalLayerId, 'line-offset', lineOffset);
+        }
+        if (this.map.getLayer(arrowLayerId)) {
+          this.map.setLayoutProperty(arrowLayerId, 'icon-offset', iconOffset);
+        }
+      });
+    });
+  }
+
+  /**
+   * Briefly show every compare stack so Mapbox fetches viewport tiles for all archives,
+   * then restore normal visibility. Makes later toggles feel instant.
+   */
+  warmComparePmtilesArchives() {
+    if (!this.map || !this.pmtilesLoadedSuccessfully || !Array.isArray(this.props.layers)) return;
+    if (this._compareArchivesWarming) return;
+    this._compareArchivesWarming = true;
+
+    this.props.layers.forEach((layer) => {
+      if (layer.type !== 'way' || !layer.isActive) return;
+      MAP_PMTILES_COMPARE_KINDS.forEach((kind) => {
+        const id = layer.id + pmtilesLayerSuffixForKind(kind);
+        if (this.map.getLayer(id)) {
+          this.map.setLayoutProperty(id, 'visibility', 'visible');
+        }
+      });
+    });
+
+    this.map.once('idle', () => {
+      this._compareArchivesWarming = false;
+      this.updateLayerVisibility();
+      this.applyLaneSideOffset();
+    });
+  }
+
+  /**
+   * Disposable compare aid: flip which preloaded PMTiles stack is visible (no source reload).
+   */
+  swapPmtilesArchive(_kind = PMTILES_COMPARE_KIND.z13) {
+    if (!this.map || !USE_PMTILES_SOURCE || !this.pmtilesLoadedSuccessfully) return;
+    console.debug(
+      'Showing PMTiles compare archive',
+      _kind,
+      this.filenameForActivePmtilesKind(_kind)
+    );
+    this.updateLayerVisibility();
+    this.applyRouteOverlayVisibility();
+  }
+
+  /**
+   * Disposable PoC: tear down zg/z13/analysis sources and rebuild them for SP or Spain.
+   */
+  reloadPmtilesPocRegion(regionId = this.activePmtilesPocRegion()) {
+    if (!this.map || !USE_PMTILES_SOURCE || !this.layersInitialized) return;
+    const PMTILES_BASE_URL = process.env.REACT_APP_PMTILES_URL;
+    if (!PMTILES_BASE_URL) return;
+
+    const files = filenamesForPmtilesPocRegion(regionId);
+    console.debug('Reloading PMTiles PoC region', regionId, files);
+
+    MAP_PMTILES_COMPARE_KINDS.forEach((kind) => {
+      const sourceId = pmtilesSourceIdForKind(kind);
+      this.removePmtilesCompareLayersForKind(kind);
+      if (this.map.getSource(sourceId)) {
+        this.map.removeSource(sourceId);
+      }
+      this.map.addSource(sourceId, {
+        type: 'vector',
+        url: PMTILES_BASE_URL + (files[kind] || files.z13),
+        promoteId: 'id',
+      });
+    });
+
+    const layers = this.props.layers || [];
+    MAP_PMTILES_COMPARE_KINDS.forEach((kind) => {
+      const sourceId = pmtilesSourceIdForKind(kind);
+      const layerSuffix = pmtilesLayerSuffixForKind(kind);
+      layers
+        .slice()
+        .reverse()
+        .forEach((l) => {
+          if (!l.type || l.type === 'way') {
+            this.initCyclepathLayerForSource(l, sourceId, layerSuffix);
+          } else if (l.type === 'poi' && l.filters) {
+            this.initPOILayerForSource(l, sourceId, layerSuffix);
+          }
+        });
+    });
+
+    this.pmtilesLoadedSuccessfully = true;
+    this.updateLayerVisibility();
+    this.applyLaneSideOffset();
+    this.warmComparePmtilesArchives();
+  }
+
   updateRouteTooltips() {
+    if (this.props.hideRouteOverlay) {
+      this.popups?.clearRouteTooltips?.();
+      return;
+    }
     if (this.popups) {
       this.popups.updateRouteTooltips(
         this.props.routes,
@@ -2991,6 +3529,7 @@ class Map extends Component {
     // Restore current routes if they exist
     if (this.props.routes) {
       this.updateRoutesLayer(this.props.routes);
+      this.applyRouteOverlayVisibility();
       if (this.props.hoveredRouteIndex !== null && this.props.hoveredRouteIndex !== undefined) {
         this.updateHoveredRoute(this.props.hoveredRouteIndex);
       }
@@ -3031,6 +3570,15 @@ class Map extends Component {
       }
       this.globalSearchMarker = null;
     }
+    if (this.elevationHoverMarker) {
+      try {
+        this.elevationHoverMarker.remove();
+      } catch (e) {
+        /* ignore */
+      }
+      this.elevationHoverMarker = null;
+    }
+    this.stopRouteCalculatingPulse();
     if (this.popups) {
       this.popups.searchResultPopup?.off?.('close', this._onSearchResultPopupClosed);
     }
@@ -3139,17 +3687,30 @@ export { Map };
 // Wrapper component to use the directions context with the class component
 const MapWrapper = React.forwardRef((props, ref) => {
   const directionsContext = useDirections();
+  const directions = directionsContext.directions;
+  const visibleRouteIndices = directionsContext.visibleRouteIndices;
+  const routesForMap = React.useMemo(() => {
+    if (!directions?.routes?.length) return directions;
+    if (!visibleRouteIndices) return directions;
+    const keep = new Set(visibleRouteIndices);
+    return {
+      ...directions,
+      routes: directions.routes.filter((_, index) => keep.has(index)),
+    };
+  }, [directions, visibleRouteIndices]);
 
   return (
     <Map
       ref={ref}
       {...props}
-      routes={directionsContext.directions}
+      routes={routesForMap}
       selectedRouteIndex={directionsContext.selectedRouteIndex}
       hoveredRouteIndex={directionsContext.hoveredRouteIndex}
       onRouteSelected={directionsContext.selectRoute}
       onRouteHovered={directionsContext.hoverRoute}
       isInRouteMode={directionsContext.isInRouteMode}
+      elevationHoverLngLat={directionsContext.elevationHoverLngLat}
+      directionsLoading={directionsContext.directionsLoading}
     />
   );
 });

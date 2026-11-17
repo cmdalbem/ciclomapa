@@ -195,5 +195,39 @@ export const formatDistance = (distance) => {
 
 export const formatDuration = (duration) => {
   if (!duration) return 'N/A';
-  return `${Math.round(duration / 60)} min`;
+  const totalMin = Math.round(duration / 60);
+  if (totalMin < 60) return `${totalMin} min`;
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  return mins === 0 ? `${hours}h` : `${hours}h ${mins}min`;
 };
+
+/** Matches ciclomapa.brf assigns. */
+export const BROUTER_PROFILE_DEFAULTS = {
+  consider_elevation: true,
+  unpavedPenalty: 1,
+  consider_noise: false,
+  consider_river: false,
+  consider_forest: false,
+};
+
+/** Surface chip: BRouter `unpavedPenalty` multiplier (<1 favors dirt, >1 favors asphalt). */
+export const BROUTER_SURFACE_OPTIONS = [
+  { value: 4, label: 'Só asfalto', shortLabel: 'Só asfalto' },
+  { value: 2, label: 'Preferir asfalto', shortLabel: 'Preferir asfalto' },
+  { value: 1, label: 'Qualquer terreno', shortLabel: 'Qualquer terreno' },
+  { value: 0.5, label: 'Preferir terra', shortLabel: 'Preferir terra' },
+  { value: 0.25, label: 'Só terra', shortLabel: 'Só terra' },
+];
+
+/** Objective dropdown: maps UI sort keys → ciclomapa.brf `routingObjective`. */
+export const BROUTER_OBJECTIVE_OPTIONS = [
+  { key: 'score', label: 'Mais protegida', routingObjective: 0 },
+  { key: 'fastest', label: 'Mais rápida', routingObjective: 1 },
+  { key: 'shortest', label: 'Mais curta', routingObjective: 2 },
+];
+
+export function brouterRoutingObjectiveFromSort(sortKey) {
+  const opt = BROUTER_OBJECTIVE_OPTIONS.find((o) => o.key === sortKey);
+  return opt ? opt.routingObjective : 0;
+}

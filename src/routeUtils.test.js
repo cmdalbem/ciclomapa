@@ -28,8 +28,12 @@ describe('formatDistance', () => {
 });
 
 describe('formatDuration', () => {
-  it('formats seconds as minutes', () => {
+  it('formats seconds as minutes under an hour', () => {
     expect(formatDuration(300)).toBe('5 min');
+  });
+  it('formats longer trips as hours and minutes', () => {
+    expect(formatDuration(226 * 60)).toBe('3h 46min');
+    expect(formatDuration(120 * 60)).toBe('2h');
   });
   it('returns N/A for null/undefined', () => {
     expect(formatDuration(null)).toBe('N/A');

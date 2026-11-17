@@ -96,6 +96,7 @@ export default function AppLayout({
               isDarkMode={state.isDarkMode}
               setMapRef={handlers.setMapRef}
               directionsPanelRef={directionsPanelRef}
+              fromPoint={state.fromPoint}
               toPoint={state.toPoint}
               isTrackingUserLocation={state.isTrackingUserLocation}
               onTrackingUserLocationChange={handlers.onTrackingUserLocationChange}

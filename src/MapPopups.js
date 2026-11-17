@@ -224,7 +224,7 @@ class MapPopups {
         try {
           this.map.setFeatureState(
             {
-              source: PMTILES_SOURCE_ID,
+              source: this.selectedCyclewaySourceId || PMTILES_SOURCE_ID,
               sourceLayer: PMTILES_SOURCE_LAYER,
               id: this.selectedCycleway,
             },
@@ -233,6 +233,7 @@ class MapPopups {
         } catch (e) {}
       }
       this.selectedCycleway = null;
+      this.selectedCyclewaySourceId = null;
     });
 
     this.commentPopup = new mapboxgl.Popup({
@@ -624,12 +625,13 @@ class MapPopups {
     });
   }
 
-  showCyclewayPopup(e, layer) {
+  showCyclewayPopup(e, layer, sourceId) {
     const coords = e.lngLat;
     const properties = e.features[0].properties;
     const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
     const bgClass = layer.id;
     this.selectedCycleway = e.features[0].id;
+    this.selectedCyclewaySourceId = sourceId || PMTILES_SOURCE_ID;
 
     if (this.previousCyclewayLayerClass) {
       this.cyclewayPopup.removeClassName(this.previousCyclewayLayerClass);
@@ -775,17 +777,28 @@ class MapPopups {
     this.clearRouteTooltips();
 
     if (directions && directions.routes && directions.routes.length > 0) {
-      directions.routes.forEach((route) => {
+      directions.routes.forEach((route, displayIndex) => {
         if (!route.geometry || route.geometry.type !== 'LineString') {
           return;
         }
 
-        console.debug('updateRouteTooltips - route', route, route.sortedIndex);
-
-        // Calculate midpoint of the route
         const coordinates = route.geometry.coordinates;
-        const percentageSlot = (route.sortedIndex + 1) / (directions.routes.length + 1);
-        const midPoint = coordinates[Math.floor(coordinates.length * percentageSlot)];
+        if (!coordinates?.length) return;
+
+        // Use display order, not sortedIndex: after max-routes filtering the painted
+        // list is shorter and sortedIndex can be >> length (setLngLat(undefined) crash).
+        const percentageSlot = (displayIndex + 1) / (directions.routes.length + 1);
+        const midIndex = Math.min(
+          coordinates.length - 1,
+          Math.max(0, Math.floor(coordinates.length * percentageSlot))
+        );
+        const midPoint = coordinates[midIndex];
+        if (!midPoint || midPoint.length < 2) return;
+
+        const routeIndex =
+          route.sortedIndex !== undefined && route.sortedIndex !== null
+            ? route.sortedIndex
+            : displayIndex;
 
         // Create popup for this route
         const popup = new mapboxgl.Popup({
@@ -795,18 +808,18 @@ class MapPopups {
           className: 'route-tooltip-popup',
         })
           .setLngLat(midPoint)
-          .setHTML(this.createRouteTooltipHTML(route, route.sortedIndex, selectedRouteIndex))
+          .setHTML(this.createRouteTooltipHTML(route, routeIndex, selectedRouteIndex))
           .addTo(this.map);
 
         // Add click handler to the popup content
         popup.getElement().addEventListener('click', (e) => {
           e.stopPropagation();
           if (onRouteSelected) {
-            onRouteSelected(route.sortedIndex);
+            onRouteSelected(routeIndex);
           }
         });
 
-        // Store popup reference for cleanup
+        popup.routeIndex = routeIndex;
         this.routeTooltips.push(popup);
       });
 
@@ -821,7 +834,10 @@ class MapPopups {
     this.routeTooltips.forEach((popup, index) => {
       const contentDiv = popup.getElement();
       if (contentDiv) {
-        const stateVariables = this.getTooltipStateVariables(index, selectedRouteIndex);
+        const stateVariables = this.getTooltipStateVariables(
+          popup.routeIndex ?? index,
+          selectedRouteIndex
+        );
         contentDiv.style.setProperty('--popup-bg-color', stateVariables.bgColor);
         contentDiv.style.setProperty('--popup-text-color-on-primary', stateVariables.bgColor);
         contentDiv.style.setProperty('--popup-text-color', stateVariables.textColor);
