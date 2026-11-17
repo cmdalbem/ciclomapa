@@ -111,8 +111,7 @@ export function computeTypologies(data, layers) {
             });
 
             if (
-              (typeof filter[0] === 'object' && partsToMatch[0] && partsToMatch[1]) ||
-              partsToMatch[0]
+              typeof filter[0] === 'object' ? partsToMatch[0] && partsToMatch[1] : partsToMatch[0]
             ) {
               match = true;
 

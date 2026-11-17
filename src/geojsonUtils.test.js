@@ -6,6 +6,7 @@ import {
   calculateCyclepathCoverageFromPathDetails,
   calculateCyclepathCoverageFromBrouterMessages,
   calculateLayersLengths,
+  computeTypologies,
   COVERAGE_MAX_LATERAL_KM,
 } from './utils/geojsonUtils.js';
 
@@ -343,5 +344,76 @@ describe('calculateCyclepathCoverageFromBrouterMessages', () => {
     expect(
       result.routePaintSegments.some((f) => f.properties.debug_cyclepath_type === 'street')
     ).toBe(true);
+  });
+
+  it('does not count a bare highway=path as coverage', () => {
+    const layers = [
+      {
+        id: 'ciclovia',
+        name: 'Ciclovia',
+        filters: [
+          [
+            ['highway', 'path'],
+            ['bicycle', 'yes'],
+          ],
+        ],
+      },
+    ];
+    const messages = [
+      ['Longitude', 'Latitude', 'Elevation', 'Distance', 'WayTags'],
+      ['0', '0', '0', '500', 'highway=path'],
+      ['10000', '0', '0', '500', 'highway=path'],
+    ];
+    const result = calculateCyclepathCoverageFromBrouterMessages(messages, layers, {
+      type: 'LineString',
+      coordinates: [
+        [0, 0],
+        [0.01, 0],
+      ],
+    });
+    expect(result.coverage).toBe(0);
+  });
+});
+
+describe('computeTypologies compound filters', () => {
+  const trilha = {
+    name: 'Trilha',
+    filters: [
+      [
+        ['highway', 'path'],
+        ['bicycle', 'yes'],
+      ],
+    ],
+  };
+
+  function feature(properties) {
+    return {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties,
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [0.001, 0],
+            ],
+          },
+        },
+      ],
+    };
+  }
+
+  it('requires both tags on a compound filter', () => {
+    const data = feature({ highway: 'path' });
+    computeTypologies(data, [trilha]);
+    expect(data.features[0].properties.type).toBeUndefined();
+  });
+
+  it('matches when both compound tags are present', () => {
+    const data = feature({ highway: 'path', bicycle: 'yes' });
+    computeTypologies(data, [trilha]);
+    expect(data.features[0].properties.type).toBe('Trilha');
   });
 });
