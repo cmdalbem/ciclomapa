@@ -112,6 +112,7 @@ class DirectionsPanel extends Component {
     this.debouncedRunPlacesSearch = debounce(this.runPlacesSearch, PLACES_AUTOCOMPLETE_DEBOUNCE_MS);
 
     this.toggleCollapse = this.toggleCollapse.bind(this);
+    this.syncRouteSheetHeight = this.syncRouteSheetHeight.bind(this);
     this.clearDirections = this.clearDirections.bind(this);
     this.clearDirectionsOnly = this.clearDirectionsOnly.bind(this);
     this.selectRoute = this.selectRoute.bind(this);
@@ -183,6 +184,15 @@ class DirectionsPanel extends Component {
       // only fires on *changes*, so kick the calc here or it sits idle.
       this.requestDirectionsCalculation();
     }
+
+    if (IS_MOBILE) {
+      const sheet = document.getElementById('directionsPanel');
+      if (sheet && typeof ResizeObserver !== 'undefined') {
+        this.routeSheetHeightObserver = new ResizeObserver(() => this.syncRouteSheetHeight());
+        this.routeSheetHeightObserver.observe(sheet);
+      }
+      this.syncRouteSheetHeight();
+    }
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -247,6 +257,10 @@ class DirectionsPanel extends Component {
     ) {
       this.syncVisibleRouteIndices();
     }
+
+    if (prevState.collapsed !== this.state.collapsed) {
+      this.syncRouteSheetHeight();
+    }
   }
 
   componentWillUnmount() {
@@ -257,6 +271,11 @@ class DirectionsPanel extends Component {
     if (this.debouncedRunPlacesSearch) {
       this.debouncedRunPlacesSearch.cancel();
     }
+    if (this.routeSheetHeightObserver) {
+      this.routeSheetHeightObserver.disconnect();
+      this.routeSheetHeightObserver = null;
+    }
+    document.getElementById('ciclomapa')?.style.removeProperty('--cm-route-sheet-height');
     this.cancelDirectionsCalculation();
     this.cleanup();
     this.removeMapClickListener();
@@ -594,6 +613,20 @@ class DirectionsPanel extends Component {
     // Remove custom markers
     this.removeMarker('from');
     this.removeMarker('to');
+  }
+
+  syncRouteSheetHeight() {
+    const root = document.getElementById('ciclomapa');
+    if (!root) return;
+    if (!IS_MOBILE) {
+      root.style.removeProperty('--cm-route-sheet-height');
+      return;
+    }
+    const sheet = document.getElementById('directionsPanel');
+    // Layout height is real even while the sheet is translated off-screen,
+    // so the geolocate lift is already correct on the opening frame.
+    const height = sheet ? Math.round(sheet.getBoundingClientRect().height) : 0;
+    root.style.setProperty('--cm-route-sheet-height', `${height}px`);
   }
 
   toggleCollapse() {
@@ -991,54 +1024,59 @@ class DirectionsPanel extends Component {
               onClick={() => this.setState({ showAdvancedRouteOptions: true })}
             >
               <LuSlidersHorizontal className="cm-brouter-pref__icon" aria-hidden />
-              <span className="cm-brouter-pref__text">Ajustes</span>
               {hiddenActiveCount > 0 && (
                 <span className="cm-brouter-pref__count">{hiddenActiveCount}</span>
               )}
             </button>
           )}
         </div>
-        {showAdvanced && (
-          <div className="cm-brouter-prefs__toggles">
-            {toggleChip({
-              key: 'elev',
-              label: 'Permitir subidas',
-              title: 'Permitir subidas',
-              icon: LuMountain,
-              on: allowHills,
-              onClick: () => this.handleBrouterPrefChange({ consider_elevation: allowHills }),
-            })}
-            {toggleChip({
-              key: 'noise',
-              label: 'Evitar ruído',
-              title: 'Evitar ruído',
-              icon: LuVolumeX,
-              on: Boolean(this.state.consider_noise),
-              onClick: () =>
-                this.handleBrouterPrefChange({ consider_noise: !this.state.consider_noise }),
-            })}
-            {toggleChip({
-              key: 'nature',
-              label: 'Natureza',
-              title: 'Preferir rios e parques',
-              icon: LuLeaf,
-              on: Boolean(this.state.consider_river || this.state.consider_forest),
-              onClick: () => {
-                const next = !(this.state.consider_river || this.state.consider_forest);
-                this.handleBrouterPrefChange({ consider_river: next, consider_forest: next });
-              },
-            })}
-            <button
-              type="button"
-              className="cm-brouter-pref cm-brouter-pref--collapse"
-              aria-expanded="true"
-              aria-label="Ocultar ajustes"
-              onClick={() => this.setState({ showAdvancedRouteOptions: false })}
-            >
-              <IconCaretDown className="cm-brouter-pref__caret" aria-hidden />
-            </button>
+        <div
+          className="cm-brouter-prefs__advanced"
+          aria-hidden={!showAdvanced}
+          inert={!showAdvanced ? true : undefined}
+        >
+          <div className="cm-brouter-prefs__advanced-inner">
+            <div className="cm-brouter-prefs__toggles">
+              {toggleChip({
+                key: 'elev',
+                label: 'Permitir subidas',
+                title: 'Permitir subidas',
+                icon: LuMountain,
+                on: allowHills,
+                onClick: () => this.handleBrouterPrefChange({ consider_elevation: allowHills }),
+              })}
+              {toggleChip({
+                key: 'noise',
+                label: 'Evitar ruído',
+                title: 'Evitar ruído',
+                icon: LuVolumeX,
+                on: Boolean(this.state.consider_noise),
+                onClick: () =>
+                  this.handleBrouterPrefChange({ consider_noise: !this.state.consider_noise }),
+              })}
+              {toggleChip({
+                key: 'nature',
+                label: 'Natureza',
+                title: 'Preferir rios e parques',
+                icon: LuLeaf,
+                on: Boolean(this.state.consider_river || this.state.consider_forest),
+                onClick: () => {
+                  const next = !(this.state.consider_river || this.state.consider_forest);
+                  this.handleBrouterPrefChange({ consider_river: next, consider_forest: next });
+                },
+              })}
+              <button
+                type="button"
+                className="cm-brouter-pref cm-brouter-pref--collapse"
+                aria-expanded={showAdvanced}
+                aria-label="Ocultar ajustes"
+                onClick={() => this.setState({ showAdvancedRouteOptions: false })}
+              >
+                <IconCaretDown className="cm-brouter-pref__caret" aria-hidden />
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -1402,6 +1440,19 @@ class DirectionsPanel extends Component {
                       aria-label="Voltar para origem e destino"
                     />
                   </div>
+                  {directionsLoading && (
+                    <div className="cm-panel__header-status">
+                      <span>Calculando rotas…</span>
+                      <button
+                        type="button"
+                        className="cm-panel__header-status-cancel"
+                        onClick={this.cancelDirectionsCalculation}
+                        aria-label="Cancelar cálculo de rota"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
                   <Button
                     onClick={this.toggleCollapse}
                     type="text"
@@ -1421,10 +1472,7 @@ class DirectionsPanel extends Component {
                     Planejar rota
                   </h3>
 
-                  <div
-                    className="flex items-center -mr-1 flex-shrink-0"
-                    style={{ marginTop: '-5px' }}
-                  >
+                  <div className="cm-panel__header-actions flex items-center flex-shrink-0">
                     <div className="flex items-center opacity-50">
                       {this.props.openLayersLegendModal && (
                         <Button
@@ -1504,7 +1552,6 @@ class DirectionsPanel extends Component {
                 id="directionsPanel--results"
                 className="cm-panel__results directionsPanel--results md:space-y-2 space-y-2"
               >
-                {IS_MOBILE ? <span className="text-sm opacity-70">Calculando rotas…</span> : null}
                 {Array.from({ length: 3 }, (_, i) => (
                   <div key={i} className="cm-route-option flex justify-between gap-1">
                     <div className="flex items-start min-w-0 flex-1">
@@ -1527,14 +1574,16 @@ class DirectionsPanel extends Component {
                     </div>
                   </div>
                 ))}
-                <button
-                  type="button"
-                  className="cm-panel__footer-action"
-                  onClick={this.cancelDirectionsCalculation}
-                  aria-label="Cancelar cálculo de rota"
-                >
-                  Cancelar
-                </button>
+                {!IS_MOBILE && (
+                  <button
+                    type="button"
+                    className="cm-panel__footer-action"
+                    onClick={this.cancelDirectionsCalculation}
+                    aria-label="Cancelar cálculo de rota"
+                  >
+                    Cancelar
+                  </button>
+                )}
               </div>
             )}
             {(directionsError || this.state.cityValidationError) && (

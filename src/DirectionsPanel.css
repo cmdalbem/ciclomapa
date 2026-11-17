@@ -69,6 +69,34 @@
   justify-content: center;
 }
 
+#directionsPanel .cm-panel__header-actions {
+  margin-top: -5px;
+  margin-right: -4px;
+}
+
+#directionsPanel .cm-panel__header-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.2;
+}
+
+#directionsPanel .cm-panel__header-status-cancel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  opacity: 0.5;
+}
+
+#directionsPanel .cm-panel__header-status-cancel:hover {
+  opacity: 0.8;
+}
+
 /* Full-bleed selectable rows (cancels .cm-panel__body p-4) */
 #directionsPanel .cm-route-option {
   background: transparent;
@@ -106,19 +134,19 @@
 }
 
 #directionsPanel .cm-route-option--hover:not(.cm-route-option--selected) {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 #directionsPanel .cm-route-option--selected {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .theme-light #directionsPanel .cm-route-option--hover:not(.cm-route-option--selected) {
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .theme-light #directionsPanel .cm-route-option--selected {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 #directionsPanel .cm-route-tag {
@@ -348,7 +376,24 @@
 #directionsPanel .cm-brouter-prefs {
   display: flex;
   flex-direction: column;
-  gap: var(--cm-panel-control-gap);
+}
+
+#directionsPanel .cm-brouter-prefs__advanced {
+  display: grid;
+  grid-template-rows: 0fr;
+  pointer-events: none;
+  transition: grid-template-rows 300ms ease-out;
+}
+
+#directionsPanel .cm-brouter-prefs--advanced .cm-brouter-prefs__advanced {
+  grid-template-rows: 1fr;
+  pointer-events: auto;
+}
+
+#directionsPanel .cm-brouter-prefs__advanced-inner {
+  overflow: hidden;
+  min-height: 0;
+  padding-top: var(--cm-panel-control-gap);
 }
 
 #directionsPanel .cm-brouter-prefs__dropdowns,
@@ -475,31 +520,31 @@
 }
 
 #directionsPanel .cm-brouter-pref--more {
-  width: auto;
-  min-width: max-content;
-  padding-left: 12px;
-  padding-right: 12px;
+  position: relative;
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
 }
 
-#directionsPanel .cm-brouter-pref--more .cm-brouter-pref__icon,
-#directionsPanel .cm-brouter-pref--more .cm-brouter-pref__text {
+#directionsPanel .cm-brouter-pref--more .cm-brouter-pref__icon {
   opacity: 0.55;
 }
 
-#directionsPanel .cm-brouter-pref--more:hover .cm-brouter-pref__icon,
-#directionsPanel .cm-brouter-pref--more:hover .cm-brouter-pref__text {
+#directionsPanel .cm-brouter-pref--more:hover .cm-brouter-pref__icon {
   opacity: 0.9;
 }
 
 #directionsPanel .cm-brouter-pref__count {
-  margin-left: 4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 5px;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  line-height: 16px;
+  line-height: 14px;
   text-align: center;
   background: rgba(255, 255, 255, 0.22);
 }
@@ -752,7 +797,8 @@ body.theme-light {
   }
   #directionsPanel .cm-brouter-pref,
   #directionsPanel .cm-brouter-pref__icon,
-  #directionsPanel .cm-brouter-pref__text {
+  #directionsPanel .cm-brouter-pref__text,
+  #directionsPanel .cm-brouter-prefs__advanced {
     transition: none;
   }
   .animate-pulse-2x,
@@ -779,16 +825,73 @@ body.theme-light {
     display: none;
   }
 
-  #directionsPanel .cm-route-option {
-    margin-left: 0;
+  #directionsPanel.cm-panel.glass-bg {
+    --glass-bg-opacity: 0.97;
+  }
+
+  .theme-light #directionsPanel.cm-panel.glass-bg {
+    background: rgba(255, 255, 255, 0.97);
+  }
+
+  .theme-dark #directionsPanel.cm-panel.glass-bg {
+    background: rgba(23, 23, 23, 0.94);
+  }
+
+  .theme-light #directionsPanel.directions-panel-open--planning.glass-bg {
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  .theme-light #directionsPanel {
+    --cm-panel-control-bg: rgba(0, 0, 0, 0.07);
+  }
+
+  #directionsPanel .cm-panel__body {
+    padding: 8px 12px 12px;
+  }
+
+  #directionsPanel .cm-panel__header {
+    align-items: center;
+    min-height: 28px;
+  }
+
+  #directionsPanel .cm-panel__header h3 {
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  #directionsPanel .cm-panel__header-actions {
+    margin-top: 0;
     margin-right: 0;
-    padding: 8px 10px;
+  }
+
+  #directionsPanel .cm-panel__header .ant-btn.-ml-2 {
+    margin-left: 0;
+  }
+
+  #directionsPanel .cm-panel__header .ant-btn.-mr-1 {
+    margin-right: 0;
+  }
+
+  #directionsPanel .cm-panel__controls {
+    margin-top: 8px;
+  }
+
+  #directionsPanel .cm-panel__results {
+    margin-top: 4px;
+  }
+
+  /* Content stays on the 12px header grid; selected bg can overflow it
+     a bit toward the sheet edge, with a small remaining inset. */
+  #directionsPanel .cm-route-option {
+    margin-left: -8px;
+    margin-right: -8px;
+    padding: 8px;
     border-radius: var(--radius-md);
     overflow: hidden;
   }
 
   #directionsPanel .cm-route-elev {
-    margin: 8px -10px -8px;
+    margin: 8px -8px -8px;
   }
 
   #directionsPanel .ant-input-affix-wrapper {
