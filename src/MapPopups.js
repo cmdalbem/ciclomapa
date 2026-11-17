@@ -819,7 +819,7 @@ class MapPopups {
           }
         });
 
-        // Store popup reference for cleanup
+        popup.routeIndex = routeIndex;
         this.routeTooltips.push(popup);
       });
 
@@ -834,7 +834,10 @@ class MapPopups {
     this.routeTooltips.forEach((popup, index) => {
       const contentDiv = popup.getElement();
       if (contentDiv) {
-        const stateVariables = this.getTooltipStateVariables(index, selectedRouteIndex);
+        const stateVariables = this.getTooltipStateVariables(
+          popup.routeIndex ?? index,
+          selectedRouteIndex
+        );
         contentDiv.style.setProperty('--popup-bg-color', stateVariables.bgColor);
         contentDiv.style.setProperty('--popup-text-color-on-primary', stateVariables.bgColor);
         contentDiv.style.setProperty('--popup-text-color', stateVariables.textColor);
