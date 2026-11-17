@@ -85,7 +85,7 @@
     "filters": [["amenity", "bicycle_rental"]],
     "type": "poi",
     "icon": "poi-rental",
-    "zoomThreshold": 15,
+    "zoomThreshold": 14.4,
     "style": {
       "textColor": "#E56119"
     }

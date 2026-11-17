@@ -201,3 +201,20 @@
   color: var(--color-favorite-accent-dark) !important;
   border-color: var(--color-favorite-accent-dark) !important;
 }
+
+/* Bicing wordmark: charcoal ink → white in dark mode; accent red stays */
+.bicing-logo__ink {
+  fill: #242122;
+}
+
+.bicing-logo__accent {
+  fill: #d51922;
+}
+
+.theme-dark .bicing-logo__ink {
+  fill: #ffffff;
+}
+
+.theme-dark .bicing-logo__accent {
+  fill: #c5c5c5;
+}
