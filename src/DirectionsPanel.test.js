@@ -101,3 +101,18 @@ it('keeps extra route options behind Ajustes', () => {
   expect(ajustes).toBeInTheDocument();
   expect(ajustes).toHaveTextContent('2');
 });
+
+it('ranks Mais rápida by duration, not score', () => {
+  const ref = React.createRef();
+  render(
+    <DirectionsProvider>
+      <DirectionsPanel ref={ref} {...defaultProps} />
+    </DirectionsProvider>
+  );
+
+  const betterScoreSlower = { score: 90, duration: 3000, distance: 4 };
+  const faster = { score: 40, duration: 1000, distance: 5 };
+  const ranked = ref.current.getSortedRoutes([betterScoreSlower, faster], 'fastest');
+  expect(ranked[0]).toBe(faster);
+  expect(ranked[1]).toBe(betterScoreSlower);
+});

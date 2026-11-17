@@ -789,6 +789,16 @@ class DirectionsPanel extends Component {
       }
 
       this.props.setDirectionsData(result);
+      // Manager ranks by score; the panel may be showing fastest/shortest.
+      // Pick the top card for the current objective instead of keeping index 0.
+      const max = this.props.maxRoutesShown;
+      let ranked = this.getSortedRoutes(result.routes);
+      if (max > 0) ranked = ranked.slice(0, max);
+      const top = ranked[0];
+      const originalIndex = top ? result.routes.indexOf(top) : -1;
+      if (originalIndex >= 0) {
+        this.selectRoute(originalIndex);
+      }
     } catch (error) {
       if (requestId !== this.directionsRequestId || error?.name === 'AbortError') {
         return;
