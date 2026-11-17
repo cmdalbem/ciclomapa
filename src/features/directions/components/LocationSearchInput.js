@@ -155,6 +155,7 @@ export default function LocationSearchInput({ inputType, parentComponent, classN
       onSelect={(value, option) => handlers.handleSelect(option.suggestion, inputType)}
       open={showLocalDropdown ? true : isFocused ? undefined : false}
       className={className}
+      transitionName=""
     >
       <Input
         placeholder={
