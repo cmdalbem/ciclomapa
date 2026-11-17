@@ -1187,7 +1187,7 @@ class Map extends Component {
         } catch (err) {}
 
         const layer = self.props.layers.find((l) => l.id === e.features[0].layer.id.split('--')[0]);
-        self.popups.showCyclewayPopup(e, layer);
+        self.popups.showCyclewayPopup(e, layer, sourceId);
         if (IS_MOBILE && e.features && e.features[0]) {
           const bb = turfBbox(e.features[0]); // [minX, minY, maxX, maxY]
           const bounds = new mapboxgl.LngLatBounds([bb[0], bb[1]], [bb[2], bb[3]]);

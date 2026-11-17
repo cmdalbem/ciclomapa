@@ -224,7 +224,7 @@ class MapPopups {
         try {
           this.map.setFeatureState(
             {
-              source: PMTILES_SOURCE_ID,
+              source: this.selectedCyclewaySourceId || PMTILES_SOURCE_ID,
               sourceLayer: PMTILES_SOURCE_LAYER,
               id: this.selectedCycleway,
             },
@@ -233,6 +233,7 @@ class MapPopups {
         } catch (e) {}
       }
       this.selectedCycleway = null;
+      this.selectedCyclewaySourceId = null;
     });
 
     this.commentPopup = new mapboxgl.Popup({
@@ -624,12 +625,13 @@ class MapPopups {
     });
   }
 
-  showCyclewayPopup(e, layer) {
+  showCyclewayPopup(e, layer, sourceId) {
     const coords = e.lngLat;
     const properties = e.features[0].properties;
     const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
     const bgClass = layer.id;
     this.selectedCycleway = e.features[0].id;
+    this.selectedCyclewaySourceId = sourceId || PMTILES_SOURCE_ID;
 
     if (this.previousCyclewayLayerClass) {
       this.cyclewayPopup.removeClassName(this.previousCyclewayLayerClass);
