@@ -306,6 +306,23 @@ describe('Map helpers', () => {
     expect(setData.mock.calls.at(-1)[0].features).toEqual([]);
   });
 
+  it('skips the calculating pulse when the user prefers reduced motion', () => {
+    const orig = window.matchMedia;
+    window.matchMedia = (query) => ({
+      matches: String(query).includes('prefers-reduced-motion'),
+      media: query,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+    });
+    const map = mountMap();
+    map.map = fakeMapbox({ getLayer: () => true, setPaintProperty: jest.fn() });
+    map.startRouteCalculatingPulse();
+    expect(map._routeCalculatingDashRaf).toBeFalsy();
+    window.matchMedia = orig;
+  });
+
   it('puts unselected route casings under fills', () => {
     const added = [];
     const map = mountMap();

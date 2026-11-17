@@ -2157,7 +2157,11 @@ class Map extends Component {
         ? { top: 32, bottom: 250, left: 32, right: 32 }
         : { top: 100, bottom: 100, left: 500, right: 100 };
       try {
-        map.fitBounds([from, to], { padding, duration: 800, maxZoom: 14 });
+        map.fitBounds([from, to], {
+          padding,
+          duration: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : 800,
+          maxZoom: 14,
+        });
       } catch (e) {
         console.debug('fitBounds for calculating overlay failed', e);
       }
@@ -2166,6 +2170,7 @@ class Map extends Component {
 
   startRouteCalculatingPulse() {
     if (this._routeCalculatingDashRaf) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const tick = (now) => {
       if (!this.map?.getLayer(ROUTE_CALCULATING_LINE_ID)) {
         this._routeCalculatingDashRaf = null;
