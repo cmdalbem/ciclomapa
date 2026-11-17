@@ -9,7 +9,7 @@ PORT="${BROUTER_PORT:-17777}"
 # Brazil-wide routing needs more heap than a single-city PoC.
 XMX="${BROUTER_XMX:-2g}"
 
-# 5x5° tiles (SW corner in the name). PoC coverage: whole Brazil + Barcelona.
+# 5x5° tiles (SW corner in the name). PoC coverage: whole Brazil + whole Spain.
 TILES=()
 
 # Brazil bbox ~ W74..W35, S34..N5 → 9×9 grid. Ocean squares 404; we skip those.
@@ -20,7 +20,8 @@ for lon in "${BR_LONS[@]}"; do
     TILES+=("${lon}_${lat}")
   done
 done
-TILES+=("E0_N40") # Barcelona / NE Spain
+# Spain mainland + Balearics + Canaries. Ocean squares 404; we skip those.
+TILES+=(W10_N35 W10_N40 W5_N35 W5_N40 E0_N35 E0_N40 W20_N25 W15_N25)
 
 if ! command -v java >/dev/null; then
   echo "Need Java 17+. brew install openjdk@17"
@@ -82,4 +83,4 @@ java -Xmx"$XMX" -Xms256m \
   -DmaxRunningTime=120 \
   -DdebugThreadPool=true \
   -cp "$JAR" btools.server.RouteServer \
-  segments4 profiles2 customprofiles "$PORT" 2 127.0.0.1
+  segments4 profiles2 customprofiles "$PORT" 4 127.0.0.1

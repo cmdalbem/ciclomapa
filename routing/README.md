@@ -11,7 +11,7 @@ Tiles live in `routing/brouter/segments4/` (5×5°). [`run-local.sh`](brouter/ru
 | Coverage                         | Notes                                      |
 | -------------------------------- | ------------------------------------------ |
 | Whole Brazil (`W75..W35` × `S35..N5`) | ~81 candidates; empty ocean tiles 404/skip |
-| Barcelona / NE Spain (`E0_N40`)  | Spain PoC                                  |
+| Whole Spain (mainland, Balearics, Canaries) | `W10/W5/E0` × `N35/N40` plus Canaries `W20/W15_N25` |
 
 First Brazil download is chunky (many `.rd5` files). Re-runs only fetch what's missing. Heap defaults to 2g (`BROUTER_XMX=4g` if long cross-country routes OOM).
 

@@ -5,7 +5,7 @@ module.exports = function setupProxy(app) {
   app.use(
     '/local-brouter',
     createProxyMiddleware({
-      target: 'http://127.0.0.1:17777',
+      target: process.env.BROUTER_PROXY_TARGET || 'http://127.0.0.1:17777',
       changeOrigin: true,
       // Nested profile path unlocks BRouter's _debug/debug.txt engine log
       // (see routing/brouter/run-local.sh). Bare "ciclomapa" never opens it.
