@@ -3524,6 +3524,7 @@ class Map extends Component {
     // Restore current routes if they exist
     if (this.props.routes) {
       this.updateRoutesLayer(this.props.routes);
+      this.applyRouteOverlayVisibility();
       if (this.props.hoveredRouteIndex !== null && this.props.hoveredRouteIndex !== undefined) {
         this.updateHoveredRoute(this.props.hoveredRouteIndex);
       }
