@@ -214,9 +214,9 @@ export const BROUTER_PROFILE_DEFAULTS = {
 /** Surface chip: BRouter `unpavedPenalty` multiplier (<1 favors dirt, >1 favors asphalt). */
 export const BROUTER_SURFACE_OPTIONS = [
   { value: 4, label: 'Só asfalto', shortLabel: 'Só asfalto' },
-  { value: 2, label: 'Prefiro asfalto', shortLabel: 'Pref. asfalto' },
+  { value: 2, label: 'Preferir asfalto', shortLabel: 'Preferir asfalto' },
   { value: 1, label: 'Qualquer terreno', shortLabel: 'Qualquer terreno' },
-  { value: 0.5, label: 'Prefiro terra', shortLabel: 'Pref. terra' },
+  { value: 0.5, label: 'Preferir terra', shortLabel: 'Preferir terra' },
   { value: 0.25, label: 'Só terra', shortLabel: 'Só terra' },
 ];
 

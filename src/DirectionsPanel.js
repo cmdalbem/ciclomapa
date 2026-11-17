@@ -11,7 +11,15 @@ import {
   HiOutlineInformationCircle as IconInfoOutline,
 } from 'react-icons/hi';
 import { HiOutlineArrowsUpDown as IconSwap } from 'react-icons/hi2';
-import { LuBike, LuLeaf, LuMountain, LuShield, LuTimer, LuVolumeX } from 'react-icons/lu';
+import {
+  LuBike,
+  LuLeaf,
+  LuMountain,
+  LuShield,
+  LuSlidersHorizontal,
+  LuTimer,
+  LuVolumeX,
+} from 'react-icons/lu';
 import { TbRoad, TbRuler } from 'react-icons/tb';
 import { MdOutlineTerrain } from 'react-icons/md';
 import mapboxgl from 'mapbox-gl';
@@ -74,6 +82,7 @@ class DirectionsPanel extends Component {
       consider_noise: BROUTER_PROFILE_DEFAULTS.consider_noise,
       consider_river: BROUTER_PROFILE_DEFAULTS.consider_river,
       consider_forest: BROUTER_PROFILE_DEFAULTS.consider_forest,
+      showAdvancedRouteOptions: false,
       fromSuggestions: [],
       toSuggestions: [],
       fromSearchValue: '',
@@ -880,6 +889,7 @@ class DirectionsPanel extends Component {
 
   renderBrouterPrefs() {
     const allowHills = !this.state.consider_elevation;
+    const showAdvanced = this.state.showAdvancedRouteOptions;
     const surface =
       BROUTER_SURFACE_OPTIONS.find((o) => o.value === this.state.unpavedPenalty) ||
       BROUTER_SURFACE_OPTIONS.find((o) => o.value === BROUTER_PROFILE_DEFAULTS.unpavedPenalty);
@@ -889,6 +899,12 @@ class DirectionsPanel extends Component {
       BROUTER_OBJECTIVE_OPTIONS[0];
     const ObjectiveIcon =
       objective.key === 'fastest' ? LuTimer : objective.key === 'shortest' ? TbRuler : LuShield;
+    const hiddenActiveCount = [
+      this.state.unpavedPenalty !== BROUTER_PROFILE_DEFAULTS.unpavedPenalty,
+      this.state.consider_elevation !== BROUTER_PROFILE_DEFAULTS.consider_elevation,
+      Boolean(this.state.consider_noise),
+      Boolean(this.state.consider_river || this.state.consider_forest),
+    ].filter(Boolean).length;
 
     const toggleChip = (pref) => {
       const Icon = pref.icon;
@@ -924,68 +940,103 @@ class DirectionsPanel extends Component {
       </Dropdown>
     );
 
+    const objectiveChip = dropdownChip({
+      key: 'objective',
+      label: objective.label,
+      title: 'Priorizar na rota',
+      icon: ObjectiveIcon,
+      menu: {
+        items: BROUTER_OBJECTIVE_OPTIONS.map((o) => ({
+          key: o.key,
+          label: o.label,
+        })),
+        selectedKeys: [objective.key],
+        onClick: ({ key }) => this.handleRouteSortChange(key),
+      },
+    });
+
     return (
-      <div className="cm-brouter-prefs">
+      <div className={`cm-brouter-prefs${showAdvanced ? ' cm-brouter-prefs--advanced' : ''}`}>
         <div className="cm-brouter-prefs__dropdowns">
-          {dropdownChip({
-            key: 'objective',
-            label: objective.label,
-            title: 'Priorizar na rota',
-            icon: ObjectiveIcon,
-            menu: {
-              items: BROUTER_OBJECTIVE_OPTIONS.map((o) => ({
-                key: o.key,
-                label: o.label,
-              })),
-              selectedKeys: [objective.key],
-              onClick: ({ key }) => this.handleRouteSortChange(key),
-            },
-          })}
-          {dropdownChip({
-            key: 'surface',
-            label: surface.shortLabel,
-            title: surface.label,
-            icon: SurfaceIcon,
-            menu: {
-              items: BROUTER_SURFACE_OPTIONS.map((o) => ({
-                key: String(o.value),
-                label: o.label,
-              })),
-              selectedKeys: [String(surface.value)],
-              onClick: ({ key }) => this.handleBrouterPrefChange({ unpavedPenalty: Number(key) }),
-            },
-          })}
+          {objectiveChip}
+          {showAdvanced ? (
+            dropdownChip({
+              key: 'surface',
+              label: surface.shortLabel,
+              title: surface.label,
+              icon: SurfaceIcon,
+              menu: {
+                items: BROUTER_SURFACE_OPTIONS.map((o) => ({
+                  key: String(o.value),
+                  label: o.label,
+                })),
+                selectedKeys: [String(surface.value)],
+                onClick: ({ key }) => this.handleBrouterPrefChange({ unpavedPenalty: Number(key) }),
+              },
+            })
+          ) : (
+            <button
+              type="button"
+              className="cm-brouter-pref cm-brouter-pref--dropdown cm-brouter-pref--more"
+              aria-expanded={false}
+              aria-label={
+                hiddenActiveCount === 0
+                  ? 'Ajustes da rota'
+                  : hiddenActiveCount === 1
+                    ? 'Ajustes da rota, 1 ativo'
+                    : `Ajustes da rota, ${hiddenActiveCount} ativos`
+              }
+              onClick={() => this.setState({ showAdvancedRouteOptions: true })}
+            >
+              <LuSlidersHorizontal className="cm-brouter-pref__icon" aria-hidden />
+              <span className="cm-brouter-pref__text">Ajustes</span>
+              {hiddenActiveCount > 0 && (
+                <span className="cm-brouter-pref__count">{hiddenActiveCount}</span>
+              )}
+            </button>
+          )}
         </div>
-        <div className="cm-brouter-prefs__toggles">
-          {toggleChip({
-            key: 'elev',
-            label: 'Permitir subidas',
-            title: 'Permitir subidas',
-            icon: LuMountain,
-            on: allowHills,
-            onClick: () => this.handleBrouterPrefChange({ consider_elevation: allowHills }),
-          })}
-          {toggleChip({
-            key: 'noise',
-            label: 'Evitar ruído',
-            title: 'Evitar ruído',
-            icon: LuVolumeX,
-            on: Boolean(this.state.consider_noise),
-            onClick: () =>
-              this.handleBrouterPrefChange({ consider_noise: !this.state.consider_noise }),
-          })}
-          {toggleChip({
-            key: 'nature',
-            label: 'Natureza',
-            title: 'Preferir rios e parques',
-            icon: LuLeaf,
-            on: Boolean(this.state.consider_river || this.state.consider_forest),
-            onClick: () => {
-              const next = !(this.state.consider_river || this.state.consider_forest);
-              this.handleBrouterPrefChange({ consider_river: next, consider_forest: next });
-            },
-          })}
-        </div>
+        {showAdvanced && (
+          <div className="cm-brouter-prefs__toggles">
+            {toggleChip({
+              key: 'elev',
+              label: 'Permitir subidas',
+              title: 'Permitir subidas',
+              icon: LuMountain,
+              on: allowHills,
+              onClick: () => this.handleBrouterPrefChange({ consider_elevation: allowHills }),
+            })}
+            {toggleChip({
+              key: 'noise',
+              label: 'Evitar ruído',
+              title: 'Evitar ruído',
+              icon: LuVolumeX,
+              on: Boolean(this.state.consider_noise),
+              onClick: () =>
+                this.handleBrouterPrefChange({ consider_noise: !this.state.consider_noise }),
+            })}
+            {toggleChip({
+              key: 'nature',
+              label: 'Natureza',
+              title: 'Preferir rios e parques',
+              icon: LuLeaf,
+              on: Boolean(this.state.consider_river || this.state.consider_forest),
+              onClick: () => {
+                const next = !(this.state.consider_river || this.state.consider_forest);
+                this.handleBrouterPrefChange({ consider_river: next, consider_forest: next });
+              },
+            })}
+            <button
+              type="button"
+              className="cm-brouter-pref cm-brouter-pref--collapse"
+              aria-expanded="true"
+              aria-label="Ocultar ajustes"
+              onClick={() => this.setState({ showAdvancedRouteOptions: false })}
+            >
+              <IconCaretDown className="cm-brouter-pref__caret" aria-hidden />
+            </button>
+          </div>
+        )}
       </div>
     );
   }

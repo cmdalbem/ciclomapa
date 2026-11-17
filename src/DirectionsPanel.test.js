@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { DirectionsProvider } from './contexts/DirectionsContext';
 import DirectionsPanel from './DirectionsPanel.js';
 
@@ -68,4 +68,36 @@ it('shows legend link in panel header', () => {
   expect(
     screen.getByRole('button', { name: /como interpretar o mapa e as rotas/i })
   ).toBeInTheDocument();
+});
+
+it('keeps extra route options behind Ajustes', () => {
+  render(
+    <DirectionsProvider>
+      <DirectionsPanel {...defaultProps} />
+    </DirectionsProvider>
+  );
+
+  expect(screen.getByRole('button', { name: 'Priorizar na rota' })).toHaveTextContent(
+    'Mais protegida'
+  );
+  expect(screen.getByRole('button', { name: 'Ajustes da rota' })).toBeInTheDocument();
+  expect(screen.queryByText('Qualquer terreno')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Permitir subidas' })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Ajustes da rota' }));
+
+  expect(screen.getByRole('button', { name: 'Priorizar na rota' })).toHaveTextContent(
+    'Mais protegida'
+  );
+  expect(screen.getByRole('button', { name: 'Qualquer terreno' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Permitir subidas' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Permitir subidas' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Evitar ruído' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Ocultar ajustes' }));
+
+  expect(screen.queryByRole('button', { name: 'Permitir subidas' })).not.toBeInTheDocument();
+  const ajustes = screen.getByRole('button', { name: 'Ajustes da rota, 2 ativos' });
+  expect(ajustes).toBeInTheDocument();
+  expect(ajustes).toHaveTextContent('2');
 });
