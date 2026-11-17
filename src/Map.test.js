@@ -357,7 +357,7 @@ describe('Map helpers', () => {
     expect(JSON.stringify(fill.paint['line-color'])).toContain('feature-state');
     expect(fill.paint['line-width']).toBe(8);
     expect(JSON.stringify(border.paint)).not.toContain('feature-state');
-    expect(hit.paint['line-width']).toBe(40);
+    expect(hit.paint['line-width']).toBe(28);
     expect(hit.paint['line-opacity']).toBe(0);
   });
 

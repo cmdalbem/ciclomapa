@@ -1655,7 +1655,7 @@ class Map extends Component {
           },
           paint: {
             'line-color': unselectedColor,
-            'line-width': 40,
+            'line-width': 28,
             'line-opacity': 0,
           },
           filter: ['==', '$type', 'LineString'],
