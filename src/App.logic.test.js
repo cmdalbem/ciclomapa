@@ -139,6 +139,10 @@ describe('App GeoJSON gate and area sync', () => {
     act(() => app.setState({ isSidebarOpen: false }));
     app._isDirectionsPanelOpen = true;
     expect(app.needsCityGeoJsonContext()).toBe(true);
+    app._routingProvider = 'brouter';
+    expect(app.needsCityGeoJsonContext()).toBe(false);
+    act(() => app.setState({ isSidebarOpen: true }));
+    expect(app.needsCityGeoJsonContext()).toBe(true);
   });
 
   it('setArea normalizes catalog labels and tags the analytics source', () => {

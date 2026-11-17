@@ -10,6 +10,7 @@ import Map from './Map.js';
 import TopBar from './TopBar.js';
 import LayersPanel from './LayersPanel.js';
 import LayersBar from './LayersBar.js';
+import MapPmtilesCompareControl from './features/map/MapPmtilesCompareControl.tsx';
 import { IS_MOBILE, IS_PROD, ENABLE_SATELLITE_TOGGLE } from './config/constants.js';
 
 const AnalyticsSidebar = React.lazy(() => import('./AnalyticsSidebar.js'));
@@ -96,6 +97,7 @@ export default function AppLayout({
               isDarkMode={state.isDarkMode}
               setMapRef={handlers.setMapRef}
               directionsPanelRef={directionsPanelRef}
+              fromPoint={state.fromPoint}
               toPoint={state.toPoint}
               isTrackingUserLocation={state.isTrackingUserLocation}
               onTrackingUserLocationChange={handlers.onTrackingUserLocationChange}
@@ -105,6 +107,9 @@ export default function AppLayout({
               onFavoritesChanged={handlers.handleFavoritesChanged}
               cleanMode={state.cleanMode}
             />
+          ) : null}
+          {!state.embedMode && !state.hideUI && !state.hideUIFromUrl && state.mapBootReady ? (
+            <MapPmtilesCompareControl onJumpToCitySlug={handlers.jumpToPmtilesPocCity} />
           ) : null}
 
           {!IS_MOBILE && !state.embedMode && (
@@ -190,6 +195,7 @@ export default function AppLayout({
               onToPointChange={handlers.setToPoint}
               onClearRoutePoints={handlers.clearRoutePoints}
               onDirectionsPanelToggle={handlers.onDirectionsPanelToggle}
+              onRoutingProviderChange={handlers.onRoutingProviderChange}
               isDarkMode={state.isDarkMode}
               debugMode={state.debugMode}
               onAreaChange={handlers.setArea}
@@ -303,8 +309,10 @@ AppLayout.propTypes = {
     setToPoint: PropTypes.func,
     clearRoutePoints: PropTypes.func,
     onDirectionsPanelToggle: PropTypes.func,
+    onRoutingProviderChange: PropTypes.func,
     toggleDirectionsPanel: PropTypes.func,
     setArea: PropTypes.func,
+    jumpToPmtilesPocCity: PropTypes.func,
     closeAboutModal: PropTypes.func,
     openCityPicker: PropTypes.func,
     closeLayersLegendModal: PropTypes.func,
