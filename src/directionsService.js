@@ -102,6 +102,23 @@ class BRouterDirectionsProvider extends DirectionsProvider {
           alternativeidx: String(alternativeidx),
           format: 'geojson',
         });
+        const br = options.brouterProfile || {};
+        const elevation = br.consider_elevation !== false;
+        const unpaved =
+          typeof br.unpavedPenalty === 'number' && Number.isFinite(br.unpavedPenalty)
+            ? br.unpavedPenalty
+            : 1;
+        // BRouter profile booleans are 0/1; "false" makes the .brf parser throw 500.
+        params.set('profile:consider_elevation', elevation ? '1' : '0');
+        params.set('profile:unpavedPenalty', String(unpaved));
+        params.set('profile:consider_noise', br.consider_noise ? '1' : '0');
+        params.set('profile:consider_river', br.consider_river ? '1' : '0');
+        params.set('profile:consider_forest', br.consider_forest ? '1' : '0');
+        const objective =
+          typeof br.routingObjective === 'number' && Number.isFinite(br.routingObjective)
+            ? br.routingObjective
+            : 0;
+        params.set('profile:routingObjective', String(objective));
         const response = await fetch(`${this.baseUrl}/brouter?${params}`, {
           method: 'GET',
           signal: options.signal,

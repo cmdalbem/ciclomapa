@@ -49,7 +49,7 @@ class DirectionsManager {
     _geoJson,
     layers,
     isDarkMode,
-    { signal } = {}
+    { signal, brouterProfile } = {}
   ) {
     if (!this.directionsService) {
       await this.initialize();
@@ -67,6 +67,7 @@ class DirectionsManager {
     try {
       const directions = await this.directionsService.getCyclingDirections(fromCoords, toCoords, {
         signal,
+        brouterProfile,
       });
 
       throwIfAborted();

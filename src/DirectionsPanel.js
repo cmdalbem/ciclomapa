@@ -2,15 +2,18 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import debounce from 'lodash.debounce';
 import { useDirections } from './contexts/DirectionsContext';
-import { Button, Tooltip } from 'antd';
+import { Button, Dropdown, Tooltip } from 'antd';
 import {
   HiX as IconClose,
   HiOutlineArrowLeft as IconBack,
+  HiChevronDown as IconCaretDown,
   HiInformationCircle as IconInfoCircle,
   HiOutlineInformationCircle as IconInfoOutline,
 } from 'react-icons/hi';
 import { HiOutlineArrowsUpDown as IconSwap } from 'react-icons/hi2';
-import { LuBike } from 'react-icons/lu';
+import { LuBike, LuLeaf, LuMountain, LuShield, LuTimer, LuVolumeX } from 'react-icons/lu';
+import { TbRoad, TbRuler } from 'react-icons/tb';
+import { MdOutlineTerrain } from 'react-icons/md';
 import mapboxgl from 'mapbox-gl';
 
 import './DirectionsPanel.css';
@@ -47,6 +50,12 @@ import {
   prefetchGooglePlaces,
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
+import {
+  BROUTER_OBJECTIVE_OPTIONS,
+  BROUTER_PROFILE_DEFAULTS,
+  BROUTER_SURFACE_OPTIONS,
+  brouterRoutingObjectiveFromSort,
+} from './utils/routeUtils.js';
 
 // How fresh a cached position must be to skip the navigator round trip.
 const GEOLOC_CACHE_FRESH_MS = 120_000;
@@ -59,6 +68,12 @@ class DirectionsPanel extends Component {
       fromGeocoderAttached: false,
       toGeocoderAttached: false,
       focusedInput: null,
+      routeSortMode: 'score',
+      consider_elevation: BROUTER_PROFILE_DEFAULTS.consider_elevation,
+      unpavedPenalty: BROUTER_PROFILE_DEFAULTS.unpavedPenalty,
+      consider_noise: BROUTER_PROFILE_DEFAULTS.consider_noise,
+      consider_river: BROUTER_PROFILE_DEFAULTS.consider_river,
+      consider_forest: BROUTER_PROFILE_DEFAULTS.consider_forest,
       fromSuggestions: [],
       toSuggestions: [],
       fromSearchValue: '',
@@ -105,6 +120,9 @@ class DirectionsPanel extends Component {
     this.calculateDirections = this.calculateDirections.bind(this);
     this.cancelDirectionsCalculation = this.cancelDirectionsCalculation.bind(this);
     this.swapOriginDestination = this.swapOriginDestination.bind(this);
+    this.handleRouteSortChange = this.handleRouteSortChange.bind(this);
+    this.handleBrouterPrefChange = this.handleBrouterPrefChange.bind(this);
+    this.getBrouterProfile = this.getBrouterProfile.bind(this);
     this.getSortedRoutes = this.getSortedRoutes.bind(this);
     this.getInputDisplayValue = this.getInputDisplayValue.bind(this);
   }
@@ -157,7 +175,7 @@ class DirectionsPanel extends Component {
     }
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps, prevState) {
     if (this.props.map && !prevProps.map) {
       console.debug('Map became available, setting up map click listener');
       this.setupMapClickListener();
@@ -214,7 +232,8 @@ class DirectionsPanel extends Component {
 
     if (
       this.props.directions !== prevProps.directions ||
-      this.props.maxRoutesShown !== prevProps.maxRoutesShown
+      this.props.maxRoutesShown !== prevProps.maxRoutesShown ||
+      this.state.routeSortMode !== prevState.routeSortMode
     ) {
       this.syncVisibleRouteIndices();
     }
@@ -685,7 +704,19 @@ class DirectionsPanel extends Component {
   }
 
   directionsRequestKey(fromCoords, toCoords) {
-    return [fromCoords[0], fromCoords[1], toCoords[0], toCoords[1]].join('|');
+    const profile = this.getBrouterProfile();
+    return [
+      fromCoords[0],
+      fromCoords[1],
+      toCoords[0],
+      toCoords[1],
+      profile.consider_elevation,
+      profile.unpavedPenalty,
+      profile.consider_noise,
+      profile.consider_river,
+      profile.consider_forest,
+      profile.routingObjective,
+    ].join('|');
   }
 
   async calculateDirections(fromCoords, toCoords) {
@@ -714,7 +745,7 @@ class DirectionsPanel extends Component {
         this.props.geoJson,
         this.props.layers,
         this.props.isDarkMode,
-        { signal: controller.signal }
+        { signal: controller.signal, brouterProfile: this.getBrouterProfile() }
       );
 
       if (requestId !== this.directionsRequestId) {
@@ -803,15 +834,168 @@ class DirectionsPanel extends Component {
     });
   }
 
-  getSortedRoutes(routes) {
+  getBrouterProfile() {
+    return {
+      consider_elevation: this.state.consider_elevation,
+      unpavedPenalty: this.state.unpavedPenalty,
+      consider_noise: this.state.consider_noise,
+      consider_river: this.state.consider_river,
+      consider_forest: this.state.consider_forest,
+      routingObjective: brouterRoutingObjectiveFromSort(this.state.routeSortMode),
+    };
+  }
+
+  handleBrouterPrefChange(patch) {
+    this.setState(patch, () => {
+      if (this.props.fromPoint && this.props.toPoint) {
+        const fromCoords = this.props.fromPoint.result.center;
+        const toCoords = this.props.toPoint.result.center;
+        this.calculateDirections(fromCoords, toCoords);
+      }
+    });
+  }
+
+  handleRouteSortChange(sortMode) {
+    this.handleBrouterPrefChange({ routeSortMode: sortMode });
+  }
+
+  getSortedRoutes(routes, mode = this.state.routeSortMode) {
     if (!routes || routes.length === 0) return [];
 
-    return [...routes].sort((a, b) => {
-      const scoreA = a.score !== null && a.score !== undefined ? a.score : -1;
-      const scoreB = b.score !== null && b.score !== undefined ? b.score : -1;
-      if (scoreB !== scoreA) return scoreB - scoreA;
-      return (b.coverage || 0) - (a.coverage || 0);
-    });
+    const sortedRoutes = [...routes];
+
+    switch (mode) {
+      case 'score':
+        sortedRoutes.sort((a, b) => {
+          const scoreA = a.score !== null && a.score !== undefined ? a.score : -1;
+          const scoreB = b.score !== null && b.score !== undefined ? b.score : -1;
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          return (b.coverage || 0) - (a.coverage || 0);
+        });
+        break;
+      case 'fastest':
+        sortedRoutes.sort((a, b) => (a.duration || Infinity) - (b.duration || Infinity));
+        break;
+      case 'shortest':
+        sortedRoutes.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+        break;
+      default:
+        break;
+    }
+
+    return sortedRoutes;
+  }
+
+  renderBrouterPrefs() {
+    const allowHills = !this.state.consider_elevation;
+    const surface =
+      BROUTER_SURFACE_OPTIONS.find((o) => o.value === this.state.unpavedPenalty) ||
+      BROUTER_SURFACE_OPTIONS.find((o) => o.value === BROUTER_PROFILE_DEFAULTS.unpavedPenalty);
+    const SurfaceIcon = surface.value >= 2 ? TbRoad : MdOutlineTerrain;
+    const objective =
+      BROUTER_OBJECTIVE_OPTIONS.find((o) => o.key === this.state.routeSortMode) ||
+      BROUTER_OBJECTIVE_OPTIONS[0];
+    const ObjectiveIcon =
+      objective.key === 'fastest' ? LuTimer : objective.key === 'shortest' ? TbRuler : LuShield;
+
+    const toggleChip = (pref) => {
+      const Icon = pref.icon;
+      return (
+        <button
+          key={pref.key}
+          type="button"
+          className={`cm-brouter-pref${pref.on ? ' cm-brouter-pref--on' : ''}`}
+          aria-pressed={pref.on}
+          aria-label={pref.title}
+          onClick={pref.onClick}
+        >
+          <Icon className="cm-brouter-pref__icon" aria-hidden />
+          <span className="cm-brouter-pref__text">{pref.label}</span>
+        </button>
+      );
+    };
+
+    const dropdownChip = ({ key, label, title, icon: Icon, menu }) => (
+      <Dropdown key={key} trigger={['click']} placement="bottomLeft" menu={menu}>
+        <button
+          type="button"
+          className="cm-brouter-pref cm-brouter-pref--dropdown"
+          aria-haspopup="listbox"
+          aria-label={title}
+        >
+          <Icon className="cm-brouter-pref__icon" aria-hidden />
+          <span className="cm-brouter-pref__text">
+            {label}
+            <IconCaretDown className="cm-brouter-pref__caret" aria-hidden />
+          </span>
+        </button>
+      </Dropdown>
+    );
+
+    return (
+      <div className="cm-brouter-prefs">
+        <div className="cm-brouter-prefs__dropdowns">
+          {dropdownChip({
+            key: 'objective',
+            label: objective.label,
+            title: 'Priorizar na rota',
+            icon: ObjectiveIcon,
+            menu: {
+              items: BROUTER_OBJECTIVE_OPTIONS.map((o) => ({
+                key: o.key,
+                label: o.label,
+              })),
+              selectedKeys: [objective.key],
+              onClick: ({ key }) => this.handleRouteSortChange(key),
+            },
+          })}
+          {dropdownChip({
+            key: 'surface',
+            label: surface.shortLabel,
+            title: surface.label,
+            icon: SurfaceIcon,
+            menu: {
+              items: BROUTER_SURFACE_OPTIONS.map((o) => ({
+                key: String(o.value),
+                label: o.label,
+              })),
+              selectedKeys: [String(surface.value)],
+              onClick: ({ key }) => this.handleBrouterPrefChange({ unpavedPenalty: Number(key) }),
+            },
+          })}
+        </div>
+        <div className="cm-brouter-prefs__toggles">
+          {toggleChip({
+            key: 'elev',
+            label: 'Permitir subidas',
+            title: 'Permitir subidas',
+            icon: LuMountain,
+            on: allowHills,
+            onClick: () => this.handleBrouterPrefChange({ consider_elevation: allowHills }),
+          })}
+          {toggleChip({
+            key: 'noise',
+            label: 'Evitar ruído',
+            title: 'Evitar ruído',
+            icon: LuVolumeX,
+            on: Boolean(this.state.consider_noise),
+            onClick: () =>
+              this.handleBrouterPrefChange({ consider_noise: !this.state.consider_noise }),
+          })}
+          {toggleChip({
+            key: 'nature',
+            label: 'Natureza',
+            title: 'Preferir rios e parques',
+            icon: LuLeaf,
+            on: Boolean(this.state.consider_river || this.state.consider_forest),
+            onClick: () => {
+              const next = !(this.state.consider_river || this.state.consider_forest);
+              this.handleBrouterPrefChange({ consider_river: next, consider_forest: next });
+            },
+          })}
+        </div>
+      </div>
+    );
   }
 
   setDestinationFromMapClick(coordinates) {
@@ -1239,6 +1423,7 @@ class DirectionsPanel extends Component {
             </div>
             {!showResultsOnMobile && (
               <div className="cm-panel__controls">
+                <div className="directions-route-options">{this.renderBrouterPrefs()}</div>
                 <div className="cm-route-points">
                   <div className="cm-route-points__inputs">
                     <LocationSearchInput
