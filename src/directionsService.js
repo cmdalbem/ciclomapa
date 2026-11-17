@@ -119,14 +119,19 @@ class BRouterDirectionsProvider extends DirectionsProvider {
             ? br.routingObjective
             : 0;
         params.set('profile:routingObjective', String(objective));
-        const response = await fetch(`${this.baseUrl}/brouter?${params}`, {
-          method: 'GET',
-          signal: options.signal,
-        });
-        if (!response.ok) return null;
         try {
-          return await response.json();
-        } catch {
+          const response = await fetch(`${this.baseUrl}/brouter?${params}`, {
+            method: 'GET',
+            signal: options.signal,
+          });
+          if (!response.ok) return null;
+          try {
+            return await response.json();
+          } catch {
+            return null;
+          }
+        } catch (err) {
+          if (err?.name === 'AbortError') throw err;
           return null;
         }
       })
@@ -174,7 +179,7 @@ class BRouterDirectionsProvider extends DirectionsProvider {
     return {
       routes: distinct,
       waypoints: [{ coordinates: fromCoords }, { coordinates: toCoords }],
-      bbox: this.calculateBbox(routes),
+      bbox: this.calculateBbox(distinct),
     };
   }
 }
