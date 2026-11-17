@@ -1,39 +1,25 @@
-// Generalized directions service supporting multiple providers
-import mbxDirections from '@mapbox/mapbox-sdk/services/directions';
-import {
-  MAPBOX_ACCESS_TOKEN,
-  OPENROUTESERVICE_API_KEY,
-  OPENROUTESERVICE_BASE_URL,
-  GRAPHHOPPER_API_KEY,
-  GRAPHHOPPER_BASE_URL,
-  VALHALLA_BASE_URL,
-} from './config/constants.js';
+import { BROUTER_BASE_URL, BROUTER_ALT_MAX_SHARE_DEFAULT } from './config/constants.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 
-// Abstract base class for directions providers
 class DirectionsProvider {
-  constructor() {}
-
-  async getDirections(from, to, options = {}) {
+  async getDirections() {
     throw new Error('getDirections method must be implemented by subclass');
   }
 
-  // Normalize coordinates to [longitude, latitude] format
   normalizeCoordinates(coords) {
     if (!coords || !Array.isArray(coords) || coords.length < 2) {
       throw new Error('Invalid coordinates provided');
     }
-    return [coords[0], coords[1]]; // Ensure [lng, lat] format
+    return [coords[0], coords[1]];
   }
 
-  // Calculate bounding box from route coordinates
   calculateBbox(routes) {
     if (!routes || routes.length === 0) return null;
 
-    let minLng = Infinity,
-      minLat = Infinity;
-    let maxLng = -Infinity,
-      maxLat = -Infinity;
+    let minLng = Infinity;
+    let minLat = Infinity;
+    let maxLng = -Infinity;
+    let maxLat = -Infinity;
 
     routes.forEach((route) => {
       if (route.geometry && route.geometry.coordinates) {
@@ -51,412 +37,149 @@ class DirectionsProvider {
   }
 }
 
-class MapboxDirectionsProvider extends DirectionsProvider {
-  constructor() {
+// BRouter has no share_factor. Cheap stand-in: ~100m cells, drop an alt if
+// most of its cells already sit on a kept route.
+const BROUTER_ALT_CELL_DECIMALS = 3;
+
+function brouterRouteCells(coords) {
+  const cells = new Set();
+  for (let i = 0; i < coords.length; i++) {
+    const c = coords[i];
+    cells.add(
+      `${c[0].toFixed(BROUTER_ALT_CELL_DECIMALS)},${c[1].toFixed(BROUTER_ALT_CELL_DECIMALS)}`
+    );
+  }
+  return cells;
+}
+
+function brouterCellShare(a, b) {
+  if (!a.size || !b.size) return 0;
+  const [small, big] = a.size <= b.size ? [a, b] : [b, a];
+  let n = 0;
+  for (const cell of small) {
+    if (big.has(cell)) n++;
+  }
+  return n / small.size;
+}
+
+function dropSimilarBrouterRoutes(routes, maxShare = BROUTER_ALT_MAX_SHARE_DEFAULT) {
+  const cap = typeof maxShare === 'number' && Number.isFinite(maxShare) ? maxShare : 1;
+  if (!(cap < 1)) return routes;
+  const kept = [];
+  const grids = [];
+  for (let i = 0; i < routes.length; i++) {
+    const grid = brouterRouteCells(routes[i].geometry.coordinates);
+    if (grids.some((g) => brouterCellShare(grid, g) >= cap)) continue;
+    kept.push(routes[i]);
+    grids.push(grid);
+  }
+  return kept.length ? kept : routes.slice(0, 1);
+}
+
+class BRouterDirectionsProvider extends DirectionsProvider {
+  constructor({ baseUrl = BROUTER_BASE_URL } = {}) {
     super();
-    this.client = mbxDirections({ accessToken: MAPBOX_ACCESS_TOKEN });
+    this.baseUrl = baseUrl;
   }
 
   async getDirections(from, to, options = {}) {
     const fromCoords = this.normalizeCoordinates(from);
     const toCoords = this.normalizeCoordinates(to);
+    const lonlats = `${fromCoords[0]},${fromCoords[1]}|${toCoords[0]},${toCoords[1]}`;
 
     trackCall({
-      api: API_TYPES.MAPBOX_DIRECTIONS,
+      api: API_TYPES.BROUTER,
       details: `${fromCoords[1].toFixed(4)},${fromCoords[0].toFixed(4)} → ${toCoords[1].toFixed(4)},${toCoords[0].toFixed(4)}`,
     });
 
-    try {
-      const response = await this.client
-        .getDirections({
-          profile: options.profile || 'cycling',
-          waypoints: [{ coordinates: fromCoords }, { coordinates: toCoords }],
-          geometries: options.geometries || 'geojson',
-          overview: options.overview || 'full',
-          alternatives: options.alternatives !== false,
-          steps: options.steps || false,
-          ...options.mapboxOptions, // Allow custom Mapbox-specific options
-        })
-        .send();
-
-      // Add bbox if not present in response
-      const data = response.body;
-      if (!data.bbox && data.routes) {
-        data.bbox = this.calculateBbox(data.routes);
-      }
-
-      return data;
-    } catch (err) {
-      console.error('Mapbox Directions API error:', err);
-      throw new Error(`Erro ao calcular rota: ${err.message}`);
-    }
-  }
-}
-
-class OpenRouteServiceProvider extends DirectionsProvider {
-  constructor() {
-    super();
-    this.apiKey = OPENROUTESERVICE_API_KEY;
-    this.baseUrl = OPENROUTESERVICE_BASE_URL;
-  }
-
-  async getDirections(from, to) {
-    const fromCoords = this.normalizeCoordinates(from);
-    const toCoords = this.normalizeCoordinates(to);
-
-    if (!this.apiKey) {
-      throw new Error('OpenRouteService API key is required');
-    }
-
-    trackCall({
-      api: API_TYPES.ORS,
-      details: `${fromCoords[1].toFixed(4)},${fromCoords[0].toFixed(4)} → ${toCoords[1].toFixed(4)},${toCoords[0].toFixed(4)}`,
-    });
-
-    try {
-      // OpenRouteService expects API key as query parameter, not in Authorization header
-      const url = `${this.baseUrl}/cycling-regular/geojson?api_key=${this.apiKey}`;
-
-      const requestBody = {
-        coordinates: [fromCoords, toCoords],
-        format: 'geojson',
-        alternative_routes: {
-          target_count: 3,
-          weight_factor: 2.5,
-          share_factor: 0.5,
-        },
-        // elevation: true,
-        instructions: false,
-        extra_info: ['steepness'],
-      };
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('OpenRouteService API error response:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText,
+    // BRouter clamps alternativeidx to 0..3 (four routes max).
+    const idxs = [0, 1, 2, 3];
+    const results = await Promise.all(
+      idxs.map(async (alternativeidx) => {
+        const params = new URLSearchParams({
+          lonlats,
+          profile: 'ciclomapa',
+          alternativeidx: String(alternativeidx),
+          format: 'geojson',
         });
-        throw new Error(`Erro ao calcular rota: ${response.status} - ${errorText}`);
+        const response = await fetch(`${this.baseUrl}/brouter?${params}`, {
+          method: 'GET',
+          signal: options.signal,
+        });
+        if (!response.ok) return null;
+        try {
+          return await response.json();
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const routes = [];
+    results.forEach((data) => {
+      const feature = data?.features?.[0];
+      if (!feature?.geometry?.coordinates?.length) return;
+      const raw = feature.geometry.coordinates;
+      const coords = raw.map((c) => [c[0], c[1]]);
+      const props = feature.properties || {};
+      const distanceM = Number(props['track-length']);
+      const durationS = Number(props['total-time']);
+      const filteredAscend = Number(props['filtered ascend']);
+      const profile = [];
+      const last = raw.length - 1;
+      const z0 = Number(raw[0][2]);
+      const z1 = Number(raw[last][2]);
+      const netElev = Number.isFinite(z0) && Number.isFinite(z1) ? z1 - z0 : null;
+      const sampleCount = Math.min(48, raw.length);
+      for (let i = 0; i < sampleCount; i++) {
+        const idx = sampleCount === 1 ? 0 : Math.round((i / (sampleCount - 1)) * last);
+        const z = Number(raw[idx][2]);
+        if (Number.isFinite(z)) profile.push(z);
       }
-
-      const data = await response.json();
-      return this.normalizeOpenRouteServiceResponse(data);
-    } catch (err) {
-      console.error('OpenRouteService API error:', err);
-      throw new Error(`Erro ao calcular rota: ${err.message}`);
-    }
-  }
-
-  // Convert OpenRouteService response to Mapbox-compatible format
-  normalizeOpenRouteServiceResponse(data) {
-    return {
-      routes: data.features.map((feature) => ({
-        geometry: feature.geometry,
-        distance: feature.properties.summary.distance,
-        duration: feature.properties.summary.duration,
-        weight: feature.properties.summary.duration,
-      })),
-      waypoints: data.features[0]?.properties.way_points || [],
-      bbox: data.bbox,
-    };
-  }
-}
-
-class GraphHopperDirectionsProvider extends DirectionsProvider {
-  constructor() {
-    super();
-    this.apiKey = GRAPHHOPPER_API_KEY;
-    this.baseUrl = GRAPHHOPPER_BASE_URL;
-  }
-
-  async getDirections(from, to, options = {}) {
-    const fromCoords = this.normalizeCoordinates(from);
-    const toCoords = this.normalizeCoordinates(to);
-
-    if (!this.apiKey) {
-      throw new Error('GraphHopper API key is required');
-    }
-
-    trackCall({
-      api: API_TYPES.GRAPHHOPPER,
-      details: `${fromCoords[1].toFixed(4)},${fromCoords[0].toFixed(4)} → ${toCoords[1].toFixed(4)},${toCoords[0].toFixed(4)}`,
+      routes.push({
+        geometry: { type: 'LineString', coordinates: coords },
+        distance: Number.isFinite(distanceM) ? distanceM : 0,
+        duration: Number.isFinite(durationS) ? durationS : 0,
+        weight: Number.isFinite(durationS) ? durationS : 0,
+        brouterMessages: props.messages || null,
+        ascend: Number.isFinite(filteredAscend) ? filteredAscend : null,
+        netElev,
+        elevationProfile: profile.length >= 2 ? profile : null,
+      });
     });
 
-    try {
-      const params = new URLSearchParams({
-        key: this.apiKey,
-        // vehicle: 'bike',
-        profile: 'bike',
-        type: 'json',
-        instructions: 'false',
-        // elevation: 'true',
-        points_encoded: 'false',
-        calc_points: 'true',
-        // details: ['bike_network'],
-        algorithm: 'alternative_route',
-        'alternative_route.max_paths': 5,
-
-        // Sets the factor by which the alternatives routes can be longer than the optimal route.
-        // Increasing can lead to worse alternatives. Default: 1.4
-        'alternative_route.max_weight_factor': 4,
-
-        // How similar an alternative route can be to the optimal route. Increasing can lead to worse alternatives. Default: 0.6
-        'alternative_route.max_share_factor': 0.5,
-
-        // Only available in paid version or self-hosted servers
-        // 'ch.disable': true,
-        // custom_model: JSON.stringify(
-        //     {
-        //         "distance_influence": 15,
-        //         "priority": [
-        //           {
-        //             "if": "bike_network == LOCAL",
-        //             "multiply_by": "20"
-        //           },
-        //           {
-        //             "if": "road_class == CYCLEWAY",
-        //             "multiply_by": "20"
-        //           }
-        //         ]
-        //     }
-        // )
-      });
-
-      // Add multiple points using append (GraphHopper expects multiple 'point' parameters)
-      params.append('point', `${fromCoords[1]},${fromCoords[0]}`); // lat,lng format for GET
-      params.append('point', `${toCoords[1]},${toCoords[0]}`);
-
-      // Add optional parameters
-      // if (options.avoidFeatures && options.avoidFeatures.length > 0) {
-      //     const avoidList = options.avoidFeatures
-      //         .map(feature => this.mapAvoidFeature(feature))
-      //         .filter(Boolean);
-      //     if (avoidList.length > 0) {
-      //         params.append('avoid', avoidList.join(','));
-      //     }
-      // }
-
-      const response = await fetch(`${this.baseUrl}?${params}`, {
-        method: 'GET',
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro ao calcular rota: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      return this.normalizeGraphHopperResponse(data);
-    } catch (err) {
-      console.error('GraphHopper API error:', err);
-      throw new Error(`Erro ao calcular rota: ${err.message}`);
-    }
-  }
-
-  // Map avoid features to GraphHopper format
-  mapAvoidFeature(feature) {
-    const avoidMap = {
-      highways: 'highway',
-      tolls: 'toll',
-      ferries: 'ferry',
-    };
-    return avoidMap[feature];
-  }
-
-  // Convert GraphHopper response to Mapbox-compatible format
-  normalizeGraphHopperResponse(data) {
-    if (!data.paths || data.paths.length === 0) {
+    if (routes.length === 0) {
       throw new Error('Não foram encontradas rotas');
     }
 
-    const routes = data.paths.map((path) => {
-      const route = {
-        geometry: {
-          type: 'LineString',
-          coordinates: path.points.coordinates, // Already in [lng, lat] format from GraphHopper
-        },
-        distance: path.distance,
-        duration: path.time / 1000, // Convert from milliseconds to seconds
-        weight: path.time / 1000,
-      };
-
-      // Add elevation data if available
-      if (path.ascend !== undefined && path.descend !== undefined) {
-        route.ascend = path.ascend;
-        route.descend = path.descend;
-      }
-
-      return route;
-    });
-
-    // Calculate bounding box from all route coordinates
-    const bbox = this.calculateBbox(routes);
+    const distinct = dropSimilarBrouterRoutes(routes);
 
     return {
-      routes,
-      waypoints:
-        data.paths[0]?.snapped_waypoints?.coordinates?.map((coord) => ({
-          coordinates: coord,
-        })) || [],
-      bbox,
+      routes: distinct,
+      waypoints: [{ coordinates: fromCoords }, { coordinates: toCoords }],
+      bbox: this.calculateBbox(routes),
     };
   }
 }
 
-class ValhallaDirectionsProvider extends DirectionsProvider {
-  constructor() {
-    super();
-    this.baseUrl = VALHALLA_BASE_URL;
-  }
-
-  async getDirections(from, to, options = {}) {
-    const fromCoords = this.normalizeCoordinates(from);
-    const toCoords = this.normalizeCoordinates(to);
-
-    trackCall({
-      api: API_TYPES.VALHALLA,
-      details: `${fromCoords[1].toFixed(4)},${fromCoords[0].toFixed(4)} → ${toCoords[1].toFixed(4)},${toCoords[0].toFixed(4)}`,
-    });
-
-    try {
-      const requestBody = {
-        locations: [
-          { lat: fromCoords[1], lon: fromCoords[0] },
-          { lat: toCoords[1], lon: toCoords[0] },
-        ],
-        costing: 'bicycle',
-        costing_options: {
-          bicycle: {
-            maneuver_penalty: 20,
-            bicycle_type: 'City',
-            use_roads: 0.1,
-          },
-        },
-        format: 'osrm',
-        shape_format: 'geojson',
-        alternates: 5,
-      };
-
-      const url = this.baseUrl;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Valhalla API error response:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText,
-        });
-        throw new Error(`Erro ao calcular rota: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      return this.normalizeValhallaResponse(data);
-    } catch (err) {
-      console.error('Valhalla API error:', err);
-      throw new Error(`Erro ao calcular rota: ${err.message}`);
-    }
-  }
-
-  // Convert Valhalla response to Mapbox-compatible format
-  normalizeValhallaResponse(data) {
-    if (!data.routes || data.routes.length === 0) {
-      throw new Error('Não foram encontradas rotas');
-    }
-
-    const routes = data.routes.map((route) => ({
-      geometry: route.geometry,
-      distance: route.distance,
-      duration: route.duration,
-      weight: route.weight,
-      legs: route.legs,
-    }));
-
-    // Calculate bounding box from route coordinates
-    const bbox = this.calculateBbox(routes);
-
-    return {
-      routes,
-      waypoints: data.waypoints.map((waypoint) => ({
-        coordinates: waypoint.location,
-      })),
-      bbox,
-    };
-  }
-}
-
-// Main Directions Service
 class DirectionsService {
-  constructor(provider = 'mapbox') {
-    this.providers = {
-      mapbox: new MapboxDirectionsProvider(),
-      openrouteservice: new OpenRouteServiceProvider(),
-      graphhopper: new GraphHopperDirectionsProvider(),
-      valhalla: new ValhallaDirectionsProvider(),
-    };
-
-    this.currentProvider = this.providers[provider];
-    if (!this.currentProvider) {
-      throw new Error(`Unknown directions provider: ${provider}`);
-    }
+  constructor() {
+    this.provider = new BRouterDirectionsProvider();
   }
 
-  // Set the active provider
-  setProvider(providerName) {
-    if (!this.providers[providerName]) {
-      throw new Error(`Unknown directions provider: ${providerName}`);
-    }
-    this.currentProvider = this.providers[providerName];
-  }
-
-  // Get available providers
-  getAvailableProviders() {
-    return Object.keys(this.providers);
-  }
-
-  // Main method to get directions
   async getDirections(from, to, options = {}) {
-    return await this.currentProvider.getDirections(from, to, options);
+    return await this.provider.getDirections(from, to, options);
   }
 
-  // Convenience method for cycling directions (maintains backward compatibility)
   async getCyclingDirections(from, to, options = {}) {
-    return await this.getDirections(from, to, {
-      profile: 'cycling',
-      ...options,
-    });
+    return await this.getDirections(from, to, options);
   }
 }
 
-// Create default service instance
-const directionsService = new DirectionsService('mapbox');
+const directionsService = new DirectionsService();
 
-// Export both the service instance and the classes for advanced usage
 export default directionsService;
-export {
-  DirectionsService,
-  MapboxDirectionsProvider,
-  OpenRouteServiceProvider,
-  GraphHopperDirectionsProvider,
-  ValhallaDirectionsProvider,
-};
+export { DirectionsService, BRouterDirectionsProvider };
 
-// Backward compatibility exports
 export const getCyclingDirections = (from, to, options) =>
   directionsService.getCyclingDirections(from, to, options);

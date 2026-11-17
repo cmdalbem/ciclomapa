@@ -1955,7 +1955,7 @@ export class App extends Component {
 
   onDirectionsPanelToggle(isOpen) {
     this._isDirectionsPanelOpen = isOpen;
-    if (isOpen) {
+    if (isOpen && this.needsCityGeoJsonContext()) {
       this.syncAreaWithViewportThenLoadCityData();
     }
     // Directions open state is kept off React state (avoids App-wide re-renders), so
@@ -1963,12 +1963,12 @@ export class App extends Component {
     this.mapComponent?.initBoundaryLayer?.();
   }
 
-  // Shared gate for anything that needs per-city GeoJSON: Analytics sidebar,
-  // Routing panel, and the city boundary outline. Idle map browsing stays on
-  // PMTiles only; city/area itself is only changed via the picker / URL.
+  // Shared gate for anything that needs per-city GeoJSON: Analytics sidebar
+  // and the city boundary outline. Idle map browsing stays on PMTiles only.
+  // Routing scores from BRouter WayTags, so it does not load a city dump.
   needsCityGeoJsonContext() {
     // isSidebarOpen is persisted, but the Analytics sidebar isn't rendered on mobile.
-    return (!IS_MOBILE && this.state.isSidebarOpen) || this._isDirectionsPanelOpen;
+    return !IS_MOBILE && this.state.isSidebarOpen;
   }
 
   toggleDirectionsPanel() {

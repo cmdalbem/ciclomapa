@@ -129,7 +129,7 @@ describe('App city / slug helpers', () => {
 });
 
 describe('App GeoJSON gate and area sync', () => {
-  it('needsCityGeoJsonContext is true for desktop analytics or an open route panel', () => {
+  it('needsCityGeoJsonContext is true for desktop analytics, not for routing', () => {
     const app = mountApp().current;
     app._isDirectionsPanelOpen = false;
     act(() => app.setState({ isSidebarOpen: false }));
@@ -138,7 +138,7 @@ describe('App GeoJSON gate and area sync', () => {
     expect(app.needsCityGeoJsonContext()).toBe(true);
     act(() => app.setState({ isSidebarOpen: false }));
     app._isDirectionsPanelOpen = true;
-    expect(app.needsCityGeoJsonContext()).toBe(true);
+    expect(app.needsCityGeoJsonContext()).toBe(false);
   });
 
   it('setArea normalizes catalog labels and tags the analytics source', () => {
@@ -173,7 +173,7 @@ describe('App GeoJSON gate and area sync', () => {
 
   it('syncAreaWithViewportThenLoadCityData switches area when the viewport city differs', async () => {
     const app = mountApp().current;
-    app._isDirectionsPanelOpen = true;
+    act(() => app.setState({ isSidebarOpen: true }));
     jest.spyOn(app, 'getCurrentViewport').mockReturnValue({ lat: -30, lng: -51, zoom: 12 });
     guessPlaceFromViewport.mockResolvedValue({
       place_name: 'Porto Alegre, Rio Grande do Sul, Brasil',
@@ -190,7 +190,7 @@ describe('App GeoJSON gate and area sync', () => {
 
   it('keeps the current area and loads GeoJSON when geocoding fails', async () => {
     const app = mountApp().current;
-    app._isDirectionsPanelOpen = true;
+    act(() => app.setState({ isSidebarOpen: true }));
     const area = app.state.area;
     const spy = jest.spyOn(app, 'updateData').mockImplementation(() => {});
     guessPlaceFromViewport.mockRejectedValue(new Error('down'));
@@ -201,13 +201,13 @@ describe('App GeoJSON gate and area sync', () => {
     expect(spy).toHaveBeenCalled();
   });
 
-  it('drops a stale viewport sync after the panel closes', async () => {
+  it('drops a stale viewport sync after analytics closes', async () => {
     const app = mountApp().current;
-    app._isDirectionsPanelOpen = true;
+    act(() => app.setState({ isSidebarOpen: true }));
     let resolve;
     guessPlaceFromViewport.mockImplementation(() => new Promise((r) => (resolve = r)));
     const p = app.syncAreaWithViewportThenLoadCityData();
-    app._isDirectionsPanelOpen = false;
+    act(() => app.setState({ isSidebarOpen: false }));
     resolve({ place_name: 'Porto Alegre, Rio Grande do Sul, Brasil' });
     await p;
     expect(app.state.area).not.toBe('Porto Alegre, Rio Grande do Sul, Brasil');
@@ -340,19 +340,19 @@ describe('App UI handlers', () => {
     expect(app.getCurrentViewport()).toEqual({ lat: 1, lng: 2, zoom: 9 });
   });
 
-  it('onDirectionsPanelToggle and toggleSidebar kick off viewport city sync', async () => {
+  it('toggleSidebar kicks off viewport city sync; routing does not', async () => {
     const app = mountApp().current;
     const spy = jest.spyOn(app, 'syncAreaWithViewportThenLoadCityData').mockResolvedValue();
     app.mapComponent = { initBoundaryLayer: jest.fn() };
     app.onDirectionsPanelToggle(true);
     expect(app._isDirectionsPanelOpen).toBe(true);
-    expect(spy).toHaveBeenCalled();
+    expect(spy).not.toHaveBeenCalled();
     expect(app.mapComponent.initBoundaryLayer).toHaveBeenCalled();
 
     await act(async () => {
       app.toggleSidebar(true);
     });
     expect(app.state.isSidebarOpen).toBe(true);
-    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });

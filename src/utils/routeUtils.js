@@ -195,5 +195,9 @@ export const formatDistance = (distance) => {
 
 export const formatDuration = (duration) => {
   if (!duration) return 'N/A';
-  return `${Math.round(duration / 60)} min`;
+  const totalMin = Math.round(duration / 60);
+  if (totalMin < 60) return `${totalMin} min`;
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  return mins === 0 ? `${hours}h` : `${hours}h ${mins}min`;
 };
