@@ -306,6 +306,44 @@ describe('Map helpers', () => {
     expect(setData.mock.calls.at(-1)[0].features).toEqual([]);
   });
 
+  it('puts unselected route casings under fills', () => {
+    const added = [];
+    const map = mountMap();
+    map.map = fakeMapbox({
+      addLayer: (layer) => added.push(layer.id),
+      getLayer: () => false,
+    });
+    map.createRouteLayerSet(map.map, 'routes-unselected', 'bottom');
+    expect(added).toEqual([
+      'routes-unselected--interactive',
+      'route-paddings-unselected',
+      'route--borders-unselected',
+      'routes-unselected',
+    ]);
+
+    added.length = 0;
+    map.createRouteLayerSet(map.map, 'route-selected', 'top');
+    expect(added).toEqual(['route-padding-selected', 'route-selected', 'route--border-selected']);
+  });
+
+  it('paints unselected routes with a hover feature-state', () => {
+    const layers = [];
+    const map = mountMap();
+    map.map = fakeMapbox({
+      addLayer: (layer) => layers.push(layer),
+      getLayer: () => false,
+    });
+    map.createRouteLayerSet(map.map, 'routes-unselected', 'bottom');
+    const fill = layers.find((layer) => layer.id === 'routes-unselected');
+    const border = layers.find((layer) => layer.id === 'route--borders-unselected');
+    const hit = layers.find((layer) => layer.id === 'routes-unselected--interactive');
+    expect(JSON.stringify(fill.paint['line-color'])).toContain('feature-state');
+    expect(fill.paint['line-width']).toBe(8);
+    expect(JSON.stringify(border.paint)).not.toContain('feature-state');
+    expect(hit.paint['line-width']).toBe(40);
+    expect(hit.paint['line-opacity']).toBe(0);
+  });
+
   it('syncMapState prefers onMapPositionChange', () => {
     const onMapPositionChange = jest.fn();
     const onMapMoved = jest.fn();

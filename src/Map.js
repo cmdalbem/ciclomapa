@@ -182,10 +182,13 @@ const SELECTED_SOLID_ROUTE_LAYER_IDS = [
 
 /** Solid unselected alternatives — always a single color, never typology. */
 const UNSELECTED_SOLID_ROUTE_LAYER_IDS = [
+  'routes-unselected--interactive',
   'route-paddings-unselected',
-  'routes-unselected',
   'route--borders-unselected',
+  'routes-unselected',
 ];
+
+const ROUTE_HOVER_LAYER_IDS = [...UNSELECTED_SOLID_ROUTE_LAYER_IDS, 'route-selected'];
 
 const SOLID_ROUTE_LAYER_IDS = [
   ...SELECTED_SOLID_ROUTE_LAYER_IDS,
@@ -1585,101 +1588,113 @@ class Map extends Component {
     const isUnselected = layerType !== 'top';
     const isLightMode = !this.props.isDarkMode;
 
-    // 1. Padding layer
-    map.addLayer(
-      {
-        id: `route-padding${suffix}`,
-        type: 'line',
-        source: sourceId,
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-          'line-elevation-reference': 'ground',
-        },
-        paint: {
-          'line-occlusion-opacity': 1,
-          'line-color': this.props.isDarkMode
-            ? MAP_COLORS.DARK.ROUTE_PADDING_LINE
-            : MAP_COLORS.LIGHT.ROUTE_PADDING_LINE,
-          'line-width': ROUTE_LINE_PADDING_WIDTH,
-          'line-gap-width': ROUTE_LINE_PADDING_GAP_WIDTH,
-        },
-        filter: ['==', '$type', 'LineString'],
+    const paddingLayer = {
+      id: `route-padding${suffix}`,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+        'line-elevation-reference': 'ground',
       },
-      layerUnderneathName
+      paint: {
+        'line-occlusion-opacity': 1,
+        'line-color': this.props.isDarkMode
+          ? MAP_COLORS.DARK.ROUTE_PADDING_LINE
+          : MAP_COLORS.LIGHT.ROUTE_PADDING_LINE,
+        'line-width': ROUTE_LINE_PADDING_WIDTH,
+        'line-gap-width': ROUTE_LINE_PADDING_GAP_WIDTH,
+      },
+      filter: ['==', '$type', 'LineString'],
+    };
+
+    const unselectedColor = this.props.isDarkMode
+      ? ROUTE_COLORS.DARK.UNSELECTED
+      : ROUTE_COLORS.LIGHT.UNSELECTED;
+    const unselectedHoverColor = adjustColorBrightness(
+      unselectedColor,
+      this.props.isDarkMode ? 0.3 : -0.3
     );
 
-    // 3. Main route layer
-    map.addLayer(
-      {
-        id: `route${suffix}`,
-        type: 'line',
-        source: sourceId,
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-          'line-elevation-reference': 'ground',
-        },
-        paint: {
-          'line-occlusion-opacity': 1,
-          'line-color':
-            layerType === 'top'
-              ? this.props.isDarkMode
-                ? ROUTE_COLORS.DARK.SELECTED
-                : ROUTE_COLORS.LIGHT.SELECTED
-              : this.props.isDarkMode
-                ? ROUTE_COLORS.DARK.UNSELECTED
-                : ROUTE_COLORS.LIGHT.UNSELECTED,
-          'line-width': ROUTE_LINE_WIDTH,
-        },
-        filter: ['==', '$type', 'LineString'],
+    const fillLayer = {
+      id: `route${suffix}`,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+        'line-elevation-reference': 'ground',
       },
-      layerUnderneathName
-    );
+      paint: {
+        'line-occlusion-opacity': 1,
+        'line-color': isUnselected
+          ? [
+              'case',
+              ['boolean', ['feature-state', 'hover'], false],
+              unselectedHoverColor,
+              unselectedColor,
+            ]
+          : this.props.isDarkMode
+            ? ROUTE_COLORS.DARK.SELECTED
+            : ROUTE_COLORS.LIGHT.SELECTED,
+        'line-width': ROUTE_LINE_WIDTH,
+        'line-color-transition': { duration: 120 },
+      },
+      filter: ['==', '$type', 'LineString'],
+    };
 
-    // 2. Border layer
-    map.addLayer(
-      {
-        id: `route--border${suffix}`,
-        type: 'line',
-        source: sourceId,
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-          'line-elevation-reference': 'ground',
-        },
-        paint: {
-          'line-occlusion-opacity': 1,
-          'line-color':
-            layerType === 'top'
-              ? this.props.isDarkMode
-                ? MAP_COLORS.DARK.ROUTE_BORDER
-                : MAP_COLORS.LIGHT.ROUTE_BORDER
-              : this.props.isDarkMode
-                ? MAP_COLORS.DARK.ROUTE_BORDER
-                : MAP_COLORS.LIGHT.ROUTE_BORDER,
-          // : [
-          //     'case',
-          //     ['boolean', ['feature-state', 'hover'], false],
-          //         this.props.isDarkMode ? '#ffffff' : '#1a1a1a', // On hover
-          //         this.props.isDarkMode ? '#ffffff' : '#000000', // Default
-          // ],
-          // Improve contrast for unselected alternative routes on the light basemap:
-          // enable a visible outline only for the unselected layer in light mode.
-          'line-width':
-            isUnselected && isLightMode
-              ? ROUTE_UNSELECTED_LIGHT_BORDER_WIDTH
-              : ROUTE_LINE_BORDER_WIDTH,
-          'line-opacity':
-            isUnselected && isLightMode
-              ? ROUTE_UNSELECTED_LIGHT_BORDER_OPACITY
-              : ROUTE_LINE_BORDER_OPACITY,
-          'line-gap-width': ROUTE_LINE_GAP_WIDTH,
-        },
-        filter: ['==', '$type', 'LineString'],
+    const hitLayer = isUnselected
+      ? {
+          id: 'routes-unselected--interactive',
+          type: 'line',
+          source: sourceId,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+            'line-elevation-reference': 'ground',
+          },
+          paint: {
+            'line-color': unselectedColor,
+            'line-width': 40,
+            'line-opacity': 0,
+          },
+          filter: ['==', '$type', 'LineString'],
+        }
+      : null;
+
+    const borderLayer = {
+      id: `route--border${suffix}`,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+        'line-elevation-reference': 'ground',
       },
-      layerUnderneathName
-    );
+      paint: {
+        'line-occlusion-opacity': 1,
+        'line-color': this.props.isDarkMode
+          ? MAP_COLORS.DARK.ROUTE_BORDER
+          : MAP_COLORS.LIGHT.ROUTE_BORDER,
+        'line-width':
+          isUnselected && isLightMode
+            ? ROUTE_UNSELECTED_LIGHT_BORDER_WIDTH
+            : ROUTE_LINE_BORDER_WIDTH,
+        'line-opacity':
+          isUnselected && isLightMode
+            ? ROUTE_UNSELECTED_LIGHT_BORDER_OPACITY
+            : ROUTE_LINE_BORDER_OPACITY,
+        'line-gap-width': ROUTE_LINE_GAP_WIDTH,
+      },
+      filter: ['==', '$type', 'LineString'],
+    };
+
+    // Unselected: fat invisible hit target under casings/fills (same trick as
+    // lanes). Casings under fills so overlapping alts merge. Selected outline on top.
+    const stack = isUnselected
+      ? [hitLayer, paddingLayer, borderLayer, fillLayer]
+      : [paddingLayer, fillLayer, borderLayer];
+    stack.forEach((layer) => map.addLayer(layer, layerUnderneathName));
   }
 
   createCyclepathLayerSet(map, sourceId, layerType) {
@@ -1831,59 +1846,41 @@ class Map extends Component {
   setupRouteEventHandlers(map) {
     const self = this;
 
-    // Set up click handlers for both top and bottom layers
-    ['route-selected', 'routes-unselected'].forEach((layerId) => {
+    const hoverLayers = ROUTE_HOVER_LAYER_IDS.filter((layerId) => map.getLayer(layerId));
+
+    hoverLayers.forEach((layerId) => {
       map.on('click', layerId, (e) => {
-        if (e.features && e.features.length > 0) {
-          const routeIndex = e.features[0].properties.routeIndex;
-          if (self.props.onRouteSelected) {
-            self.props.onRouteSelected(routeIndex);
-          }
-        }
+        const routeIndex = e.features?.[0]?.properties?.routeIndex;
+        if (routeIndex == null) return;
+        self.props.onRouteSelected?.(routeIndex);
       });
     });
 
-    // Track currently hovered route
     this.currentHoveredRoute = null;
 
-    // Set up hover handlers for both top and bottom layers
-    ['route-selected', 'routes-unselected'].forEach((layerId) => {
-      map.on('mouseenter', layerId, (e) => {
+    hoverLayers.forEach((layerId) => {
+      map.on('mousemove', layerId, (e) => {
         map.getCanvas().style.cursor = 'pointer';
-
-        // if (e.features && e.features.length > 0) {
-        //     const routeIndex = e.features[0].properties.routeIndex;
-        //     this.currentHoveredRoute = routeIndex;
-
-        //     // Determine which source this layer belongs to
-        //     const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
-        //     map.setFeatureState(
-        //         { source: sourceId, id: routeIndex },
-        //         { hover: true }
-        //     );
-
-        //     if (self.props.onRouteHovered) {
-        //         self.props.onRouteHovered(routeIndex);
-        //     }
-        // }
+        const routeIndex = e.features?.[0]?.properties?.routeIndex;
+        if (routeIndex == null || self.currentHoveredRoute === routeIndex) return;
+        self.currentHoveredRoute = routeIndex;
+        self.props.onRouteHovered?.(routeIndex);
       });
 
       map.on('mouseleave', layerId, (e) => {
         map.getCanvas().style.cursor = '';
-
-        // if (this.currentHoveredRoute !== null) {
-        //     // Determine which source this layer belongs to
-        //     const sourceId = layerId === 'route-selected' ? 'route-selected' : 'routes-unselected';
-        //     map.setFeatureState(
-        //         { source: sourceId, id: this.currentHoveredRoute },
-        //         { hover: false }
-        //     );
-        //     this.currentHoveredRoute = null;
-        // }
-
-        // if (self.props.onRouteUnhovered) {
-        //     self.props.onRouteUnhovered();
-        // }
+        const point = e.point;
+        requestAnimationFrame(() => {
+          if (!self.map) return;
+          const layers = hoverLayers.filter((id) => self.map.getLayer(id));
+          const stillOnRoute =
+            point && layers.length
+              ? self.map.queryRenderedFeatures(point, { layers }).length > 0
+              : false;
+          if (stillOnRoute) return;
+          self.currentHoveredRoute = null;
+          self.props.onRouteHovered?.(null);
+        });
       });
     });
   }
@@ -1892,18 +1889,26 @@ class Map extends Component {
     const map = this.map;
     if (!map || map.getSource('route-selected')) return;
 
-    const emptySource = {
-      type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features: [],
-      },
-    };
+    const emptyCollection = { type: 'FeatureCollection', features: [] };
 
-    map.addSource('route-selected', emptySource);
-    map.addSource('routes-unselected', emptySource);
-    map.addSource('overlapping-cyclepaths-selected', emptySource);
-    map.addSource('overlapping-cyclepaths-unselected', emptySource);
+    map.addSource('route-selected', {
+      type: 'geojson',
+      promoteId: 'routeIndex',
+      data: emptyCollection,
+    });
+    map.addSource('routes-unselected', {
+      type: 'geojson',
+      promoteId: 'routeIndex',
+      data: emptyCollection,
+    });
+    map.addSource('overlapping-cyclepaths-selected', {
+      type: 'geojson',
+      data: emptyCollection,
+    });
+    map.addSource('overlapping-cyclepaths-unselected', {
+      type: 'geojson',
+      data: emptyCollection,
+    });
     map.addSource(ROUTE_CALCULATING_SOURCE_ID, {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] },

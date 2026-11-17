@@ -142,7 +142,7 @@ export default function RoutesList({
   const { setElevationHoverLngLat } = useDirections();
 
   return (
-    <div className="cm-route-list space-y-2">
+    <div className="cm-route-list">
       {routes.map((route, index) => {
         const originalIndex = route._originalIndex !== undefined ? route._originalIndex : index;
         const isSelected = selectedRouteIndex === originalIndex;
