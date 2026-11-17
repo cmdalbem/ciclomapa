@@ -549,14 +549,6 @@ class DirectionsPanel extends Component {
     marker.addTo(this.props.map);
     marker.on('dragstart', () => {
       this.isDraggingMarker = true;
-      if (this.props.fromPoint && this.props.toPoint) {
-        this.cancelDirectionsCalculation({ keepLoading: true });
-        this.props.setLoading?.(true);
-        this.syncCalculatingHintFromMarkers();
-      }
-    });
-    marker.on('drag', () => {
-      if (this.isDraggingMarker) this.syncCalculatingHintFromMarkers();
     });
     marker.on('dragend', () => this.handleMarkerDrag(marker, type));
 
@@ -1027,30 +1019,6 @@ class DirectionsPanel extends Component {
   handleRouteClick(routeIndex) {
     console.debug('Route clicked:', routeIndex);
     this.selectRoute(routeIndex);
-  }
-
-  syncCalculatingHintFromMarkers() {
-    const map = this.props.map;
-    const source = map?.getSource?.('route-calculating');
-    const from = this.fromMarker?.getLngLat?.();
-    const to = this.toMarker?.getLngLat?.();
-    if (!source || !from || !to) return;
-    source.setData({
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [from.lng, from.lat],
-              [to.lng, to.lat],
-            ],
-          },
-        },
-      ],
-    });
   }
 
   handleMarkerDrag(marker, type) {
