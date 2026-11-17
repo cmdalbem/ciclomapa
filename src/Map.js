@@ -219,10 +219,16 @@ export function curvedLineBetween(from, to, steps = 24) {
   const dist = Math.hypot(dx, dy) || 1;
   // Perpendicular offset ~8% of the span, capped so mega hops don't balloon.
   const mag = Math.min(0.08 * dist, 0.35);
-  const nx = (-dy / dist) * mag;
-  const ny = (dx / dist) * mag;
-  const cx = (from[0] + to[0]) / 2 + nx;
-  const cy = (from[1] + to[1]) / 2 + ny;
+  // Always bulge north (or east if the chord is vertical) so a westbound
+  // A→B doesn't sag south, which reads as the long way around.
+  let nx = -dy / dist;
+  let ny = dx / dist;
+  if (ny < 0 || (ny === 0 && nx < 0)) {
+    nx = -nx;
+    ny = -ny;
+  }
+  const cx = (from[0] + to[0]) / 2 + nx * mag;
+  const cy = (from[1] + to[1]) / 2 + ny * mag;
   const coords = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
@@ -234,6 +240,25 @@ export function curvedLineBetween(from, to, steps = 24) {
   }
   return coords;
 }
+
+export function parseRoutePointCenter(value) {
+  if (Array.isArray(value) && value.length >= 2) {
+    const lng = Number(value[0]);
+    const lat = Number(value[1]);
+    return Number.isFinite(lng) && Number.isFinite(lat) ? [lng, lat] : null;
+  }
+  const lng = Number(value?.lng);
+  const lat = Number(value?.lat);
+  return Number.isFinite(lng) && Number.isFinite(lat) ? [lng, lat] : null;
+}
+
+export function routeCalculatingLineColor(isDarkMode) {
+  return isDarkMode ? 'rgba(255,255,255,0.92)' : 'rgba(28,28,28,0.82)';
+}
+
+const ROUTE_CALCULATING_LINE_ID = 'route-calculating-line';
+const ROUTE_CALCULATING_SOURCE_ID = 'route-calculating';
+const ROUTE_CALCULATING_DASH = [1.4, 2.2];
 
 /** Built-in `Map`; the React component class name `Map` shadows `window.Map` inside methods. */
 const JsMap = window.Map;
@@ -1879,7 +1904,7 @@ class Map extends Component {
     map.addSource('routes-unselected', emptySource);
     map.addSource('overlapping-cyclepaths-selected', emptySource);
     map.addSource('overlapping-cyclepaths-unselected', emptySource);
-    map.addSource('route-calculating', {
+    map.addSource(ROUTE_CALCULATING_SOURCE_ID, {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] },
     });
@@ -1891,17 +1916,17 @@ class Map extends Component {
     this.createCyclepathLayerSet(map, 'overlapping-cyclepaths-selected', 'top');
 
     // Soft curved hint while OD is set and a calc is in flight (above solid routes).
+    // Dasharray stays static: animating it in GL JS keeps flickering.
     map.addLayer({
-      id: 'route-calculating-line',
+      id: ROUTE_CALCULATING_LINE_ID,
       type: 'line',
-      source: 'route-calculating',
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      source: ROUTE_CALCULATING_SOURCE_ID,
+      layout: { 'line-cap': 'round', 'line-join': 'round', visibility: 'none' },
       paint: {
-        'line-color': 'rgba(255,255,255,0.85)',
-        'line-width': ['interpolate', ['linear'], ['zoom'], 8, 2.4, 14, 3.4],
+        'line-color': routeCalculatingLineColor(this.props.isDarkMode),
+        'line-width': 3.5,
         'line-opacity': 0.7,
-        'line-dasharray': [0, 1.8],
-        'line-dasharray-transition': { duration: 0 },
+        'line-dasharray': ROUTE_CALCULATING_DASH,
         'line-opacity-transition': { duration: 0 },
       },
     });
@@ -2050,7 +2075,8 @@ class Map extends Component {
     if (
       this.props.directionsLoading !== prevProps.directionsLoading ||
       this.props.fromPoint !== prevProps.fromPoint ||
-      this.props.toPoint !== prevProps.toPoint
+      this.props.toPoint !== prevProps.toPoint ||
+      this.props.isDarkMode !== prevProps.isDarkMode
     ) {
       this.applyRouteCalculatingOverlay({
         // Don't yank the camera when the user is just nudging A/B.
@@ -2073,38 +2099,40 @@ class Map extends Component {
 
   applyRouteCalculatingOverlay({ fitBounds = false } = {}) {
     const map = this.map;
-    if (!map?.getSource('route-calculating')) return;
+    if (!map?.getSource(ROUTE_CALCULATING_SOURCE_ID)) return;
 
-    const pair = (value) => {
-      if (Array.isArray(value) && value.length >= 2) {
-        const lng = Number(value[0]);
-        const lat = Number(value[1]);
-        return Number.isFinite(lng) && Number.isFinite(lat) ? [lng, lat] : null;
-      }
-      const lng = Number(value?.lng);
-      const lat = Number(value?.lat);
-      return Number.isFinite(lng) && Number.isFinite(lat) ? [lng, lat] : null;
-    };
-    const from = pair(this.props.fromPoint?.result?.center);
-    const to = pair(this.props.toPoint?.result?.center);
-    const show = this.props.directionsLoading && from && to;
+    const from = parseRoutePointCenter(this.props.fromPoint?.result?.center);
+    const to = parseRoutePointCenter(this.props.toPoint?.result?.center);
+    const show = Boolean(this.props.directionsLoading && from && to);
+    const hasLine = Boolean(map.getLayer(ROUTE_CALCULATING_LINE_ID));
 
     if (!show) {
-      map.getSource('route-calculating').setData({ type: 'FeatureCollection', features: [] });
-      this.stopRouteCalculatingDashAnimation();
+      map.getSource(ROUTE_CALCULATING_SOURCE_ID).setData({
+        type: 'FeatureCollection',
+        features: [],
+      });
+      if (hasLine) {
+        map.setLayoutProperty(ROUTE_CALCULATING_LINE_ID, 'visibility', 'none');
+      }
+      this.stopRouteCalculatingPulse();
       return;
     }
 
-    if (map.getLayer('route-calculating-line')) {
-      map.setLayoutProperty('route-calculating-line', 'visibility', 'visible');
+    if (hasLine) {
+      map.setLayoutProperty(ROUTE_CALCULATING_LINE_ID, 'visibility', 'visible');
+      map.setPaintProperty(
+        ROUTE_CALCULATING_LINE_ID,
+        'line-color',
+        routeCalculatingLineColor(this.props.isDarkMode)
+      );
       try {
-        map.moveLayer('route-calculating-line');
+        map.moveLayer(ROUTE_CALCULATING_LINE_ID);
       } catch (e) {
         /* already on top or style mid-reload */
       }
     }
 
-    map.getSource('route-calculating').setData({
+    map.getSource(ROUTE_CALCULATING_SOURCE_ID).setData({
       type: 'FeatureCollection',
       features: [
         {
@@ -2117,7 +2145,7 @@ class Map extends Component {
         },
       ],
     });
-    this.startRouteCalculatingDashAnimation();
+    this.startRouteCalculatingPulse();
 
     if (fitBounds) {
       const padding = IS_MOBILE
@@ -2131,26 +2159,16 @@ class Map extends Component {
     }
   }
 
-  startRouteCalculatingDashAnimation() {
+  startRouteCalculatingPulse() {
     if (this._routeCalculatingDashRaf) return;
-    const started = performance.now();
-    const DASH = 0.01;
-    const GAP = 1.8;
-    const PERIOD = DASH + GAP;
     const tick = (now) => {
-      if (!this.map?.getLayer('route-calculating-line')) {
+      if (!this.map?.getLayer(ROUTE_CALCULATING_LINE_ID)) {
         this._routeCalculatingDashRaf = null;
         return;
       }
-      const elapsed = now - started;
-      // Mapbox has no dashoffset; this is the constant-sum pattern from their ant-path
-      // example so the loop doesn't hitch when it wraps.
-      const pos = ((elapsed / 1400) % 1) * PERIOD;
-      const dasharray = pos < DASH ? [pos, GAP, DASH - pos] : [0, pos - DASH, DASH, PERIOD - pos];
-      const opacity = 0.5 + 0.22 * (0.5 + 0.5 * Math.sin((elapsed / 2400) * Math.PI * 2));
+      const opacity = 0.42 + 0.38 * (0.5 + 0.5 * Math.sin((now / 1100) * Math.PI * 2));
       try {
-        this.map.setPaintProperty('route-calculating-line', 'line-opacity', opacity);
-        this.map.setPaintProperty('route-calculating-line', 'line-dasharray', dasharray);
+        this.map.setPaintProperty(ROUTE_CALCULATING_LINE_ID, 'line-opacity', opacity);
       } catch (e) {
         /* style may be mid-reload */
       }
@@ -2159,7 +2177,7 @@ class Map extends Component {
     this._routeCalculatingDashRaf = requestAnimationFrame(tick);
   }
 
-  stopRouteCalculatingDashAnimation() {
+  stopRouteCalculatingPulse() {
     if (this._routeCalculatingDashRaf) {
       cancelAnimationFrame(this._routeCalculatingDashRaf);
       this._routeCalculatingDashRaf = null;
@@ -3549,7 +3567,7 @@ class Map extends Component {
       }
       this.elevationHoverMarker = null;
     }
-    this.stopRouteCalculatingDashAnimation();
+    this.stopRouteCalculatingPulse();
     if (this.popups) {
       this.popups.searchResultPopup?.off?.('close', this._onSearchResultPopupClosed);
     }

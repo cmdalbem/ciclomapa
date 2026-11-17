@@ -1,7 +1,12 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { DirectionsProvider } from './contexts/DirectionsContext';
-import MapWrapper, { flyMapToCityFocus } from './Map.js';
+import MapWrapper, {
+  flyMapToCityFocus,
+  curvedLineBetween,
+  parseRoutePointCenter,
+  routeCalculatingLineColor,
+} from './Map.js';
 import { DEFAULT_ZOOM, PMTILES_SOURCE_ID } from './config/constants.js';
 
 const mockFlyMapTo = jest.fn();
@@ -240,6 +245,65 @@ describe('Map helpers', () => {
     map.updateRouteEndpointPoiFilters(false);
     expect(setFilter).toHaveBeenCalled();
     expect(setFilter.mock.calls[0][1][0]).toBe('any');
+  });
+
+  it('curvedLineBetween starts at A, ends at B, and bulges north', () => {
+    const from = [2.18, 41.4];
+    const to = [2.15, 41.4];
+    const coords = curvedLineBetween(from, to);
+    expect(coords[0]).toEqual(from);
+    expect(coords[coords.length - 1]).toEqual(to);
+    expect(coords.length).toBeGreaterThan(8);
+    expect(coords[Math.floor(coords.length / 2)][1]).toBeGreaterThan(41.4);
+  });
+
+  it('parseRoutePointCenter accepts [lng, lat] and {lng, lat}', () => {
+    expect(parseRoutePointCenter([-46.63, -23.55])).toEqual([-46.63, -23.55]);
+    expect(parseRoutePointCenter({ lng: -46.63, lat: -23.55 })).toEqual([-46.63, -23.55]);
+    expect(parseRoutePointCenter(null)).toBeNull();
+    expect(parseRoutePointCenter([NaN, 1])).toBeNull();
+  });
+
+  it('routeCalculatingLineColor contrasts with the basemap', () => {
+    expect(routeCalculatingLineColor(true)).toMatch(/255,\s*255,\s*255/);
+    expect(routeCalculatingLineColor(false)).toMatch(/28,\s*28,\s*28/);
+  });
+
+  it('applyRouteCalculatingOverlay draws a curve while loading and clears it after', () => {
+    const setData = jest.fn();
+    const setLayoutProperty = jest.fn();
+    const setPaintProperty = jest.fn();
+    const map = mountMap();
+    map.map = fakeMapbox({
+      getSource: (id) => (id === 'route-calculating' ? { setData } : null),
+      getLayer: (id) => id === 'route-calculating-line',
+      setLayoutProperty,
+      setPaintProperty,
+      moveLayer: jest.fn(),
+    });
+    map.props = {
+      ...map.props,
+      directionsLoading: true,
+      isDarkMode: true,
+      fromPoint: { result: { center: [-46.63, -23.55] } },
+      toPoint: { result: { center: [-46.64, -23.56] } },
+    };
+
+    map.applyRouteCalculatingOverlay();
+    expect(setLayoutProperty).toHaveBeenCalledWith(
+      'route-calculating-line',
+      'visibility',
+      'visible'
+    );
+    const drawn = setData.mock.calls[0][0];
+    expect(drawn.features[0].geometry.type).toBe('LineString');
+    expect(drawn.features[0].geometry.coordinates[0]).toEqual([-46.63, -23.55]);
+
+    map.props = { ...map.props, directionsLoading: false };
+    map.applyRouteCalculatingOverlay();
+    map.stopRouteCalculatingPulse();
+    expect(setLayoutProperty).toHaveBeenCalledWith('route-calculating-line', 'visibility', 'none');
+    expect(setData.mock.calls.at(-1)[0].features).toEqual([]);
   });
 
   it('syncMapState prefers onMapPositionChange', () => {
