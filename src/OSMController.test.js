@@ -86,7 +86,7 @@ describe('OSMController.getQuery', () => {
     const q = OSMController.getQuery({ areaId: 3600000001 });
     expect(q).toContain('[out:json][timeout:500]');
     expect(q).toContain('area(3600000001)->.a;');
-    expect(q).toContain('rel(area.a)["boundary"="administrative"]');
+    expect(q).toContain('nwr(pivot.a)->.citybnd');
     expect(q).toContain('way["highway"="cycleway"](area.a);');
     // POI layers are queried as nodes too.
     expect(q).toMatch(/node\["amenity"="bicycle_parking"\]\(area\.a\);/);
@@ -111,6 +111,23 @@ describe('OSMController.getQuery', () => {
   it('expands compound filters into chained tag selectors', () => {
     const q = OSMController.getQuery({ areaId: 1 });
     expect(q).toContain('way["highway"="track"]["bicycle"="designated"](area.a);');
+  });
+
+  it('does not send debug-only ciclomapa tags to Overpass', () => {
+    const q = OSMController.getQuery({ areaId: 3600000001 });
+    expect(q).not.toContain('ciclomapa:');
+    expect(q).not.toContain('match_confidence_bucket');
+  });
+
+  it('builds a short boundary-only query with no layer filters', () => {
+    const q = OSMController.getQuery({ areaId: 3600000001, boundaryOnly: true });
+    expect(q).toContain('[timeout:120]');
+    expect(q).toContain('area(3600000001)->.a;');
+    expect(q).toContain('nwr(pivot.a)->.citybnd');
+    expect(q).toContain('(.citybnd;>;)');
+    expect(q).toContain('out geom;');
+    expect(q).not.toContain('way["highway"="cycleway"]');
+    expect(q).not.toContain('bicycle_parking');
   });
 });
 
@@ -347,6 +364,16 @@ describe('OSMController.getData', () => {
     });
     const { geoJson } = await OSMController.getData({ area: areaName });
     expect(geoJson.features).toHaveLength(1);
+  });
+
+  it('sends a boundary-only Overpass query when asked', async () => {
+    fetch.mockResolvedValue(jsonResponse(overpassWithData));
+    await OSMController.getData({ area: areaName, boundaryOnly: true });
+    const query = decodeURI(fetch.mock.calls[0][0].split('?data=')[1]);
+    expect(query).toContain('nwr(pivot.a)->.citybnd');
+    expect(query).toContain('(.citybnd;>;)');
+    expect(query).not.toContain('way["highway"="cycleway"]');
+    expect(query).toContain('[timeout:120]');
   });
 
   it('rejects when the area cannot be resolved', async () => {
