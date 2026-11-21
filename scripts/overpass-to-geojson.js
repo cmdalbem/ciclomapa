@@ -52,7 +52,7 @@ const DEFAULT_USER_AGENT = `${pkg.name}/${pkg.version} (+${pkg.homepage || 'http
 // Area ID overrides (from constants.js)
 const AREA_ID_OVERRIDES = {
   'Vitória, Espirito Santo, Brasil': 3601825817,
-  'Brasília, Distrito Federal, Brasil': 3602662005,
+  'Brasília, Distrito Federal, Brasil': 3600421151,
   'København, Capital RegionDenmark, Denmark': 3613707878,
   'Comuna 1, Buenos Aires, Argentina': 3601224652,
   'Stockholm, Stockholm, Sweden': 3600398021,
@@ -406,9 +406,18 @@ function generateQueryFromLayers(
     )
     .join('');
 
+  const boundaryQuery = !bbox
+    ? `
+            nwr(pivot.a)->.citybnd;
+            (.citybnd;>;);
+            out geom;
+        `
+    : '';
+
   const query = `
         [out:json][timeout:500];
         ${!bbox && `area(${areaId})->.a;`}
+        ${boundaryQuery}
         (
             ${body}
         );
