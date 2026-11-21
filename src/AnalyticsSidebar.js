@@ -571,8 +571,8 @@ class AnalyticsSidebar extends Component {
                     </span>
                     {ENABLE_OFFICIAL_CITY_HALL_METRICS_COMPARISON &&
                       this.props.cityMetadata &&
-                      this.props.cityMetadata.alianca_2025 !== undefined &&
-                      this.props.cityMetadata.alianca_2025 !== null && (
+                      this.props.cityMetadata.alianca_2026 !== undefined &&
+                      this.props.cityMetadata.alianca_2026 !== null && (
                         <>
                           {/* <span className="tracking-widest mt-2">OFICIAL</span> */}
                           <Popover
@@ -590,7 +590,7 @@ class AnalyticsSidebar extends Component {
                                 <p>
                                   Quilometragem total de ciclovias e ciclofaixas divulgada como dado
                                   oficial da Prefeitura com base no levantamento anual da Aliança
-                                  Bike. Última atualização: julho de 2025.
+                                  Bike. Última atualização: outubro de 2026.
                                 </p>
                                 <OfficialDisclaimer />
                                 <Button
@@ -608,7 +608,7 @@ class AnalyticsSidebar extends Component {
                               <IconVerified className="inline-block opacity-50" />
                               <div className="flex items-center items-baseline opacity-70">
                                 {appendKmUnit(
-                                  Number(this.props.cityMetadata.alianca_2025).toFixed(1)
+                                  Number(this.props.cityMetadata.alianca_2026).toFixed(1)
                                 )}
                               </div>
                               {/* <IconInfo /> */}
