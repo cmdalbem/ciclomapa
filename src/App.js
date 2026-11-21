@@ -17,12 +17,18 @@ import { downloadObjectAsJson } from './utils/utils.js';
 import { updateDocumentMeta } from './utils/documentMeta.js';
 import { getSystemThemePreference } from './utils/themeUtils';
 import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './utils/geojsonUtils.js';
+import { DEFAULT_PARALLEL_DEDUPE_ENGINE } from './utils/parallelDedupeEngines/engineTypes.js';
 import {
   getCanonicalCitySlug,
   getPredefinedCitySlugDefinition,
   getPredefinedCityStaticLocation,
 } from './config/citySlugCatalog.js';
-import { isPrivacyPolicyLocation, PRIVACY_POLICY_PATH } from './config/routes.js';
+import {
+  CITY_PICKER_QUERY_PARAM,
+  isPrivacyPolicyLocation,
+  PRIVACY_POLICY_PATH,
+  searchWithCityPicker,
+} from './config/routes.js';
 import { flyMapToCityFocus } from './Map.js';
 import { flyMapTo, flyMapToCinematic } from './features/map/mapCamera.js';
 import { isAreaBrowsePlaceResult } from './GooglePlacesGeocoder.js';
@@ -80,7 +86,7 @@ export class App extends Component {
   _geoJsonLoadedArea = null;
   _geoJsonLoadingArea = null;
   // Areas we already re-fetched from OSM once this session because the cached GeoJSON
-  // had no admin boundary (see updateData()).
+  // had no usable city outline (see updateData()).
   _boundaryRefetchAttemptedAreas = new Set();
   // Layer names present in the PMTiles archive (null until metadata is read).
   pmtilesAvailableLayerNames = null;
@@ -89,6 +95,7 @@ export class App extends Component {
   pendingFlyToTarget = null;
   lastResolvedCitySlug = null;
   lastNotifiedCitySlugError = null;
+  lastSelectedParallelDedupeEngine = null;
   initialBareRootEntry = false;
   _welcomeMapBootScheduled = false;
   _unmounted = false;
@@ -130,6 +137,9 @@ export class App extends Component {
     this.closePrivacyPolicyModal = this.closePrivacyPolicyModal.bind(this);
     this.syncPrivacyPolicyFromRoute = this.syncPrivacyPolicyFromRoute.bind(this);
     this.onChangeStrategy = this.onChangeStrategy.bind(this);
+    this.onChangeParallelDedupeEngine = this.onChangeParallelDedupeEngine.bind(this);
+    this.togglePreviousParallelDedupeEngine = this.togglePreviousParallelDedupeEngine.bind(this);
+    this.onGlobalKeyDown = this.onGlobalKeyDown.bind(this);
     this.setMapRef = this.setMapRef.bind(this);
     this.setMapComponentRef = this.setMapComponentRef.bind(this);
     this.triggerGeolocate = this.triggerGeolocate.bind(this);
@@ -155,6 +165,39 @@ export class App extends Component {
       !initialHasCitySlug;
 
     this.state = this.buildInitialState();
+  }
+
+  isTypingInFormField(target) {
+    if (!target) return false;
+    const tag = (target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+    return Boolean(target.isContentEditable);
+  }
+
+  togglePreviousParallelDedupeEngine() {
+    const legacyId = 'legacy_name_angle';
+    const current = this.state.parallelDedupeEngine;
+    const previous = this.lastSelectedParallelDedupeEngine || legacyId;
+
+    // Swap: after toggling, "previous" becomes whatever we were on.
+    this.lastSelectedParallelDedupeEngine = current;
+    this.setState({ parallelDedupeEngine: previous });
+  }
+
+  onGlobalKeyDown(e) {
+    // Shortcut: press "m" to toggle current engine <-> previously selected engine.
+    // If no previous engine is available, fall back to legacy.
+    if (!e) return;
+    if (this.isTypingInFormField(e.target)) return;
+
+    const key = String(e.key || '').toLowerCase();
+    if (key !== 'm') return;
+
+    // Avoid repeat firing when user holds the key.
+    if (e.repeat) return;
+
+    e.preventDefault();
+    this.togglePreviousParallelDedupeEngine();
   }
 
   buildInitialState() {
@@ -259,6 +302,8 @@ export class App extends Component {
     const isPrivacyPolicyRoute =
       typeof window !== 'undefined' && isPrivacyPolicyLocation(window.location.pathname);
 
+    const isDebugMode = urlParams.debug || false;
+
     return {
       area: initialArea,
       showSatellite: ENABLE_SATELLITE_TOGGLE
@@ -270,10 +315,10 @@ export class App extends Component {
       lat: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
       lng: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
       geoJson: null,
-      debugMode: urlParams.debug || false,
+      debugMode: isDebugMode,
       loading: false,
       mapStyle: isDarkMode ? MAP_STYLES.DARK : MAP_STYLES.LIGHT,
-      layers: this.initLayers(prev.layersStates, isDarkMode, urlParams.debug || false),
+      layers: this.initLayers(prev.layersStates, isDarkMode, isDebugMode),
       lengths: {},
       isTrackingUserLocation: IS_MOBILE && prev.isTrackingUserLocation === true ? true : false,
       embedMode,
@@ -287,7 +332,8 @@ export class App extends Component {
       darkModeFromUrl: urlFlagEnabled(urlParams.dark),
       layersLegendModal: false,
       layersLegendScrollToSection: null,
-      lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
+      lengthCalculationStrategy: isDebugMode ? DEFAULT_LENGTH_CALCULATE_STRATEGIES : 'pessimistic',
+      parallelDedupeEngine: isDebugMode ? DEFAULT_PARALLEL_DEDUPE_ENGINE : 'geometry_first',
       map: null,
       isDarkMode: isDarkMode,
       mapKey: 0,
@@ -326,6 +372,14 @@ export class App extends Component {
 
   onChangeStrategy(strategy) {
     this.setState({ lengthCalculationStrategy: strategy });
+  }
+
+  onChangeParallelDedupeEngine(engineId) {
+    const current = this.state.parallelDedupeEngine;
+    if (engineId !== current) {
+      this.lastSelectedParallelDedupeEngine = current;
+    }
+    this.setState({ parallelDedupeEngine: engineId });
   }
 
   toggleTheme(newIsDark) {
@@ -388,7 +442,9 @@ export class App extends Component {
 
   openCityPicker() {
     this.setState({ aboutModal: false, hideUI: false });
-    this.props.router.navigate({ search: '?buscar' });
+    this.props.router.navigate({
+      search: searchWithCityPicker(window.location.search, true),
+    });
   }
 
   openLayersLegendModal(scrollToSection = null) {
@@ -471,6 +527,10 @@ export class App extends Component {
     // metadata has been read we go with the fallback list.
     const availableNames = this.pmtilesAvailableLayerNames;
     layers.forEach((l) => {
+      if (l.onlyDebug) {
+        l.isAvailable = true;
+        return;
+      }
       if (!l.filters) return; // e.g. comments: not sourced from the tiles at all
       l.isAvailable = availableNames
         ? availableNames.has(l.name)
@@ -501,6 +561,7 @@ export class App extends Component {
 
     this.setState((prev) => ({
       layers: prev.layers.map((l) => {
+        if (l.onlyDebug) return { ...l, isAvailable: true };
         if (!l.filters) return l;
         const isAvailable = this.pmtilesAvailableLayerNames.has(l.name);
         return { ...l, isAvailable, isActive: isAvailable && l.isActive };
@@ -721,6 +782,7 @@ export class App extends Component {
     // resolveCitySlugToAreaAndViewport is not called (which would fly the map to the
     // city centre, overriding the user's current position).
     const params = new URLSearchParams(window.location.search);
+    params.delete(CITY_PICKER_QUERY_PARAM);
     const viewport = this.getCurrentViewport();
     if (Number.isFinite(viewport.lat) && Number.isFinite(viewport.lng)) {
       params.set('lat', viewport.lat.toFixed(7));
@@ -1222,7 +1284,7 @@ export class App extends Component {
   }
 
   getDataFromOSM(options = {}) {
-    const { areaName = this.state.area, forceUpdate, backgroundUpdate } = options;
+    const { areaName = this.state.area, forceUpdate, backgroundUpdate, boundaryOnly } = options;
 
     // Cancel any existing OSM request
     if (this.currentOSMRequest) {
@@ -1235,7 +1297,9 @@ export class App extends Component {
       this.abortCurrentOSMRequest();
     }
 
-    this.setState({ loading: true });
+    if (!boundaryOnly) {
+      this.setState({ loading: true });
+    }
 
     // const parts = areaName.split(',');
     // const city = parts[0];
@@ -1252,12 +1316,17 @@ export class App extends Component {
     //     duration: 0
     // });
 
-    const osmLoadToken = startDataLoad('geojson-osm', 'GeoJSON (Overpass)', {
-      area: areaName,
-      backgroundUpdate: !!backgroundUpdate,
-    });
+    const osmLoadToken = startDataLoad(
+      'geojson-osm',
+      boundaryOnly ? 'GeoJSON (Overpass boundary)' : 'GeoJSON (Overpass)',
+      {
+        area: areaName,
+        backgroundUpdate: !!backgroundUpdate,
+        boundaryOnly: !!boundaryOnly,
+      }
+    );
 
-    const request = OSMController.getData({ area: areaName });
+    const request = OSMController.getData({ area: areaName, boundaryOnly: !!boundaryOnly });
     this.currentOSMRequest = request;
     return request
       .then((newData) => {
@@ -1277,6 +1346,38 @@ export class App extends Component {
           return;
         }
 
+        if (boundaryOnly) {
+          const existing = this.state.geoJson;
+          if (!existing?.features) {
+            this.setState({ loading: false });
+            return;
+          }
+
+          const incoming = newData.geoJson?.features || [];
+          const boundaryFeatures = incoming.filter(
+            (f) => f.properties?.boundary === 'administrative'
+          );
+          const withoutOldBoundary = existing.features.filter(
+            (f) => f.properties?.boundary !== 'administrative'
+          );
+          const merged = {
+            ...existing,
+            features: [...withoutOldBoundary, ...boundaryFeatures],
+          };
+
+          this.setState({ geoJson: merged, loading: false });
+
+          if (SAVE_TO_FIREBASE && boundaryFeatures.length > 0) {
+            const storageKey = this.getStorageKeyForArea(areaName);
+            this.getStorage()
+              .save(areaName, merged, {}, { storageKey })
+              .catch((e) => {
+                console.debug('Could not persist city boundary:', e);
+              });
+          }
+          return;
+        }
+
         this.geoJsonDiff(this.state.geoJson, newData.geoJson);
 
         if (forceUpdate && !this.isOSMDataHealthy(this.state.geoJson, newData.geoJson)) {
@@ -1286,14 +1387,18 @@ export class App extends Component {
           const computedLengths = calculateLayersLengths(
             newData.geoJson,
             this.state.layers,
-            this.state.lengthCalculationStrategy
+            this.state.lengthCalculationStrategy,
+            this.state.parallelDedupeEngine
           );
           const lengths =
             Object.keys(computedLengths).length === 0
               ? this.state.lengths || computedLengths
               : computedLengths;
 
-          if (SAVE_TO_FIREBASE) {
+          const shouldPersistLengthsToFirebase =
+            SAVE_TO_FIREBASE && this.state.parallelDedupeEngine === DEFAULT_PARALLEL_DEDUPE_ENGINE;
+
+          if (shouldPersistLengthsToFirebase) {
             const storageKey = this.getStorageKeyForArea(areaName);
             this.getStorage()
               .save(areaName, newData.geoJson, computedLengths, { storageKey })
@@ -1422,24 +1527,35 @@ export class App extends Component {
           meta: { area, features: data.geoJson?.features?.length ?? 0 },
         });
 
-        // Re-fetch when stale, or when cached GeoJSON lacks the city boundary (saves
-        // from before ENABLE_BOUNDARY_LAYER only stored cyclepath ways). The boundary
-        // retry happens at most once per city per session: if OSM has no matching
-        // admin boundary for this area we'd otherwise hit Overpass on every open.
-        const hasBoundaryFeature =
-          !ENABLE_BOUNDARY_LAYER ||
-          data.geoJson?.features?.some((f) => f.properties?.boundary === 'administrative');
+        // Re-fetch when stale. If the cache is fresh but missing the city outline
+        // (or it still has a pile of inner admin polygons, like Brasília RAs),
+        // only pull the area's own relation. Once per city per session.
+        const isFresh = this.isDataFresh(data.updatedAt);
+        const cityAdminLevels = new Set(['4', '6', '7', '8']);
+        const cityBoundaryCount = (data.geoJson?.features || []).filter(
+          (f) =>
+            f.properties?.boundary === 'administrative' &&
+            cityAdminLevels.has(String(f.properties?.admin_level || ''))
+        ).length;
+        const hasCityBoundary =
+          !ENABLE_BOUNDARY_LAYER || (cityBoundaryCount >= 1 && cityBoundaryCount <= 2);
         const shouldRefetchForBoundary =
-          !hasBoundaryFeature && !this._boundaryRefetchAttemptedAreas.has(area);
-        const needsBackgroundRefetch =
-          !this.isDataFresh(data.updatedAt) || shouldRefetchForBoundary;
+          !hasCityBoundary && !this._boundaryRefetchAttemptedAreas.has(area);
+        const needsFullRefetch = !isFresh;
+        const needsBoundaryBackfill = isFresh && shouldRefetchForBoundary;
 
-        if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
+        const shouldRecalculateLengths =
+          !data.lengths ||
+          FORCE_RECALCULATE_LENGTHS_ALWAYS ||
+          this.state.parallelDedupeEngine !== DEFAULT_PARALLEL_DEDUPE_ENGINE;
+
+        if (shouldRecalculateLengths) {
           console.debug('Recalculating lengths...');
           const computedLengths = calculateLayersLengths(
             data.geoJson,
             this.state.layers,
-            this.state.lengthCalculationStrategy
+            this.state.lengthCalculationStrategy,
+            this.state.parallelDedupeEngine
           );
           if (Object.keys(computedLengths).length > 0) {
             data.lengths = computedLengths;
@@ -1450,7 +1566,7 @@ export class App extends Component {
           geoJson: data.geoJson,
           lengths: data.lengths,
           dataUpdatedAt: new Date(data.updatedAt),
-          loading: needsBackgroundRefetch,
+          loading: needsFullRefetch,
         });
 
         this._geoJsonLoadedArea = area;
@@ -1458,11 +1574,14 @@ export class App extends Component {
           this._geoJsonLoadingArea = null;
         }
 
-        if (needsBackgroundRefetch) {
+        if (needsFullRefetch) {
           if (shouldRefetchForBoundary) {
             this._boundaryRefetchAttemptedAreas.add(area);
           }
           this.getDataFromOSM({ areaName: area, backgroundUpdate: true });
+        } else if (needsBoundaryBackfill) {
+          this._boundaryRefetchAttemptedAreas.add(area);
+          this.getDataFromOSM({ areaName: area, backgroundUpdate: true, boundaryOnly: true });
         }
       })
       .catch((e) => {
@@ -1735,7 +1854,8 @@ export class App extends Component {
       const computedLengths = calculateLayersLengths(
         clone,
         this.state.layers,
-        this.state.lengthCalculationStrategy
+        this.state.lengthCalculationStrategy,
+        this.state.parallelDedupeEngine
       );
       this.setState({
         geoJson: clone,
@@ -1743,6 +1863,24 @@ export class App extends Component {
           Object.keys(computedLengths).length === 0
             ? this.state.lengths || computedLengths
             : computedLengths,
+      });
+    }
+
+    if (this.state.parallelDedupeEngine !== prevState.parallelDedupeEngine) {
+      // Deep clone geoJson data to force Mapbox to update the data layers
+      const clone = JSON.parse(JSON.stringify(this.state.geoJson));
+      const computedDedupeLengths = calculateLayersLengths(
+        clone,
+        this.state.layers,
+        this.state.lengthCalculationStrategy,
+        this.state.parallelDedupeEngine
+      );
+      this.setState({
+        geoJson: clone,
+        lengths:
+          Object.keys(computedDedupeLengths).length === 0
+            ? this.state.lengths || computedDedupeLengths
+            : computedDedupeLengths,
       });
     }
 
@@ -1763,7 +1901,8 @@ export class App extends Component {
     const computedLengths = calculateLayersLengths(
       this.state.geoJson,
       this.state.layers,
-      this.state.lengthCalculationStrategy
+      this.state.lengthCalculationStrategy,
+      this.state.parallelDedupeEngine
     );
     if (Object.keys(computedLengths).length === 0) {
       return;
@@ -1790,6 +1929,8 @@ export class App extends Component {
   }
 
   componentDidMount() {
+    window.addEventListener('keydown', this.onGlobalKeyDown);
+
     if (!this.state.mapBootReady) {
       this.scheduleWelcomeMapBootAfterPaint();
     }
@@ -1859,6 +2000,7 @@ export class App extends Component {
 
   componentWillUnmount() {
     this._unmounted = true;
+    window.removeEventListener('keydown', this.onGlobalKeyDown);
 
     // Clean up theme change listener
     if (this.themeChangeListener && window.matchMedia) {
@@ -2093,6 +2235,7 @@ export class App extends Component {
       onMapShowSatelliteChanged: this.onMapShowSatelliteChanged,
       onLayersChange: this.onLayersChange,
       onChangeStrategy: this.onChangeStrategy,
+      onChangeParallelDedupeEngine: this.onChangeParallelDedupeEngine,
       setDirectionsPanelRef: this.setDirectionsPanelRef,
       setFromPoint: this.setFromPoint,
       setToPoint: this.setToPoint,

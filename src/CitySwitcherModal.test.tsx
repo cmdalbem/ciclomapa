@@ -167,6 +167,38 @@ it('clicking a top city navigates to that slug and closes the picker', async () 
   expect(document.querySelector('.city-switcher-modal--open')).toBeNull();
 });
 
+it('clicking a recent city navigates to that slug and closes the picker', async () => {
+  window.localStorage.setItem(
+    RECENT_ITEMS_KEY,
+    JSON.stringify([
+      {
+        id: 'city:rio-de-janeiro',
+        type: 'city',
+        title: 'Rio de Janeiro',
+        subtitle: 'Rio de Janeiro, Brasil',
+        citySlug: 'rio-de-janeiro',
+        visitedAt: Date.now(),
+      },
+    ])
+  );
+
+  const user = userEvent.setup();
+  renderOpenPicker('/curitiba');
+
+  const recentSection = await screen.findByTestId('city-switcher-recent');
+  const link = await waitFor(() => {
+    const el = recentSection.querySelector('a[href="/rio-de-janeiro"]');
+    expect(el).toBeInstanceOf(HTMLAnchorElement);
+    return el as HTMLAnchorElement;
+  });
+  await user.click(link);
+
+  await waitFor(() => {
+    expect(screen.getByTestId('pathname')).toHaveTextContent('/rio-de-janeiro');
+  });
+  expect(document.querySelector('.city-switcher-modal--open')).toBeNull();
+});
+
 it('shows Recentes when localStorage has recent city items (favoritesStore)', async () => {
   window.localStorage.setItem(
     RECENT_ITEMS_KEY,

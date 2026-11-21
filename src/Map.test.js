@@ -1,7 +1,12 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { DirectionsProvider } from './contexts/DirectionsContext';
-import MapWrapper, { flyMapToCityFocus } from './Map.js';
+import MapWrapper, {
+  applyOverlapXray,
+  flyMapToCityFocus,
+  pickCityBoundaryFeature,
+  ringsAsPolygonHoles,
+} from './Map.js';
 import { DEFAULT_ZOOM, PMTILES_SOURCE_ID } from './config/constants.js';
 
 const mockFlyMapTo = jest.fn();
@@ -135,6 +140,52 @@ describe('flyMapToCityFocus', () => {
   });
 });
 
+describe('city boundary helpers', () => {
+  const closed = (coords) => [...coords, coords[0]];
+  const small = closed([
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+  ]);
+  const large = closed([
+    [0, 0],
+    [10, 0],
+    [10, 10],
+    [0, 10],
+  ]);
+
+  it('picks the largest closed admin polygon among city-level features', () => {
+    const features = [
+      {
+        properties: { boundary: 'administrative', admin_level: '9', name: 'RA' },
+        geometry: { type: 'Polygon', coordinates: [large] },
+      },
+      {
+        properties: { boundary: 'administrative', admin_level: '4', name: 'DF' },
+        geometry: { type: 'Polygon', coordinates: [small] },
+      },
+      {
+        properties: { highway: 'cycleway' },
+        geometry: { type: 'Polygon', coordinates: [large] },
+      },
+    ];
+    expect(pickCityBoundaryFeature(features).properties.name).toBe('DF');
+  });
+
+  it('reverses CCW rings so they work as polygon holes', () => {
+    const ccw = closed([
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, 1],
+    ]);
+    const [hole] = ringsAsPolygonHoles([ccw]);
+    expect(hole[0]).toEqual(ccw[0]);
+    expect(hole[1]).toEqual(ccw[ccw.length - 2]);
+  });
+});
+
 describe('Map helpers', () => {
   it('renders the e2e container without creating a Mapbox map', () => {
     const { getByTestId } = render(
@@ -208,6 +259,99 @@ describe('Map helpers', () => {
     map.props = { ...map.props, cleanMode: false };
     map.applyCleanModeBasemapLabels();
     expect(setLayoutProperty).toHaveBeenCalledWith('place-label', 'visibility', 'visible');
+  });
+
+  it('applyOverlapXray shows halo layers under visible cycle lines', () => {
+    const paint = { 'ciclovia--pmtiles': {} };
+    const layout = {
+      'ciclovia--pmtiles': { visibility: 'visible' },
+      'ciclovia--halo--pmtiles': { visibility: 'none' },
+    };
+    const map = {
+      getStyle: () => ({
+        layers: [
+          { id: 'ciclovia--halo--pmtiles', type: 'line' },
+          { id: 'ciclovia--pmtiles', type: 'line' },
+          { id: 'ciclovia--interactive--pmtiles', type: 'line' },
+          { id: 'boundary-layer', type: 'line' },
+        ],
+      }),
+      getLayer: (id) => layout[id] !== undefined,
+      getPaintProperty: (id, prop) => paint[id]?.[prop],
+      getLayoutProperty: (id, prop) => layout[id]?.[prop],
+      setPaintProperty: jest.fn((id, prop, value) => {
+        paint[id] = paint[id] || {};
+        paint[id][prop] = value;
+      }),
+      setLayoutProperty: jest.fn((id, prop, value) => {
+        layout[id] = layout[id] || {};
+        layout[id][prop] = value;
+      }),
+    };
+
+    applyOverlapXray(map, true);
+    expect(map.setLayoutProperty).toHaveBeenCalledWith(
+      'ciclovia--halo--pmtiles',
+      'visibility',
+      'visible'
+    );
+    expect(map.setPaintProperty).toHaveBeenCalledWith('ciclovia--pmtiles', 'line-opacity', 0.75);
+
+    map.setPaintProperty.mockClear();
+    map.setLayoutProperty.mockClear();
+    applyOverlapXray(map, false);
+    expect(map.setLayoutProperty).toHaveBeenCalledWith(
+      'ciclovia--halo--pmtiles',
+      'visibility',
+      'none'
+    );
+    expect(map.setPaintProperty).toHaveBeenCalledWith('ciclovia--pmtiles', 'line-opacity', 1);
+  });
+
+  it('setDedupeDebugData writes GeoJSON onto the overlay source in debug mode', () => {
+    const map = mountMap({ debugMode: true });
+    const setData = jest.fn();
+    map.map = fakeMapbox({
+      getSource: (id) => (id === 'dedupe-debug' ? { setData } : null),
+    });
+    const fc = { type: 'FeatureCollection', features: [{ type: 'Feature' }] };
+    map.setDedupeDebugData(fc);
+    expect(setData).toHaveBeenCalledWith(fc);
+  });
+
+  it('initCyclepathLayerForSource omits source-layer on the GeoJSON overlay', () => {
+    const map = mountMap({ debugMode: true, layers: [] });
+    const addLayer = jest.fn();
+    map.map = fakeMapbox({
+      getSource: () => ({}),
+      getLayer: () => false,
+      addLayer,
+      on: jest.fn(),
+    });
+    map.initCyclepathLayerForSource(
+      {
+        id: 'lado-a',
+        name: '🛠️ Lado A',
+        onlyDebug: true,
+        filters: [
+          [
+            ['ciclomapa:paired', 'true'],
+            ['ciclomapa:side', 'a'],
+          ],
+        ],
+        style: { lineColor: '#0B54FE', lineWidth: 8 },
+      },
+      'dedupe-debug',
+      null
+    );
+    expect(addLayer).toHaveBeenCalled();
+    const added = addLayer.mock.calls.map(([spec]) => spec);
+    expect(added.every((spec) => spec.source === 'dedupe-debug')).toBe(true);
+    expect(added.every((spec) => spec['source-layer'] === undefined)).toBe(true);
+    const halo = added.find((spec) => spec.id === 'lado-a--halo--pmtiles');
+    expect(halo).toBeTruthy();
+    expect(halo.layout.visibility).toBe('none');
+    expect(halo.paint['line-opacity']).toBe(0.28);
   });
 
   it('updateRouteEndpointPoiFilters applies a within filter and restores it when routes clear', () => {

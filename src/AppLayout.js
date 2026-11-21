@@ -62,7 +62,6 @@ export default function AppLayout({
               isSidebarOpen={state.isSidebarOpen}
               toggleSidebar={handlers.toggleSidebar}
               embedMode={state.embedMode}
-              debugMode={state.debugMode}
               openAboutModal={handlers.openAboutModal}
               isDarkMode={state.isDarkMode}
               toggleTheme={handlers.toggleTheme}
@@ -127,10 +126,12 @@ export default function AppLayout({
                   location={state.area}
                   cityMetadata={state.airtableCityFields}
                   lengthCalculationStrategy={state.lengthCalculationStrategy}
+                  parallelDedupeEngine={state.parallelDedupeEngine}
                   debugMode={state.debugMode}
                   isDarkMode={state.isDarkMode}
                   toggle={handlers.toggleSidebar}
                   onChangeStrategy={handlers.onChangeStrategy}
+                  onChangeParallelDedupeEngine={handlers.onChangeParallelDedupeEngine}
                   downloadData={handlers.downloadData}
                   lastUpdate={state.dataUpdatedAt}
                   loading={state.loading}

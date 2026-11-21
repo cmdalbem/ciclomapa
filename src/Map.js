@@ -77,11 +77,167 @@ export function flyMapToCityFocus(map, centerLngLat, placeName) {
   });
 }
 
+function ringSignedArea(ring) {
+  let sum = 0;
+  for (let i = 0, n = ring.length - 1; i < n; i++) {
+    sum += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+  }
+  return sum;
+}
+
+function isClosedRing(ring) {
+  if (!Array.isArray(ring) || ring.length < 4) return false;
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  return (
+    Array.isArray(first) && Array.isArray(last) && first[0] === last[0] && first[1] === last[1]
+  );
+}
+
+export function closedOuterRingsFromGeometry(geometry) {
+  let rawRings = [];
+  if (geometry?.type === 'Polygon') {
+    rawRings = [geometry.coordinates?.[0]];
+  } else if (geometry?.type === 'MultiPolygon') {
+    rawRings = (geometry.coordinates || []).map((poly) => poly?.[0]);
+  }
+  return rawRings.filter(isClosedRing);
+}
+
+const CITY_ADMIN_LEVELS = new Set(['4', '6', '7', '8']);
+
+function featureOuterArea(feature) {
+  const rings = closedOuterRingsFromGeometry(feature.geometry);
+  if (!rings.length) return 0;
+  return rings.reduce((sum, ring) => sum + Math.abs(ringSignedArea(ring)), 0);
+}
+
+/** Prefer a municipality/state polygon (largest if several), not a random inner RA. */
+export function pickCityBoundaryFeature(features) {
+  const admin = (features || []).filter((f) => f?.properties?.boundary === 'administrative');
+  const preferred = admin.filter((f) =>
+    CITY_ADMIN_LEVELS.has(String(f.properties?.admin_level || ''))
+  );
+  const pool = preferred.length ? preferred : admin;
+  let best = null;
+  let bestArea = -1;
+  for (const f of pool) {
+    const area = featureOuterArea(f);
+    if (area > bestArea) {
+      bestArea = area;
+      best = f;
+    }
+  }
+  return best;
+}
+
+/** RFC 7946 holes are clockwise. OSM outers are usually CCW; using those as holes paints the mask over the whole map. */
+export function ringsAsPolygonHoles(rings) {
+  return rings.map((ring) => (ringSignedArea(ring) > 0 ? ring.slice().reverse() : ring.slice()));
+}
+
 /** GeoJSON source holding endpoint circles used alongside route-mode POI `within` filters */
 const ROUTE_ENDPOINT_POI_ZONES_SOURCE_ID = 'route-endpoint-poi-zones';
 
 /** Suffix on every app data layer id built from the PMTiles source (e.g. `ciclovia--pmtiles`). */
 const PMTILES_LAYER_SUFFIX = '--pmtiles';
+
+/** Debug-panel overlap halo: fat translucent stroke under cycle lanes. */
+export const OVERLAP_XRAY_EVENT = 'ciclomapa:overlap-xray';
+export const OVERLAP_XRAY_STORAGE_KEY = 'ciclomapa-debug-overlap-xray';
+const OVERLAP_HALO_INFIX = '--halo';
+const overlapXrayOriginals = new WeakMap();
+
+export function readOverlapXrayEnabled() {
+  try {
+    return window.localStorage.getItem(OVERLAP_XRAY_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function overlapHaloLayerId(baseLayerId) {
+  if (!baseLayerId.endsWith(PMTILES_LAYER_SUFFIX)) return `${baseLayerId}${OVERLAP_HALO_INFIX}`;
+  return `${baseLayerId.slice(0, -PMTILES_LAYER_SUFFIX.length)}${OVERLAP_HALO_INFIX}${PMTILES_LAYER_SUFFIX}`;
+}
+
+function isOverlapHaloLayer(layer) {
+  const id = layer?.id || '';
+  return layer?.type === 'line' && id.includes(`${OVERLAP_HALO_INFIX}${PMTILES_LAYER_SUFFIX}`);
+}
+
+function isOverlapXrayCoreLayer(layer) {
+  if (!layer || layer.type !== 'line') return false;
+  const id = layer.id || '';
+  if (!id.endsWith(PMTILES_LAYER_SUFFIX)) return false;
+  if (
+    id.includes('--interactive') ||
+    id.includes('--routes-active') ||
+    id.includes(OVERLAP_HALO_INFIX)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/** Show a wide translucent halo under cycle lanes so stacked ways look brighter. */
+export function applyOverlapXray(map, enabled) {
+  if (!map || typeof map.getStyle !== 'function') return;
+  let style;
+  try {
+    style = map.getStyle();
+  } catch {
+    return;
+  }
+  const layers = style?.layers;
+  if (!Array.isArray(layers)) return;
+
+  for (const layer of layers) {
+    if (!isOverlapHaloLayer(layer)) continue;
+    const baseId = layer.id.replace(OVERLAP_HALO_INFIX, '');
+    const baseVisible =
+      typeof map.getLayer === 'function' &&
+      map.getLayer(baseId) &&
+      (typeof map.getLayoutProperty !== 'function' ||
+        map.getLayoutProperty(baseId, 'visibility') !== 'none');
+    map.setLayoutProperty(layer.id, 'visibility', enabled && baseVisible ? 'visible' : 'none');
+  }
+
+  const cores = layers.filter(isOverlapXrayCoreLayer);
+  if (enabled) {
+    let snap = overlapXrayOriginals.get(map);
+    if (!snap) {
+      snap = {};
+      overlapXrayOriginals.set(map, snap);
+    }
+    for (const layer of cores) {
+      if (!snap[layer.id]) {
+        snap[layer.id] = {
+          opacity:
+            typeof map.getPaintProperty === 'function'
+              ? map.getPaintProperty(layer.id, 'line-opacity')
+              : undefined,
+        };
+      }
+      map.setPaintProperty(layer.id, 'line-opacity', 0.75);
+    }
+    return;
+  }
+
+  const snap = overlapXrayOriginals.get(map);
+  if (!snap) return;
+  for (const layer of cores) {
+    const orig = snap[layer.id];
+    if (!orig) continue;
+    map.setPaintProperty(layer.id, 'line-opacity', orig.opacity ?? 1);
+  }
+  overlapXrayOriginals.delete(map);
+}
+
+/** Debug-only GeoJSON overlay for pairing tags (`ciclomapa:*`). Not used in production. */
+const DEDUPE_DEBUG_SOURCE_ID = 'dedupe-debug';
+
+const EMPTY_GEOJSON = { type: 'FeatureCollection', features: [] };
 
 const MISSING_BASEMAP_IMAGES = new Set([
   'turning-circle-outline',
@@ -93,6 +249,7 @@ const MISSING_BASEMAP_IMAGES = new Set([
 /** Geo sources for app data layers; basemap (e.g. composite) is everything else. */
 const CICLOMAPA_DATA_SOURCES = new Set([
   PMTILES_SOURCE_ID,
+  DEDUPE_DEBUG_SOURCE_ID,
   'commentsSrc',
   'favoritesSrc',
   'route-selected',
@@ -144,6 +301,8 @@ class Map extends Component {
     this._onSearchResultPopupClosed = this._onSearchResultPopupClosed.bind(this);
     document.addEventListener('newComment', this.newComment);
     document.addEventListener('ciclomapa-comment-at', this.openCommentAtCoordinates);
+    this._onOverlapXray = (e) => applyOverlapXray(this.map, !!e.detail?.enabled);
+    window.addEventListener(OVERLAP_XRAY_EVENT, this._onOverlapXray);
 
     if (ENABLE_COMMENTS) {
       this.airtableDatabase = new AirtableDatabase();
@@ -478,20 +637,7 @@ class Map extends Component {
     const isDarkMode = this.props.isDarkMode;
     const boundaryLineColor = isDarkMode ? MAP_COLORS.DARK.BOUNDARY : MAP_COLORS.LIGHT.BOUNDARY;
 
-    const boundaryFeatures = (this.props.data?.features || []).filter(
-      (f) => f.properties?.boundary === 'administrative'
-    );
-
-    let boundary;
-    for (const adminLevel of ['8', '7', '9', '10', '6']) {
-      boundary = boundaryFeatures.find(
-        (f) => String(f.properties?.admin_level || '') === adminLevel
-      );
-      if (boundary) break;
-    }
-    if (!boundary) {
-      boundary = boundaryFeatures[0];
-    }
+    const boundary = pickCityBoundaryFeature(this.props.data?.features);
 
     if (!boundary) {
       if (this.map.getLayer('boundary-layer')) this.map.removeLayer('boundary-layer');
@@ -506,20 +652,7 @@ class Map extends Component {
     // renderer, it's just skipped, which paints the mask across the *whole* map
     // instead of just outside the city. Treat anything but a proper closed ring
     // (4+ points, first === last) as "no boundary data" rather than risk that.
-    let rawRings = [];
-    if (boundary.geometry?.type === 'Polygon') {
-      rawRings = [boundary.geometry.coordinates?.[0]];
-    } else if (boundary.geometry?.type === 'MultiPolygon') {
-      rawRings = (boundary.geometry.coordinates || []).map((poly) => poly?.[0]);
-    }
-    const outerRings = rawRings.filter((ring) => {
-      if (!Array.isArray(ring) || ring.length < 4) return false;
-      const first = ring[0];
-      const last = ring[ring.length - 1];
-      return (
-        Array.isArray(first) && Array.isArray(last) && first[0] === last[0] && first[1] === last[1]
-      );
-    });
+    const outerRings = closedOuterRingsFromGeometry(boundary.geometry);
 
     if (outerRings.length === 0) {
       if (this.map.getLayer('boundary-layer')) this.map.removeLayer('boundary-layer');
@@ -566,7 +699,7 @@ class Map extends Component {
                 [-180, 90],
                 [-180, -90],
               ],
-              ...outerRings,
+              ...ringsAsPolygonHoles(outerRings),
             ],
           },
         },
@@ -780,7 +913,7 @@ class Map extends Component {
     });
   }
 
-  initCyclepathLayerForSource(l, sourceId) {
+  initCyclepathLayerForSource(l, sourceId, sourceLayer = PMTILES_SOURCE_LAYER) {
     if (!this.map.getSource(sourceId)) return;
 
     const filters = this.convertFilterToMapboxFilter(l);
@@ -788,33 +921,47 @@ class Map extends Component {
     const layerUnderneathName = this.getLayerUnderneathName(this.map);
     const self = this;
 
-    const sourceLayer = PMTILES_SOURCE_LAYER;
+    const sourceFields = sourceLayer
+      ? { source: sourceId, 'source-layer': sourceLayer }
+      : { source: sourceId };
+    const featureStateTarget = (id) =>
+      sourceLayer ? { source: sourceId, sourceLayer, id } : { source: sourceId, id };
+    const isGeoJsonOverlay = !sourceLayer;
     const interactiveLayerId = l.id + '--interactive' + PMTILES_LAYER_SUFFIX;
     const normalLayerId = l.id + PMTILES_LAYER_SUFFIX;
+    const haloLayerId = overlapHaloLayerId(normalLayerId);
     const routesActiveLayerId = l.id + '--routes-active' + PMTILES_LAYER_SUFFIX;
 
-    const dashedLineStyle = { 'line-dasharray': [1, 1] };
-    // const dashedLineStyle = {
-    //     'line-dasharray': [
-    //         "step",
-    //         ["zoom"],
-    //         ["literal", [0.5, 1]],
-    //         15,
-    //         ["literal", [1.75, 1]],
-    //         16,
-    //         ["literal", [1, 0.75]],
-    //         17,
-    //         ["literal", [1, 0.5]]
-    //     ]
-    // };
+    const lineOffset = [
+      'interpolate',
+      ['exponential', 1.5],
+      ['zoom'],
+      10,
+      [
+        'case',
+        ['==', ['get', 'cycleway:right'], 'lane'],
+        Math.max(1, l.style.lineWidth / 4),
+        ['==', ['get', 'cycleway:left'], 'lane'],
+        Math.min(-1, -l.style.lineWidth / 4),
+        0,
+      ],
+      18,
+      [
+        'case',
+        ['==', ['get', 'cycleway:right'], 'lane'],
+        l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+        ['==', ['get', 'cycleway:left'], 'lane'],
+        -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
+        0,
+      ],
+    ];
 
     // Interactive layer is wider than the actual layer to improve usability
     this.map.addLayer(
       {
         id: interactiveLayerId,
         type: 'line',
-        source: sourceId,
-        'source-layer': sourceLayer,
+        ...sourceFields,
         filter: filters,
         paint: {
           'line-opacity': [
@@ -823,29 +970,7 @@ class Map extends Component {
             1, // Selected
             0,
           ],
-          'line-offset': [
-            'interpolate',
-            ['exponential', 1.5],
-            ['zoom'],
-            10,
-            [
-              'case',
-              ['==', ['get', 'cycleway:right'], 'lane'],
-              Math.max(1, l.style.lineWidth / 4),
-              ['==', ['get', 'cycleway:left'], 'lane'],
-              Math.min(-1, -l.style.lineWidth / 4),
-              0,
-            ],
-            18,
-            [
-              'case',
-              ['==', ['get', 'cycleway:right'], 'lane'],
-              l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-              ['==', ['get', 'cycleway:left'], 'lane'],
-              -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-              0,
-            ],
-          ],
+          'line-offset': lineOffset,
           'line-color': adjustColorBrightness(
             l.style.lineColor,
             this.props.isDarkMode ? -0.7 : 0.7
@@ -863,8 +988,7 @@ class Map extends Component {
       {
         id: normalLayerId,
         type: 'line',
-        source: sourceId,
-        'source-layer': sourceLayer,
+        ...sourceFields,
         name: l.name,
         description: l.description,
         filter: filters,
@@ -881,29 +1005,7 @@ class Map extends Component {
               adjustColorBrightness(l.style.lineColor, this.props.isDarkMode ? 0.0 : -0.1, 'hsl'), // Default
             ],
           ],
-          'line-offset': [
-            'interpolate',
-            ['exponential', 1.5],
-            ['zoom'],
-            10,
-            [
-              'case',
-              ['==', ['get', 'cycleway:right'], 'lane'],
-              Math.max(1, l.style.lineWidth / 4),
-              ['==', ['get', 'cycleway:left'], 'lane'],
-              Math.min(-1, -l.style.lineWidth / 4),
-              0,
-            ],
-            18,
-            [
-              'case',
-              ['==', ['get', 'cycleway:right'], 'lane'],
-              l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-              ['==', ['get', 'cycleway:left'], 'lane'],
-              -l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
-              0,
-            ],
-          ],
+          'line-offset': lineOffset,
           'line-width': [
             'interpolate',
             ['exponential', 1.5],
@@ -913,7 +1015,7 @@ class Map extends Component {
             18,
             l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER,
           ],
-          ...(l.style.lineStyle === 'dashed' && dashedLineStyle),
+          ...(l.style.lineStyle === 'dashed' && { 'line-dasharray': [1, 1] }),
         },
         layout: {
           'line-elevation-reference': 'ground',
@@ -922,6 +1024,96 @@ class Map extends Component {
       },
       layerUnderneathName
     );
+
+    this.map.addLayer(
+      {
+        id: haloLayerId,
+        type: 'line',
+        ...sourceFields,
+        filter: filters,
+        paint: {
+          'line-color': adjustColorBrightness(
+            l.style.lineColor,
+            this.props.isDarkMode ? 0.15 : -0.05,
+            'hsl'
+          ),
+          'line-opacity': 0.28,
+          'line-offset': lineOffset,
+          'line-width': [
+            'interpolate',
+            ['exponential', 1.5],
+            ['zoom'],
+            10,
+            Math.max(4, (l.style.lineWidth / LOW_ZOOM_WIDTH_DIVISOR) * 3),
+            18,
+            l.style.lineWidth * DEFAULT_LINE_WIDTH_MULTIPLIER * 2.8,
+          ],
+        },
+        layout: {
+          'line-elevation-reference': 'ground',
+          'line-join': 'round',
+          'line-cap': 'round',
+          visibility: 'none',
+        },
+      },
+      normalLayerId
+    );
+
+    if (isGeoJsonOverlay) {
+      this.map.on('click', interactiveLayerId, (e) => {
+        if (e.target.getZoom() < INTERACTIVE_LAYERS_ZOOM_THRESHOLD) {
+          return;
+        }
+        if (e && e.features && e.features.length > 0 && !e.originalEvent.defaultPrevented) {
+          if (self.props.isInRouteMode) {
+            e.originalEvent.preventDefault();
+            return;
+          }
+
+          if (self.selectedCycleway) {
+            try {
+              self.map.setFeatureState(featureStateTarget(self.selectedCycleway), {
+                selected: false,
+              });
+            } catch (err) {}
+          }
+          self.selectedCycleway = e.features[0].id;
+
+          // Copy clicked lane OSM id to clipboard for pairing debug.
+          try {
+            const clickedFeature = e.features[0];
+            const featureId =
+              clickedFeature?.properties?.id ?? clickedFeature?.properties?.['@id'] ?? null;
+
+            let osmFullId = null;
+            if (typeof featureId === 'string' && /^(node|way|relation)\/\d+$/.test(featureId)) {
+              osmFullId = featureId;
+            } else if (typeof featureId === 'number') {
+              osmFullId = `way/${featureId}`;
+            } else if (typeof featureId === 'string' && /^\d+$/.test(featureId)) {
+              osmFullId = `way/${featureId}`;
+            }
+
+            if (osmFullId && navigator?.clipboard?.writeText) {
+              navigator.clipboard.writeText(String(osmFullId)).catch(() => {});
+            }
+          } catch (err) {}
+
+          try {
+            self.map.setFeatureState(featureStateTarget(self.selectedCycleway), {
+              selected: true,
+            });
+          } catch (err) {}
+
+          const layer = self.props.layers.find(
+            (ly) => ly.id === e.features[0].layer.id.split('--')[0]
+          );
+          self.popups.showCyclewayPopup(e, layer);
+          e.originalEvent.preventDefault();
+        }
+      });
+      return;
+    }
 
     const arrowLayerId = normalLayerId + '--arrows';
     const arrowBase = arrowIconsByLayer[l.name];
@@ -1028,7 +1220,7 @@ class Map extends Component {
             18,
             l.style.lineWidth * ROUTES_ACTIVE_HIGH_ZOOM_WIDTH_MULTIPLIER,
           ],
-          ...(l.style.lineStyle === 'dashed' && dashedLineStyle),
+          ...(l.style.lineStyle === 'dashed' && { 'line-dasharray': [1, 1] }),
         },
         layout: {
           'line-elevation-reference': 'ground',
@@ -1052,21 +1244,65 @@ class Map extends Component {
 
         if (self.selectedCycleway) {
           try {
-            self.map.setFeatureState(
-              { source: sourceId, sourceLayer: sourceLayer, id: self.selectedCycleway },
-              { selected: false }
-            );
+            self.map.setFeatureState(featureStateTarget(self.selectedCycleway), {
+              selected: false,
+            });
           } catch (err) {}
         }
         self.selectedCycleway = e.features[0].id;
+
+        // DO NOT SHIP THIS CODE! ONLY FOR DEVELOPMENT PURPOSES!
+        // Copy clicked lane OSM id to clipboard for quick debugging.
+        // Mapbox/osmtogeojson feature ids usually come as "way/<osm_id>" (or "relation/<osm_id>").
+        // Copy the full "way/<number>" string for quick debugging.
         try {
-          self.map.setFeatureState(
-            { source: sourceId, sourceLayer: sourceLayer, id: self.selectedCycleway },
-            {
-              selected: true,
-              ...(self.hoveredCycleway === self.selectedCycleway ? { hover: true } : {}),
+          const clickedFeature = e.features[0];
+          const featureId =
+            clickedFeature?.properties?.id ?? clickedFeature?.properties?.['@id'] ?? null;
+
+          let osmFullId = null;
+          if (typeof featureId === 'string' && /^(node|way|relation)\/\d+$/.test(featureId)) {
+            osmFullId = featureId;
+          } else if (typeof featureId === 'number') {
+            osmFullId = `way/${featureId}`;
+          } else if (typeof featureId === 'string' && /^\d+$/.test(featureId)) {
+            osmFullId = `way/${featureId}`;
+          }
+
+          if (osmFullId) {
+            const text = String(osmFullId);
+            const fallbackCopy = (value) => {
+              const ta = document.createElement('textarea');
+              ta.value = value;
+              ta.style.position = 'fixed';
+              ta.style.left = '-1000px';
+              ta.style.top = '-1000px';
+              document.body.appendChild(ta);
+              ta.focus();
+              ta.select();
+              try {
+                document.execCommand('copy');
+              } catch (err) {
+                // ignore
+              }
+              document.body.removeChild(ta);
+            };
+
+            if (navigator?.clipboard?.writeText) {
+              navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+            } else {
+              fallbackCopy(text);
             }
-          );
+          }
+        } catch (err) {
+          // Clipboard is a best-effort feature; don't break map interactions.
+        }
+
+        try {
+          self.map.setFeatureState(featureStateTarget(self.selectedCycleway), {
+            selected: true,
+            ...(self.hoveredCycleway === self.selectedCycleway ? { hover: true } : {}),
+          });
         } catch (err) {}
 
         const layer = self.props.layers.find((l) => l.id === e.features[0].layer.id.split('--')[0]);
@@ -1096,26 +1332,12 @@ class Map extends Component {
         self.map.getCanvas().style.cursor = 'pointer';
 
         if (self.hoveredCycleway) {
-          self.map.setFeatureState(
-            {
-              source: sourceId,
-              sourceLayer: sourceLayer,
-              id: self.hoveredCycleway,
-            },
-            { hover: false }
-          );
+          self.map.setFeatureState(featureStateTarget(self.hoveredCycleway), { hover: false });
         }
 
         self.hoveredCycleway = e.features[0].id;
         self.hoveredCyclewayLayerId = interactiveLayerId;
-        self.map.setFeatureState(
-          {
-            source: sourceId,
-            sourceLayer: sourceLayer,
-            id: self.hoveredCycleway,
-          },
-          { hover: true }
-        );
+        self.map.setFeatureState(featureStateTarget(self.hoveredCycleway), { hover: true });
       }
     });
 
@@ -1123,14 +1345,7 @@ class Map extends Component {
       console.debug('mouseleave', interactiveLayerId);
       if (self.hoveredCyclewayLayerId !== interactiveLayerId) return;
       if (self.hoveredCycleway) {
-        self.map.setFeatureState(
-          {
-            source: sourceId,
-            sourceLayer: sourceLayer,
-            id: self.hoveredCycleway,
-          },
-          { hover: false }
-        );
+        self.map.setFeatureState(featureStateTarget(self.hoveredCycleway), { hover: false });
 
         self.map.getCanvas().style.cursor = '';
       }
@@ -1391,6 +1606,14 @@ class Map extends Component {
       });
     }
 
+    if (this.props.debugMode && !map.getSource(DEDUPE_DEBUG_SOURCE_ID)) {
+      map.addSource(DEDUPE_DEBUG_SOURCE_ID, {
+        type: 'geojson',
+        data: EMPTY_GEOJSON,
+        promoteId: 'id',
+      });
+    }
+
     // layers.json is ordered from most to least important, but we
     //   want the most important ones to be on top so we add in reverse.
     // Slice is used here to don't destructively reverse the original array.
@@ -1399,6 +1622,12 @@ class Map extends Component {
         .slice()
         .reverse()
         .forEach((l) => {
+          if (l.onlyDebug) {
+            if (this.props.debugMode) {
+              this.initCyclepathLayerForSource(l, DEDUPE_DEBUG_SOURCE_ID, null);
+            }
+            return;
+          }
           if (!l.type || l.type === 'way') {
             this.initCyclepathLayerForSource(l, PMTILES_SOURCE_ID);
           } else if (l.type === 'poi' && l.filters) {
@@ -1406,6 +1635,8 @@ class Map extends Component {
           }
         });
       this.layersInitialized = true;
+      this.setDedupeDebugData(this.props.data);
+      if (readOverlapXrayEnabled()) applyOverlapXray(map, true);
     }
 
     if (map.getLayer('mapbox-satellite')) {
@@ -1760,6 +1991,7 @@ class Map extends Component {
       // the stored filters would leave the route-endpoint `within` filter stuck on the
       // POI layers when the route is cleared.
       this.initBoundaryLayer();
+      this.setDedupeDebugData(this.props.data);
     }
 
     if (this.props.location !== prevProps.location && this.popups) {
@@ -2407,6 +2639,13 @@ class Map extends Component {
     }
   }
 
+  setDedupeDebugData(data) {
+    if (!this.map || !this.props.debugMode) return;
+    const source = this.map.getSource(DEDUPE_DEBUG_SOURCE_ID);
+    if (!source) return;
+    source.setData(data && data.type === 'FeatureCollection' ? data : EMPTY_GEOJSON);
+  }
+
   updateLayerVisibility() {
     const map = this.map;
     if (!map) return;
@@ -2423,6 +2662,7 @@ class Map extends Component {
         const baseLayerId = layer.id + PMTILES_LAYER_SUFFIX;
         const interactiveLayerId = layer.id + '--interactive' + PMTILES_LAYER_SUFFIX;
         const routesActiveLayerId = layer.id + '--routes-active' + PMTILES_LAYER_SUFFIX;
+        const haloLayerId = overlapHaloLayerId(baseLayerId);
         const arrowLayerId = baseLayerId + '--arrows';
 
         // Swap between normal and routes-active variants:
@@ -2440,6 +2680,11 @@ class Map extends Component {
               : 'none';
           map.setLayoutProperty(id, 'visibility', status);
         });
+
+        if (map.getLayer(haloLayerId)) {
+          const showHalo = layer.isActive && !hasRoutes && readOverlapXrayEnabled();
+          map.setLayoutProperty(haloLayerId, 'visibility', showHalo ? 'visible' : 'none');
+        }
 
         // Handle arrow layer visibility (same as base layer)
         if (map.getLayer(arrowLayerId)) {
@@ -3022,6 +3267,7 @@ class Map extends Component {
     }
     document.removeEventListener('newComment', this.newComment);
     document.removeEventListener('ciclomapa-comment-at', this.openCommentAtCoordinates);
+    window.removeEventListener(OVERLAP_XRAY_EVENT, this._onOverlapXray);
 
     if (this.globalSearchMarker) {
       try {
