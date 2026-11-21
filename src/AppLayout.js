@@ -62,7 +62,6 @@ export default function AppLayout({
               isSidebarOpen={state.isSidebarOpen}
               toggleSidebar={handlers.toggleSidebar}
               embedMode={state.embedMode}
-              debugMode={state.debugMode}
               openAboutModal={handlers.openAboutModal}
               isDarkMode={state.isDarkMode}
               toggleTheme={handlers.toggleTheme}
