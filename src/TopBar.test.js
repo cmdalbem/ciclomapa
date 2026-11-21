@@ -107,15 +107,6 @@ describe('TopBar (desktop)', () => {
     expect(screen.queryByRole('button', { name: 'Métricas' })).not.toBeInTheDocument();
   });
 
-  it('shows "Revisar ícones" only in debug mode and navigates to the dev page', () => {
-    const { unmount } = renderTopBar();
-    expect(screen.queryByRole('button', { name: 'Revisar ícones' })).not.toBeInTheDocument();
-    unmount();
-    renderTopBar({ debugMode: true });
-    fireEvent.click(screen.getByRole('button', { name: 'Revisar ícones' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/dev/place-type-icons');
-  });
-
   it('Colaborar > Adicionar comentário dispatches the newComment event', async () => {
     const listener = jest.fn();
     document.addEventListener('newComment', listener);
@@ -161,7 +152,7 @@ describe('TopBar (desktop)', () => {
   });
 
   it('overflow menu routes every entry to the right handler', async () => {
-    renderTopBar({ debugMode: true, isDarkMode: false });
+    renderTopBar({ isDarkMode: false });
     const more = screen.getByRole('button', { name: 'Mais opções' });
 
     const clickEntry = async (label) => {
@@ -179,9 +170,6 @@ describe('TopBar (desktop)', () => {
 
     await clickEntry('Métricas');
     expect(baseProps.toggleSidebar).toHaveBeenCalledWith(true);
-
-    await clickEntry('Revisar ícones');
-    expect(screen.getByTestId('location')).toHaveTextContent('/dev/place-type-icons');
   });
 
   it('overflow menu shows the light-theme label when dark', async () => {

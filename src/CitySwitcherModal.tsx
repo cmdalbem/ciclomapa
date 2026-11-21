@@ -14,6 +14,7 @@ import { HiSearch as IconSearch } from 'react-icons/hi';
 import { Button, Input } from 'antd';
 import Storage from './Storage.js';
 import { slugify } from './utils/utils.js';
+import { CITY_PICKER_QUERY_PARAM } from './config/routes.js';
 import { getCanonicalCitySlug, getPredefinedCitySlugDefinition } from './config/citySlugCatalog.js';
 import { TOP_CITY_SLUGS } from './config/topCitiesCatalog.js';
 import {
@@ -1235,9 +1236,9 @@ function CitySwitcherModal({
     getAutocompleteOptions: getCitySwitcherAutocompleteOptions,
   });
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const isCityPickerOpen = searchParams.has('buscar');
+  const isCityPickerOpen = searchParams.has(CITY_PICKER_QUERY_PARAM);
   const cityPickerStaggerPlayedRef = useRef(false);
   const shouldStaggerEnterRef = useRef<boolean | null>(null);
 
@@ -1334,6 +1335,15 @@ function CitySwitcherModal({
     navigate(-1);
   }, [navigate]);
 
+  // After a pick, drop `?buscar` in place. `navigate(-1)` would undo a city Link
+  // (or a slug write) and send the URL back to the previous city.
+  const dismissCityPicker = useCallback(() => {
+    if (!searchParams.has(CITY_PICKER_QUERY_PARAM)) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete(CITY_PICKER_QUERY_PARAM);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const recordRecentlyVisitedCity = useCallback(
     (nextSlug: string, areaLabel: string | undefined) => {
       setRecentCityEntries((prev) => {
@@ -1429,7 +1439,7 @@ function CitySwitcherModal({
           placeTypes: resolved.properties?.types,
           areaContext,
         });
-        closeCityPicker();
+        dismissCityPicker();
         setGlobalSearchValue('');
         clearPlacesSearch();
       } catch (e) {
@@ -1439,7 +1449,7 @@ function CitySwitcherModal({
     },
     [
       clearPlacesSearch,
-      closeCityPicker,
+      dismissCityPicker,
       onPlacesResultSelected,
       recordRecentPlace,
       setPlacesSearchError,
@@ -1743,7 +1753,7 @@ function CitySwitcherModal({
                           placeTypes: fav.placeTypes,
                           areaContext: fav.areaContext,
                         });
-                        closeCityPicker();
+                        dismissCityPicker();
                       }}
                     >
                       <div className="city-switcher-modal__placeSearchRow">
@@ -1807,6 +1817,7 @@ function CitySwitcherModal({
                     {item.type === 'city' && item.citySlug ? (
                       <Link
                         to={`/${encodeURIComponent(item.citySlug)}`}
+                        replace
                         className="city-switcher-modal__cityBtn city-switcher-modal__placeSearchBtn"
                         onClick={() => {
                           if (item.citySlug) {
@@ -1817,7 +1828,6 @@ function CitySwitcherModal({
                             recordRecentlyVisitedCity(item.citySlug, areaLabel);
                           }
                           onCatalogCityPicked?.();
-                          closeCityPicker();
                         }}
                       >
                         <div className="city-switcher-modal__placeSearchRow">
@@ -1864,7 +1874,7 @@ function CitySwitcherModal({
                               areaContext: item.areaContext,
                             });
                           }
-                          closeCityPicker();
+                          dismissCityPicker();
                         }}
                       >
                         <div className="city-switcher-modal__placeSearchRow">
