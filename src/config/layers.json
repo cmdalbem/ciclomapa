@@ -73,7 +73,31 @@
     "style": {
       "lineColor": "#2A9D8F",
       "lineWidth": 7,
-      "lineStyle": "dashed"
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "🛠️ Tag + ciclovia",
+    "onlyDebug": true,
+    "isActive": false,
+    "description": "Rua com cycleway=* na própria via (track, lane...) e uma highway=cycleway desenhada do lado. Pode ser ciclovia vs ciclofaixa. Costuma ser o mesmo trecho mapeado duas vezes.",
+    "filters": [["ciclomapa:pair_kind", "dual_mapped"]],
+    "style": {
+      "lineColor": "#D97706",
+      "lineWidth": 7,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "🛠️ Ciclovias sobrepostas",
+    "onlyDebug": true,
+    "isActive": false,
+    "description": "Duas highway=cycleway desenhadas no mesmo corredor. Costuma ser um traçado antigo que ficou no mapa quando mapearam de novo ao lado.",
+    "filters": [["ciclomapa:pair_kind", "overlapping_cycleway"]],
+    "style": {
+      "lineColor": "#7C3AED",
+      "lineWidth": 7,
+      "lineStyle": "solid"
     }
   },
   {
@@ -100,8 +124,10 @@
       ]
     ],
     "style": {
-      "lineColor": "#FEFEFE",
-      "lineWidth": 1
+      "lineColor": "#111111",
+      "lineColorDark": "#FFFFFF",
+      "lineWidth": 2,
+      "lineStyle": "dashed"
     }
   },
   {

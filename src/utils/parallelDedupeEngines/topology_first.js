@@ -578,5 +578,6 @@ export function run({ layer, segments }) {
     groupsById[`topology_group_${compIdx}`] = members;
   });
 
+  // Dual-mapped (tag + separate cycleway) is applied later across all counted layers.
   return [segments, groupsById];
 }

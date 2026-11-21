@@ -8,6 +8,11 @@ import {
   DEFAULT_PARALLEL_DEDUPE_ENGINE,
   getParallelDedupeEngine,
 } from './parallelDedupeEngines/engineTypes.js';
+import {
+  applyDualMappedCycleways,
+  applyOppositeOnewayLanes,
+  applyOverlappingDedicatedCycleways,
+} from './parallelDedupeEngines/dual_mapped.js';
 
 // 0.5 = a perfectly straight street that has two parallel sides with opposite hands
 // 1 = a perfectly straight street that change its hand in the middle
@@ -223,7 +228,12 @@ export function calculateLayersLengths(
       lengths[l.id] = segments.length;
     });
 
-  // Way case: go full-blown length computation
+  // Way case: go full-blown length computation.
+  // Dual-mapping (on-street cycleway tag + separately drawn highway=cycleway)
+  // has to see every counted layer at once: a ciclofaixa next to a ciclovia
+  // never meets if we only pair inside one type.
+  const countedWork = [];
+
   layers
     .filter((l) => l.type === 'way')
     .forEach((l) => {
@@ -252,108 +262,114 @@ export function calculateLayersLengths(
       });
 
       if (LENGTH_COUNTED_LAYER_IDS.includes(l.id)) {
-        let streetsByName;
-
         const engine = getParallelDedupeEngine(parallelDedupeEngine);
-        [segments, streetsByName] = engine({ layer: l, segments });
-
-        // Sum total lengths for names streets
-        for (let key in streetsByName) {
-          const street = streetsByName[key];
-
-          street.totalLength = 0;
-          street.totalLengthSideA = 0;
-          street.totalLengthSideB = 0;
-          street.forEach((seg) => {
-            seg.properties['ciclomapa:group_id'] = key;
-            seg.properties['ciclomapa:engine'] = parallelDedupeEngine;
-            seg.properties['ciclomapa:paired'] = 'true';
-          });
-          street.forEach((seg) => {
-            street.totalLength += seg.properties['ciclomapa:segment_length'];
-            if (seg.properties['ciclomapa:side'] === 'a') {
-              street.totalLengthSideA += seg.properties['ciclomapa:segment_length'];
-            } else {
-              street.totalLengthSideB += seg.properties['ciclomapa:segment_length'];
-            }
-          });
-          street.forEach((seg) => {
-            seg.properties['ciclomapa:dist_by_length_ratio'] = (
-              seg.properties['ciclomapa:max_dist'] / street.totalLength
-            ).toFixed(2);
-
-            // Raw length = sum of segments lengths (thus, not real official length)
-            seg.properties['ciclomapa:total_raw_length'] = street.totalLength;
-            seg.properties['ciclomapa:total_raw_length__side_a'] = street.totalLengthSideA;
-            seg.properties['ciclomapa:total_raw_length__side_b'] = street.totalLengthSideB;
-
-            if (street.totalLengthSideA > street.totalLengthSideB) {
-              seg.properties['ciclomapa:bigger_side'] = 'a';
-              seg.properties['ciclomapa:smaller_side'] = 'b';
-            } else {
-              seg.properties['ciclomapa:bigger_side'] = 'b';
-              seg.properties['ciclomapa:smaller_side'] = 'a';
-            }
-
-            // Heuristic to detect false positives: when a street was clustered
-            //   as having 2 sides but actually it's a street that changes its
-            //   "hand" along itself.
-            if (
-              parallelDedupeEngine === 'legacy_name_angle' &&
-              seg.properties['ciclomapa:duplicate_candidate'] &&
-              seg.properties['ciclomapa:dist_by_length_ratio'] > DISTANCE_BY_LENGTH_RATIO_TRESHOLD
-            ) {
-              seg.properties['ciclomapa:ignored'] = 'true';
-              seg.properties['ciclomapa:paired'] = 'false';
-              delete seg.properties['ciclomapa:duplicate_candidate'];
-              delete seg.properties['ciclomapa:side'];
-              delete seg.properties['ciclomapa:match_confidence_bucket'];
-              delete seg.properties['ciclomapa:group_id'];
-
-              street.falsePositive = true;
-            }
-          });
-        }
-
-        // Sum up layer lengths
-        if (strategy !== 'average') {
-          segments.forEach((seg) => {
-            if (
-              !seg.properties['ciclomapa:duplicate_candidate'] ||
-              (strategy === 'pessimistic' &&
-                seg.properties['ciclomapa:side'] === seg.properties['ciclomapa:smaller_side']) ||
-              (strategy === 'optimistic' &&
-                seg.properties['ciclomapa:side'] === seg.properties['ciclomapa:bigger_side']) ||
-              (strategy === 'random' && seg.properties['ciclomapa:side'] === 'a')
-            ) {
-              lengths[l.id] += seg.properties['ciclomapa:segment_length'];
-              seg.properties['ciclomapa:considered'] = 'true';
-            }
-          });
-        } else {
-          // Sum all segments that are not part of duplicated streets
-          segments
-            .filter((seg) => !seg.properties['ciclomapa:duplicate_candidate'])
-            .forEach((seg) => {
-              lengths[l.id] += seg.properties['ciclomapa:segment_length'];
-              seg.properties['ciclomapa:considered'] = 'true';
-            });
-
-          // Sum total length of duplicated streets
-          for (let name in streetsByName) {
-            const street = streetsByName[name];
-            if (!street.falsePositive) {
-              lengths[l.id] += street.totalLength / 2;
-
-              // Tag all segments so we can visualize it
-              street.forEach((seg) => {
-                seg.properties['ciclomapa:considered'] = 'true';
-              });
-            }
-          }
-        }
+        const [pairedSegments, streetsByName] = engine({ layer: l, segments });
+        countedWork.push({ layer: l, segments: pairedSegments, streetsByName });
       }
     });
+
+  const countedSegments = countedWork.flatMap((work) => work.segments);
+  applyDualMappedCycleways(countedSegments);
+  applyOverlappingDedicatedCycleways(countedSegments);
+  applyOppositeOnewayLanes(countedSegments);
+
+  countedWork.forEach(({ layer: l, segments, streetsByName }) => {
+    // Sum total lengths for names streets
+    for (let key in streetsByName) {
+      const street = streetsByName[key];
+
+      street.totalLength = 0;
+      street.totalLengthSideA = 0;
+      street.totalLengthSideB = 0;
+      street.forEach((seg) => {
+        seg.properties['ciclomapa:group_id'] = key;
+        seg.properties['ciclomapa:engine'] = parallelDedupeEngine;
+        seg.properties['ciclomapa:paired'] = 'true';
+      });
+      street.forEach((seg) => {
+        street.totalLength += seg.properties['ciclomapa:segment_length'];
+        if (seg.properties['ciclomapa:side'] === 'a') {
+          street.totalLengthSideA += seg.properties['ciclomapa:segment_length'];
+        } else {
+          street.totalLengthSideB += seg.properties['ciclomapa:segment_length'];
+        }
+      });
+      street.forEach((seg) => {
+        seg.properties['ciclomapa:dist_by_length_ratio'] = (
+          seg.properties['ciclomapa:max_dist'] / street.totalLength
+        ).toFixed(2);
+
+        // Raw length = sum of segments lengths (thus, not real official length)
+        seg.properties['ciclomapa:total_raw_length'] = street.totalLength;
+        seg.properties['ciclomapa:total_raw_length__side_a'] = street.totalLengthSideA;
+        seg.properties['ciclomapa:total_raw_length__side_b'] = street.totalLengthSideB;
+
+        if (street.totalLengthSideA > street.totalLengthSideB) {
+          seg.properties['ciclomapa:bigger_side'] = 'a';
+          seg.properties['ciclomapa:smaller_side'] = 'b';
+        } else {
+          seg.properties['ciclomapa:bigger_side'] = 'b';
+          seg.properties['ciclomapa:smaller_side'] = 'a';
+        }
+
+        // Heuristic to detect false positives: when a street was clustered
+        //   as having 2 sides but actually it's a street that changes its
+        //   "hand" along itself.
+        if (
+          parallelDedupeEngine === 'legacy_name_angle' &&
+          seg.properties['ciclomapa:duplicate_candidate'] &&
+          seg.properties['ciclomapa:dist_by_length_ratio'] > DISTANCE_BY_LENGTH_RATIO_TRESHOLD
+        ) {
+          seg.properties['ciclomapa:ignored'] = 'true';
+          seg.properties['ciclomapa:paired'] = 'false';
+          delete seg.properties['ciclomapa:duplicate_candidate'];
+          delete seg.properties['ciclomapa:side'];
+          delete seg.properties['ciclomapa:match_confidence_bucket'];
+          delete seg.properties['ciclomapa:group_id'];
+
+          street.falsePositive = true;
+        }
+      });
+    }
+
+    // Sum up layer lengths
+    if (strategy !== 'average') {
+      segments.forEach((seg) => {
+        if (
+          !seg.properties['ciclomapa:duplicate_candidate'] ||
+          (strategy === 'pessimistic' &&
+            seg.properties['ciclomapa:side'] === seg.properties['ciclomapa:smaller_side']) ||
+          (strategy === 'optimistic' &&
+            seg.properties['ciclomapa:side'] === seg.properties['ciclomapa:bigger_side']) ||
+          (strategy === 'random' && seg.properties['ciclomapa:side'] === 'a')
+        ) {
+          lengths[l.id] += seg.properties['ciclomapa:segment_length'];
+          seg.properties['ciclomapa:considered'] = 'true';
+        }
+      });
+    } else {
+      // Sum all segments that are not part of duplicated streets
+      segments
+        .filter((seg) => !seg.properties['ciclomapa:duplicate_candidate'])
+        .forEach((seg) => {
+          lengths[l.id] += seg.properties['ciclomapa:segment_length'];
+          seg.properties['ciclomapa:considered'] = 'true';
+        });
+
+      // Sum total length of duplicated streets
+      for (let name in streetsByName) {
+        const street = streetsByName[name];
+        if (!street.falsePositive) {
+          lengths[l.id] += street.totalLength / 2;
+
+          // Tag all segments so we can visualize it
+          street.forEach((seg) => {
+            seg.properties['ciclomapa:considered'] = 'true';
+          });
+        }
+      }
+    }
+  });
 
   return lengths;
 }
