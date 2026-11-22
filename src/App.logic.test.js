@@ -49,7 +49,13 @@ jest.mock(
       children
 );
 jest.mock('./antdNotification', () => ({
-  appNotification: { info: jest.fn(), error: jest.fn(), success: jest.fn(), warning: jest.fn() },
+  appNotification: {
+    info: jest.fn(),
+    error: jest.fn(),
+    success: jest.fn(),
+    warning: jest.fn(),
+    destroy: jest.fn(),
+  },
   bindAntdNotification: jest.fn(),
 }));
 jest.mock('./utils/documentMeta.js', () => ({ updateDocumentMeta: jest.fn() }));
@@ -418,6 +424,40 @@ describe('App updateData Overpass backfill', () => {
     });
     expect(osm.mock.calls[0][0].boundaryOnly).toBeFalsy();
     expect(osm.mock.calls[0][0].backgroundUpdate).toBe(true);
+    expect(app._invalidateLengthsOnSave).toBe(area);
+  });
+
+  it('does not keep old-area km when saving after a query-area change', async () => {
+    const app = mountApp().current;
+    const area = Object.keys(AREA_ID_OVERRIDES)[0];
+    act(() => {
+      app.setState({
+        area,
+        geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+        lengths: { ciclovia: 999 },
+        loading: true,
+      });
+    });
+    app._invalidateLengthsOnSave = area;
+    jest.spyOn(OSMController, 'getData').mockResolvedValue({
+      geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+    });
+    const save = jest.spyOn(app.getStorage(), 'save').mockResolvedValue();
+
+    await act(async () => {
+      await app.getDataFromOSM({ areaName: area, backgroundUpdate: true });
+    });
+
+    expect(app.state.lengths).not.toEqual({ ciclovia: 999 });
+    expect(save).toHaveBeenCalledWith(
+      area,
+      expect.any(Object),
+      expect.any(Object),
+      expect.objectContaining({
+        invalidateLengths: true,
+        queryAreaId: AREA_ID_OVERRIDES[area],
+      })
+    );
   });
 
   it('still backfills only the outline when the cached query area already matches', async () => {

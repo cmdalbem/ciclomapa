@@ -1354,10 +1354,14 @@ export class App extends Component {
             this.state.layers,
             this.state.lengthCalculationStrategy
           );
+          const dropRetainedLengths = this._invalidateLengthsOnSave === areaName;
+          if (dropRetainedLengths) {
+            this._invalidateLengthsOnSave = null;
+          }
           const lengths =
-            Object.keys(computedLengths).length === 0
-              ? this.state.lengths || computedLengths
-              : computedLengths;
+            dropRetainedLengths || Object.keys(computedLengths).length > 0
+              ? computedLengths
+              : this.state.lengths || computedLengths;
 
           if (SAVE_TO_FIREBASE) {
             const storageKey = this.getStorageKeyForArea(areaName);
@@ -1365,6 +1369,7 @@ export class App extends Component {
               .save(areaName, newData.geoJson, computedLengths, {
                 storageKey,
                 queryAreaId: AREA_ID_OVERRIDES[areaName],
+                invalidateLengths: dropRetainedLengths,
               })
               .then(() => {
                 if (!IS_PROD) {
@@ -1536,6 +1541,9 @@ export class App extends Component {
         }
 
         if (needsFullRefetch) {
+          if (queryAreaMismatch) {
+            this._invalidateLengthsOnSave = area;
+          }
           if (shouldRefetchForBoundary) {
             this._boundaryRefetchAttemptedAreas.add(area);
           }

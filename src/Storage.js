@@ -207,23 +207,38 @@ class Storage {
     });
   }
 
-  async resolveLengthsForSave(slug, lengths) {
+  async resolveLengthsForSave(slug, lengths, options = {}) {
     if (Object.keys(lengths).length > 0) {
       return lengths;
     }
+    if (options.invalidateLengths) {
+      return lengths;
+    }
+
+    const newAreaId = options.queryAreaId;
+    let existingAreaId;
 
     try {
       const metadataDoc = await this.db
         .collection(DEFAULT_CITIES_COLLECTION)
         .doc(`${slug}_metadata`)
         .get();
-      const existing = metadataDoc.exists ? metadataDoc.data()?.lengths : null;
+      const existingMeta = metadataDoc.exists ? metadataDoc.data() : null;
+      existingAreaId = existingMeta?.queryAreaId;
+      if (newAreaId != null && existingAreaId !== newAreaId) {
+        return lengths;
+      }
+      const existing = existingMeta?.lengths;
       if (existing && Object.keys(existing).length > 0) {
         console.debug(`[Storage] Preserving existing metadata lengths for ${slug}`);
         return existing;
       }
     } catch (error) {
       console.debug(`[Storage] Could not read metadata lengths for ${slug}:`, error);
+    }
+
+    if (newAreaId != null && existingAreaId !== newAreaId) {
+      return lengths;
     }
 
     const statsDoc = await this.getCityStatsDoc(slug);
@@ -253,17 +268,26 @@ class Storage {
     try {
       console.debug(`[Firebase] Saving GeoJSON ${name} using new chunked format...`);
 
-      const lengthsForMetadata = await this.resolveLengthsForSave(storageKey, lengths);
+      const lengthsForMetadata = await this.resolveLengthsForSave(storageKey, lengths, options);
+      const hasLengths = Object.keys(lengthsForMetadata).length > 0;
 
       if (Object.keys(lengths).length > 0) {
         await this.saveStatsToFirestore(storageKey, lengths);
         console.debug(`[Firebase] Lengths for ${name} saved successfully.`);
+      } else if (!hasLengths && (options.invalidateLengths || options.queryAreaId != null)) {
+        await this.saveStatsToFirestore(storageKey, {});
       }
 
-      await this.saveWithChunking(name, geoJson, lengthsForMetadata, storageKey, {
-        updatedAt: now,
-        queryAreaId: options.queryAreaId,
-      });
+      await this.saveWithChunking(
+        name,
+        geoJson,
+        hasLengths ? lengthsForMetadata : null,
+        storageKey,
+        {
+          updatedAt: now,
+          queryAreaId: options.queryAreaId,
+        }
+      );
       console.debug(`[Firebase] GeoJSON ${name} saved successfully using new format.`);
     } catch (error) {
       console.error(`[Firebase] Error saving GeoJSON ${name}: `, error);

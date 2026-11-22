@@ -47,7 +47,7 @@ Theme is **`body.theme-dark`** / **`body.theme-light`**. Prefer design tokens (C
 
 ### Tokens derived from layer config
 
-Map + UI colors stay aligned by deriving some values from `src/config/layers.v2.json` (and related map constants). When a layer’s semantic color changes, legend/badges/route UI and Mapbox paint can stay consistent.
+Map + UI colors stay aligned by deriving some values from `src/config/layers.json` (and related map constants). When a layer’s semantic color changes, legend/badges/route UI and Mapbox paint can stay consistent.
 
 ## Accessibility
 
