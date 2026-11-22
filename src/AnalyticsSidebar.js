@@ -245,6 +245,16 @@ export function officialKmMatch(oursKm, officialKm) {
   return { ours, official, grade };
 }
 
+const OFFICIAL_KM_GRADE_TEXT = {
+  close: { dark: 'text-green-400', light: 'text-green-800' },
+  mid: { dark: 'text-amber-400', light: 'text-amber-700' },
+  far: { dark: 'text-red-400', light: 'text-red-700' },
+};
+
+const RANKING_ROW_CLASS = 'flex items-center gap-3 box-border w-full px-3.5';
+const RANKING_VALUE_CLASS =
+  'w-20 flex-shrink-0 box-border text-right text-xs leading-tight whitespace-nowrap tabular-nums';
+
 const LENGTH_STRATEGY_OPTION_HINTS = {
   pessimistic: 'Usa sempre o lado mais curto',
   optimistic: 'Usa sempre o lado mais longo',
@@ -287,12 +297,27 @@ MapperSelectField.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
-const AnalyticsSkeleton = ({ variant = 'md' }) => (
-  <span className={`cm-analytics-skel cm-analytics-skel--${variant}`} aria-hidden />
+const ANALYTICS_SKEL_SIZE = {
+  lg: 'w-[5.5rem] h-7 mt-1',
+  md: 'w-10 h-3 flex-shrink-0',
+  bar: 'block w-full h-1 mt-1',
+};
+
+const AnalyticsSkeleton = ({ variant = 'md', isDarkMode }) => (
+  <span
+    data-testid={`analytics-skel-${variant}`}
+    className={[
+      'inline-block rounded-full animate-pulse-2x',
+      ANALYTICS_SKEL_SIZE[variant],
+      isDarkMode ? 'bg-white bg-opacity-20' : 'bg-black bg-opacity-10',
+    ].join(' ')}
+    aria-hidden
+  />
 );
 
 AnalyticsSkeleton.propTypes = {
   variant: PropTypes.oneOf(['lg', 'md', 'bar']),
+  isDarkMode: PropTypes.bool,
 };
 
 class AnalyticsSidebar extends Component {
@@ -882,7 +907,7 @@ class AnalyticsSidebar extends Component {
                 {showLengthsSkeleton ? (
                   <span className="inline-flex flex-col items-center" aria-hidden>
                     <span className="tracking-wides text-xs opacity-40">TOTAL</span>
-                    <AnalyticsSkeleton variant="lg" />
+                    <AnalyticsSkeleton variant="lg" isDarkMode={this.props.isDarkMode} />
                   </span>
                 ) : hasLengthTotals ? (
                   <>
@@ -903,6 +928,7 @@ class AnalyticsSidebar extends Component {
                           kmLabel={appendKmUnit(
                             Number(this.props.cityMetadata.alianca_2026).toFixed(1)
                           )}
+                          isDarkMode={this.props.isDarkMode}
                           match={officialKmMatch(
                             comparableAliancaKm(lengths),
                             this.props.cityMetadata.alianca_2026
@@ -934,9 +960,9 @@ class AnalyticsSidebar extends Component {
                     <div key={l.id} className="mb-2" aria-hidden>
                       <div className="flex items-center justify-between px-0 py-0 text-xs font-semibold leading-5">
                         <span>{l.shortName || l.displayName || l.name}</span>
-                        <AnalyticsSkeleton variant="md" />
+                        <AnalyticsSkeleton variant="md" isDarkMode={this.props.isDarkMode} />
                       </div>
-                      <AnalyticsSkeleton variant="bar" />
+                      <AnalyticsSkeleton variant="bar" isDarkMode={this.props.isDarkMode} />
                     </div>
                   ))
                 : vias.infraLayers.map((l) => (
@@ -962,7 +988,7 @@ class AnalyticsSidebar extends Component {
                     aria-hidden
                   >
                     <span>{l.name}</span>
-                    <AnalyticsSkeleton variant="md" />
+                    <AnalyticsSkeleton variant="md" isDarkMode={this.props.isDarkMode} />
                   </div>
                 ))
               : poiLayers.map(
@@ -980,26 +1006,30 @@ class AnalyticsSidebar extends Component {
           currentSlug={currentCitySlug}
           currentLengths={lengths}
           infraLayers={this.getInfraLayersSorted()}
+          isDarkMode={this.props.isDarkMode}
           onClose={() => this.closeCitiesRanking()}
         />
 
         {(this.props.loading || this.props.lastUpdate || this.props.downloadData) && (
-          <div className="cm-analytics-source">
-            <div className="cm-analytics-source__row">
-              <IconDatabase className="cm-analytics-source__icon" aria-hidden />
-              <p className="cm-analytics-source__copy">
+          <div className="mt-auto">
+            <div className="flex items-start gap-2 px-5 py-3">
+              <IconDatabase
+                className="flex-shrink-0 w-[1.05em] h-[1.05em] mt-0.5 opacity-50"
+                aria-hidden
+              />
+              <p className="flex-1 min-w-0 m-0 text-xs leading-snug opacity-50">
                 {this.props.lastUpdate
                   ? `Dados obtidos do OpenStreetMap há ${timeSince(this.props.lastUpdate)}.`
                   : this.props.loading
                     ? 'Carregando dados desta cidade...'
                     : ''}
               </p>
-              <div className="cm-analytics-source__actions">
+              <div className="flex items-center flex-shrink-0 -my-1.5 -mr-2">
                 {this.props.loading && (
                   <Button
                     type="text"
                     size="small"
-                    className="cm-analytics-source__cancel"
+                    className="!text-inherit opacity-70 hover:opacity-100 !text-xs !h-auto !px-1"
                     onClick={this.props.cancelDataLoad}
                   >
                     Cancelar
@@ -1020,7 +1050,7 @@ class AnalyticsSidebar extends Component {
                     <Button
                       type="text"
                       shape="circle"
-                      className="cm-analytics-source__btn"
+                      className="!text-inherit opacity-70 hover:opacity-100"
                       icon={<IconMore />}
                       aria-label="Mais opções"
                     />
@@ -1249,13 +1279,12 @@ DataLine.propTypes = {
 const MetricInfoActions = ({ compareLabel, onCompare, link }) => {
   if (!onCompare && !link) return null;
   return (
-    <div className="cm-metric-info__actions">
+    <div className="flex flex-col gap-2">
       {onCompare && (
         <Button
           type="primary"
           block
           icon={<IconCitiesCompare />}
-          className="cm-metric-info__compare"
           onClick={onCompare}
           aria-label={compareLabel}
         >
@@ -1277,10 +1306,12 @@ MetricInfoActions.propTypes = {
   link: PropTypes.string,
 };
 
-const OfficialKmInfo = ({ kmLabel, onCompare, match }) => {
+const OfficialKmInfo = ({ kmLabel, onCompare, match, isDarkMode }) => {
   const [infoOpen, setInfoOpen] = React.useState(false);
   const osmSharePct =
     match && match.official > 0 ? Math.round((match.ours / match.official) * 100) : null;
+  const gradeClass =
+    OFFICIAL_KM_GRADE_TEXT[match?.grade]?.[isDarkMode ? 'dark' : 'light'] || 'text-inherit';
   return (
     <Popover
       placement="left"
@@ -1291,11 +1322,11 @@ const OfficialKmInfo = ({ kmLabel, onCompare, match }) => {
       open={infoOpen}
       onOpenChange={setInfoOpen}
       content={
-        <div className="cm-metric-info">
+        <div className="flex flex-col gap-3 w-80 leading-normal">
           <h3 className="text-lg flex items-center gap-1">
             <IconOfficial className="inline-block text-xl opacity-70" /> Dado Oficial da Prefeitura
           </h3>
-          <p>
+          <p className="m-0">
             Quilometragem total de ciclovias e ciclofaixas divulgada como dado oficial da Prefeitura
             com base no levantamento anual da Aliança Bike. Última atualização: outubro de 2026.
           </p>
@@ -1317,15 +1348,16 @@ const OfficialKmInfo = ({ kmLabel, onCompare, match }) => {
     >
       <button
         type="button"
-        className={`cm-official-km${match?.grade ? ` cm-official-km--${match.grade}` : ''}`}
+        data-km-grade={match?.grade || undefined}
+        className={`flex items-center gap-0.5 m-0 p-0 border-0 bg-transparent cursor-pointer tracking-tight font-inherit ${gradeClass}`}
         aria-label={
           osmSharePct === null
             ? 'Informações: Dado oficial da Prefeitura'
             : `Informações: Dado oficial da Prefeitura. OSM em ${osmSharePct}% desse valor`
         }
       >
-        <IconOfficial className="cm-official-km__icon" />
-        <span className="cm-official-km__value">{kmLabel}</span>
+        <IconOfficial className="flex-shrink-0 opacity-90" />
+        <span className="flex items-baseline">{kmLabel}</span>
       </button>
     </Popover>
   );
@@ -1334,6 +1366,7 @@ const OfficialKmInfo = ({ kmLabel, onCompare, match }) => {
 OfficialKmInfo.propTypes = {
   kmLabel: PropTypes.string.isRequired,
   onCompare: PropTypes.func,
+  isDarkMode: PropTypes.bool,
   match: PropTypes.shape({
     ours: PropTypes.number.isRequired,
     official: PropTypes.number.isRequired,
@@ -1359,8 +1392,8 @@ const Section = (props) => {
           )}
         </h3>
 
-        <div className="cm-metric-section-actions">
-          {props.year && <span className="cm-metric-section-actions__year">{props.year}</span>}
+        <div className="flex items-center -mr-2">
+          {props.year && <span className="text-xs leading-none opacity-50">{props.year}</span>}
 
           {props.description && (
             <Popover
@@ -1373,7 +1406,7 @@ const Section = (props) => {
               onOpenChange={setInfoOpen}
               key={props.title}
               content={
-                <div className="cm-metric-info">
+                <div className="flex flex-col gap-3 w-80 leading-normal">
                   <h3 className="text-lg">{props.title}</h3>
                   {props.description}
                   <MetricInfoActions
@@ -1394,7 +1427,7 @@ const Section = (props) => {
               <Button
                 type="text"
                 shape="circle"
-                className="cm-metric-section-actions__btn"
+                className="!text-inherit opacity-50 hover:opacity-100"
                 icon={<IconInfo />}
                 aria-label={`Informações: ${props.title}`}
               />
@@ -1418,7 +1451,14 @@ Section.propTypes = {
   onCompare: PropTypes.func,
 };
 
-const CitiesRankingModal = ({ spec, currentSlug, currentLengths, infraLayers, onClose }) => {
+const CitiesRankingModal = ({
+  spec,
+  currentSlug,
+  currentLengths,
+  infraLayers,
+  isDarkMode,
+  onClose,
+}) => {
   const open = Boolean(spec);
   const rows = spec?.rows || [];
   const title = spec?.title || '';
@@ -1465,18 +1505,20 @@ const CitiesRankingModal = ({ spec, currentSlug, currentLengths, infraLayers, on
       centered
       destroyOnHidden
       width={showHistory || showOsmKm ? Math.min(880, 280 + valueCols.length * 76) : 440}
-      className="cm-metric-ranking-modal"
     >
       {open && (
-        <div className="cm-metric-ranking">
-          <div className="cm-metric-ranking__head">
-            <span className="cm-metric-ranking__head-city">Cidade</span>
-            <div className="cm-metric-ranking__values">
+        <div className="overflow-auto -mx-2 flex flex-col gap-2" style={{ maxHeight: '60vh' }}>
+          <div
+            className={`${RANKING_ROW_CLASS} pt-0 pb-0.5 sticky top-0 z-10 text-xs leading-tight text-current text-opacity-50`}
+            style={{ background: 'var(--ant-color-bg-container)' }}
+          >
+            <span className="min-w-0 flex-1">Cidade</span>
+            <div className="flex items-center justify-end">
               {valueCols.map((year) => (
                 <span
                   key={year}
-                  className={`cm-metric-ranking__head-year${
-                    year === latestYear ? ' cm-metric-ranking__year--latest' : ''
+                  className={`${RANKING_VALUE_CLASS}${
+                    year === latestYear ? ' text-current opacity-100' : ''
                   }`}
                 >
                   {year}
@@ -1484,7 +1526,7 @@ const CitiesRankingModal = ({ spec, currentSlug, currentLengths, infraLayers, on
               ))}
             </div>
           </div>
-          <ul className="cm-metric-ranking__list" aria-label={`${title} por cidade`}>
+          <ul className="list-none m-0 p-0 flex flex-col gap-2" aria-label={`${title} por cidade`}>
             {rows.map((row) => {
               const isCurrent = Boolean(currentSlug && row.slug === currentSlug);
               const { name, meta } = rankingCityCopy(row.slug, row.cityName);
@@ -1525,15 +1567,19 @@ const CitiesRankingModal = ({ spec, currentSlug, currentLengths, infraLayers, on
               return (
                 <li key={row.slug}>
                   <Link
-                    className={`cm-metric-ranking__card${
-                      isCurrent ? ' cm-metric-ranking__card--current' : ''
-                    }`}
+                    className={[
+                      RANKING_ROW_CLASS,
+                      'rounded-2xl no-underline cursor-pointer text-inherit py-3.5',
+                      'bg-white bg-opacity-5 hover:bg-opacity-10 hover:text-inherit hover:no-underline',
+                      'motion-safe:transition motion-safe:hover:-translate-y-px',
+                      isCurrent ? 'bg-opacity-10' : '',
+                    ].join(' ')}
                     to={`/${encodeURIComponent(row.slug)}`}
                     aria-label={meta ? `${name}, ${meta}` : name}
                     aria-current={isCurrent ? 'page' : undefined}
                     onClick={onClose}
                   >
-                    <div className="cm-metric-ranking__identity">
+                    <div className="min-w-0 flex-1 flex items-center gap-3">
                       {hasRingData ? (
                         <CityInfraMiniRing
                           lengthsKmByLayer={lengthsKmByLayer}
@@ -1542,22 +1588,38 @@ const CitiesRankingModal = ({ spec, currentSlug, currentLengths, infraLayers, on
                       ) : (
                         <CityInfraMiniRingPlaceholder />
                       )}
-                      <div className="cm-metric-ranking__name-wrap">
-                        <div className="cm-metric-ranking__name">{name}</div>
-                        {meta ? <div className="cm-metric-ranking__meta">{meta}</div> : null}
+                      <div className="flex-1 min-w-0 flex flex-col items-stretch justify-center gap-1">
+                        <div className="text-xs leading-tight min-w-0 overflow-hidden overflow-ellipsis whitespace-nowrap">
+                          {name}
+                        </div>
+                        {meta ? (
+                          <div className="text-xs leading-tight opacity-50 min-w-0 overflow-hidden overflow-ellipsis whitespace-nowrap">
+                            {meta}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
-                    <div className="cm-metric-ranking__values">
-                      {values.map((cell) => (
-                        <span
-                          key={cell.key}
-                          className={`cm-metric-ranking__value${
-                            cell.latest ? ' cm-metric-ranking__value--latest' : ''
-                          }${cell.grade ? ` cm-metric-ranking__value--${cell.grade}` : ''}`}
-                        >
-                          {cell.text}
-                        </span>
-                      ))}
+                    <div className="flex items-center justify-end">
+                      {values.map((cell) => {
+                        const gradeClass = cell.grade
+                          ? OFFICIAL_KM_GRADE_TEXT[cell.grade]?.[isDarkMode ? 'dark' : 'light']
+                          : '';
+                        return (
+                          <span
+                            key={cell.key}
+                            data-km-grade={cell.grade || undefined}
+                            className={[
+                              RANKING_VALUE_CLASS,
+                              cell.latest || cell.grade ? 'opacity-100 font-medium' : 'opacity-50',
+                              gradeClass || (cell.latest ? 'text-current' : ''),
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                          >
+                            {cell.text}
+                          </span>
+                        );
+                      })}
                     </div>
                   </Link>
                 </li>
@@ -1588,6 +1650,7 @@ CitiesRankingModal.propTypes = {
   currentSlug: PropTypes.string,
   currentLengths: PropTypes.object,
   infraLayers: PropTypes.array,
+  isDarkMode: PropTypes.bool,
   onClose: PropTypes.func.isRequired,
 };
 

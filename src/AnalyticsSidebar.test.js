@@ -296,7 +296,7 @@ describe('AnalyticsSidebar', () => {
     const closeBtn = screen.getByRole('button', {
       name: /Informações: Dado oficial da Prefeitura/,
     });
-    expect(closeBtn).toHaveClass('cm-official-km--close');
+    expect(closeBtn).toHaveAttribute('data-km-grade', 'close');
     expect(closeBtn).toHaveAccessibleName(/OSM em 100% desse valor/);
   });
 
@@ -344,7 +344,7 @@ describe('AnalyticsSidebar', () => {
     const portoAlegre = screen.getByRole('link', { name: /Porto Alegre/ });
     expect(portoAlegre).toHaveTextContent('15.0');
     expect(portoAlegre).toHaveTextContent('120');
-    expect(portoAlegre.querySelector('.cm-metric-ranking__value--far')).not.toBeNull();
+    expect(portoAlegre.querySelector('[data-km-grade="far"]')).not.toBeNull();
     expect(screen.getByRole('link', { name: /Palmas/ })).toHaveAttribute('href', '/palmas');
     expect(screen.getByRole('link', { name: /Palmas/ })).toHaveTextContent('Tocantins');
   });
