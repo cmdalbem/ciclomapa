@@ -1,6 +1,6 @@
 import React from 'react';
 import { hexToRgba, adjustColorBrightness } from '../utils/utils.js';
-import * as layersDefinitions from '../config/layers.json';
+import { getLayersDefinition } from '../config/layersCatalog.js';
 import { INFRASTRUCTURE_BADGE_TOKENS, ROUTE_COLORS } from '../config/constants.js';
 
 export interface InfrastructureBadgeProps {
@@ -77,7 +77,7 @@ const InfrastructureBadge: React.FC<InfrastructureBadgeProps> = ({
   infrastructure,
   isDarkMode = false,
 }) => {
-  const layers = normalizeLayersDefinitions(layersDefinitions);
+  const layers = normalizeLayersDefinitions(getLayersDefinition());
   const layerColors: Record<string, string> = {
     rua: isDarkMode ? ROUTE_COLORS.DARK.SELECTED : ROUTE_COLORS.LIGHT.SELECTED,
   };

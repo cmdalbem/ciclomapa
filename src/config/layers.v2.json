@@ -1,67 +1,150 @@
 [
   {
-    "name": "DEBUG - Inclusas",
+    "name": "Lado A",
     "onlyDebug": true,
-    "isActive": false,
-    "description": "Vias inclusas no cálculo de total de kilometros da cidade.",
-    "filters": [["ciclomapa:considered", "true"]],
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "sides",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Vias automaticamente detectadas como sendo duplicadas.",
+    "filters": [
+      [
+        ["ciclomapa:paired", "true"],
+        ["ciclomapa:side", "a"]
+      ]
+    ],
     "style": {
-      "lineColor": "#90EE90",
-      "lineWidth": 12,
-      "borderColor": "green",
-      "borderStyle": "solid",
-      "lineStyle": "dashed"
-    }
-  },
-  {
-    "name": "DEBUG - Vias sem nome",
-    "onlyDebug": true,
-    "isActive": false,
-    "description": "Vias sem nome são problemáticas porque nosso algoritmo de detecção de vias duplicadas necessita que a via tenha nome para sabermos que os segmentos pertencem à mesma rua e portanto precisam ser comparados entre sim.",
-    "filters": [["ciclomapa:unnamed", "true"]],
-    "style": {
-      "lineColor": "#e03e3d",
+      "lineColor": "#0B54FE",
       "lineWidth": 8
     }
   },
   {
-    "name": "DEBUG - Falsos positivos",
+    "name": "Lado B",
     "onlyDebug": true,
-    "isActive": false,
-    "description": "Vias originalmente detectadas como sendo duplicadas pelo nosso algoritmo porém filtradas depois por uma heurística para detectar faltos positivos.",
-    "filters": [["ciclomapa:ignored", "true"]],
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "sides",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Vias automaticamente detectadas como sendo duplicadas.",
+    "filters": [
+      [
+        ["ciclomapa:paired", "true"],
+        ["ciclomapa:side", "b"]
+      ]
+    ],
     "style": {
-      "lineColor": "#90EE90",
-      "lineWidth": 8,
+      "lineColor": "#FC0FC0",
+      "lineWidth": 8
+    }
+  },
+  {
+    "name": "Pareados",
+    "onlyDebug": true,
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "sides",
+    "isActive": false,
+    "description": "Segmentos marcados como pareados/duplicados pelo motor de detecção paralela.",
+    "filters": [["ciclomapa:paired", "true"]],
+    "style": {
+      "lineColor": "#2A9D8F",
+      "lineWidth": 7,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Tag + ciclovia",
+    "onlyDebug": true,
+    "isActive": true,
+    "description": "Rua com cycleway=* na própria via (track, lane...) e uma highway=cycleway desenhada do lado. Pode ser ciclovia vs ciclofaixa. Costuma ser o mesmo trecho mapeado duas vezes.",
+    "filters": [["ciclomapa:pair_kind", "dual_mapped"]],
+    "style": {
+      "lineColor": "#D97706",
+      "lineWidth": 7,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Ciclovias sobrepostas",
+    "onlyDebug": true,
+    "isActive": true,
+    "description": "Duas highway=cycleway desenhadas no mesmo corredor. Costuma ser um traçado antigo que ficou no mapa quando mapearam de novo ao lado.",
+    "filters": [["ciclomapa:pair_kind", "overlapping_cycleway"]],
+    "style": {
+      "lineColor": "#7C3AED",
+      "lineWidth": 7,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Não pareados",
+    "onlyDebug": true,
+    "isActive": true,
+    "description": "Segmentos marcados como não pareados (ficam fora da dupla contagem controlada).",
+    "filters": [
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Ciclovia"]
+      ],
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Ciclofaixa"]
+      ],
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Ciclorrota"]
+      ],
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Calçada compartilhada"]
+      ]
+    ],
+    "style": {
+      "lineColor": "#111111",
+      "lineColorDark": "#FFFFFF",
+      "lineWidth": 5,
       "lineStyle": "dashed"
     }
   },
   {
-    "name": "DEBUG - Lado A (azul)",
+    "name": "Confiança alta",
     "onlyDebug": true,
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "confidence",
     "isActive": false,
-    "description": "Vias automaticamente detectadas como sendo duplicadas.",
-    "filters": [["ciclomapa:side", "a"]],
+    "description": "Segmentos com alta confiança do pareamento (quando disponíveis).",
+    "filters": [["ciclomapa:match_confidence_bucket", "high"]],
     "style": {
-      "lineColor": "#ADD8E6",
-      "lineWidth": 8,
-      "borderColor": "#0B54FE",
-      "borderStyle": "solid",
-      "lineStyle": "dashed"
+      "lineColor": "#00CED1",
+      "lineWidth": 9,
+      "lineStyle": "solid"
     }
   },
   {
-    "name": "DEBUG - Lado B (rosa)",
+    "name": "Confiança média",
     "onlyDebug": true,
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "confidence",
     "isActive": false,
-    "description": "Vias automaticamente detectadas como sendo duplicadas.",
-    "filters": [["ciclomapa:side", "b"]],
+    "description": "Segmentos com confiança média do pareamento (quando disponíveis).",
+    "filters": [["ciclomapa:match_confidence_bucket", "med"]],
     "style": {
-      "lineColor": "#FFC0CB",
+      "lineColor": "#FFD700",
       "lineWidth": 8,
-      "borderColor": "#FC0FC0",
-      "borderStyle": "solid",
-      "lineStyle": "dashed"
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Confiança baixa",
+    "onlyDebug": true,
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "confidence",
+    "isActive": false,
+    "description": "Segmentos com baixa confiança do pareamento (quando disponíveis).",
+    "filters": [["ciclomapa:match_confidence_bucket", "low"]],
+    "style": {
+      "lineColor": "#FF4500",
+      "lineWidth": 7,
+      "lineStyle": "solid"
     }
   },
   {
@@ -113,10 +196,21 @@
       ["cycleway", "track"],
       ["cycleway:left", "track"],
       ["cycleway:right", "track"],
+      ["cycleway:both", "track"],
       ["cycleway", "opposite_track"],
       ["cycleway:left", "opposite_track"],
-      ["cycleway:right", "opposite_track"]
+      ["cycleway:right", "opposite_track"],
+      ["cycleway:both", "opposite_track"],
+      [
+        ["highway", "path"],
+        ["segregated", "yes"]
+      ],
+      [
+        ["highway", "footway"],
+        ["segregated", "yes"]
+      ]
     ],
+    "except": [["segregated", "no"]],
     "zoomThreshold": 15,
     "style": {
       "lineColor": "#386641",
@@ -145,9 +239,22 @@
         ["highway", "pedestrian"],
         ["bicycle", "yes"]
       ],
+      [
+        ["highway", "cycleway"],
+        ["segregated", "no"]
+      ],
+      [
+        ["highway", "path"],
+        ["segregated", "no"]
+      ],
+      [
+        ["highway", "path"],
+        ["bicycle", "designated"]
+      ],
       ["cycleway", "sidepath"],
       ["cycleway:left", "sidepath"],
-      ["cycleway:right", "sidepath"]
+      ["cycleway:right", "sidepath"],
+      ["cycleway:both", "sidepath"]
     ],
     "style": {
       "lineColor": "#386641",
@@ -156,7 +263,8 @@
       "textColorDark": "#000000",
       "lineWidth": 8,
       "lineStyle": "dashed"
-    }
+    },
+    "except": [["segregated", "yes"]]
   },
   {
     "name": "Ciclofaixa",
@@ -170,7 +278,12 @@
       ["cycleway:both", "lane"],
       ["cycleway", "opposite_lane"],
       ["cycleway:right", "opposite_lane"],
-      ["cycleway:left", "opposite_lane"]
+      ["cycleway:left", "opposite_lane"],
+      ["cycleway:both", "opposite_lane"],
+      ["cycleway", "buffered_lane"],
+      ["cycleway:left", "buffered_lane"],
+      ["cycleway:right", "buffered_lane"],
+      ["cycleway:both", "buffered_lane"]
     ],
     "style": {
       "lineColor": "#A7C957",
@@ -186,16 +299,18 @@
     "description": "Ruas compartilhadas com carros com sinalização especial que indica preferência das bicicletas.",
     "protectionLevel": "Baixa",
     "filters": [
-      ["cycleway", "buffered_lane"],
-      ["cycleway:left", "buffered_lane"],
-      ["cycleway:right", "buffered_lane"],
       ["cycleway", "shared_lane"],
       ["cycleway:left", "shared_lane"],
       ["cycleway:right", "shared_lane"],
+      ["cycleway:both", "shared_lane"],
       ["cycleway", "share_busway"],
       ["cycleway:left", "share_busway"],
       ["cycleway:right", "share_busway"],
-      ["cycleway", "opposite_share_busway"]
+      ["cycleway:both", "share_busway"],
+      ["cycleway", "opposite_share_busway"],
+      ["cycleway:left", "opposite_share_busway"],
+      ["cycleway:right", "opposite_share_busway"],
+      ["cycleway:both", "opposite_share_busway"]
     ],
     "style": {
       "lineColor": "#A7C957",
@@ -243,10 +358,6 @@
       ],
       [
         ["highway", "path"],
-        ["bicycle", "designated"]
-      ],
-      [
-        ["highway", "path"],
         ["bicycle", "yes"]
       ]
     ],
@@ -256,7 +367,11 @@
       "textColor": "#FFFFFF",
       "lineWidth": 2,
       "lineStyle": "dashed"
-    }
+    },
+    "except": [
+      ["segregated", "no"],
+      ["segregated", "yes"]
+    ]
   },
   {
     "name": "Proibido",

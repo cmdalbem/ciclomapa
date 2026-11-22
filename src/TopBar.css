@@ -1,3 +1,11 @@
+.topbar-collaborate--mapper {
+  box-shadow: inset 0 0 0 1.5px var(--color-mapper-accent);
+}
+
+.theme-dark .topbar-collaborate--mapper {
+  box-shadow: inset 0 0 0 1.5px var(--color-mapper-accent-dark);
+}
+
 .react-icon {
   display: inline-block;
   font-size: 1em;

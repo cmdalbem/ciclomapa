@@ -24,6 +24,8 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs').promises;
 
+const LAYERS_CATALOG_VERSION = 'v2';
+
 const AREA_ALIASES = {
   'south america': [
     'Argentina',
@@ -288,7 +290,13 @@ async function checkTippecanoe() {
 // overpass-to-geojson.js. The app reads this list back from the PMTiles metadata to
 // decide which layer toggles to show.
 async function resolveIncludedLayerNames(config) {
-  const layersPath = path.join(__dirname, '..', 'src', 'config', 'layers.json');
+  const layersPath = path.join(
+    __dirname,
+    '..',
+    'src',
+    'config',
+    `layers.${LAYERS_CATALOG_VERSION}.json`
+  );
   const layers = JSON.parse(await fs.readFile(layersPath, 'utf8'));
   const toKey = (name) => name.toLowerCase();
   const includeSet = config.includeLayers && new Set(config.includeLayers.map(toKey));
@@ -340,7 +348,9 @@ async function generatePMtiles(geojsonFiles, outputPath, includedLayerNames, opt
         'default',
         // Stored in the archive's JSON metadata `description`; the app parses it.
         '--description',
-        JSON.stringify({ ciclomapa: { layers: includedLayerNames } }),
+        JSON.stringify({
+          ciclomapa: { layers: includedLayerNames, layersVersion: LAYERS_CATALOG_VERSION },
+        }),
       ];
 
       // Analysis builds only: keep geometry, don't drop/simplify away to fit tile size.
@@ -396,16 +406,23 @@ function layerNamesKey(names) {
     .join('\0');
 }
 
-// GeoJSON files stamp `ciclomapa.layers` when written. Metadata for the archive must
-// match those stamps so --skip-geojson can't advertise POI (or other) layers that
-// were never queried into the reused files.
+// GeoJSON files stamp `ciclomapa.layers` and `ciclomapa.layersVersion` when written.
+// --skip-geojson must refuse a v1 extract (same layer names, different filters)
+// and a file built without POI when this run includes POI.
 async function assertGeoJSONLayerStampMatches(geojsonFiles, expectedLayerNames) {
   const expectedKey = layerNamesKey(expectedLayerNames);
   for (const file of geojsonFiles) {
     const raw = await fs.readFile(file, 'utf8');
     const geoJson = JSON.parse(raw);
     const stamped = geoJson.ciclomapa?.layers;
+    const stampedVersion = geoJson.ciclomapa?.layersVersion;
     const label = path.basename(file);
+
+    if (stampedVersion !== LAYERS_CATALOG_VERSION) {
+      throw new Error(
+        `${label} was built with catalog ${stampedVersion || 'unknown'}, this run uses ${LAYERS_CATALOG_VERSION}. Re-run without --skip-geojson.`
+      );
+    }
 
     if (!Array.isArray(stamped) || stamped.length === 0) {
       throw new Error(

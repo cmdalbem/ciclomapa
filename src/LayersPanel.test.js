@@ -64,6 +64,19 @@ describe('LayersPanel (desktop)', () => {
     expect(row('Ciclofaixa!')).toHaveStyle({ opacity: 0.5 });
   });
 
+  it('shows the OSM version switch inside the mapper box and reports clicks', () => {
+    const onLayersVersionChange = jest.fn();
+    renderPanel({
+      showLayersVersionSwitch: true,
+      layersVersion: 'v2',
+      onLayersVersionChange,
+    });
+    const box = screen.getByText('Modo mapeador').closest('[data-mapper-box]');
+    expect(box).toContainElement(screen.getByRole('button', { name: 'v1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'v1' }));
+    expect(onLayersVersionChange).toHaveBeenCalledWith('v1');
+  });
+
   it('clicking a row toggles it', () => {
     const { onLayersChange } = renderPanel();
     fireEvent.click(screen.getByText('Ciclovia'));
@@ -108,6 +121,71 @@ describe('LayersPanel (desktop)', () => {
     fireEvent.mouseEnter(screen.getByText('Ciclovia'));
     await screen.findByText('Ciclovia desc');
     expect(screen.queryByTestId('layers-panel-popover-full-legend')).not.toBeInTheDocument();
+  });
+
+  it('groups onlyDebug layers in the mapper box above the regular layers', () => {
+    renderPanel({
+      layers: [...layers, way('Diff v1→v2', true, { onlyDebug: true, description: 'diff' })],
+    });
+    expect(screen.getByText('Ciclovia')).toBeInTheDocument();
+    const box = screen.getByText('Modo mapeador').closest('[data-mapper-box]');
+    expect(box).toBeTruthy();
+    expect(box).toHaveTextContent('Diff v1→v2');
+    expect(box).not.toHaveTextContent('Ciclovia');
+    const panel = document.getElementById('layersPanel');
+    expect(panel.firstElementChild).toBe(box);
+  });
+
+  it('collapses pairing layers into one Pareamento row with extra views in the hover popover', async () => {
+    const pairing = [
+      way('Lado A', false, {
+        id: 'lado-a',
+        onlyDebug: true,
+        mapperGroup: 'pairing',
+        mapperGroupSection: 'sides',
+        mapperGroupDefault: true,
+        style: { lineColor: '#0B54FE', lineStyle: 'solid' },
+      }),
+      way('Lado B', false, {
+        id: 'lado-b',
+        onlyDebug: true,
+        mapperGroup: 'pairing',
+        mapperGroupSection: 'sides',
+        mapperGroupDefault: true,
+        style: { lineColor: '#FC0FC0', lineStyle: 'solid' },
+      }),
+      way('Não pareados', false, {
+        id: 'nao-pareados',
+        onlyDebug: true,
+      }),
+    ];
+    const { onLayersChange } = renderPanel({
+      layers: [
+        ...layers,
+        way('Diff v1→v2', true, { id: 'diff-v1v2', onlyDebug: true }),
+        ...pairing,
+      ],
+    });
+
+    const box = screen.getByText('Modo mapeador').closest('[data-mapper-box]');
+    expect(box).toHaveTextContent('Pareamento');
+    expect(screen.getByRole('button', { name: 'Pareamento' })).toBeInTheDocument();
+    expect(box).toHaveTextContent('Diff v1→v2');
+    expect(box).toHaveTextContent('Não pareados');
+    expect(screen.queryByText('Lado A')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Pareamento'));
+    expect(onLayersChange).toHaveBeenCalledWith([
+      { id: 'lado-a', isActive: true },
+      { id: 'lado-b', isActive: true },
+    ]);
+
+    fireEvent.mouseEnter(screen.getByText('Pareamento'));
+    expect(await screen.findByText('Lado A')).toBeInTheDocument();
+    expect(screen.getByText('Pareados')).toBeInTheDocument();
+    expect(screen.queryByText('Outros')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Não pareados', { selector: '.font-semibold' }));
+    expect(onLayersChange).toHaveBeenCalledWith('nao-pareados', true);
   });
 
   it('toggleMobileCollapse flips collapsed state', () => {

@@ -2,7 +2,8 @@ import mapboxgl from 'mapbox-gl';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import './MapPopups.css';
-import { osmi18n as i18n } from './osmi18n';
+import './components/MapperBox.css';
+import { osmi18n as i18n, getOsmDebugTagDescription, osmTypologyDebugRank } from './osmi18n';
 import Analytics from './Analytics.js';
 import { formatDistance, formatDuration } from './utils/routeUtils.js';
 import { formatTimeAgo } from './utils/utils.js';
@@ -28,6 +29,27 @@ export function escapeHtml(text) {
     .replace(/"/g, '&quot;');
 }
 
+/** Black or white text against a hex background. Mapper overlays often have no textColor. */
+export function contrastingTextOn(bg) {
+  const hex = String(bg || '')
+    .replace('#', '')
+    .trim();
+  const full =
+    hex.length === 3
+      ? hex
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : hex;
+  if (full.length !== 6 || /[^0-9a-f]/i.test(full)) return '#ffffff';
+  const n = parseInt(full, 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const y = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return y > 0.55 ? '#111111' : '#ffffff';
+}
+
 const POPUP_PLACE_TYPE_ICON_CLASS =
   'search-result-popup-place-icon w-4 h-4 flex-shrink-0 mt-1 opacity-70';
 
@@ -45,6 +67,29 @@ const FAV_HEART_FILLED_SVG = `<svg fill="currentColor" stroke="currentColor" str
 const DIRECTIONS_ICON_SVG = `<svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>`;
 const COMMENT_ICON_SVG = `<svg fill="currentColor" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M5.5 1.28953e-06C6.7728 1.28953e-06 8.02305 0.101033 9.24609 0.293947C10.2822 0.458667 11 1.43545 11 2.5332V5.92969C10.9998 7.02731 10.2821 8.00424 9.24609 8.16895C8.23004 8.32913 7.19514 8.42589 6.14453 8.4541C6.09235 8.4552 6.0421 8.47721 6.00488 8.5166L3.81348 10.877C3.75856 10.936 3.6884 10.9759 3.6123 10.9922C3.53618 11.0085 3.45745 10.9997 3.38574 10.9678C3.314 10.9358 3.25216 10.882 3.20898 10.8125C3.16593 10.7431 3.14273 10.6615 3.14258 10.5781V8.34668C2.67824 8.30092 2.21523 8.24099 1.75391 8.16797C0.717811 8.00437 0 7.02649 0 5.92871V2.53418C0 1.4364 0.717811 0.457542 1.75391 0.293947C2.99428 0.0978829 4.24634 -0.00041067 5.5 1.28953e-06ZM4.75 4H2.75V5L4.75 5.01465V7H5.75V5.01465L7.75 5V4H5.75V2H4.75V4Z"/></svg>`;
 const EDIT_ICON_SVG = `<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 12 12" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M1 8.91695V11H3.08304L8.91638 5.16667L6.83333 3.08362L1 8.91695ZM10.8375 3.24552C11.0542 3.02888 11.0542 2.67893 10.8375 2.4623L9.5377 1.16248C9.32107 0.945841 8.97111 0.945841 8.75448 1.16248L7.73795 2.179L9.821 4.26205L10.8375 3.24552Z"/></svg>`;
+const STREET_VIEW_ICON_SVG = `<svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const MAPILLARY_ICON_SVG = `<svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" class="react-icon mb-0.5 mr-1" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
+
+/**
+ * Open Street View at a viewpoint with the little map pane visible
+ * (cbp first param 11 = SV on top, map below).
+ */
+export function buildGoogleStreetViewUrl(lat, lng) {
+  const url = new URL('https://www.google.com/maps');
+  url.searchParams.set('layer', 'c');
+  url.searchParams.set('cbll', `${lat},${lng}`);
+  url.searchParams.set('cbp', '11,0,0,0,0');
+  return url.toString();
+}
+
+/** Mapillary coverage map zoomed to the clicked feature. */
+export function buildMapillaryUrl(lat, lng) {
+  const url = new URL('https://www.mapillary.com/app/');
+  url.searchParams.set('lat', String(lat));
+  url.searchParams.set('lng', String(lng));
+  url.searchParams.set('z', '17');
+  return url.toString();
+}
 
 /** `favMeta` mirrors `favoritesStore` fields when favoriting from the search-result popup. */
 function buildFavBtnHtml(lng, lat, title, color, favoriteId = null, favMeta = null) {
@@ -206,9 +251,10 @@ class MapPopups {
   routeTooltips;
   previousCyclewayLayerClass;
 
-  constructor(map, debugMode, isDarkMode = false, selectedAreaLabel = '') {
+  constructor(map, debugMode, isDarkMode = false, selectedAreaLabel = '', mapperMode = false) {
     this.map = map;
     this.debugMode = debugMode;
+    this.mapperMode = Boolean(mapperMode || debugMode);
     this.isDarkMode = isDarkMode;
     this.selectedAreaLabel = selectedAreaLabel || '';
 
@@ -223,7 +269,7 @@ class MapPopups {
       if (this.selectedCycleway) {
         try {
           this.map.setFeatureState(
-            {
+            this.selectedCyclewayFeatureState || {
               source: PMTILES_SOURCE_ID,
               sourceLayer: PMTILES_SOURCE_LAYER,
               id: this.selectedCycleway,
@@ -233,6 +279,7 @@ class MapPopups {
         } catch (e) {}
       }
       this.selectedCycleway = null;
+      this.selectedCyclewayFeatureState = null;
     });
 
     this.commentPopup = new mapboxgl.Popup({
@@ -260,6 +307,28 @@ class MapPopups {
     this.routeTooltips = [];
     this.poiAddressAbortController = null;
     this.poiAddressRequestId = 0;
+
+    this._onKeyDown = (e) => {
+      if (!e || e.key !== 'Escape' || e.defaultPrevented || e.repeat) return;
+      if (this._isTypingInFormField(e.target)) return;
+      if (!this.hasOpenPopup()) return;
+      e.preventDefault();
+      this.closeAllPopups();
+    };
+    document.addEventListener('keydown', this._onKeyDown);
+  }
+
+  _isTypingInFormField(target) {
+    if (!target) return false;
+    const tag = (target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+    return Boolean(target.isContentEditable);
+  }
+
+  hasOpenPopup() {
+    return [this.cyclewayPopup, this.commentPopup, this.poiPopup, this.searchResultPopup].some(
+      (popup) => popup && typeof popup.isOpen === 'function' && popup.isOpen()
+    );
   }
 
   setSelectedAreaLabel(label) {
@@ -287,69 +356,170 @@ class MapPopups {
     );
   }
 
+  renderDebugTagTooltip(description) {
+    if (!description?.summary) return '';
+
+    const summary = escapeHtml(description.summary);
+    const values = Array.isArray(description.values) ? description.values : [];
+    const valuesHtml =
+      values.length > 0
+        ? `<div class="popup-debug-tag-tooltip__values">
+            <div class="popup-debug-tag-tooltip__values-label">Valores comuns</div>
+            <ul class="popup-debug-tag-tooltip__list">
+              ${values.map((v) => `<li>${escapeHtml(v)}</li>`).join('')}
+            </ul>
+          </div>`
+        : '';
+
+    return `
+      <div class="popup-debug-tag-tooltip absolute bottom-full left-0 mb-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+        <div class="popup-debug-tag-tooltip__summary">${summary}</div>
+        ${valuesHtml}
+        <div class="popup-debug-tag-tooltip__arrow"></div>
+      </div>`;
+  }
+
+  renderPropertyCell({ key, content, displayName, isDebug, description }) {
+    const labelColor = isDebug ? 'text-red-500 font-mono' : 'opacity-50';
+    const safeName = escapeHtml(displayName);
+
+    const labelHtml =
+      isDebug && description
+        ? `<div class="relative inline-block group">
+            <button type="button" class="${labelColor} border-b border-dotted border-current cursor-help bg-transparent p-0 text-left">
+              ${safeName}
+            </button>
+            ${this.renderDebugTagTooltip(description)}
+          </div>`
+        : `<div class="${labelColor}">${safeName}</div>`;
+
+    return `
+      <div data-popup-tag="${escapeHtml(key)}" data-popup-tag-kind="${isDebug ? 'debug' : 'main'}">
+        ${labelHtml}
+        <div class="overflow-ellipsis overflow-hidden${isDebug ? ' font-mono' : ''}">
+          ${content}
+        </div>
+      </div>`;
+  }
+
   renderProperties(properties) {
-    const propertiesHtml = Object.keys(properties)
-      .filter((key) => (this.debugMode ? true : !key.startsWith('ciclomapa:')))
-      .map((key) => {
+    const mainCells = [];
+    const debugPrimary = [];
+    const debugOther = [];
+
+    Object.keys(properties)
+      .filter((key) => (this.mapperMode ? true : !key.startsWith('ciclomapa:')))
+      .forEach((key) => {
         const untranslatedValue = properties[key];
         const translatedName = i18n[key];
         const translatedValue = i18n[untranslatedValue];
+        const isLinkTag = key === 'website' || key === 'email' || key === 'facebook';
 
         let content = '';
-        let isTranslated = true;
+        let isDebug = false;
 
-        switch (key) {
-          case 'website':
-          case 'email':
-          case 'facebook':
-            // Sometimes people will not put the http part of the link on OSM,
-            // making the browser think the link is a subpage of CicloMapa and
-            // adding our domain to the beggining of it.
-            let link = untranslatedValue.includes('http')
-              ? untranslatedValue
-              : 'http://' + untranslatedValue;
-            content = `<a target="_blank" rel="noopener" class="underline" href=${link}>${link}</a>`;
-            break;
-
-          default:
-            if (translatedName) {
-              content = translatedValue || untranslatedValue;
-            } else {
-              if (this.debugMode) {
-                // In debug mode, show untranslated properties
-                content = untranslatedValue;
-                isTranslated = false;
-              } else {
-                console.debug('Map tooltip: ignored OSM tag:', key, untranslatedValue);
-                return '';
-              }
-            }
-            break;
+        if (isLinkTag) {
+          // Sometimes people will not put the http part of the link on OSM,
+          // making the browser think the link is a subpage of CicloMapa and
+          // adding our domain to the beggining of it.
+          const link = String(untranslatedValue).includes('http')
+            ? String(untranslatedValue)
+            : 'http://' + untranslatedValue;
+          const safeLink = escapeHtml(link);
+          content = `<a target="_blank" rel="noopener" class="underline" href="${safeLink}">${safeLink}</a>`;
+        } else if (translatedName) {
+          content = escapeHtml(String(translatedValue || untranslatedValue));
+        } else if (this.mapperMode) {
+          content = escapeHtml(String(untranslatedValue));
+          isDebug = true;
+        } else {
+          console.debug('Map tooltip: ignored OSM tag:', key, untranslatedValue);
+          return;
         }
 
-        const labelColor = this.debugMode && !isTranslated ? 'text-red-500' : 'opacity-50';
-        const displayName = translatedName || key;
+        const cell = this.renderPropertyCell({
+          key,
+          content,
+          displayName: translatedName || key,
+          isDebug,
+          description: isDebug ? getOsmDebugTagDescription(key) : undefined,
+        });
 
-        return `
-                    <div>
-                        <div class="${labelColor}">
-                            ${displayName}
-                        </div>
-                        <div class="overflow-ellipsis overflow-hidden">
-                            ${content}
-                        </div>
-                    </div>`;
-      })
-      .join('');
+        if (!isDebug) {
+          mainCells.push(cell);
+          return;
+        }
 
-    if (!propertiesHtml || propertiesHtml.length === 0) {
-      return '';
-    }
+        const rank = osmTypologyDebugRank(key);
+        if (rank >= 0) {
+          debugPrimary.push({ rank, cell });
+        } else {
+          debugOther.push(cell);
+        }
+      });
 
+    debugPrimary.sort((a, b) => a.rank - b.rank);
+    const primaryCells = debugPrimary.map((item) => item.cell);
+
+    const mapperTagsHtml = this.renderMapperTagsHtml(primaryCells, debugOther);
+    const mainHtml =
+      mainCells.length > 0
+        ? `<div class="mt-4 md:text-sm text-xs"><div class="grid grid-cols-2 gap-3">${mainCells.join('')}</div></div>`
+        : '';
+
+    return { mainHtml, mapperTagsHtml };
+  }
+
+  renderMapperTagsHtml(primaryCells, debugOther) {
+    if (!this.mapperMode) return '';
+    if (primaryCells.length === 0 && debugOther.length === 0) return '';
+
+    const visibleCells = primaryCells.length > 0 ? primaryCells : debugOther;
+    const collapsedCells = primaryCells.length > 0 ? debugOther : [];
+    const primaryGrid = `<div class="grid grid-cols-2 gap-3">${visibleCells.join('')}</div>`;
+    const moreBlock =
+      collapsedCells.length > 0
+        ? `<details class="popup-debug-tags__more">
+            <summary class="popup-debug-tags__more-summary">Ver mais (${collapsedCells.length})</summary>
+            <div class="grid grid-cols-2 gap-3 popup-debug-tags__more-grid">${collapsedCells.join('')}</div>
+          </details>`
+        : '';
+
+    return `${primaryGrid}${moreBlock}`;
+  }
+
+  renderMapperLocationActions(coordinates) {
+    if (!this.mapperMode || !coordinates || coordinates.length !== 2) return '';
+    const [lng, lat] = coordinates;
+    const streetViewHref = escapeHtml(buildGoogleStreetViewUrl(lat, lng));
+    const mapillaryHref = escapeHtml(buildMapillaryUrl(lat, lng));
+    return `<div class="cm-mapper-box__actions">
+      <a class="cm-mapper-box__action" target="_blank" rel="noopener" href="${streetViewHref}">
+        ${STREET_VIEW_ICON_SVG}
+        Street View
+      </a>
+      <a class="cm-mapper-box__action" target="_blank" rel="noopener" href="${mapillaryHref}">
+        ${MAPILLARY_ICON_SVG}
+        Mapillary
+      </a>
+    </div>`;
+  }
+
+  renderMapperBox(mapperTagsHtml, coordinates) {
+    if (!this.mapperMode) return '';
+    const actionsHtml = this.renderMapperLocationActions(coordinates);
+    if (!mapperTagsHtml && !actionsHtml) return '';
     return `
-            <div class="mt-4 md:text-sm text-xs grid grid-cols-2 gap-3">
-                ${propertiesHtml}
-            </div>`;
+      <div class="cm-mapper-box mt-4 md:text-sm text-xs" data-mapper-box>
+        <div class="cm-mapper-box__label">Modo mapeador</div>
+        ${mapperTagsHtml}
+        ${actionsHtml}
+      </div>`;
+  }
+
+  renderFeatureDetails(properties, coordinates = null) {
+    const { mainHtml, mapperTagsHtml } = this.renderProperties(properties);
+    return `${mainHtml}${this.renderMapperBox(mapperTagsHtml, coordinates)}`;
   }
 
   getSearchResultFooter(
@@ -577,7 +747,7 @@ class MapPopups {
                 </div>
             </div>
 
-            ${this.renderProperties(propertiesForGrid)}
+            ${this.renderFeatureDetails(propertiesForGrid, [coords.lng, coords.lat])}
 
             ${this.getFooter(osmUrl, 'white', [coords.lng, coords.lat])}
         `;
@@ -624,17 +794,56 @@ class MapPopups {
     });
   }
 
+  applyCyclewayPopupTheme(layer) {
+    const el = document.querySelector('.popup-big.mapboxgl-popup');
+    if (!el) return;
+
+    // Overlay layers like Não pareados are #111 with no textColor. Painting the
+    // whole card with that color leaves black-on-black type.
+    if (layer.onlyDebug) {
+      el.style.removeProperty('--popup-bg-color');
+      el.style.removeProperty('--popup-text-color');
+      el.style.removeProperty('--popup-text-color-on-primary');
+      return;
+    }
+
+    const bg = layer.style?.lineColor;
+    const text = layer.style?.textColor || contrastingTextOn(bg);
+    el.style.setProperty('--popup-bg-color', bg);
+    el.style.setProperty('--popup-text-color-on-primary', bg);
+    el.style.setProperty('--popup-text-color', text);
+  }
+
   showCyclewayPopup(e, layer) {
     const coords = e.lngLat;
     const properties = e.features[0].properties;
     const osmUrl = `https://www.openstreetmap.org/${properties.id}`;
     const bgClass = layer.id;
-    this.selectedCycleway = e.features[0].id;
+    const feature = e.features[0];
+    this.selectedCycleway = feature.id;
+    this.selectedCyclewayFeatureState = feature.source
+      ? {
+          source: feature.source,
+          ...(feature.sourceLayer ? { sourceLayer: feature.sourceLayer } : {}),
+          id: feature.id,
+        }
+      : {
+          source: PMTILES_SOURCE_ID,
+          sourceLayer: PMTILES_SOURCE_LAYER,
+          id: feature.id,
+        };
 
     if (this.previousCyclewayLayerClass) {
       this.cyclewayPopup.removeClassName(this.previousCyclewayLayerClass);
     }
     this.previousCyclewayLayerClass = bgClass;
+
+    const chipBg = layer.onlyDebug
+      ? layer.style?.lineColor || 'var(--popup-text-color)'
+      : 'var(--popup-text-color)';
+    const chipFg = layer.onlyDebug
+      ? contrastingTextOn(layer.style?.lineColor)
+      : 'var(--popup-bg-color)';
 
     let html = `
             <div>
@@ -642,7 +851,7 @@ class MapPopups {
                 <div class="relative inline-block mt-3 group">
                     <div
                         class="inline-flex items-center py-0 px-2 rounded-full font-semibold tracking-wide cursor-pointer"
-                        style="background-color: var(--popup-text-color); color: var(--popup-bg-color);"
+                        style="background-color: ${chipBg}; color: ${chipFg};"
                     >
                         ${layer.name}
                     </div>
@@ -666,7 +875,7 @@ class MapPopups {
                     }
                 </div>
 
-                ${this.renderProperties(properties)}
+                ${this.renderFeatureDetails(properties, [coords.lng, coords.lat])}
 
                 ${this.getFooter(osmUrl, 'black', [coords.lng, coords.lat])}
             </div>
@@ -677,15 +886,7 @@ class MapPopups {
     // Disabeld while we probably don't really need it
     // this.attachMobileActiveHandler(this.cyclewayPopup);
 
-    document
-      .querySelector('.popup-big.mapboxgl-popup')
-      .style.setProperty('--popup-bg-color', layer.style.lineColor);
-    document
-      .querySelector('.popup-big.mapboxgl-popup')
-      .style.setProperty('--popup-text-color-on-primary', layer.style.lineColor);
-    document
-      .querySelector('.popup-big.mapboxgl-popup')
-      .style.setProperty('--popup-text-color', layer.style.textColor);
+    this.applyCyclewayPopupTheme(layer);
 
     // document.querySelector('.mapboxgl-popup-content').style.backgroundColor = layer.style.lineColor;
     // document.querySelector('.mapboxgl-popup-tip').style.borderTopColor = layer.style.lineColor;
@@ -845,6 +1046,12 @@ class MapPopups {
     this.commentPopup.remove();
     this.poiPopup.remove();
     this.hideSearchResultPopup();
+  }
+
+  destroy() {
+    document.removeEventListener('keydown', this._onKeyDown);
+    this.closeAllPopups();
+    this.clearRouteTooltips();
   }
 }
 

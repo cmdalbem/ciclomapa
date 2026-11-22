@@ -32,6 +32,8 @@ describe('design tokens', () => {
       expect(props['--color-bg-light']).toBe(colors.bgLight);
       expect(props['--color-logo-dark']).toBe(colors.logoDark);
       expect(props['--color-logo-light']).toBe(colors.logoLight);
+      expect(props['--color-mapper-accent']).toBe(colors.mapperAccent);
+      expect(props['--color-mapper-accent-dark']).toBe(colors.mapperAccentDark);
     });
 
     it('includes required spacing and layout tokens', () => {

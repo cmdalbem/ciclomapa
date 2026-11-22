@@ -111,6 +111,21 @@ export default function LayerOsmFilters({ layer, className = '' }) {
                   )}
                   style={{ margin: 0, padding: 0 }}
                 />
+                {layer.except?.length > 0 && (
+                  <>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      exceto
+                    </Text>
+                    <List
+                      size="small"
+                      dataSource={layer.except}
+                      rowKey={(_, index) => `osm-x-${layer.id}-${index}`}
+                      split={false}
+                      renderItem={(branch) => <OsmFilterBranch branch={branch} />}
+                      style={{ margin: 0, padding: 0 }}
+                    />
+                  </>
+                )}
                 <Text type="secondary" style={{ fontSize: 12 }}>
                   <IconInfoCircle
                     aria-hidden="true"
@@ -132,6 +147,7 @@ LayerOsmFilters.propTypes = {
   layer: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     filters: PropTypes.array,
+    except: PropTypes.array,
   }).isRequired,
   className: PropTypes.string,
 };

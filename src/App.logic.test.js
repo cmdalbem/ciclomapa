@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import App from './App.js';
 import OSMController from './OSMController.js';
 import { AREA_ID_OVERRIDES, PMTILES_FALLBACK_MISSING_LAYER_NAMES } from './config/constants.js';
+import { mapperLayerNeedsCityGeoJson } from './config/layersCatalog.js';
 import { guessPlaceFromViewport, reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 import { appNotification } from './antdNotification';
 import Analytics from './Analytics.js';
@@ -49,7 +50,13 @@ jest.mock(
       children
 );
 jest.mock('./antdNotification', () => ({
-  appNotification: { info: jest.fn(), error: jest.fn(), success: jest.fn(), warning: jest.fn() },
+  appNotification: {
+    info: jest.fn(),
+    error: jest.fn(),
+    success: jest.fn(),
+    warning: jest.fn(),
+    destroy: jest.fn(),
+  },
   bindAntdNotification: jest.fn(),
 }));
 jest.mock('./utils/documentMeta.js', () => ({ updateDocumentMeta: jest.fn() }));
@@ -441,6 +448,38 @@ describe('App updateData Overpass backfill', () => {
     });
     expect(osm).toHaveBeenCalledTimes(1);
   });
+
+  it('persists GeoJSON and lengths on Atualizar for the selected pairing engine', async () => {
+    const app = mountApp().current;
+    const area = app.state.area;
+    expect(app.state.parallelDedupeEngine).toBe('geometry_first');
+    act(() => {
+      app.setState({
+        geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+        lengths: { ciclovia: 10 },
+        loading: false,
+      });
+    });
+    const nextGeoJson = JSON.parse(JSON.stringify(wayOnlyGeoJson));
+    jest.spyOn(OSMController, 'getData').mockResolvedValue({
+      geoJson: nextGeoJson,
+    });
+    const save = jest.spyOn(app.getStorage(), 'save').mockResolvedValue();
+
+    await act(async () => {
+      await app.getDataFromOSM({
+        areaName: area,
+        forceUpdate: true,
+      });
+    });
+
+    expect(save).toHaveBeenCalledWith(
+      area,
+      nextGeoJson,
+      expect.any(Object),
+      expect.objectContaining({ storageKey: expect.any(String) })
+    );
+  });
 });
 
 describe('App layers and PMTiles metadata', () => {
@@ -466,13 +505,42 @@ describe('App layers and PMTiles metadata', () => {
     expect(layers.find((l) => l.name === 'Ciclofaixa').isActive).toBe(false);
   });
 
-  it('keeps debug pairing layers available even when they are not in the PMTiles archive', () => {
+  it('keeps the PMTiles diff overlay available even when it is not in the archive', () => {
     const app = mountApp().current;
     app.pmtilesAvailableLayerNames = new Set(['Ciclovia']);
     const layers = app.initLayers({}, false, true);
-    const debugLayers = layers.filter((l) => l.onlyDebug);
-    expect(debugLayers.length).toBeGreaterThan(0);
-    expect(debugLayers.every((l) => l.isAvailable)).toBe(true);
+    const diff = layers.find((l) => l.name === 'Diff v1→v2');
+    expect(diff).toBeTruthy();
+    expect(diff.isAvailable).toBe(true);
+    expect(mapperLayerNeedsCityGeoJson(diff)).toBe(false);
+  });
+
+  it('hides GeoJSON pairing layers until the analytics sidebar is open', () => {
+    const app = mountApp().current;
+    app.pmtilesAvailableLayerNames = new Set(['Ciclovia']);
+    const closed = app.initLayers({}, false, true, undefined, true, false);
+    const pairingClosed = closed.filter(mapperLayerNeedsCityGeoJson);
+    expect(pairingClosed.length).toBeGreaterThan(0);
+    expect(pairingClosed.every((l) => l.isAvailable === false)).toBe(true);
+    expect(closed.find((l) => l.name === 'Diff v1→v2').isAvailable).toBe(true);
+
+    const open = app.initLayers({}, false, true, undefined, true, true);
+    expect(open.filter(mapperLayerNeedsCityGeoJson).every((l) => l.isAvailable)).toBe(true);
+    expect(open.find((l) => l.name === 'Diff v1→v2').isAvailable).toBe(true);
+    expect(open.find((l) => l.name === 'Diff v1→v2').isActive).toBe(true);
+    expect(open.find((l) => l.name === 'Lado A').isActive).toBe(true);
+    expect(open.find((l) => l.name === 'Lado B').isActive).toBe(true);
+    expect(open.find((l) => l.name === 'Tag + ciclovia').isActive).toBe(true);
+    expect(open.find((l) => l.name === 'Ciclovias sobrepostas').isActive).toBe(true);
+    expect(open.find((l) => l.name === 'Não pareados').isActive).toBe(true);
+    expect(open.find((l) => l.name === 'Pareados').isActive).toBe(false);
+  });
+
+  it('initLayers includes pairing layers and the v1/v2 diff overlay in mapper mode', () => {
+    const app = mountApp().current;
+    const layers = app.initLayers({}, false, false, undefined, true);
+    expect(layers.some((l) => l.onlyDebug)).toBe(true);
+    expect(layers.some((l) => l.name === 'Diff v1→v2')).toBe(true);
   });
 
   it('loadPmtilesAvailableLayers no-ops without a tiles URL', async () => {
@@ -493,6 +561,25 @@ describe('App layers and PMTiles metadata', () => {
       await app.loadPmtilesAvailableLayers();
     });
     expect(app.pmtilesAvailableLayerNames).toBeNull();
+  });
+
+  it('defaults to layers v2 and can switch to v1', () => {
+    const app = mountApp().current;
+    expect(app.state.layersVersion).toBe('v2');
+    expect(app.state.layers.find((l) => l.name === 'Ciclovia').except).toEqual([
+      ['segregated', 'no'],
+    ]);
+    act(() => app.onLayersVersionChange('v1'));
+    expect(app.state.layersVersion).toBe('v1');
+    expect(app.state.layers.find((l) => l.name === 'Ciclovia').except).toBeUndefined();
+    act(() => app.onLayersVersionChange('nope'));
+    expect(app.state.layersVersion).toBe('v2');
+  });
+
+  it('reads layers version from the URL', () => {
+    const app = mountApp('/sao-paulo?layers=v1').current;
+    expect(app.state.layersVersion).toBe('v1');
+    expect(app.state.layers.find((l) => l.name === 'Ciclovia').except).toBeUndefined();
   });
 
   it('onLayersChange updates one layer or a batch', () => {
@@ -531,6 +618,56 @@ describe('App UI handlers', () => {
     act(() => app.closePrivacyPolicyModal());
   });
 
+  it('toggles mapper mode into localStorage without a URL param', () => {
+    const app = mountApp().current;
+    expect(app.state.mapperMode).toBe(false);
+    expect(app.state.layers.some((l) => l.onlyDebug)).toBe(false);
+    expect(app.state.lengthCalculationStrategy).toBe('pessimistic');
+    expect(app.state.parallelDedupeEngine).toBe('geometry_first');
+
+    act(() => app.toggleMapperMode());
+    expect(app.state.mapperMode).toBe(true);
+    expect(app.state.layers.some((l) => l.onlyDebug)).toBe(true);
+    expect(app.state.lengthCalculationStrategy).toBe('pessimistic');
+    expect(app.state.parallelDedupeEngine).toBe('geometry_first');
+    expect(JSON.parse(localStorage.getItem('appstate')).mapperMode).toBe(true);
+    expect(window.location.search).not.toMatch(/mapper/);
+
+    act(() => app.toggleMapperMode());
+    expect(app.state.mapperMode).toBe(false);
+    expect(app.state.lengthCalculationStrategy).toBe('pessimistic');
+    expect(app.state.parallelDedupeEngine).toBe('geometry_first');
+    expect(JSON.parse(localStorage.getItem('appstate')).mapperMode).toBe(false);
+  });
+
+  it('opens the analytics sidebar when mapper mode is turned on', () => {
+    const app = mountApp().current;
+    expect(app.state.isSidebarOpen).toBe(false);
+
+    act(() => app.toggleMapperMode());
+    expect(app.state.mapperMode).toBe(true);
+    expect(app.state.isSidebarOpen).toBe(true);
+
+    act(() => app.toggleMapperMode());
+    expect(app.state.mapperMode).toBe(false);
+    expect(app.state.isSidebarOpen).toBe(true);
+  });
+
+  it('boots mapper and debug with pessimistic + geometry_first', () => {
+    localStorage.setItem('appstate', JSON.stringify({ mapperMode: true }));
+    const mapperApp = mountApp().current;
+    expect(mapperApp.state.mapperMode).toBe(true);
+    expect(mapperApp.state.lengthCalculationStrategy).toBe('pessimistic');
+    expect(mapperApp.state.parallelDedupeEngine).toBe('geometry_first');
+
+    localStorage.setItem('ciclomapa_welcomeSeen:v3', '1');
+    localStorage.removeItem('appstate');
+    const debugApp = mountApp('/sao-paulo?debug=true').current;
+    expect(debugApp.state.debugMode).toBeTruthy();
+    expect(debugApp.state.lengthCalculationStrategy).toBe('pessimistic');
+    expect(debugApp.state.parallelDedupeEngine).toBe('geometry_first');
+  });
+
   it('downloadData notifies when GeoJSON is not ready, otherwise tracks a purchase', () => {
     const app = mountApp().current;
     jest.spyOn(app, 'updateData').mockImplementation(() => {});
@@ -564,6 +701,84 @@ describe('App UI handlers', () => {
     expect(app.getCurrentViewport()).toEqual({ lat: 1, lng: 2, zoom: 9 });
   });
 
+  it('followViewportCity is off by default, persists, and syncs when turned on with analytics open', async () => {
+    const app = mountApp().current;
+    expect(app.state.followViewportCity).toBe(false);
+    const spy = jest.spyOn(app, 'syncAreaWithViewportThenLoadCityData').mockResolvedValue();
+    app.mapComponent = { initBoundaryLayer: jest.fn() };
+
+    await act(async () => {
+      app.setFollowViewportCity(true);
+    });
+    expect(app.state.followViewportCity).toBe(true);
+    expect(JSON.parse(localStorage.getItem('appstate')).followViewportCity).toBe(true);
+    expect(spy).not.toHaveBeenCalled();
+
+    await act(async () => {
+      app.toggleSidebar(true);
+    });
+    spy.mockClear();
+
+    await act(async () => {
+      app.setState({ mapperMode: true });
+    });
+    await act(async () => {
+      app.setFollowViewportCity(true);
+    });
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      app.setFollowViewportCity(false);
+    });
+    expect(app.state.followViewportCity).toBe(false);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('boots followViewportCity from localStorage', () => {
+    localStorage.setItem('appstate', JSON.stringify({ followViewportCity: true }));
+    const app = mountApp().current;
+    expect(app.state.followViewportCity).toBe(true);
+  });
+
+  it('onMapPositionChange schedules a viewport follow only when the option is on', () => {
+    const app = mountApp().current;
+    app.debouncedFollowViewportCity = Object.assign(jest.fn(), { cancel: jest.fn() });
+
+    act(() => app.onMapPositionChange());
+    expect(app.debouncedFollowViewportCity).not.toHaveBeenCalled();
+
+    act(() => app.setState({ followViewportCity: true, mapperMode: true }));
+    act(() => app.onMapPositionChange());
+    expect(app.debouncedFollowViewportCity).toHaveBeenCalledTimes(1);
+  });
+
+  it('maybeFollowViewportCity skips when analytics is closed, zoomed out, or the option is off', () => {
+    const app = mountApp().current;
+    const spy = jest.spyOn(app, 'syncAreaWithViewportThenLoadCityData').mockResolvedValue();
+    jest.spyOn(app, 'getCurrentViewport').mockReturnValue({ lat: -15, lng: -56, zoom: 12 });
+
+    act(() => app.setState({ followViewportCity: false, isSidebarOpen: true }));
+    app.maybeFollowViewportCity();
+    expect(spy).not.toHaveBeenCalled();
+
+    act(() => app.setState({ followViewportCity: true, isSidebarOpen: false }));
+    app.maybeFollowViewportCity();
+    expect(spy).not.toHaveBeenCalled();
+
+    act(() => app.setState({ followViewportCity: true, isSidebarOpen: true }));
+    app.maybeFollowViewportCity();
+    expect(spy).not.toHaveBeenCalled();
+
+    act(() => app.setState({ followViewportCity: true, isSidebarOpen: true, mapperMode: true }));
+    app.getCurrentViewport.mockReturnValue({ lat: -15, lng: -56, zoom: 4 });
+    app.maybeFollowViewportCity();
+    expect(spy).not.toHaveBeenCalled();
+
+    app.getCurrentViewport.mockReturnValue({ lat: -15, lng: -56, zoom: 12 });
+    app.maybeFollowViewportCity();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
   it('onDirectionsPanelToggle and toggleSidebar kick off viewport city sync', async () => {
     const app = mountApp().current;
     const spy = jest.spyOn(app, 'syncAreaWithViewportThenLoadCityData').mockResolvedValue();
@@ -578,5 +793,100 @@ describe('App UI handlers', () => {
     });
     expect(app.state.isSidebarOpen).toBe(true);
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('toggleSidebar hides pairing layers without clearing their visibility', async () => {
+    const app = mountApp().current;
+    jest.spyOn(app, 'syncAreaWithViewportThenLoadCityData').mockResolvedValue();
+    await act(async () => {
+      app.setState({
+        mapperMode: true,
+        isSidebarOpen: true,
+        layers: app.initLayers({}, false, false, undefined, true, true),
+      });
+    });
+    expect(app.state.layers.find((l) => l.name === 'Lado A').isAvailable).toBe(true);
+    expect(app.state.layers.find((l) => l.name === 'Lado A').isActive).toBe(true);
+    expect(app.state.layers.find((l) => l.name === 'Tag + ciclovia').isActive).toBe(true);
+
+    await act(async () => {
+      app.toggleSidebar(false);
+    });
+    const closed = app.state.layers.find((l) => l.name === 'Lado A');
+    expect(closed.isAvailable).toBe(false);
+    expect(closed.isActive).toBe(true);
+    expect(app.state.layers.find((l) => l.name === 'Diff v1→v2').isAvailable).toBe(true);
+
+    await act(async () => {
+      app.toggleSidebar(true);
+    });
+    const reopened = app.state.layers.find((l) => l.name === 'Lado A');
+    expect(reopened.isAvailable).toBe(true);
+    expect(reopened.isActive).toBe(true);
+  });
+
+  it('ignores the engine shortcut outside mapper/debug and with modifiers', () => {
+    const app = mountApp().current;
+    const spy = jest.spyOn(app, 'togglePreviousParallelDedupeEngine');
+    act(() => app.onGlobalKeyDown({ key: 'm', preventDefault: jest.fn(), target: document.body }));
+    expect(spy).not.toHaveBeenCalled();
+
+    act(() => app.toggleMapperMode());
+    act(() =>
+      app.onGlobalKeyDown({
+        key: 'm',
+        ctrlKey: true,
+        preventDefault: jest.fn(),
+        target: document.body,
+      })
+    );
+    expect(spy).not.toHaveBeenCalled();
+
+    act(() => app.onGlobalKeyDown({ key: 'm', preventDefault: jest.fn(), target: document.body }));
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not apply a follow geocode after following is turned off', async () => {
+    let resolveGuess;
+    guessPlaceFromViewport.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveGuess = resolve;
+        })
+    );
+    const app = mountApp().current;
+    jest.spyOn(app, 'getCurrentViewport').mockReturnValue({ lng: -46.6, lat: -23.5, zoom: 14 });
+    const setArea = jest.spyOn(app, 'setArea');
+
+    await act(async () => {
+      app.setState({
+        mapperMode: true,
+        isSidebarOpen: true,
+        followViewportCity: true,
+        area: 'Porto Alegre, Rio Grande do Sul, Brasil',
+      });
+    });
+
+    let pending;
+    await act(async () => {
+      pending = app.syncAreaWithViewportThenLoadCityData({ fromFollow: true });
+    });
+    act(() => app.setFollowViewportCity(false));
+    resolveGuess({ place_name: 'São Paulo, São Paulo, Brasil' });
+    await act(async () => {
+      await pending;
+    });
+    expect(setArea).not.toHaveBeenCalled();
+  });
+
+  it('does not abort a full OSM refresh for a boundary-only backfill', () => {
+    const app = mountApp().current;
+    const abort = jest.fn();
+    app.currentOSMRequest = { abort };
+    app._currentOSMRequestIsFull = true;
+    const result = app.getDataFromOSM({ boundaryOnly: true, areaName: app.state.area });
+    expect(abort).not.toHaveBeenCalled();
+    expect(app.currentOSMRequest).toEqual({ abort });
+    return expect(result).resolves.toBeUndefined();
   });
 });

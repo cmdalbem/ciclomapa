@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
-import { Space, Button, Dropdown, Tooltip } from 'antd';
+import { Space, Button, Dropdown, Tooltip, Switch } from 'antd';
 
 import {
   HiOutlineMap as IconMap,
@@ -15,6 +15,7 @@ import {
   HiUsers as IconCollaborate,
   HiChartPie as IconMetrics,
   HiDotsVertical as IconMore,
+  HiOutlineTag as IconMapper,
 } from 'react-icons/hi';
 
 import { IconContext } from 'react-icons';
@@ -39,6 +40,8 @@ function TopBar(props) {
     embedMode,
     isDarkMode,
     toggleTheme,
+    mapperMode,
+    toggleMapperMode,
     lat,
     lng,
     z,
@@ -83,6 +86,10 @@ function TopBar(props) {
       if (e.key === 'comment') {
         newComment();
       }
+      if (e.key === 'mapper') {
+        toggleMapperMode?.();
+        return;
+      }
       if (e.key === 'edit') {
         if (hasDismissedEditModal) {
           // Read the viewport at click time so the OSM editor opens at the
@@ -102,6 +109,7 @@ function TopBar(props) {
       hasDismissedEditModal,
       newComment,
       openEditModal,
+      toggleMapperMode,
       getViewport,
       currentLat,
       currentLng,
@@ -134,6 +142,17 @@ function TopBar(props) {
         key: 'edit',
         icon: <IconEdit />,
         label: 'Editar mapa',
+      },
+      { type: 'divider' },
+      {
+        key: 'mapper',
+        icon: <IconMapper />,
+        label: (
+          <span className="inline-flex items-center justify-between gap-3 w-full">
+            Modo mapeador
+            <Switch size="small" checked={!!mapperMode} />
+          </span>
+        ),
       },
     ],
     onClick: handleMenuClick,
@@ -172,6 +191,7 @@ function TopBar(props) {
       if (key === 'theme') toggleTheme();
       else if (key === 'about') openAboutModal();
       else if (key === 'metrics') toggleSidebar(true);
+      else if (key === 'mapper') toggleMapperMode?.();
       else handleMenuClick({ key });
     },
   };
@@ -289,7 +309,9 @@ function TopBar(props) {
                   </Button>
 
                   <Dropdown menu={collaborateMenu}>
-                    <Button className="glass-bg">
+                    <Button
+                      className={`glass-bg${mapperMode ? ' topbar-collaborate--mapper' : ''}`}
+                    >
                       <span> Colaborar </span>
                       <IconCaret className="text-green-300" style={{ marginRight: '-3px' }} />
                     </Button>
@@ -347,6 +369,8 @@ TopBar.propTypes = {
   embedMode: PropTypes.bool,
   isDarkMode: PropTypes.bool,
   toggleTheme: PropTypes.func.isRequired,
+  mapperMode: PropTypes.bool,
+  toggleMapperMode: PropTypes.func,
   lat: PropTypes.number,
   lng: PropTypes.number,
   z: PropTypes.number,
@@ -361,6 +385,7 @@ TopBar.propTypes = {
 TopBar.defaultProps = {
   embedMode: false,
   isDarkMode: false,
+  mapperMode: false,
   lat: null,
   lng: null,
   z: null,

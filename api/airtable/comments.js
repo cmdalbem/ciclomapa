@@ -15,13 +15,13 @@ const PRIVATE_FIELDS = ['email'];
 // refetches with ?fresh=1 so that one request bypasses the edge cache.
 const GET_CACHE_CONTROL = 'public, s-maxage=300, stale-while-revalidate=3600';
 const FRESH_CACHE_CONTROL = 'no-store';
-// Pull only recent open rows the map can show, plus the magic tags-list row (id=44).
-// Without this, a ~230-row table is 3 Airtable pages (max pageSize 100) per load,
-// and years-old unverified reports look like current map truth.
+// Public map loads pull recent open rows plus the magic tags-list row (id=44).
+// Mapper mode uses ?all=1 to skip age/status so old reports still show.
 const MAX_COMMENT_AGE_MONTHS = 24;
 // Airtable filter and local post-filter share this calendar-month cutoff
 // (DATEADD(..., 'months') / commentAgeCutoffMs), not a fixed 30-day*N ms window.
 const COMMENTS_FILTER_FORMULA = `OR({id}=${TAGS_LIST_COMMENT_ID},AND({status}='Aberta',{latlong}!='',IS_AFTER({createdAt},DATEADD(TODAY(),-${MAX_COMMENT_AGE_MONTHS},'months'))))`;
+const COMMENTS_ALL_FILTER_FORMULA = `OR({id}=${TAGS_LIST_COMMENT_ID},{latlong}!='')`;
 const COMMENTS_FIELDS = ['id', 'status', 'latlong', 'location', 'text', 'tags', 'createdAt'];
 
 /** UTC ms for DATEADD(TODAY(), -MAX_COMMENT_AGE_MONTHS, 'months'). */
@@ -157,7 +157,25 @@ function isRecentComment(record, now = new Date()) {
   return createdMs > commentAgeCutoffMs(now);
 }
 
-function buildCommentsResponse(records) {
+function commentQueryFlag(req, name) {
+  try {
+    const rawUrl = req.url || '/';
+    const url = new URL(rawUrl, 'http://localhost');
+    return url.searchParams.get(name) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function wantsFreshComments(req) {
+  return commentQueryFlag(req, 'fresh');
+}
+
+function wantsAllComments(req) {
+  return commentQueryFlag(req, 'all');
+}
+
+function buildCommentsResponse(records, { includeAll = false } = {}) {
   const tagsListComment = records.find((c) => c?.fields?.id === TAGS_LIST_COMMENT_ID);
   if (!tagsListComment || !Array.isArray(tagsListComment.fields.tags)) {
     const err = new Error('Failed to load comments');
@@ -165,12 +183,17 @@ function buildCommentsResponse(records) {
     throw err;
   }
 
-  const comments = records
+  let comments = records
     .filter((c) => c?.fields?.id !== TAGS_LIST_COMMENT_ID)
-    .filter((c) => c?.fields?.status === 'Aberta')
-    .filter((c) => c?.fields?.latlong !== undefined)
-    .filter((c) => isRecentComment(c))
-    .map(stripPrivateFields);
+    .filter((c) => c?.fields?.latlong !== undefined);
+
+  if (!includeAll) {
+    comments = comments
+      .filter((c) => c?.fields?.status === 'Aberta')
+      .filter((c) => isRecentComment(c));
+  }
+
+  comments = comments.map(stripPrivateFields);
 
   return {
     comments,
@@ -178,22 +201,13 @@ function buildCommentsResponse(records) {
   };
 }
 
-function wantsFreshComments(req) {
-  try {
-    const rawUrl = req.url || '/';
-    const url = new URL(rawUrl, 'http://localhost');
-    return url.searchParams.get('fresh') === '1';
-  } catch {
-    return false;
-  }
-}
-
 async function handleGet(req, res) {
+  const includeAll = wantsAllComments(req);
   const records = await fetchAirtableTable(COMMENTS_TABLE_NAME, {
-    filterByFormula: COMMENTS_FILTER_FORMULA,
+    filterByFormula: includeAll ? COMMENTS_ALL_FILTER_FORMULA : COMMENTS_FILTER_FORMULA,
     fields: COMMENTS_FIELDS,
   });
-  const payload = buildCommentsResponse(records);
+  const payload = buildCommentsResponse(records, { includeAll });
   const cacheControl = wantsFreshComments(req) ? FRESH_CACHE_CONTROL : GET_CACHE_CONTROL;
   sendJson(res, 200, payload, { 'Cache-Control': cacheControl });
 }

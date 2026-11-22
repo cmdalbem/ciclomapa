@@ -125,6 +125,123 @@
   }
 }
 
+/* Raw OSM tags shown only in debug mode, separated from the translated main grid. */
+.popup-big .popup-debug-tags {
+  border-top: 1px solid color-mix(in srgb, var(--popup-text-color) 18%, transparent);
+}
+
+.popup-big .popup-debug-tags__label {
+  margin-bottom: 0.5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.45;
+  color: #f87171;
+}
+
+.popup-big .popup-debug-tags__more {
+  margin-top: 0.75rem;
+}
+
+.popup-big .popup-debug-tags__more-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  user-select: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.55;
+  list-style: none;
+}
+
+.popup-big .popup-debug-tags__more-summary::-webkit-details-marker {
+  display: none;
+}
+
+.popup-big .popup-debug-tags__more-summary::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid currentColor;
+  opacity: 0.8;
+  transition: transform 120ms ease;
+}
+
+.popup-big .popup-debug-tags__more[open] > .popup-debug-tags__more-summary::before {
+  transform: rotate(90deg);
+}
+
+.popup-big .popup-debug-tags__more-grid {
+  margin-top: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popup-big .popup-debug-tags__more-summary::before {
+    transition: none;
+  }
+}
+
+.popup-big .popup-debug-tag-tooltip {
+  width: 18rem;
+  max-width: min(18rem, 70vw);
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #111827;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.35;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  white-space: normal;
+}
+
+.popup-big .popup-debug-tag-tooltip__summary {
+  color: #fff;
+}
+
+.popup-big .popup-debug-tag-tooltip__values {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.popup-big .popup-debug-tag-tooltip__values-label {
+  margin-bottom: 0.25rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.popup-big .popup-debug-tag-tooltip__list {
+  margin: 0;
+  padding-left: 1rem;
+  list-style: disc;
+}
+
+.popup-big .popup-debug-tag-tooltip__list li + li {
+  margin-top: 0.15rem;
+}
+
+.popup-big .popup-debug-tag-tooltip__arrow {
+  position: absolute;
+  top: 100%;
+  left: 1rem;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid #111827;
+}
+
 /* Footer: bleed past .mapboxgl-popup-content horizontal padding (16px) so the bar reaches panel edges. */
 .popup-big .popup-footer-outer {
   box-sizing: border-box;

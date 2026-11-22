@@ -13,7 +13,11 @@ import {
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 import { slugify } from './utils/utils.js';
 
-import * as layersDefinitions from './config/layers.json';
+import {
+  DEFAULT_LAYERS_VERSION,
+  getLayersDefinition,
+  LAYERS_VERSION_DIFF_LAYER,
+} from './config/layersCatalog.js';
 
 // Browsers forbid setting User-Agent on fetch; Referer is enough for OSM etiquette here.
 const OSM_FETCH_HEADERS = {
@@ -138,7 +142,9 @@ class OSMController {
         `;
     }
 
-    const filteredLayers = layersDefinitions.default.filter((l) => {
+    const filteredLayers = getLayersDefinition(
+      constraints.layersVersion || DEFAULT_LAYERS_VERSION
+    ).filter((l) => {
       if (!l.filters) return false;
       if (l.onlyDebug) return false;
       if (OUTRAS_VIAS_LAYER_NAMES.has(l.name)) return false;
@@ -184,11 +190,23 @@ class OSMController {
         `;
   }
 
-  static getLayers(isDarkMode, isDebugMode) {
-    let layers = layersDefinitions.default.map((layer) => ({
+  static getLayers(isDarkMode, isDebugMode, layersVersion, mapperMode = false) {
+    let layers = getLayersDefinition(layersVersion).map((layer) => ({
       ...layer,
       style: layer.style ? { ...layer.style } : undefined,
     }));
+
+    const includeMapperLayers = Boolean(isDebugMode || mapperMode);
+
+    if (includeMapperLayers) {
+      layers = [
+        {
+          ...LAYERS_VERSION_DIFF_LAYER,
+          style: { ...LAYERS_VERSION_DIFF_LAYER.style },
+        },
+        ...layers,
+      ];
+    }
 
     layers.forEach((l) => {
       // Generate an ID based on name
@@ -212,7 +230,7 @@ class OSMController {
       }
     });
 
-    if (!isDebugMode) {
+    if (!includeMapperLayers) {
       layers = layers.filter((l) => !l.onlyDebug || (l.onlyDebug && l.onlyDebug === false));
     }
 

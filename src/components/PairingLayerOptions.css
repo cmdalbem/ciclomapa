@@ -1,0 +1,79 @@
+.cm-pairing-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - 24px));
+}
+
+.cm-pairing-popover__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cm-pairing-popover__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cm-pairing-popover__desc {
+  display: block;
+  line-height: 1.4;
+  margin-bottom: 0 !important;
+}
+
+.cm-pairing-popover__master {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.cm-pairing-popover__section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin-bottom: 0.15rem;
+}
+
+.cm-pairing-popover__option {
+  display: flex !important;
+  align-items: center;
+  width: 100%;
+  margin-inline: 0 !important;
+  padding: 0.2rem 0;
+}
+
+.cm-pairing-popover__option .ant-checkbox {
+  order: 1;
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}
+
+.cm-pairing-popover__option-body {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.cm-pairing-popover__swatch {
+  width: 1.15rem;
+  height: 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.cm-pairing-popover__name {
+  flex: 1;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
