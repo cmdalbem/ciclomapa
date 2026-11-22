@@ -640,30 +640,6 @@ class AnalyticsSidebar extends Component {
             </button>
           )}
 
-          {(this.props.debugMode || this.props.mapperMode) &&
-            this.props.onFollowViewportCityChange && (
-              <div className="cm-mapper-box mt-4 mb-1" data-mapper-box data-mapper-follow>
-                <div className="cm-mapper-box__label">Modo mapeador</div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    size="small"
-                    checked={!!this.props.followViewportCity}
-                    onChange={this.props.onFollowViewportCityChange}
-                    title="Troca as métricas quando o mapa vai para outro município"
-                    aria-label="Mudar de cidade automaticamente com o mapa"
-                  />
-                  <span
-                    className="text-xs font-normal opacity-60 leading-snug cursor-pointer"
-                    onClick={() =>
-                      this.props.onFollowViewportCityChange(!this.props.followViewportCity)
-                    }
-                  >
-                    Mudar de cidade automaticamente com o mapa
-                  </span>
-                </div>
-              </div>
-            )}
-
           {this.props.cityMetadata && this.props.cityMetadata.pnb_total !== undefined && (
             <Section
               title="PNB"
@@ -876,6 +852,25 @@ class AnalyticsSidebar extends Component {
               <div className="cm-mapper-box mb-4" data-mapper-box>
                 <div className="cm-mapper-box__label">Modo mapeador</div>
                 <div className="flex flex-col gap-2">
+                  {this.props.onFollowViewportCityChange && (
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        size="small"
+                        checked={!!this.props.followViewportCity}
+                        onChange={this.props.onFollowViewportCityChange}
+                        title="Troca as métricas quando o mapa vai para outro município"
+                        aria-label="Mudar de cidade automaticamente com o mapa"
+                      />
+                      <span
+                        className="text-xs font-normal opacity-60 leading-snug cursor-pointer"
+                        onClick={() =>
+                          this.props.onFollowViewportCityChange(!this.props.followViewportCity)
+                        }
+                      >
+                        Mudar cidade automaticamente
+                      </span>
+                    </div>
+                  )}
                   {strategiesDropdown}
                   {parallelDedupeEnginesDropdown}
                 </div>

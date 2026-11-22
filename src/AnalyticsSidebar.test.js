@@ -121,10 +121,9 @@ describe('AnalyticsSidebar', () => {
     const followSwitch = screen.getByRole('switch', {
       name: 'Mudar de cidade automaticamente com o mapa',
     });
-    expect(followSwitch.closest('[data-mapper-follow]')).toBeTruthy();
     expect(
       screen.getByLabelText('Estratégia de cálculo de extensão').closest('[data-mapper-box]')
-    ).not.toContainElement(followSwitch);
+    ).toContainElement(followSwitch);
     fireEvent.click(followSwitch);
     expect(handlers.onFollowViewportCityChange.mock.calls[0][0]).toBe(true);
   });
