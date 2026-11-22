@@ -23,6 +23,7 @@ import {
   HiOutlineChevronDown as IconCaret,
   HiDownload as IconDownload,
   HiDotsVertical as IconMore,
+  HiOutlineDatabase as IconDatabase,
 } from 'react-icons/hi';
 
 import { HiMiniCheckBadge as IconVerified } from 'react-icons/hi2';
@@ -64,6 +65,14 @@ function readLengthsIncludeFromStorage() {
     return null;
   }
 }
+
+const AnalyticsSkeleton = ({ variant = 'md' }) => (
+  <span className={`cm-analytics-skel cm-analytics-skel--${variant}`} aria-hidden />
+);
+
+AnalyticsSkeleton.propTypes = {
+  variant: PropTypes.oneOf(['lg', 'md', 'bar']),
+};
 
 const layerShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
@@ -132,10 +141,10 @@ class AnalyticsSidebar extends Component {
 
   confirmForceUpdate() {
     appModal.confirm({
-      title: 'Atualizar dados do OpenStreetMap?',
+      title: 'Sincronizar dados?',
       content:
-        'Vamos baixar novamente os dados desta cidade. Dependendo do tamanho dela, isso pode levar alguns segundos ou até mais de um minuto.',
-      okText: 'Atualizar',
+        'Vamos sincronizar esta cidade com os dados mais recentes do OpenStreetMap. Dependendo do tamanho isso pode levar alguns minutos.',
+      okText: 'Sincronizar',
       cancelText: 'Cancelar',
       onOk: () => {
         this.props.forceUpdate?.();
@@ -218,6 +227,38 @@ class AnalyticsSidebar extends Component {
     }
 
     const vias = this.getViasMetrics();
+    const hasLengthTotals = Boolean(lengths && vias.rawTotal > 0);
+    const showLengthsSkeleton = Boolean(this.props.loading) && !hasLengthTotals;
+    const poiLayers = layers.filter((l) => l.type === 'poi' && l.name !== 'Comentários');
+    const sourceMenuItems = [
+      this.props.forceUpdate &&
+        this.props.lastUpdate &&
+        !this.props.loading && {
+          key: 'refresh',
+          icon: <IconUpdate className="mt-0.5 self-start" />,
+          label: (
+            <div className="max-w-[220px] py-0.5 leading-snug">
+              <div>Sincronizar</div>
+              <div className="mt-0.5 text-xs font-normal opacity-60 whitespace-normal">
+                Traz as atualizações do OpenStreetMap para esta cidade.
+              </div>
+            </div>
+          ),
+        },
+      this.props.downloadData && {
+        key: 'download',
+        icon: <IconDownload className="mt-0.5 self-start" />,
+        label: (
+          <div className="max-w-[220px] py-0.5 leading-snug">
+            <div>Baixar GeoJSON</div>
+            <div className="mt-0.5 text-xs font-normal opacity-60 whitespace-normal">
+              Dados da infraestrutura cicloviária desta cidade para uso em seus próprios projetos e
+              análises.
+            </div>
+          </div>
+        ),
+      },
+    ].filter(Boolean);
 
     const translateStrategy = {
       random: 'Aleatório',
@@ -248,47 +289,13 @@ class AnalyticsSidebar extends Component {
           this.props.open ? 'analytics-sidebar--open' : 'analytics-sidebar--closed'
         }`}
       >
-        <div className="px-5 pb-5 flex-1">
+        <div className="px-5 pb-5 flex-1" aria-busy={showLengthsSkeleton || undefined}>
           <div className="flex w-full justify-between items-center pt-2 mt-1">
             <div className="flex items-center">
               <h2 className="my-0">Métricas</h2>
             </div>
 
             <div className="flex items-center -mr-2">
-              {this.props.downloadData && (
-                <Dropdown
-                  trigger={['click']}
-                  placement="bottomRight"
-                  menu={{
-                    items: [
-                      {
-                        key: 'download',
-                        icon: <IconDownload className="mt-0.5 self-start" />,
-                        label: (
-                          <div className="max-w-[220px] py-0.5 leading-snug">
-                            <div>Baixar GeoJSON</div>
-                            <div className="mt-0.5 text-xs font-normal opacity-60 whitespace-normal">
-                              Dados da infraestrutura cicloviária desta cidade para uso em seus
-                              próprios projetos e análises.
-                            </div>
-                          </div>
-                        ),
-                      },
-                    ],
-                    onClick: ({ key }) => {
-                      if (key === 'download') this.props.downloadData();
-                    },
-                  }}
-                >
-                  <Button
-                    type="text"
-                    shape="circle"
-                    className="text-xl text-inherit"
-                    icon={<IconMore />}
-                    aria-label="Mais opções"
-                  />
-                </Dropdown>
-              )}
               <Button
                 type="text"
                 shape="circle"
@@ -507,7 +514,7 @@ class AnalyticsSidebar extends Component {
           >
             {this.props.debugMode && strategiesDropdown}
 
-            <div className="relative">
+            <div className={`relative${showLengthsSkeleton ? ' cm-analytics-skel-chart' : ''}`}>
               <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
                 <defs>{this.generatePatterns(layers)}</defs>
                 <Pie
@@ -529,7 +536,12 @@ class AnalyticsSidebar extends Component {
                 className="absolute top-0 w-full flex flex-col items-center justify-center"
                 style={{ height: `${PIE_CHART_WIDTH_PX}px`, width: `${PIE_CHART_WIDTH_PX}px` }}
               >
-                {lengths && vias.rawTotal > 0 ? (
+                {showLengthsSkeleton ? (
+                  <span className="inline-flex flex-col items-center" aria-hidden>
+                    <span className="tracking-wides text-xs opacity-40">TOTAL</span>
+                    <AnalyticsSkeleton variant="lg" />
+                  </span>
+                ) : hasLengthTotals ? (
                   <>
                     <span className="inline-flex flex-col items-center cursor-default">
                       <span className="tracking-wides text-xs">TOTAL</span>
@@ -595,35 +607,97 @@ class AnalyticsSidebar extends Component {
             </div>
 
             <div className="mt-2">
-              {vias.infraLayers.map((l) => (
-                <ViaDataRow
-                  key={l.id}
-                  layer={l}
-                  length={lengths && lengths[l.id]}
-                  rawTotal={vias.rawTotal}
-                  effectiveTotal={vias.effectiveTotal}
-                  included={this.state.lengthsInclude[l.id]}
-                  onToggleInclude={() => this.toggleLengthsInclude(l.id)}
-                />
-              ))}
+              {showLengthsSkeleton
+                ? vias.infraLayers.map((l) => (
+                    <div key={l.id} className="mb-2" aria-hidden>
+                      <div className="flex items-center justify-between px-0 py-0 text-xs font-semibold leading-5">
+                        <span>{l.shortName || l.displayName || l.name}</span>
+                        <AnalyticsSkeleton variant="md" />
+                      </div>
+                      <AnalyticsSkeleton variant="bar" />
+                    </div>
+                  ))
+                : vias.infraLayers.map((l) => (
+                    <ViaDataRow
+                      key={l.id}
+                      layer={l}
+                      length={lengths && lengths[l.id]}
+                      rawTotal={vias.rawTotal}
+                      effectiveTotal={vias.effectiveTotal}
+                      included={this.state.lengthsInclude[l.id]}
+                      onToggleInclude={() => this.toggleLengthsInclude(l.id)}
+                    />
+                  ))}
             </div>
           </Section>
 
           <Section title="Pontos de interesse">
-            {layers
-              .filter((l) => l.type === 'poi' && l.name !== 'Comentários')
-              .map(
-                (l) =>
-                  lengths &&
-                  lengths[l.id] >= 0 && (
-                    <DataLine name={l.name} key={l.name} length={lengths[l.id]} />
-                  )
-              )}
+            {showLengthsSkeleton
+              ? poiLayers.map((l) => (
+                  <div
+                    key={l.id}
+                    className="flex items-center justify-between px-0 py-0 mb-2 text-xs font-semibold leading-5"
+                    aria-hidden
+                  >
+                    <span>{l.name}</span>
+                    <AnalyticsSkeleton variant="md" />
+                  </div>
+                ))
+              : poiLayers.map(
+                  (l) =>
+                    lengths &&
+                    lengths[l.id] >= 0 && (
+                      <DataLine name={l.name} key={l.name} length={lengths[l.id]} />
+                    )
+                )}
           </Section>
         </div>
 
-        {(this.props.loading || this.props.lastUpdate) && (
-          <div className="mt-auto bg-white bg-opacity-5">
+        {(this.props.loading || this.props.lastUpdate || this.props.downloadData) && (
+          <div className="cm-analytics-source">
+            <div className="cm-analytics-source__row">
+              <IconDatabase className="cm-analytics-source__icon" aria-hidden />
+              <p className="cm-analytics-source__copy">
+                {this.props.lastUpdate
+                  ? `Dados obtidos do OpenStreetMap há ${timeSince(this.props.lastUpdate)}.`
+                  : this.props.loading
+                    ? 'Carregando dados desta cidade...'
+                    : ''}
+              </p>
+              <div className="cm-analytics-source__actions">
+                {this.props.loading && (
+                  <Button
+                    type="text"
+                    size="small"
+                    className="cm-analytics-source__cancel"
+                    onClick={this.props.cancelDataLoad}
+                  >
+                    Cancelar
+                  </Button>
+                )}
+                {sourceMenuItems.length > 0 && (
+                  <Dropdown
+                    trigger={['click']}
+                    placement="topRight"
+                    menu={{
+                      items: sourceMenuItems,
+                      onClick: ({ key }) => {
+                        if (key === 'refresh') this.confirmForceUpdate();
+                        if (key === 'download') this.props.downloadData();
+                      },
+                    }}
+                  >
+                    <Button
+                      type="text"
+                      shape="circle"
+                      className="cm-analytics-source__btn"
+                      icon={<IconMore />}
+                      aria-label="Mais opções"
+                    />
+                  </Dropdown>
+                )}
+              </div>
+            </div>
             {this.props.loading && (
               <div className="loader-container h-1">
                 <div className="progress-materializecss">
@@ -631,38 +705,6 @@ class AnalyticsSidebar extends Component {
                 </div>
               </div>
             )}
-            <div className="px-5 py-3 flex flex-col gap-2.5">
-              {this.props.loading ? (
-                <>
-                  <p className="m-0 text-xs leading-snug opacity-70">
-                    Carregando dados desta cidade...
-                  </p>
-                  <Button
-                    type="link"
-                    size="small"
-                    className="self-start p-0 h-auto text-xs"
-                    onClick={this.props.cancelDataLoad}
-                  >
-                    Cancelar
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <p className="m-0 text-xs leading-snug opacity-70">
-                    Dados obtidos do OpenStreetMap há {timeSince(this.props.lastUpdate)}.
-                  </p>
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<IconUpdate />}
-                    className="self-start p-0 h-auto text-xs"
-                    onClick={() => this.confirmForceUpdate()}
-                  >
-                    Atualizar
-                  </Button>
-                </>
-              )}
-            </div>
           </div>
         )}
       </div>

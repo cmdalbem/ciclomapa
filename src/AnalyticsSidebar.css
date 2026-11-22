@@ -32,6 +32,125 @@
   pointer-events: auto;
 }
 
+.cm-analytics-source {
+  margin-top: auto;
+}
+
+.cm-analytics-source__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 20px;
+}
+
+.cm-analytics-source__icon {
+  flex-shrink: 0;
+  width: 1.05em;
+  height: 1.05em;
+  margin-top: 2px;
+  opacity: 0.55;
+}
+
+.cm-analytics-source__copy {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.35;
+  opacity: 0.55;
+}
+
+.cm-analytics-source__actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin: -6px -8px -6px 0;
+}
+
+.cm-analytics-source__btn.ant-btn {
+  color: inherit;
+  opacity: 0.65;
+}
+
+.cm-analytics-source__btn.ant-btn:hover,
+.cm-analytics-source__btn.ant-btn:focus-visible {
+  opacity: 1;
+}
+
+.cm-analytics-source__cancel.ant-btn {
+  color: inherit;
+  opacity: 0.7;
+  font-size: var(--font-size-xs);
+  height: auto;
+  padding: 0 4px;
+}
+
+.cm-analytics-skel {
+  display: inline-block;
+  background: rgba(127, 127, 127, 0.28);
+  border-radius: 999px;
+  animation: cm-analytics-skel-pulse 1.1s ease-in-out infinite;
+}
+
+.theme-light .cm-analytics-skel {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.theme-dark .cm-analytics-skel {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.cm-analytics-skel--lg {
+  width: 5.5rem;
+  height: 1.75rem;
+  margin-top: 0.35rem;
+}
+
+.cm-analytics-skel--md {
+  width: 2.5rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}
+
+.cm-analytics-skel--bar {
+  display: block;
+  width: 100%;
+  height: 0.25rem;
+  margin-top: 0.25rem;
+  border-radius: 999px;
+}
+
+.cm-analytics-skel-chart {
+  animation: cm-analytics-skel-chart-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes cm-analytics-skel-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes cm-analytics-skel-chart-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-analytics-skel,
+  .cm-analytics-skel-chart {
+    animation: none;
+  }
+}
+
 /* Vias row detail popover: slightly higher z-index over sidebar scroll/stacking */
 #analyticsSidebar .analytics-via-detail-popover {
   z-index: 1080;
