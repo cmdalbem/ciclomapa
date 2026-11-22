@@ -100,17 +100,19 @@ describe('OSMController.getQuery', () => {
     expect(q).not.toContain('boundary');
   });
 
-  it('drops the extra street layers for blacklisted areas', () => {
-    const normal = OSMController.getQuery({ areaId: 3600000001 });
-    const berlin = OSMController.getQuery({ areaId: 3600062422 });
-    expect(normal).toContain('"maxspeed"="30"');
-    expect(berlin).not.toContain('"maxspeed"="30"');
-    expect(berlin.length).toBeLessThan(normal.length);
+  it('does not query unused extra street layers (residenciais, trilhas, proibidas)', () => {
+    const q = OSMController.getQuery({ areaId: 3600000001 });
+    expect(q).not.toContain('"maxspeed"="30"');
+    expect(q).not.toContain('"maxspeed"="20"');
+    expect(q).not.toContain('way["highway"="living_street"]');
+    expect(q).not.toContain('way["highway"="track"]');
+    expect(q).not.toContain('["bicycle"="no"]');
+    expect(q).not.toContain('["bicycle"="dismount"]');
   });
 
   it('expands compound filters into chained tag selectors', () => {
     const q = OSMController.getQuery({ areaId: 1 });
-    expect(q).toContain('way["highway"="track"]["bicycle"="designated"](area.a);');
+    expect(q).toContain('way["highway"="footway"]["bicycle"="designated"](area.a);');
   });
 
   it('does not send debug-only ciclomapa tags to Overpass', () => {

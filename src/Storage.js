@@ -318,9 +318,7 @@ class Storage {
     const compressed = this.compressJson(geoJson);
     const slug = this.normalizeStorageKey(storageKeyOverride || name);
 
-    // Calculate optimal chunk size
-    const chunkSize = this.calculateOptimalChunkSize(compressed);
-    const chunks = this.createChunks(compressed, chunkSize);
+    const chunks = this.createChunksByUtf8Bytes(compressed);
 
     console.debug(
       `[Storage] Splitting ${name} into ${chunks.length} chunks (${compressed.length} bytes total)`
@@ -358,16 +356,19 @@ class Storage {
     );
   }
 
-  calculateOptimalChunkSize(compressed) {
-    const availableSize = Storage.MAX_DOCUMENT_SIZE - Storage.ESTIMATED_OVERHEAD;
-    const chunksNeeded = Math.ceil(compressed.length / availableSize);
-    return Math.ceil(compressed.length / chunksNeeded);
-  }
-
-  createChunks(data, chunkSize) {
+  createChunksByUtf8Bytes(data) {
+    const maxBytes = Storage.MAX_DOCUMENT_SIZE - Storage.ESTIMATED_OVERHEAD;
+    const bytes = new TextEncoder().encode(data);
+    const decoder = new TextDecoder();
     const chunks = [];
-    for (let i = 0; i < data.length; i += chunkSize) {
-      chunks.push(data.slice(i, i + chunkSize));
+    let offset = 0;
+    while (offset < bytes.length) {
+      let end = Math.min(offset + maxBytes, bytes.length);
+      if (end < bytes.length) {
+        while (end > offset && (bytes[end] & 0xc0) === 0x80) end--;
+      }
+      chunks.push(decoder.decode(bytes.subarray(offset, end)));
+      offset = end;
     }
     return chunks;
   }

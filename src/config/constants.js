@@ -8,10 +8,6 @@ export const CICLOMAPA_USER_AGENT =
 
 export const OSM_DATA_MAX_AGE_DAYS = 30;
 
-export const BLACKLISTED_CITIES_FOR_EXTRA_LAYERS = [
-  3600062422, // Berlin, Berlin, Germany
-];
-
 export const LENGTH_CALCULATE_STRATEGIES = [
   'random', // Consider a random side each time
   'optimistic', // Consider always the side the longest

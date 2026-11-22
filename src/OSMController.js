@@ -7,8 +7,8 @@ import {
   DEFAULT_BORDER_WIDTH,
   OVERPASS_SERVERS,
   AREA_ID_OVERRIDES,
-  BLACKLISTED_CITIES_FOR_EXTRA_LAYERS,
   ENABLE_BOUNDARY_LAYER,
+  OUTRAS_VIAS_LAYER_NAMES,
 } from './config/constants.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 import { slugify } from './utils/utils.js';
@@ -138,15 +138,10 @@ class OSMController {
         `;
     }
 
-    const isBlacklisted = areaId && BLACKLISTED_CITIES_FOR_EXTRA_LAYERS.includes(areaId);
-    const extraLayersToExclude = ['Baixa velocidade', 'Trilha', 'Proibido'];
-
     const filteredLayers = layersDefinitions.default.filter((l) => {
       if (!l.filters) return false;
       if (l.onlyDebug) return false;
-      if (isBlacklisted && extraLayersToExclude.includes(l.name)) {
-        return false;
-      }
+      if (OUTRAS_VIAS_LAYER_NAMES.has(l.name)) return false;
       return true;
     });
 
