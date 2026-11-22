@@ -76,6 +76,17 @@ import './styles/App.less';
 
 const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 
+// URL `lat`/`lng` farther than this from the slug city's catalog center is treated
+// as leftover from a previous city (picker switched the slug but not the camera).
+const CITY_SLUG_VIEWPORT_MAX_KM = 80;
+
+function approxDistanceKm(lat1, lng1, lat2, lng2) {
+  const midLatRad = ((lat1 + lat2) / 2) * (Math.PI / 180);
+  const dLat = lat1 - lat2;
+  const dLng = (lng1 - lng2) * Math.cos(midLatRad);
+  return Math.hypot(dLat, dLng) * 111.32;
+}
+
 export class App extends Component {
   geoJson;
   _storage = null;
@@ -169,19 +180,21 @@ export class App extends Component {
     console.log('Previous saved state:', prev);
 
     const citySlug = this.getCitySlugFromRoute();
-    const hasExplicitLatLng = this.hasExplicitViewportInURL();
-    const shouldStartFromGlobeView = Boolean(citySlug) && !hasExplicitLatLng;
+    const hasUrlViewport = this.hasExplicitViewportInURL();
+    const hasExplicitLatLng = hasUrlViewport && this.urlViewportFitsRouteCity();
+    const shouldStartFromGlobeView = Boolean(citySlug) && !hasUrlViewport;
 
     // Derive the initial area from the URL slug (for catalog cities) so that a page
     // load/refresh always reflects the slug rather than potentially stale localStorage.
     // For unknown cities, componentDidMount will resolve via Nominatim.
     let initialArea = prev.area || '';
+    let slugStatic = null;
     if (citySlug) {
       const normalizedSlug = decodeURIComponent(citySlug).trim().toLowerCase();
       const canonicalSlug = getCanonicalCitySlug(normalizedSlug) || normalizedSlug;
-      const staticLocation = getPredefinedCityStaticLocation(canonicalSlug);
-      if (staticLocation?.areaLabel) {
-        initialArea = staticLocation.areaLabel;
+      slugStatic = getPredefinedCityStaticLocation(canonicalSlug);
+      if (slugStatic?.areaLabel) {
+        initialArea = slugStatic.areaLabel;
       }
     }
 
@@ -272,9 +285,21 @@ export class App extends Component {
           ? prev.showSatellite
           : false
         : false,
-      zoom: shouldStartFromGlobeView ? 1.8 : parseFloat(urlParams.z) || prev.zoom || DEFAULT_ZOOM,
-      lat: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
-      lng: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
+      zoom: shouldStartFromGlobeView
+        ? 1.8
+        : hasExplicitLatLng && Number.isFinite(parseFloat(urlParams.z))
+          ? parseFloat(urlParams.z)
+          : prev.zoom || DEFAULT_ZOOM,
+      lat: shouldStartFromGlobeView
+        ? 0
+        : hasExplicitLatLng && Number.isFinite(parseFloat(urlParams.lat))
+          ? parseFloat(urlParams.lat)
+          : slugStatic?.lat || prev.lat || DEFAULT_LAT,
+      lng: shouldStartFromGlobeView
+        ? 0
+        : hasExplicitLatLng && Number.isFinite(parseFloat(urlParams.lng))
+          ? parseFloat(urlParams.lng)
+          : slugStatic?.lng || prev.lng || DEFAULT_LNG,
       geoJson: null,
       debugMode: urlParams.debug || false,
       loading: false,
@@ -586,6 +611,22 @@ export class App extends Component {
     return params.has('lat') || params.has('lng') || params.has('z');
   }
 
+  urlViewportFitsRouteCity() {
+    const params = new URLSearchParams(this.props?.location?.search || window.location.search);
+    const lat = parseFloat(params.get('lat'));
+    const lng = parseFloat(params.get('lng'));
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return true;
+    const citySlug = this.getCitySlugFromRoute();
+    if (!citySlug) return true;
+    const canonicalSlug = getCanonicalCitySlug(citySlug) || citySlug;
+    const staticLocation = getPredefinedCityStaticLocation(canonicalSlug);
+    if (!staticLocation) return true;
+    return (
+      approxDistanceKm(lat, lng, staticLocation.lat, staticLocation.lng) <=
+      CITY_SLUG_VIEWPORT_MAX_KM
+    );
+  }
+
   getCitySlugFromRoute() {
     const city = this.props?.router?.params?.city;
     if (!city || city === 'routes') {
@@ -729,17 +770,25 @@ export class App extends Component {
     const hasRouteParams = this.state.fromPoint && this.state.toPoint;
     const nextPath = hasRouteParams ? `/${areaSlug}/routes` : `/${areaSlug}`;
 
-    // Always embed the current viewport in the URL so that when componentDidUpdate
-    // detects the slug change, hasExplicitViewportInURL() returns true and
-    // resolveCitySlugToAreaAndViewport is not called (which would fly the map to the
-    // city centre, overriding the user's current position).
+    // A picker or URL switch must not freeze the previous city's camera into the new
+    // slug. Viewport-driven switches already have the camera over the new city, so
+    // those keep lat/lng and the slug change does not fly back to the city centre.
     const params = new URLSearchParams(window.location.search);
     params.delete(CITY_PICKER_QUERY_PARAM);
-    const viewport = this.getCurrentViewport();
-    if (Number.isFinite(viewport.lat) && Number.isFinite(viewport.lng)) {
-      params.set('lat', viewport.lat.toFixed(7));
-      params.set('lng', viewport.lng.toFixed(7));
-      params.set('z', viewport.zoom.toFixed(2));
+    const stampCurrentCamera = () => {
+      const viewport = this.getCurrentViewport();
+      if (Number.isFinite(viewport.lat) && Number.isFinite(viewport.lng)) {
+        params.set('lat', viewport.lat.toFixed(7));
+        params.set('lng', viewport.lng.toFixed(7));
+        params.set('z', viewport.zoom.toFixed(2));
+      }
+    };
+    if (this._pendingAreaChangeSource && this._pendingAreaChangeSource !== 'viewport') {
+      params.delete('lat');
+      params.delete('lng');
+      params.delete('z');
+    } else {
+      stampCurrentCamera();
     }
     const nextUrl = `${nextPath}${params.toString() ? '?' + params.toString() : ''}`;
 
@@ -2094,8 +2143,14 @@ export class App extends Component {
       // so that programmatic area switches (e.g. auto-switching to match a
       // selected route point) don't wipe out the user's from/to points.
       this._preserveRoutePointsOnAreaChange = options.keepRoutePoints === true;
-      this._pendingAreaChangeSource = options.source || null;
-      this.setState({ area: normalizedArea });
+      this._pendingAreaChangeSource = options.source || 'picker';
+      this.setState({ area: normalizedArea }, () => {
+        if (options.source === 'viewport') return;
+        const slug = this.getCitySlugFromArea(normalizedArea);
+        if (!slug) return;
+        this.lastResolvedCitySlug = null;
+        this.resolveCitySlugToAreaAndViewport(slug);
+      });
     }
   }
 
