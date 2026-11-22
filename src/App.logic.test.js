@@ -136,6 +136,28 @@ describe('App city / slug helpers', () => {
     expect(app.getSrOnlyDocumentTitle()).toBe('São Paulo — CicloMapa');
     expect(app.getPreferredCanonicalSlugForMeta('Pelotas')).toBe('sao-paulo');
   });
+
+  it('ignores a URL camera that belongs to another city than the slug', () => {
+    const app = mountApp('/salvador?lat=-25.4469028&lng=-49.2580746&z=12.27').current;
+    expect(app.state.area).toBe('Salvador, Bahia, Brasil');
+    expect(app.urlViewportFitsRouteCity()).toBe(false);
+    expect(app.state.lat).toBeCloseTo(-12.9822499);
+    expect(app.state.lng).toBeCloseTo(-38.4812772);
+  });
+
+  it('keeps a URL camera that is still in the slug city', () => {
+    const app = mountApp('/salvador?lat=-13.0100000&lng=-38.5100000&z=14').current;
+    expect(app.hasExplicitViewportInURL()).toBe(true);
+    expect(app.state.lat).toBeCloseTo(-13.01);
+    expect(app.state.lng).toBeCloseTo(-38.51);
+  });
+
+  it('picker city change resolves the new city instead of keeping the old camera', () => {
+    const app = mountApp('/curitiba?lat=-25.4295963&lng=-49.2712724&z=12').current;
+    const spy = jest.spyOn(app, 'resolveCitySlugToAreaAndViewport').mockImplementation(() => {});
+    act(() => app.setArea('Salvador, Bahia, Brasil', { source: 'picker' }));
+    expect(spy).toHaveBeenCalledWith('salvador');
+  });
 });
 
 describe('App GeoJSON gate and area sync', () => {
