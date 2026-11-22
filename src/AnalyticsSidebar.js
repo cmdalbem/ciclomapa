@@ -300,7 +300,7 @@ class AnalyticsSidebar extends Component {
     return (
       <div
         id="analyticsSidebar"
-        className={`analytics-sidebar relative w-64 border-l border-opacity-10 border-white h-screen overflow-y-auto glass-bg flex flex-col ${
+        className={`analytics-sidebar relative w-64 border-l border-opacity-10 border-white h-screen overflow-y-auto overflow-x-hidden glass-bg flex flex-col ${
           this.props.open ? 'analytics-sidebar--open' : 'analytics-sidebar--closed'
         }`}
       >
@@ -325,17 +325,13 @@ class AnalyticsSidebar extends Component {
           {this.props.location && (
             <button
               type="button"
-              className="mt-3 mb-2 text-left bg-transparent border-0 p-0 cursor-pointer text-inherit hover:opacity-80 transition-opacity duration-200"
+              className="mt-3 mb-2 block w-full min-w-0 text-left bg-transparent border-0 p-0 cursor-pointer text-inherit hover:opacity-80 transition-opacity duration-200"
               onClick={this.props.openCityPicker}
               aria-label={`Trocar cidade. Cidade atual: ${this.props.location}`}
             >
-              <div className="text-3xl leading-snug uppercase font-heading-display">
-                {this.props.location.split(',')[0]}
-                <IconCaret
-                  className="inline-block opacity-60 ml-[0.15em] align-[-0.08em]"
-                  size="0.55em"
-                  aria-hidden
-                />
+              <div className="flex min-w-0 max-w-full items-center gap-1 text-3xl leading-snug uppercase font-heading-display">
+                <span className="min-w-0">{this.props.location.split(',')[0]}</span>
+                <IconCaret className="flex-shrink-0 opacity-60" size="0.55em" aria-hidden />
               </div>
               <div className="mt-2 text-lg tracking-tight opacity-50 leading-tight">
                 {this.props.location.split(',')[1] && `${this.props.location.split(',')[1]}`}
