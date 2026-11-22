@@ -26,6 +26,7 @@
     "file-saver": "^2.0.5",
     "firebase": "^8.3.1",
     "gh-pages": "^6.3.0",
+    "hyphen": "^1.14.1",
     "idb-keyval": "^6.2.1",
     "jquery": "^3.6.0",
     "lodash.debounce": "^4.0.8",
