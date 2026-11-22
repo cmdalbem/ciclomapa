@@ -54,6 +54,7 @@ import {
   ENABLE_SATELLITE_TOGGLE,
   ENABLE_BOUNDARY_LAYER,
   MAX_RECENT_CITIES,
+  AREA_ID_OVERRIDES,
 } from './config/constants.js';
 import {
   maybeAutoOpenWelcomeAboutModal,
@@ -1308,6 +1309,10 @@ export class App extends Component {
           const boundaryFeatures = incoming.filter(
             (f) => f.properties?.boundary === 'administrative'
           );
+          if (boundaryFeatures.length === 0) {
+            this.setState({ loading: false });
+            return;
+          }
           const withoutOldBoundary = existing.features.filter(
             (f) => f.properties?.boundary !== 'administrative'
           );
@@ -1318,10 +1323,14 @@ export class App extends Component {
 
           this.setState({ geoJson: merged, loading: false });
 
-          if (SAVE_TO_FIREBASE && boundaryFeatures.length > 0) {
+          if (SAVE_TO_FIREBASE) {
             const storageKey = this.getStorageKeyForArea(areaName);
             this.getStorage()
-              .save(areaName, merged, {}, { storageKey })
+              .save(areaName, merged, {}, {
+                storageKey,
+                updatedAt: this.state.dataUpdatedAt,
+                queryAreaId: AREA_ID_OVERRIDES[areaName],
+              })
               .catch((e) => {
                 console.debug('Could not persist city boundary:', e);
               });
@@ -1348,7 +1357,10 @@ export class App extends Component {
           if (SAVE_TO_FIREBASE) {
             const storageKey = this.getStorageKeyForArea(areaName);
             this.getStorage()
-              .save(areaName, newData.geoJson, computedLengths, { storageKey })
+              .save(areaName, newData.geoJson, computedLengths, {
+                storageKey,
+                queryAreaId: AREA_ID_OVERRIDES[areaName],
+              })
               .then(() => {
                 if (!IS_PROD) {
                   appNotification.success({
@@ -1488,8 +1500,11 @@ export class App extends Component {
           !ENABLE_BOUNDARY_LAYER || (cityBoundaryCount >= 1 && cityBoundaryCount <= 2);
         const shouldRefetchForBoundary =
           !hasCityBoundary && !this._boundaryRefetchAttemptedAreas.has(area);
-        const needsFullRefetch = !isFresh;
-        const needsBoundaryBackfill = isFresh && shouldRefetchForBoundary;
+        const expectedQueryAreaId = AREA_ID_OVERRIDES[area];
+        const queryAreaMismatch =
+          expectedQueryAreaId != null && data.queryAreaId !== expectedQueryAreaId;
+        const needsFullRefetch = !isFresh || queryAreaMismatch;
+        const needsBoundaryBackfill = isFresh && !queryAreaMismatch && shouldRefetchForBoundary;
 
         if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
           console.debug('Recalculating lengths...');
