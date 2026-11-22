@@ -128,7 +128,7 @@ describe('AnalyticsSidebar', () => {
     renderSidebar({ loading: true, lengths: {}, lastUpdate: null });
     expect(screen.queryByText('Sem dados')).not.toBeInTheDocument();
     expect(screen.getAllByTestId('analytics-skel-md').length).toBeGreaterThan(0);
-    expect(screen.getByTestId('analytics-skel-lg')).toBeInTheDocument();
+    expect(screen.getByTestId('analytics-skel-lg')).toHaveClass('bg-white', 'bg-opacity-20');
     expect(screen.getByText('Ciclovia')).toBeInTheDocument();
     expect(screen.getByText('Bicicletários')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Alternar inclusão/ })).not.toBeInTheDocument();

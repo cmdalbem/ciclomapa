@@ -72,13 +72,12 @@ const ANALYTICS_SKEL_SIZE = {
   bar: 'block w-full h-1 mt-1',
 };
 
-const AnalyticsSkeleton = ({ variant = 'md', isDarkMode }) => (
+const AnalyticsSkeleton = ({ variant = 'md' }) => (
   <span
     data-testid={`analytics-skel-${variant}`}
     className={[
-      'inline-block rounded-full animate-pulse-2x',
+      'inline-block rounded-full animate-pulse-2x bg-white bg-opacity-20',
       ANALYTICS_SKEL_SIZE[variant],
-      isDarkMode ? 'bg-white bg-opacity-20' : 'bg-black bg-opacity-10',
     ].join(' ')}
     aria-hidden
   />
@@ -86,7 +85,6 @@ const AnalyticsSkeleton = ({ variant = 'md', isDarkMode }) => (
 
 AnalyticsSkeleton.propTypes = {
   variant: PropTypes.oneOf(['lg', 'md', 'bar']),
-  isDarkMode: PropTypes.bool,
 };
 
 const layerShape = PropTypes.shape({
