@@ -1325,17 +1325,29 @@ export class App extends Component {
 
           if (SAVE_TO_FIREBASE) {
             const storageKey = this.getStorageKeyForArea(areaName);
-            this.getStorage()
-              .save(
-                areaName,
-                merged,
-                {},
-                {
-                  storageKey,
-                  updatedAt: this.state.dataUpdatedAt,
-                  queryAreaId: AREA_ID_OVERRIDES[areaName],
+            const storage = this.getStorage();
+            const loadedAt = this.state.dataUpdatedAt;
+            // `merged` carries the roads we loaded earlier. If another client wrote the city
+            // while this request was in flight, saving now would overwrite its newer roads.
+            // If we can't read the stored timestamp, skip the write too.
+            storage
+              .getStoredUpdatedAt(storageKey)
+              .then((storedAt) => {
+                if (storedAt && loadedAt && storedAt.getTime() !== loadedAt.getTime()) {
+                  console.debug('Skipping boundary save: stored roads changed since load');
+                  return;
                 }
-              )
+                return storage.save(
+                  areaName,
+                  merged,
+                  {},
+                  {
+                    storageKey,
+                    updatedAt: loadedAt,
+                    queryAreaId: AREA_ID_OVERRIDES[areaName],
+                  }
+                );
+              })
               .catch((e) => {
                 console.debug('Could not persist city boundary:', e);
               });

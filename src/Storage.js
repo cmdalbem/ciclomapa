@@ -251,6 +251,17 @@ class Storage {
     return lengths;
   }
 
+  // Metadata only. Lets a caller check whether the stored roads changed since it loaded them.
+  async getStoredUpdatedAt(storageKey) {
+    const slug = this.normalizeStorageKey(storageKey);
+    trackCall({ api: API_TYPES.FIREBASE_READ, details: slug });
+    const metadataDoc = await this.db
+      .collection(DEFAULT_CITIES_COLLECTION)
+      .doc(`${slug}_metadata`)
+      .get();
+    return metadataDoc.exists ? (metadataDoc.data()?.updatedAt?.toDate?.() ?? null) : null;
+  }
+
   async save(name, geoJson, lengths, options = {}) {
     trackCall({ api: API_TYPES.FIREBASE_WRITE, details: name });
 
