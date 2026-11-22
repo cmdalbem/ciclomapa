@@ -327,9 +327,13 @@ class AnalyticsSidebar extends Component {
               onClick={this.props.openCityPicker}
               aria-label={`Trocar cidade. Cidade atual: ${this.props.location}`}
             >
-              <div className="flex min-w-0 max-w-full items-center gap-1 text-3xl leading-snug uppercase font-heading-display">
-                <span className="min-w-0">{this.props.location.split(',')[0]}</span>
-                <IconCaret className="flex-shrink-0 opacity-60" size="0.55em" aria-hidden />
+              <div className="text-3xl leading-snug uppercase font-heading-display">
+                {this.props.location.split(',')[0]}
+                <IconCaret
+                  className="inline align-middle opacity-60 ml-0.5"
+                  size="0.55em"
+                  aria-hidden
+                />
               </div>
               <div className="mt-2 text-lg tracking-tight opacity-50 leading-tight">
                 {this.props.location.split(',')[1] && `${this.props.location.split(',')[1]}`}
