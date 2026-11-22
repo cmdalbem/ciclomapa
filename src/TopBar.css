@@ -8,33 +8,6 @@
   margin-right: 4px;
 }
 
-.cm-topbar-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.cm-topbar-brand--embed {
-  opacity: 0.2;
-}
-
-.cm-topbar-beta {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.18em 0.42em 0.22em;
-  border-radius: 0.28rem;
-  font-family: var(--font-heading-display);
-  font-size: 1.05rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  line-height: 1;
-  color: #1a1a1a;
-  background: #facc15;
-  transform: rotate(-8deg);
-  user-select: none;
-}
-
 /* Logo styling for light mode */
 .logo-wordmark {
   display: inline-block;

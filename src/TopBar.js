@@ -185,12 +185,15 @@ function TopBar(props) {
       >
         <div className="flex items-start justify-between text-white w-full">
           {!IS_MOBILE && (
-            <div className={`cm-topbar-brand${embedMode ? ' cm-topbar-brand--embed' : ''}`}>
+            <div className={`flex items-center gap-2 mt-2${embedMode ? ' opacity-20' : ''}`}>
               <a href="/">
                 <Logo className="text-sm" />
               </a>
               {!IS_PROD && (
-                <span className="cm-topbar-beta" title="Esta não é a versão de produção">
+                <span
+                  className="inline-flex items-center px-[0.42em] pt-[0.18em] pb-[0.22em] rounded font-heading-display text-[1.05rem] tracking-wide leading-none text-neutral-900 bg-yellow-400 -rotate-[8deg] select-none"
+                  title="Esta não é a versão de produção"
+                >
                   Beta
                 </span>
               )}

@@ -1,6 +1,8 @@
 import React from 'react';
 import { CITY_SWITCHER_MINI_CHART_LAYER_IDS } from '../config/constants.js';
-import './CityInfraMiniRing.css';
+
+const RING_WRAP_CLASS =
+  'shrink-0 w-6 h-6 leading-none flex items-center justify-center';
 
 export type CityInfraLayer = {
   id: string;
@@ -109,7 +111,7 @@ export function CityInfraMiniRing({
 
   return (
     <div
-      className={['cm-city-infra-ring', className].filter(Boolean).join(' ')}
+      className={[RING_WRAP_CLASS, className].filter(Boolean).join(' ')}
       data-testid={testId || 'city-infra-mini-ring'}
       aria-hidden
     >
@@ -117,7 +119,7 @@ export function CityInfraMiniRing({
         width={CITY_INFRA_RING_SIZE}
         height={CITY_INFRA_RING_SIZE}
         viewBox={`0 0 ${CITY_INFRA_RING_SIZE} ${CITY_INFRA_RING_SIZE}`}
-        className="cm-city-infra-ring__svg"
+        className="block overflow-visible"
       >
         {/* Horizontal mirror so segments grow counter‑clockwise from the chart’s start (toward the left). */}
         <g
@@ -147,21 +149,20 @@ export function CityInfraMiniRingPlaceholder({ className, testId }: RingClassPro
   const r = CITY_INFRA_RING_R;
   return (
     <div
-      className={['cm-city-infra-ring', 'cm-city-infra-ring--placeholder', className]
-        .filter(Boolean)
-        .join(' ')}
+      className={[RING_WRAP_CLASS, className].filter(Boolean).join(' ')}
       data-testid={testId || 'city-infra-ring-placeholder'}
       aria-hidden
     >
-      <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} className="cm-city-infra-ring__svg">
+      <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} className="block overflow-visible">
         <circle
           cx={c}
           cy={c}
           r={r}
           fill="none"
+          stroke="currentColor"
+          strokeOpacity={0.2}
           strokeWidth={CITY_INFRA_RING_STROKE}
           strokeLinecap="round"
-          className="cm-city-infra-ring__placeholder-stroke"
         />
       </svg>
     </div>
