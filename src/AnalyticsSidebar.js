@@ -35,7 +35,10 @@ import {
 } from './config/constants.js';
 import { THIN_SPACE, appendKmUnit } from './utils/routeUtils.js';
 import { timeSince } from './utils/utils.js';
+import { hyphenateSync } from 'hyphen/pt';
 import { appModal } from './antdModal.js';
+
+const SOFT_HYPHEN = '\u00AD';
 
 const PIE_CHART_WIDTH_PX = 207;
 const nullableNumber = PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]);
@@ -273,6 +276,26 @@ class AnalyticsSidebar extends Component {
       },
     ].filter(Boolean);
 
+    const cityName = this.props.location ? this.props.location.split(',')[0].trim() : '';
+    const cityWords = cityName ? cityName.split(/\s+/) : [];
+    const isSingleWordCity = cityWords.length === 1;
+    let cityHead = '';
+    let cityTail = '';
+    if (cityName) {
+      if (isSingleWordCity) {
+        const syllables = hyphenateSync(cityName).split(SOFT_HYPHEN);
+        const glue = Math.min(2, syllables.length);
+        cityHead = syllables.slice(0, -glue).join(SOFT_HYPHEN);
+        if (cityHead) {
+          cityHead += SOFT_HYPHEN;
+        }
+        cityTail = syllables.slice(-glue).join('');
+      } else {
+        cityTail = cityWords[cityWords.length - 1];
+        cityHead = `${cityWords.slice(0, -1).join(' ')} `;
+      }
+    }
+
     const translateStrategy = {
       random: 'Aleatório',
       optimistic: 'Otimista',
@@ -327,13 +350,23 @@ class AnalyticsSidebar extends Component {
               onClick={this.props.openCityPicker}
               aria-label={`Trocar cidade. Cidade atual: ${this.props.location}`}
             >
-              <div className="text-3xl leading-snug uppercase font-heading-display">
-                {this.props.location.split(',')[0]}
-                <IconCaret
-                  className="inline align-middle opacity-60 ml-0.5"
-                  size="0.55em"
-                  aria-hidden
-                />
+              <div
+                className={[
+                  'text-3xl leading-snug uppercase font-heading-display',
+                  isSingleWordCity && 'hyphens-manual',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {cityHead}
+                <span className="whitespace-nowrap">
+                  {cityTail}
+                  <IconCaret
+                    className="inline align-middle opacity-60 ml-0.5"
+                    size="0.55em"
+                    aria-hidden
+                  />
+                </span>
               </div>
               <div className="mt-2 text-lg tracking-tight opacity-50 leading-tight">
                 {this.props.location.split(',')[1] && `${this.props.location.split(',')[1]}`}
