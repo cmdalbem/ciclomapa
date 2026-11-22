@@ -1326,11 +1326,16 @@ export class App extends Component {
           if (SAVE_TO_FIREBASE) {
             const storageKey = this.getStorageKeyForArea(areaName);
             this.getStorage()
-              .save(areaName, merged, {}, {
-                storageKey,
-                updatedAt: this.state.dataUpdatedAt,
-                queryAreaId: AREA_ID_OVERRIDES[areaName],
-              })
+              .save(
+                areaName,
+                merged,
+                {},
+                {
+                  storageKey,
+                  updatedAt: this.state.dataUpdatedAt,
+                  queryAreaId: AREA_ID_OVERRIDES[areaName],
+                }
+              )
               .catch((e) => {
                 console.debug('Could not persist city boundary:', e);
               });
