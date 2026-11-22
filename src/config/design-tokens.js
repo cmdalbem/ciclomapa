@@ -43,9 +43,9 @@ export const mapColors = {
   // Route border (outline): white in dark theme, black in light
   routeBorderDark: '#ffffff',
   routeBorderLight: '#000000',
-  // City admin boundary (Analytics/Routing context) — ciclovia greens, not route outline
-  boundaryLineDark: '#B9FAB7',
-  boundaryLineLight: '#386641',
+  // City admin boundary (Analytics/Routing context) — gray, no hue
+  boundaryLineDark: '#D9D9D9',
+  boundaryLineLight: '#4F4F4F',
   // Text/icon halo (readability on map)
   haloDark: '#1c1a17',
   haloLight: '#ffffff',
