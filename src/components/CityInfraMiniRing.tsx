@@ -1,8 +1,7 @@
 import React from 'react';
 import { CITY_SWITCHER_MINI_CHART_LAYER_IDS } from '../config/constants.js';
 
-const RING_WRAP_CLASS =
-  'shrink-0 w-6 h-6 leading-none flex items-center justify-center';
+const RING_WRAP_CLASS = 'shrink-0 w-6 h-6 leading-none flex items-center justify-center';
 
 export type CityInfraLayer = {
   id: string;
