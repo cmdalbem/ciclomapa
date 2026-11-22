@@ -926,14 +926,10 @@ function CityPickerCityCard({
             <CityInfraMiniRing
               lengthsKmByLayer={city.lengthsKmByLayer}
               infraLayers={infraLayers}
-              className="city-switcher-modal__cityInfraRing"
               testId="city-switcher-mini-pie"
             />
           ) : (
-            <CityInfraMiniRingPlaceholder
-              className="city-switcher-modal__cityInfraRing city-switcher-modal__cityInfraRing--placeholder"
-              testId="city-switcher-ring-placeholder"
-            />
+            <CityInfraMiniRingPlaceholder testId="city-switcher-ring-placeholder" />
           )}
           <div className="city-switcher-modal__cityNameWrap">
             <div className="city-switcher-modal__cityName">{city.name}</div>

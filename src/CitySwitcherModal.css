@@ -409,30 +409,6 @@ a.city-switcher-modal__cityBtn {
   opacity: 1;
 }
 
-/* Ciclovia / ciclofaixa mini ring (stroke arcs only) */
-.city-switcher-modal__cityInfraRing {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  line-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.city-switcher-modal__cityInfraRingSvg {
-  display: block;
-  overflow: visible;
-}
-
-.city-switcher-modal__cityInfraRingPlaceholderStroke {
-  stroke: rgba(255, 255, 255, 0.22);
-}
-
-.theme-light .city-switcher-modal__cityInfraRingPlaceholderStroke {
-  stroke: rgba(0, 0, 0, 0.14);
-}
-
 .city-switcher-modal__cityTotalSkeleton {
   display: inline-block;
   width: 40px;

@@ -127,8 +127,8 @@ describe('AnalyticsSidebar', () => {
   it('shows skeletons instead of Sem dados while city lengths are loading', () => {
     renderSidebar({ loading: true, lengths: {}, lastUpdate: null });
     expect(screen.queryByText('Sem dados')).not.toBeInTheDocument();
-    expect(document.querySelector('.cm-analytics-skel-chart')).not.toBeNull();
-    expect(document.querySelectorAll('.cm-analytics-skel--md').length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('analytics-skel-md').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('analytics-skel-lg')).toBeInTheDocument();
     expect(screen.getByText('Ciclovia')).toBeInTheDocument();
     expect(screen.getByText('Bicicletários')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Alternar inclusão/ })).not.toBeInTheDocument();

@@ -66,12 +66,27 @@ function readLengthsIncludeFromStorage() {
   }
 }
 
-const AnalyticsSkeleton = ({ variant = 'md' }) => (
-  <span className={`cm-analytics-skel cm-analytics-skel--${variant}`} aria-hidden />
+const ANALYTICS_SKEL_SIZE = {
+  lg: 'w-[5.5rem] h-7 mt-1',
+  md: 'w-10 h-3 flex-shrink-0',
+  bar: 'block w-full h-1 mt-1',
+};
+
+const AnalyticsSkeleton = ({ variant = 'md', isDarkMode }) => (
+  <span
+    data-testid={`analytics-skel-${variant}`}
+    className={[
+      'inline-block rounded-full animate-pulse-2x',
+      ANALYTICS_SKEL_SIZE[variant],
+      isDarkMode ? 'bg-white bg-opacity-20' : 'bg-black bg-opacity-10',
+    ].join(' ')}
+    aria-hidden
+  />
 );
 
 AnalyticsSkeleton.propTypes = {
   variant: PropTypes.oneOf(['lg', 'md', 'bar']),
+  isDarkMode: PropTypes.bool,
 };
 
 const layerShape = PropTypes.shape({
