@@ -213,7 +213,7 @@ class AnalyticsSidebar extends Component {
 
   render() {
     const { lengths, layers, isDarkMode } = this.props;
-    const pnbEvolutionData = [2018, 2019, 2020, 2021, 2022, 2023, 2024]
+    const pnbEvolutionData = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
       .map((year) => {
         const value = this.props.cityMetadata && this.props.cityMetadata[`pnb_${year}`];
         return value !== undefined && value !== null
@@ -441,7 +441,7 @@ class AnalyticsSidebar extends Component {
                         <XAxis
                           dataKey="year"
                           tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
-                          ticks={['2018', '2020', '2022', '2024']}
+                          ticks={['2018', '2020', '2022', '2025']}
                           interval={'preserveStartEnd'}
                           margin={{ left: 8, right: 8 }}
                           axisLine={false}
