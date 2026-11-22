@@ -669,22 +669,22 @@ class AnalyticsSidebar extends Component {
         </div>
 
         {(this.props.loading || this.props.lastUpdate || this.props.downloadData) && (
-          <div className="cm-analytics-source">
-            <div className="cm-analytics-source__row">
-              <IconDatabase className="cm-analytics-source__icon" aria-hidden />
-              <p className="cm-analytics-source__copy">
+          <div className="mt-auto">
+            <div className="flex items-start gap-2 px-5 py-3">
+              <IconDatabase className="mt-0.5 h-4 w-4 flex-shrink-0 opacity-50" aria-hidden />
+              <p className="m-0 min-w-0 flex-1 text-xs leading-snug opacity-50">
                 {this.props.lastUpdate
                   ? `Dados obtidos do OpenStreetMap há ${timeSince(this.props.lastUpdate)}.`
                   : this.props.loading
                     ? 'Carregando dados desta cidade...'
                     : ''}
               </p>
-              <div className="cm-analytics-source__actions">
+              <div className="-my-2 -mr-2 flex flex-shrink-0 items-center">
                 {this.props.loading && (
                   <Button
                     type="text"
                     size="small"
-                    className="cm-analytics-source__cancel"
+                    className="h-auto px-1 text-xs text-inherit opacity-70"
                     onClick={this.props.cancelDataLoad}
                   >
                     Cancelar
@@ -705,7 +705,7 @@ class AnalyticsSidebar extends Component {
                     <Button
                       type="text"
                       shape="circle"
-                      className="cm-analytics-source__btn"
+                      className="text-inherit opacity-60 hover:opacity-100"
                       icon={<IconMore />}
                       aria-label="Mais opções"
                     />
