@@ -7,6 +7,14 @@ import turfCircle from '@turf/circle';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 import { layerMatchExpression } from './config/layersCatalog.js';
+import {
+  HALL_GIS_DEBUG_SOURCE,
+  HALL_GIS_SOURCE_ID,
+  hallGisQueryUrl,
+  hallOverlayPaintsAtLocation,
+  tagHallGisDiff,
+} from './config/hallOverlays.js';
+import { tagHallInventories } from './utils/geojsonUtils.js';
 import { startDataLoad, finishDataLoad } from './dev/dataLoadTracker.js';
 import {
   MAPBOX_ACCESS_TOKEN,
@@ -270,6 +278,7 @@ const CICLOMAPA_DATA_SOURCES = new Set([
   PMTILES_SOURCE_ID,
   OSM_GEOJSON_SOURCE_ID,
   DEDUPE_DEBUG_SOURCE_ID,
+  HALL_GIS_SOURCE_ID,
   'commentsSrc',
   'favoritesSrc',
   'route-selected',
@@ -1720,6 +1729,13 @@ class Map extends Component {
       });
     }
 
+    if (this.showsMapperLayers() && !map.getSource(HALL_GIS_SOURCE_ID)) {
+      map.addSource(HALL_GIS_SOURCE_ID, {
+        type: 'geojson',
+        data: EMPTY_GEOJSON,
+      });
+    }
+
     // Layer definitions are ordered from most to least important, but we
     //   want the most important ones to be on top so we add in reverse.
     // Slice is used here to don't destructively reverse the original array.
@@ -1732,6 +1748,8 @@ class Map extends Component {
             if (this.showsMapperLayers()) {
               if (l.debugSource === 'pmtiles') {
                 this.initCyclepathLayerForSource(l, PMTILES_SOURCE_ID);
+              } else if (l.debugSource === HALL_GIS_DEBUG_SOURCE) {
+                this.initCyclepathLayerForSource(l, HALL_GIS_SOURCE_ID, null);
               } else {
                 this.initCyclepathLayerForSource(l, DEDUPE_DEBUG_SOURCE_ID, null);
               }
@@ -1749,6 +1767,7 @@ class Map extends Component {
       this.layersInitialized = true;
       this.setCityGeoJsonData(this.props.data);
       this.setDedupeDebugData(this.props.data);
+      this.loadHallGis();
       this.updateLayerVisibility();
       if (readOverlapXrayEnabled()) applyOverlapXray(map, true);
     }
@@ -2108,8 +2127,10 @@ class Map extends Component {
       this.setDedupeDebugData(this.props.data);
     }
 
-    if (this.props.location !== prevProps.location && this.popups) {
-      this.popups.setSelectedAreaLabel(this.props.location);
+    if (this.props.location !== prevProps.location) {
+      if (this.popups) this.popups.setSelectedAreaLabel(this.props.location);
+      this.setDedupeDebugData(this.props.data);
+      this.loadHallGis();
     }
 
     if (this.props.style !== prevProps.style) {
@@ -2158,7 +2179,11 @@ class Map extends Component {
 
     const layersChanged = this.props.layers.some((layer, index) => {
       const prevLayer = prevProps.layers[index];
-      return !prevLayer || layer.isActive !== prevLayer.isActive;
+      return (
+        !prevLayer ||
+        layer.isActive !== prevLayer.isActive ||
+        layer.isAvailable !== prevLayer.isAvailable
+      );
     });
 
     const routesChanged = this.props.routes !== prevProps.routes;
@@ -2755,7 +2780,63 @@ class Map extends Component {
     if (!this.map || !this.showsMapperLayers()) return;
     const source = this.map.getSource(DEDUPE_DEBUG_SOURCE_ID);
     if (!source) return;
-    source.setData(data && data.type === 'FeatureCollection' ? data : EMPTY_GEOJSON);
+    if (data && data.type === 'FeatureCollection') {
+      tagHallInventories(data, this.props.location);
+      this.applyHallGisDiff(data, this._hallGisData);
+      source.setData(data);
+      return;
+    }
+    source.setData(EMPTY_GEOJSON);
+  }
+
+  applyHallGisDiff(osmGeoJson = this.props.data, gisGeoJson = this._hallGisData) {
+    if (!this.map || !this.showsMapperLayers()) return;
+    const osm = osmGeoJson?.type === 'FeatureCollection' ? osmGeoJson : EMPTY_GEOJSON;
+    const gis = gisGeoJson?.type === 'FeatureCollection' ? gisGeoJson : EMPTY_GEOJSON;
+    tagHallGisDiff(osm, gis, this.props.location);
+    const gisSource = this.map.getSource(HALL_GIS_SOURCE_ID);
+    if (gisSource) gisSource.setData(gis);
+    // Mapbox copies GeoJSON on setData. Tagging this.props.data in place does
+    // not repaint OSM extras unless we push the tagged copy back.
+    const osmSource = this.map.getSource(OSM_GEOJSON_SOURCE_ID);
+    const expectingGis = Boolean(hallGisQueryUrl(this.props.location));
+    if (
+      osmSource &&
+      osmGeoJson?.type === 'FeatureCollection' &&
+      (!expectingGis || gis.features?.length)
+    ) {
+      osmSource.setData(osm);
+    }
+  }
+
+  async loadHallGis() {
+    if (!this.map || !this.showsMapperLayers()) return;
+    const source = this.map.getSource(HALL_GIS_SOURCE_ID);
+    if (!source) return;
+    const url = hallGisQueryUrl(this.props.location);
+    const seq = (this._hallGisSeq = (this._hallGisSeq || 0) + 1);
+    if (!url) {
+      this._hallGisData = EMPTY_GEOJSON;
+      source.setData(EMPTY_GEOJSON);
+      this.applyHallGisDiff(this.props.data, EMPTY_GEOJSON);
+      return;
+    }
+    try {
+      const response = await fetch(url, { credentials: 'omit' });
+      const data = await response.json();
+      if (seq !== this._hallGisSeq) return;
+      const gis = data?.type === 'FeatureCollection' ? data : EMPTY_GEOJSON;
+      this._hallGisData = gis;
+      this.applyHallGisDiff(this.props.data, gis);
+      if (!this.map.getSource(HALL_GIS_SOURCE_ID)) return;
+      source.setData(gis);
+    } catch (err) {
+      if (seq !== this._hallGisSeq) return;
+      console.debug('Hall GIS overlay failed', err);
+      this._hallGisData = EMPTY_GEOJSON;
+      source.setData(EMPTY_GEOJSON);
+      this.applyHallGisDiff(this.props.data, EMPTY_GEOJSON);
+    }
   }
 
   setCityGeoJsonData(data) {
@@ -2782,6 +2863,10 @@ class Map extends Component {
     this.props.layers.forEach((layer) => {
       const hasCityGeoJsonCopy = Boolean(map.getLayer(layer.id + GEOJSON_LAYER_SUFFIX));
       const useCityGeoJson = analyticsWantsGeoJson && hasCityGeoJsonCopy;
+      const layerOn =
+        layer.isActive &&
+        layer.isAvailable !== false &&
+        hallOverlayPaintsAtLocation(layer, this.props.location);
 
       if (layer.type === 'way' || !layer.type) {
         const applyWayVisibility = (suffix, sourceLive) => {
@@ -2798,22 +2883,22 @@ class Map extends Component {
             if (!map.getLayer(id)) return;
             const isRoutesActiveLayer = idx === 1;
             const status = isRoutesActiveLayer
-              ? layer.isActive && hasRoutes && sourceLive
+              ? layerOn && hasRoutes && sourceLive
                 ? 'visible'
                 : 'none'
-              : layer.isActive && !hasRoutes && sourceLive
+              : layerOn && !hasRoutes && sourceLive
                 ? 'visible'
                 : 'none';
             map.setLayoutProperty(id, 'visibility', status);
           });
 
           if (map.getLayer(haloLayerId)) {
-            const showHalo = layer.isActive && !hasRoutes && sourceLive && readOverlapXrayEnabled();
+            const showHalo = layerOn && !hasRoutes && sourceLive && readOverlapXrayEnabled();
             map.setLayoutProperty(haloLayerId, 'visibility', showHalo ? 'visible' : 'none');
           }
 
           if (map.getLayer(arrowLayerId)) {
-            const status = layer.isActive && !hasRoutes && sourceLive ? 'visible' : 'none';
+            const status = layerOn && !hasRoutes && sourceLive ? 'visible' : 'none';
             map.setLayoutProperty(arrowLayerId, 'visibility', status);
           }
         };
@@ -2823,10 +2908,10 @@ class Map extends Component {
       } else if (layer.type === 'poi') {
         const isRouteEndpointPoiIcon = ROUTE_ENDPOINT_VISIBLE_POI_ICONS.includes(layer.icon);
         const activeStatus = !hasRoutes
-          ? layer.isActive
+          ? layerOn
             ? 'visible'
             : 'none'
-          : isRouteEndpointPoiIcon && (fromCoords || toCoords) && layer.isActive
+          : isRouteEndpointPoiIcon && (fromCoords || toCoords) && layerOn
             ? 'visible'
             : 'none';
 

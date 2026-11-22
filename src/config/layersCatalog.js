@@ -3,6 +3,7 @@
 // The v1↔v2 diff overlay is injected in OSMController.getLayers (mapper/debug), not in JSON.
 import layersV1 from './layers.v1.json';
 import layersV2 from './layers.v2.json';
+import { HALL_GIS_DEBUG_SOURCE, isHallMapperGroup } from './hallOverlays.js';
 
 export const DEFAULT_LAYERS_VERSION = 'v2';
 
@@ -74,22 +75,85 @@ export const PAIRING_LAYER_GROUP = {
   id: 'pairing',
   label: 'Pareamento',
   description: 'Vias detectadas como os dois lados da mesma rua, e a confiança desse pareamento.',
+  sections: [
+    { id: 'sides', label: 'Pareados' },
+    { id: 'confidence', label: 'Confiança' },
+  ],
 };
 
-export const PAIRING_LAYER_SECTIONS = [
-  { id: 'sides', label: 'Pareados' },
-  { id: 'confidence', label: 'Confiança' },
-];
+export const PAIRING_LAYER_SECTIONS = PAIRING_LAYER_GROUP.sections;
+
+export const CUIABA_HALL_LAYER_GROUP = {
+  id: 'cuiaba-hall',
+  label: 'Cuiabá 2024',
+  description:
+    'OSM vs a lista da Semob de abril/2024. Match por nome, não geometria oficial. Temporário.',
+  sections: [{ id: 'views', label: 'Visualização' }],
+};
+
+export const SALVADOR_HALL_LAYER_GROUP = {
+  id: 'salvador-hall',
+  label: 'Salvador 2025',
+  description:
+    'OSM vs a lista nomeada da Transalvador (Aliança 2025, 308,6 km). Match por nome, não geometria oficial. Temporário.',
+  sections: [{ id: 'views', label: 'Visualização' }],
+};
+
+export const RIO_HALL_LAYER_GROUP = {
+  id: 'rio-hall',
+  label: 'Rio 2026',
+  description:
+    'OSM ciclovia/ciclofaixa vs CET-Rio exclusiva (~30 m). Oficial bruto continua nos tipos, desligado por padrão. Temporário.',
+  sections: [
+    { id: 'diff', label: 'Diferenças' },
+    { id: 'official', label: 'Oficial' },
+  ],
+};
+
+export const CURITIBA_HALL_LAYER_GROUP = {
+  id: 'curitiba-hall',
+  label: 'Curitiba 2026',
+  description:
+    'OSM ciclovia/ciclofaixa vs IPPUC exclusiva (~30 m). Oficial bruto continua nos tipos, desligado por padrão. Temporário.',
+  sections: [
+    { id: 'diff', label: 'Diferenças' },
+    { id: 'official', label: 'Oficial' },
+  ],
+};
+
+export const FORTALEZA_HALL_LAYER_GROUP = {
+  id: 'fortaleza-hall',
+  label: 'Fortaleza 2026',
+  description:
+    'OSM ciclovia/ciclofaixa vs SCSP 2026 exclusiva (~30 m). Oficial bruto continua nos tipos, desligado por padrão. Temporário.',
+  sections: [
+    { id: 'diff', label: 'Diferenças' },
+    { id: 'official', label: 'Oficial' },
+  ],
+};
+
+export const MAPPER_LAYER_GROUPS = {
+  [PAIRING_LAYER_GROUP.id]: PAIRING_LAYER_GROUP,
+  [CUIABA_HALL_LAYER_GROUP.id]: CUIABA_HALL_LAYER_GROUP,
+  [SALVADOR_HALL_LAYER_GROUP.id]: SALVADOR_HALL_LAYER_GROUP,
+  [RIO_HALL_LAYER_GROUP.id]: RIO_HALL_LAYER_GROUP,
+  [CURITIBA_HALL_LAYER_GROUP.id]: CURITIBA_HALL_LAYER_GROUP,
+  [FORTALEZA_HALL_LAYER_GROUP.id]: FORTALEZA_HALL_LAYER_GROUP,
+};
 
 export function splitMapperLayerMenu(mapperLayers) {
-  const pairingLayers = mapperLayers.filter((l) => l.mapperGroup === PAIRING_LAYER_GROUP.id);
   const items = [];
-  let pairingInserted = pairingLayers.length === 0;
+  const inserted = new Set();
   mapperLayers.forEach((layer) => {
-    if (layer.mapperGroup === PAIRING_LAYER_GROUP.id) {
-      if (!pairingInserted) {
-        items.push({ type: 'pairing', layers: pairingLayers });
-        pairingInserted = true;
+    const group = layer.mapperGroup ? MAPPER_LAYER_GROUPS[layer.mapperGroup] : null;
+    if (group) {
+      if (!inserted.has(group.id)) {
+        items.push({
+          type: 'group',
+          group,
+          layers: mapperLayers.filter((l) => l.mapperGroup === group.id),
+        });
+        inserted.add(group.id);
       }
       return;
     }
@@ -116,9 +180,14 @@ export function pairingGroupSwatchLayers(layers) {
   return layers.filter((l) => l.mapperGroupDefault && l.style?.lineColor);
 }
 
-/** Pairing overlays read `ciclomapa:*` from city GeoJSON. Diff paints from PMTiles. */
+/** Pairing overlays read tags stamped in calculateLayersLengths (Analytics). Diff is PMTiles. Hall overlays tag/load themselves. */
 export function mapperLayerNeedsCityGeoJson(layer) {
-  return Boolean(layer?.onlyDebug && layer.debugSource !== 'pmtiles');
+  return Boolean(
+    layer?.onlyDebug &&
+    layer.debugSource !== 'pmtiles' &&
+    layer.debugSource !== HALL_GIS_DEBUG_SOURCE &&
+    !isHallMapperGroup(layer.mapperGroup)
+  );
 }
 
 export const LAYERS_VERSION_DIFF_LAYER = {

@@ -188,6 +188,40 @@ describe('LayersPanel (desktop)', () => {
     expect(onLayersChange).toHaveBeenCalledWith('nao-pareados', true);
   });
 
+  it('collapses Cuiabá hall layers into one row with views in the hover popover', async () => {
+    renderPanel({
+      layers: [
+        ...layers,
+        way('Prefeitura 2024', true, {
+          id: 'prefeitura-2024',
+          onlyDebug: true,
+          mapperGroup: 'cuiaba-hall',
+          mapperGroupSection: 'views',
+          mapperGroupDefault: true,
+          style: { lineColor: '#16A34A', lineStyle: 'solid' },
+        }),
+        way('OSM fora da lista', true, {
+          id: 'osm-fora-da-lista',
+          onlyDebug: true,
+          mapperGroup: 'cuiaba-hall',
+          mapperGroupSection: 'views',
+          mapperGroupDefault: true,
+          style: { lineColor: '#E11D48', lineStyle: 'dashed' },
+        }),
+      ],
+    });
+
+    const box = screen.getByText('Modo mapeador').closest('[data-mapper-box]');
+    expect(box).toHaveTextContent('Cuiabá 2024');
+    expect(screen.getByRole('button', { name: 'Cuiabá 2024' })).toBeInTheDocument();
+    expect(screen.queryByText('Prefeitura 2024')).not.toBeInTheDocument();
+
+    fireEvent.mouseEnter(screen.getByText('Cuiabá 2024'));
+    expect(await screen.findByText('Prefeitura 2024')).toBeInTheDocument();
+    expect(screen.getByText('Visualização')).toBeInTheDocument();
+    expect(screen.getByText('OSM fora da lista')).toBeInTheDocument();
+  });
+
   it('toggleMobileCollapse flips collapsed state', () => {
     const ref = React.createRef();
     render(<LayersPanel ref={ref} layers={layers} onLayersChange={() => {}} />);

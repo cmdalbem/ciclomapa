@@ -19,6 +19,8 @@ npm-shrinkwrap.json
 
 # CicloMapa-specific
 *.geojson
+!public/hall-gis/
+!public/hall-gis/**/*.geojson
 *.pmtiles
 .pmtiles-work/
 test-results/

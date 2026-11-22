@@ -22,6 +22,7 @@ import {
   mapperLayerNeedsCityGeoJson,
   resolveLayersVersion,
 } from './config/layersCatalog.js';
+import { hallGroupIsAvailable, isHallMapperGroup } from './config/hallOverlays.js';
 import { DEFAULT_PARALLEL_DEDUPE_ENGINE } from './utils/parallelDedupeEngines/engineTypes.js';
 import {
   getCanonicalCitySlug,
@@ -83,6 +84,16 @@ const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 // Below this, "cidade segue o mapa" stays quiet: the viewport is too wide for
 // a useful city guess (globe / state scale).
 const MIN_FOLLOW_VIEWPORT_ZOOM = 10;
+// URL `lat`/`lng` farther than this from the slug city's catalog center is treated
+// as leftover from a previous city (picker switched the slug but not the camera).
+const CITY_SLUG_VIEWPORT_MAX_KM = 80;
+
+function approxDistanceKm(lat1, lng1, lat2, lng2) {
+  const midLatRad = ((lat1 + lat2) / 2) * (Math.PI / 180);
+  const dLat = lat1 - lat2;
+  const dLng = (lng1 - lng2) * Math.cos(midLatRad);
+  return Math.hypot(dLat, dLng) * 111.32;
+}
 
 export class App extends Component {
   geoJson;
@@ -219,19 +230,21 @@ export class App extends Component {
     console.log('Previous saved state:', prev);
 
     const citySlug = this.getCitySlugFromRoute();
-    const hasExplicitLatLng = this.hasExplicitViewportInURL();
-    const shouldStartFromGlobeView = Boolean(citySlug) && !hasExplicitLatLng;
+    const hasUrlViewport = this.hasExplicitViewportInURL();
+    const hasExplicitLatLng = hasUrlViewport && this.urlViewportFitsRouteCity();
+    const shouldStartFromGlobeView = Boolean(citySlug) && !hasUrlViewport;
 
     // Derive the initial area from the URL slug (for catalog cities) so that a page
     // load/refresh always reflects the slug rather than potentially stale localStorage.
     // For unknown cities, componentDidMount will resolve via Nominatim.
     let initialArea = prev.area || '';
+    let slugStatic = null;
     if (citySlug) {
       const normalizedSlug = decodeURIComponent(citySlug).trim().toLowerCase();
       const canonicalSlug = getCanonicalCitySlug(normalizedSlug) || normalizedSlug;
-      const staticLocation = getPredefinedCityStaticLocation(canonicalSlug);
-      if (staticLocation?.areaLabel) {
-        initialArea = staticLocation.areaLabel;
+      slugStatic = getPredefinedCityStaticLocation(canonicalSlug);
+      if (slugStatic?.areaLabel) {
+        initialArea = slugStatic.areaLabel;
       }
     }
 
@@ -328,9 +341,21 @@ export class App extends Component {
           ? prev.showSatellite
           : false
         : false,
-      zoom: shouldStartFromGlobeView ? 1.8 : parseFloat(urlParams.z) || prev.zoom || DEFAULT_ZOOM,
-      lat: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
-      lng: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
+      zoom: shouldStartFromGlobeView
+        ? 1.8
+        : hasExplicitLatLng && Number.isFinite(parseFloat(urlParams.z))
+          ? parseFloat(urlParams.z)
+          : prev.zoom || DEFAULT_ZOOM,
+      lat: shouldStartFromGlobeView
+        ? 0
+        : hasExplicitLatLng && Number.isFinite(parseFloat(urlParams.lat))
+          ? parseFloat(urlParams.lat)
+          : slugStatic?.lat || prev.lat || DEFAULT_LAT,
+      lng: shouldStartFromGlobeView
+        ? 0
+        : hasExplicitLatLng && Number.isFinite(parseFloat(urlParams.lng))
+          ? parseFloat(urlParams.lng)
+          : slugStatic?.lng || prev.lng || DEFAULT_LNG,
       geoJson: null,
       debugMode: isDebugMode,
       mapperMode,
@@ -342,7 +367,8 @@ export class App extends Component {
         isDebugMode,
         layersVersion,
         mapperMode,
-        isSidebarOpen
+        isSidebarOpen,
+        initialArea
       ),
       layersVersion,
       lengths: {},
@@ -593,6 +619,7 @@ export class App extends Component {
           this.debouncedFollowViewportCity?.cancel?.();
           return;
         }
+        if (this.shouldLoadCityGeoJson()) this.ensureCityDataLoaded();
         if (!IS_MOBILE && !this.state.isSidebarOpen) {
           this.toggleSidebar(true);
         }
@@ -629,7 +656,6 @@ export class App extends Component {
     );
 
     let savedActive = prevLayersStates;
-    const restoringFromLiveLayers = Array.isArray(prevLayersStates);
     if (Array.isArray(prevLayersStates)) {
       savedActive = {};
       prevLayersStates.forEach((l) => {
@@ -637,12 +663,9 @@ export class App extends Component {
       });
     }
 
-    // Merge with locally saved state. Mapper overlays always boot from JSON
-    // defaults; session toggles still stick when we re-init from live layers.
     if (savedActive && Object.keys(savedActive).length > 0) {
       layers.forEach((l) => {
         if (savedActive[l.id] === undefined) return;
-        if (l.onlyDebug && !restoringFromLiveLayers) return;
         l.isActive = savedActive[l.id];
       });
     }
@@ -654,11 +677,7 @@ export class App extends Component {
     const availableNames = this.pmtilesAvailableLayerNames;
     layers.forEach((l) => {
       if (l.onlyDebug) {
-        if (mapperLayerNeedsCityGeoJson(l)) {
-          l.isAvailable = pairingLive;
-        } else {
-          l.isAvailable = true;
-        }
+        l.isAvailable = mapperLayerNeedsCityGeoJson(l) ? pairingLive : true;
         return;
       }
       if (!l.filters) return; // e.g. comments: not sourced from the tiles at all
@@ -694,7 +713,9 @@ export class App extends Component {
         if (mapperLayerNeedsCityGeoJson(l)) {
           return { ...l, isAvailable: this.mapperGeoJsonLayersAreLive() };
         }
-        if (l.onlyDebug) return { ...l, isAvailable: true };
+        if (l.onlyDebug) {
+          return { ...l, isAvailable: true };
+        }
         if (!l.filters) return l;
         const isAvailable = this.pmtilesAvailableLayerNames.has(l.name);
         return { ...l, isAvailable, isActive: isAvailable && l.isActive };
@@ -769,6 +790,22 @@ export class App extends Component {
   hasExplicitViewportInURL() {
     const params = new URLSearchParams(this.props?.location?.search || window.location.search);
     return params.has('lat') || params.has('lng') || params.has('z');
+  }
+
+  urlViewportFitsRouteCity() {
+    const params = new URLSearchParams(this.props?.location?.search || window.location.search);
+    const lat = parseFloat(params.get('lat'));
+    const lng = parseFloat(params.get('lng'));
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return true;
+    const citySlug = this.getCitySlugFromRoute();
+    if (!citySlug) return true;
+    const canonicalSlug = getCanonicalCitySlug(citySlug) || citySlug;
+    const staticLocation = getPredefinedCityStaticLocation(canonicalSlug);
+    if (!staticLocation) return true;
+    return (
+      approxDistanceKm(lat, lng, staticLocation.lat, staticLocation.lng) <=
+      CITY_SLUG_VIEWPORT_MAX_KM
+    );
   }
 
   getCitySlugFromRoute() {
@@ -914,17 +951,25 @@ export class App extends Component {
     const hasRouteParams = this.state.fromPoint && this.state.toPoint;
     const nextPath = hasRouteParams ? `/${areaSlug}/routes` : `/${areaSlug}`;
 
-    // Always embed the current viewport in the URL so that when componentDidUpdate
-    // detects the slug change, hasExplicitViewportInURL() returns true and
-    // resolveCitySlugToAreaAndViewport is not called (which would fly the map to the
-    // city centre, overriding the user's current position).
+    // Viewport-follow already has the camera over the new city: keep lat/lng so
+    // the slug change does not fly back to the city centre. A picker/URL switch
+    // must not freeze the previous city's camera into the new slug.
     const params = new URLSearchParams(window.location.search);
     params.delete(CITY_PICKER_QUERY_PARAM);
-    const viewport = this.getCurrentViewport();
-    if (Number.isFinite(viewport.lat) && Number.isFinite(viewport.lng)) {
-      params.set('lat', viewport.lat.toFixed(7));
-      params.set('lng', viewport.lng.toFixed(7));
-      params.set('z', viewport.zoom.toFixed(2));
+    const stampCurrentCamera = () => {
+      const viewport = this.getCurrentViewport();
+      if (Number.isFinite(viewport.lat) && Number.isFinite(viewport.lng)) {
+        params.set('lat', viewport.lat.toFixed(7));
+        params.set('lng', viewport.lng.toFixed(7));
+        params.set('z', viewport.zoom.toFixed(2));
+      }
+    };
+    if (this._pendingAreaChangeSource && this._pendingAreaChangeSource !== 'viewport') {
+      params.delete('lat');
+      params.delete('lng');
+      params.delete('z');
+    } else {
+      stampCurrentCamera();
     }
     const nextUrl = `${nextPath}${params.toString() ? '?' + params.toString() : ''}`;
 
@@ -1763,9 +1808,10 @@ export class App extends Component {
   }
 
   // Map rendering is PMTiles by default. Per-city GeoJSON is for routing coverage,
-  // analytics/km stats, the city boundary outline, GeoJSON export, and painting the
-  // map from that extract while the analytics sidebar is open. Call this right
-  // before any of those features are used instead of loading eagerly on every city change.
+  // analytics/km stats, the city boundary outline, GeoJSON export, mapper overlays
+  // that tag that extract, and painting the map from it while Analytics is open.
+  // Call this right before any of those features are used instead of loading
+  // eagerly on every city change.
   ensureCityDataLoaded() {
     const area = this.state.area;
     if (!area || this._geoJsonLoadedArea === area || this._geoJsonLoadingArea === area) {
@@ -1879,7 +1925,9 @@ export class App extends Component {
       newLayers[layerIndex] = { ...newLayers[layerIndex], isActive: newVal };
     }
 
-    this.setState({ layers: newLayers });
+    this.setState({ layers: newLayers }, () => {
+      if (this.shouldLoadCityGeoJson()) this.ensureCityDataLoaded();
+    });
   }
 
   onLayersVersionChange(version) {
@@ -1984,8 +2032,13 @@ export class App extends Component {
       this.abortCurrentOSMRequest();
       this._geoJsonLoadedArea = null;
       this._geoJsonLoadingArea = null;
-      this.setState({ geoJson: null, lengths: {}, dataUpdatedAt: null, loading: false });
-      if (this.needsCityGeoJsonContext()) {
+      this.setState({
+        geoJson: null,
+        lengths: {},
+        dataUpdatedAt: null,
+        loading: false,
+      });
+      if (this.shouldLoadCityGeoJson()) {
         this.ensureCityDataLoaded();
       }
 
@@ -2215,7 +2268,7 @@ export class App extends Component {
 
     // Sidebar/routes open state can be restored from localStorage before any toggle
     // fires — kick off deferred GeoJSON (boundary, metrics, freshness) in that case.
-    if (this.needsCityGeoJsonContext()) {
+    if (this.shouldLoadCityGeoJson()) {
       this.ensureCityDataLoaded();
     }
 
@@ -2344,6 +2397,23 @@ export class App extends Component {
     return (!IS_MOBILE && this.state.isSidebarOpen) || this._isDirectionsPanelOpen;
   }
 
+  // OSM hall overlays paint from the city extract and tag names themselves, so they
+  // should fetch GeoJSON even with Analytics closed. Boundary/stats still use
+  // needsCityGeoJsonContext so closing the sidebar does not keep the city mask on.
+  shouldLoadCityGeoJson() {
+    if (this.needsCityGeoJsonContext()) return true;
+    if (IS_MOBILE || this.state.embedMode) return false;
+    if (!(this.state.mapperMode || this.state.debugMode)) return false;
+    return Boolean(
+      this.state.layers?.some(
+        (l) =>
+          l.isActive &&
+          isHallMapperGroup(l.mapperGroup) &&
+          hallGroupIsAvailable(l.mapperGroup, this.state.area)
+      )
+    );
+  }
+
   toggleDirectionsPanel() {
     this.directionsPanel?.toggleCollapse?.();
   }
@@ -2367,8 +2437,14 @@ export class App extends Component {
       // so that programmatic area switches (e.g. auto-switching to match a
       // selected route point) don't wipe out the user's from/to points.
       this._preserveRoutePointsOnAreaChange = options.keepRoutePoints === true;
-      this._pendingAreaChangeSource = options.source || null;
-      this.setState({ area: normalizedArea });
+      this._pendingAreaChangeSource = options.source || 'picker';
+      this.setState({ area: normalizedArea }, () => {
+        if (options.source === 'viewport') return;
+        const slug = this.getCitySlugFromArea(normalizedArea);
+        if (!slug) return;
+        this.lastResolvedCitySlug = null;
+        this.resolveCitySlugToAreaAndViewport(slug);
+      });
     }
   }
 

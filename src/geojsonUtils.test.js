@@ -3,6 +3,8 @@ import {
   angleToEmojiDirection,
   calculateLayersLengths,
   computeTypologies,
+  tagCuiabaHallInventory,
+  tagHallInventories,
 } from './utils/geojsonUtils.js';
 import {
   getLayersDefinition,
@@ -262,6 +264,87 @@ describe('layers catalog version ids', () => {
     expect(resolveLayersVersion('toString')).toBe('v2');
     expect(resolveLayersVersion('v1')).toBe('v1');
     expect(resolveLayersVersion('nope')).toBe('v2');
+  });
+});
+
+describe('tagCuiabaHallInventory', () => {
+  const way = (properties) => ({
+    type: 'Feature',
+    properties,
+    geometry: {
+      type: 'LineString',
+      coordinates: [
+        [0, 0],
+        [0.01, 0],
+      ],
+    },
+  });
+
+  it('tags Semob list, Contorno Leste and leftover ciclovia only in Cuiabá', () => {
+    const data = {
+      type: 'FeatureCollection',
+      features: [
+        way({ name: 'Avenida das Torres', type: 'Ciclofaixa' }),
+        way({ name: 'Ciclovia Contorno Leste', type: 'Ciclovia' }),
+        way({ name: 'Rodovia dos Coxiponés', type: 'Ciclofaixa' }),
+        way({ name: 'Loja X', type: 'Lojas & oficinas' }),
+      ],
+    };
+    tagCuiabaHallInventory(data, 'Cuiabá, Mato Grosso, Brasil');
+    expect(data.features[0].properties['ciclomapa:cuiaba_hall']).toBe('list');
+    expect(data.features[1].properties['ciclomapa:cuiaba_hall']).toBe('announced');
+    expect(data.features[2].properties['ciclomapa:cuiaba_hall']).toBe('extra');
+    expect(data.features[3].properties['ciclomapa:cuiaba_hall']).toBeUndefined();
+  });
+
+  it('does not tag other cities even when names collide', () => {
+    const data = {
+      type: 'FeatureCollection',
+      features: [way({ name: 'Avenida das Torres', type: 'Ciclofaixa' })],
+    };
+    tagCuiabaHallInventory(data, 'São Paulo, São Paulo, Brasil');
+    expect(data.features[0].properties['ciclomapa:cuiaba_hall']).toBeUndefined();
+  });
+});
+
+describe('tagHallInventories Salvador', () => {
+  const way = (properties) => ({
+    type: 'Feature',
+    properties,
+    geometry: {
+      type: 'LineString',
+      coordinates: [
+        [0, 0],
+        [0.01, 0],
+      ],
+    },
+  });
+
+  it('tags Transalvador list vs leftover ciclovia only in Salvador', () => {
+    const data = {
+      type: 'FeatureCollection',
+      features: [
+        way({ name: 'Avenida Afrânio Peixoto', type: 'Ciclovia' }),
+        way({ name: 'Orla Suburbana', type: 'Ciclofaixa' }),
+        way({ name: 'Alguma rua sem lista', type: 'Ciclovia' }),
+        way({ name: 'Loja X', type: 'Lojas & oficinas' }),
+      ],
+    };
+    tagHallInventories(data, 'Salvador, Bahia, Brasil');
+    expect(data.features[0].properties['ciclomapa:salvador_hall']).toBe('list');
+    expect(data.features[1].properties['ciclomapa:salvador_hall']).toBe('list');
+    expect(data.features[2].properties['ciclomapa:salvador_hall']).toBe('extra');
+    expect(data.features[3].properties['ciclomapa:salvador_hall']).toBeUndefined();
+    expect(data.features[0].properties['ciclomapa:cuiaba_hall']).toBeUndefined();
+  });
+
+  it('does not tag Salvador names outside Salvador', () => {
+    const data = {
+      type: 'FeatureCollection',
+      features: [way({ name: 'Avenida Afrânio Peixoto', type: 'Ciclovia' })],
+    };
+    tagHallInventories(data, 'São Paulo, São Paulo, Brasil');
+    expect(data.features[0].properties['ciclomapa:salvador_hall']).toBeUndefined();
   });
 });
 

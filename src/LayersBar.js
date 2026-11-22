@@ -12,7 +12,6 @@ import { Popover } from 'antd';
 import LayersVersionSwitch from './components/LayersVersionSwitch';
 import PairingLayerOptions from './components/PairingLayerOptions';
 import {
-  PAIRING_LAYER_GROUP,
   pairingGroupIsActive,
   pairingGroupSwatchLayers,
   splitMapperLayerMenu,
@@ -308,25 +307,26 @@ class LayersBar extends Component {
                 <LayersVersionSwitch value={layersVersion} onChange={onLayersVersionChange} />
               )}
               {mapperMenu.map((item) =>
-                item.type === 'pairing' ? (
+                item.type === 'group' ? (
                   <Popover
-                    key={PAIRING_LAYER_GROUP.id}
+                    key={item.group.id}
                     trigger="click"
                     placement="bottomLeft"
                     content={
                       <PairingLayerOptions
+                        group={item.group}
                         layers={item.layers}
                         onLayersChange={this.props.onLayersChange}
                       />
                     }
                   >
                     {this.renderLayerButton({
-                      id: PAIRING_LAYER_GROUP.id,
+                      id: item.group.id,
                       isActive: pairingGroupIsActive(item.layers),
                       lineColors: pairingGroupSwatchLayers(item.layers).map(
                         (layer) => layer.style.lineColor
                       ),
-                      label: PAIRING_LAYER_GROUP.label,
+                      label: item.group.label,
                     })}
                   </Popover>
                 ) : (

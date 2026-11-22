@@ -3,7 +3,6 @@ import { Checkbox, Switch, Typography } from 'antd';
 
 import {
   PAIRING_LAYER_GROUP,
-  PAIRING_LAYER_SECTIONS,
   pairingGroupIsActive,
   pairingGroupToggleChanges,
 } from '../config/layersCatalog.js';
@@ -26,7 +25,15 @@ export type PairingLayer = {
 
 type LayerChange = { id: string; isActive: boolean };
 
+type MapperLayerGroup = {
+  id: string;
+  label: string;
+  description: string;
+  sections?: { id: string; label: string }[];
+};
+
 type PairingLayerOptionsProps = {
+  group?: MapperLayerGroup;
   layers: PairingLayer[];
   onLayersChange: (idOrChanges: string | LayerChange[], newVal?: boolean) => void;
 };
@@ -41,8 +48,13 @@ function waySwatchStyle(style?: PairingLayer['style']): React.CSSProperties {
   };
 }
 
-export default function PairingLayerOptions({ layers, onLayersChange }: PairingLayerOptionsProps) {
+export default function PairingLayerOptions({
+  group = PAIRING_LAYER_GROUP,
+  layers,
+  onLayersChange,
+}: PairingLayerOptionsProps) {
   const anyOn = pairingGroupIsActive(layers);
+  const sections = group.sections || [];
 
   const renderOption = (layer: PairingLayer) => (
     <Checkbox
@@ -65,8 +77,8 @@ export default function PairingLayerOptions({ layers, onLayersChange }: PairingL
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="cm-pairing-popover__header">
-        <div className="cm-pairing-popover__title">{PAIRING_LAYER_GROUP.label}</div>
-        <Text className="cm-pairing-popover__desc">{PAIRING_LAYER_GROUP.description}</Text>
+        <div className="cm-pairing-popover__title">{group.label}</div>
+        <Text className="cm-pairing-popover__desc">{group.description}</Text>
       </div>
 
       <div className="cm-pairing-popover__master">
@@ -74,12 +86,12 @@ export default function PairingLayerOptions({ layers, onLayersChange }: PairingL
         <Switch
           size="small"
           checked={anyOn}
-          aria-label="Mostrar pareamento no mapa"
+          aria-label={`Mostrar ${group.label} no mapa`}
           onChange={() => onLayersChange(pairingGroupToggleChanges(layers))}
         />
       </div>
 
-      {PAIRING_LAYER_SECTIONS.map((section) => {
+      {sections.map((section) => {
         const sectionLayers = layers.filter((layer) => layer.mapperGroupSection === section.id);
         if (!sectionLayers.length) return null;
         return (
@@ -90,10 +102,7 @@ export default function PairingLayerOptions({ layers, onLayersChange }: PairingL
         );
       })}
       {layers
-        .filter(
-          (layer) =>
-            !PAIRING_LAYER_SECTIONS.some((section) => section.id === layer.mapperGroupSection)
-        )
+        .filter((layer) => !sections.some((section) => section.id === layer.mapperGroupSection))
         .map(renderOption)}
     </div>
   );

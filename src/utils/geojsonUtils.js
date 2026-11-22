@@ -14,6 +14,7 @@ import {
   applyOppositeOnewayLanes,
   applyOverlappingDedicatedCycleways,
 } from './parallelDedupeEngines/dual_mapped.js';
+import { tagSalvadorHallInventory } from '../config/hallOverlays.js';
 
 export function gzipDecompress(data) {
   return JSON.parse(pako.inflate(data), { to: 'string' });
@@ -136,6 +137,93 @@ export function computeTypologies(data, layers) {
   });
 
   return data;
+}
+
+const CUIABA_HALL_PROP = 'ciclomapa:cuiaba_hall';
+const CUIABA_HALL_COUNTED_TYPES = new Set(['Ciclovia', 'Ciclofaixa']);
+// Semob Apr 2024 inventory + the Contorno Leste announcement. Name match only.
+const CUIABA_HALL_LIST_NEEDLES = [
+  'vuolo',
+  'tancredo',
+  'avenida do cpa',
+  'ciclovia avenida do cpa',
+  'das torres',
+  'tatsumi',
+  'koga',
+  'ciclovia v2',
+  'avenida v-2',
+  'avenida v2',
+  'emanuel pinheiro',
+  'palmiro',
+  'erico',
+  'preza',
+  'rui barbosa',
+  'orla do porto',
+  'manoel jose de arruda',
+  'parque do barbado',
+  'arquimedes',
+  'estrada do moinho',
+  'elder candia',
+  'helder candia',
+  'ciriaco candia',
+  'mt-010',
+  'mt 010',
+  'parque das aguas',
+  'parque da aguas',
+  'dante',
+  'trabalhador',
+];
+const CUIABA_HALL_ANNOUNCED_NEEDLES = ['contorno leste'];
+
+function foldHallText(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function cuiabaHallBlob(properties) {
+  if (!properties) return '';
+  return foldHallText(
+    [properties.name, properties.street, properties['addr:street'], properties.ref]
+      .filter(Boolean)
+      .join(' | ')
+  );
+}
+
+function hallNeedlesHit(blob, needles) {
+  return needles.some((n) => blob.includes(n));
+}
+
+export function isCuiabaHallLocation(location) {
+  return foldHallText(location).includes('cuiaba');
+}
+
+/** Temporary Cuiabá overlay: tag OSM ways that look like Semob's named inventory. */
+export function tagCuiabaHallInventory(geoJson, location) {
+  if (!geoJson?.features?.length) return geoJson;
+  const inCuiaba = isCuiabaHallLocation(location);
+  for (const feature of geoJson.features) {
+    const properties = feature.properties;
+    if (!properties) continue;
+    delete properties[CUIABA_HALL_PROP];
+    if (!inCuiaba) continue;
+    const blob = cuiabaHallBlob(properties);
+    if (hallNeedlesHit(blob, CUIABA_HALL_ANNOUNCED_NEEDLES)) {
+      properties[CUIABA_HALL_PROP] = 'announced';
+    } else if (hallNeedlesHit(blob, CUIABA_HALL_LIST_NEEDLES)) {
+      properties[CUIABA_HALL_PROP] = 'list';
+    } else if (CUIABA_HALL_COUNTED_TYPES.has(properties.type)) {
+      properties[CUIABA_HALL_PROP] = 'extra';
+    }
+  }
+  return geoJson;
+}
+
+export function tagHallInventories(geoJson, location) {
+  tagCuiabaHallInventory(geoJson, location);
+  tagSalvadorHallInventory(geoJson, location);
+  return geoJson;
 }
 
 Math.toRadians = function (degrees) {

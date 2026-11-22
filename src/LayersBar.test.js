@@ -114,6 +114,34 @@ describe('LayersBar', () => {
     expect(screen.getByText('Lado A')).toBeInTheDocument();
   });
 
+  it('collapses Cuiabá hall layers into one Cuiabá pill', async () => {
+    renderBar({
+      layers: [
+        way('Ciclovia', true),
+        way('Prefeitura 2024', true, {
+          id: 'prefeitura-2024',
+          onlyDebug: true,
+          mapperGroup: 'cuiaba-hall',
+          mapperGroupSection: 'views',
+          mapperGroupDefault: true,
+        }),
+        way('OSM fora da lista', false, {
+          id: 'osm-fora-da-lista',
+          onlyDebug: true,
+          mapperGroup: 'cuiaba-hall',
+          mapperGroupSection: 'views',
+          mapperGroupDefault: true,
+        }),
+      ],
+    });
+    expect(screen.getByRole('button', { name: 'Cuiabá 2024' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Prefeitura 2024/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cuiabá 2024' }));
+    expect(await screen.findByText('Mostrar no mapa')).toBeInTheDocument();
+    expect(screen.getByText('Prefeitura 2024')).toBeInTheDocument();
+  });
+
   it('puts the OSM version switch inside the mapper box', () => {
     const onLayersVersionChange = jest.fn();
     renderBar({

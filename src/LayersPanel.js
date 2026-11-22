@@ -10,7 +10,6 @@ import PairingLayerOptions from './components/PairingLayerOptions';
 import { getLayerLegendImageSrc } from './utils/utils.js';
 import { IconSignal1, IconSignal2, IconSignal3 } from './components/ProtectionSignalIcons';
 import {
-  PAIRING_LAYER_GROUP,
   pairingGroupIsActive,
   pairingGroupSwatchLayers,
   pairingGroupToggleChanges,
@@ -161,12 +160,12 @@ class LayersPanel extends Component {
     );
   }
 
-  renderPairingGroupRow(layers) {
+  renderMapperGroupRow(group, layers) {
     const isActive = pairingGroupIsActive(layers);
     return (
       <Popover
         placement="left"
-        key={PAIRING_LAYER_GROUP.id}
+        key={group.id}
         trigger={['hover', 'focus']}
         mouseEnterDelay={0.15}
         mouseLeaveDelay={0.2}
@@ -175,7 +174,13 @@ class LayersPanel extends Component {
           container: { maxHeight: 'min(85vh, 560px)', overflow: 'auto' },
           content: { maxWidth: 'min(360px, calc(100vw - 24px))' },
         }}
-        content={<PairingLayerOptions layers={layers} onLayersChange={this.props.onLayersChange} />}
+        content={
+          <PairingLayerOptions
+            group={group}
+            layers={layers}
+            onLayersChange={this.props.onLayersChange}
+          />
+        }
       >
         <button
           type="button"
@@ -183,14 +188,14 @@ class LayersPanel extends Component {
           onClick={() => this.props.onLayersChange(pairingGroupToggleChanges(layers))}
           style={{ opacity: isActive ? 1 : 0.5 }}
           aria-pressed={isActive}
-          aria-label={PAIRING_LAYER_GROUP.label}
+          aria-label={group.label}
         >
           <div className="layer-panel-name flex items-center">
             <span className="w-6 mr-2 inline-block flex justify-center">
               {this.renderPairingSwatch(layers)}
             </span>
             <span className={`font-semibold ${this.props.embedMode ? 'text-xs' : ''}`}>
-              {PAIRING_LAYER_GROUP.label}
+              {group.label}
             </span>
           </div>
           <div className="flex items-center">
@@ -209,8 +214,8 @@ class LayersPanel extends Component {
     return (
       <>
         {splitMapperLayerMenu(mapperLayers).map((item) =>
-          item.type === 'pairing'
-            ? this.renderPairingGroupRow(item.layers)
+          item.type === 'group'
+            ? this.renderMapperGroupRow(item.group, item.layers)
             : this.renderLayerRow(item.layer)
         )}
       </>

@@ -70,6 +70,10 @@ jest.mock('pmtiles', () => ({
   PMTiles: jest.fn().mockImplementation(() => ({ getMetadata: mockGetMetadata })),
 }));
 
+const CUIABA_AREA = 'Cuiabá, Mato Grosso, Brasil';
+const SALVADOR_AREA = 'Salvador, Bahia, Brasil';
+const RIO_AREA = 'Rio de Janeiro, Rio de Janeiro, Brasil';
+
 function mountApp(entry = '/sao-paulo') {
   const ref = React.createRef();
   render(
@@ -134,6 +138,28 @@ describe('App city / slug helpers', () => {
     expect(app.getSrOnlyDocumentTitle()).toBe('São Paulo — CicloMapa');
     expect(app.getPreferredCanonicalSlugForMeta('Pelotas')).toBe('sao-paulo');
   });
+
+  it('ignores a URL camera that belongs to another city than the slug', () => {
+    const app = mountApp('/salvador?lat=-25.4469028&lng=-49.2580746&z=12.27').current;
+    expect(app.state.area).toBe(SALVADOR_AREA);
+    expect(app.urlViewportFitsRouteCity()).toBe(false);
+    expect(app.state.lat).toBeCloseTo(-12.9822499);
+    expect(app.state.lng).toBeCloseTo(-38.4812772);
+  });
+
+  it('keeps a URL camera that is still in the slug city', () => {
+    const app = mountApp('/salvador?lat=-13.0100000&lng=-38.5100000&z=14').current;
+    expect(app.hasExplicitViewportInURL()).toBe(true);
+    expect(app.state.lat).toBeCloseTo(-13.01);
+    expect(app.state.lng).toBeCloseTo(-38.51);
+  });
+
+  it('picker city change resolves the new city instead of keeping the old camera', () => {
+    const app = mountApp('/curitiba?lat=-25.4295963&lng=-49.2712724&z=12').current;
+    const spy = jest.spyOn(app, 'resolveCitySlugToAreaAndViewport').mockImplementation(() => {});
+    act(() => app.setArea(SALVADOR_AREA, { source: 'picker' }));
+    expect(spy).toHaveBeenCalledWith('salvador');
+  });
 });
 
 describe('App GeoJSON gate and area sync', () => {
@@ -147,6 +173,70 @@ describe('App GeoJSON gate and area sync', () => {
     act(() => app.setState({ isSidebarOpen: false }));
     app._isDirectionsPanelOpen = true;
     expect(app.needsCityGeoJsonContext()).toBe(true);
+  });
+
+  it('loads city GeoJSON for the Cuiabá overlay without opening analytics', () => {
+    const app = mountApp().current;
+    act(() =>
+      app.setState({
+        isSidebarOpen: false,
+        mapperMode: true,
+        area: 'Cuiabá, Mato Grosso, Brasil',
+        layers: app.initLayers({}, false, false, undefined, true, false, CUIABA_AREA),
+      })
+    );
+    expect(app.needsCityGeoJsonContext()).toBe(false);
+    expect(app.shouldLoadCityGeoJson()).toBe(true);
+
+    act(() =>
+      app.setState({
+        layers: app.state.layers.map((l) =>
+          l.mapperGroup === 'cuiaba-hall' ? { ...l, isActive: false } : l
+        ),
+      })
+    );
+    expect(app.shouldLoadCityGeoJson()).toBe(false);
+  });
+
+  it('loads city GeoJSON for the Salvador overlay without opening analytics', () => {
+    const app = mountApp().current;
+    act(() =>
+      app.setState({
+        isSidebarOpen: false,
+        mapperMode: true,
+        area: SALVADOR_AREA,
+        layers: app.initLayers({}, false, false, undefined, true, false, SALVADOR_AREA),
+      })
+    );
+    expect(app.needsCityGeoJsonContext()).toBe(false);
+    expect(app.shouldLoadCityGeoJson()).toBe(true);
+    expect(app.state.layers.find((l) => l.name === 'Lista Transalvador').isAvailable).toBe(true);
+    expect(app.state.layers.find((l) => l.name === 'Prefeitura 2024').isAvailable).toBe(true);
+  });
+
+  it('loads city GeoJSON for Rio GIS diffs without opening analytics', () => {
+    const app = mountApp().current;
+    act(() =>
+      app.setState({
+        isSidebarOpen: false,
+        mapperMode: true,
+        area: RIO_AREA,
+        layers: app.initLayers({}, false, false, undefined, true, false, RIO_AREA),
+      })
+    );
+    expect(app.shouldLoadCityGeoJson()).toBe(true);
+    expect(app.state.layers.find((l) => l.name === 'Só OSM (Rio)').isAvailable).toBe(true);
+    expect(app.state.layers.find((l) => l.name === 'Só OSM (Rio)').isActive).toBe(true);
+    expect(app.state.layers.find((l) => l.name === 'CET-Rio ciclovia').isActive).toBe(false);
+    const curitibaDiff = app.state.layers.find((l) => l.name === 'Só OSM (Curitiba)');
+    expect(curitibaDiff.isAvailable).toBe(true);
+    expect(curitibaDiff.isActive).toBe(true);
+    expect(
+      mapperLayerNeedsCityGeoJson(app.state.layers.find((l) => l.name === 'CET-Rio ciclovia'))
+    ).toBe(false);
+    expect(
+      mapperLayerNeedsCityGeoJson(app.state.layers.find((l) => l.name === 'Só OSM (Rio)'))
+    ).toBe(false);
   });
 
   it('setArea normalizes catalog labels and tags the analytics source', () => {
@@ -508,23 +598,30 @@ describe('App layers and PMTiles metadata', () => {
   it('keeps the PMTiles diff overlay available even when it is not in the archive', () => {
     const app = mountApp().current;
     app.pmtilesAvailableLayerNames = new Set(['Ciclovia']);
-    const layers = app.initLayers({}, false, true);
+    const layers = app.initLayers({}, false, true, undefined, true, false, CUIABA_AREA);
     const diff = layers.find((l) => l.name === 'Diff v1→v2');
     expect(diff).toBeTruthy();
     expect(diff.isAvailable).toBe(true);
     expect(mapperLayerNeedsCityGeoJson(diff)).toBe(false);
+    expect(mapperLayerNeedsCityGeoJson(layers.find((l) => l.name === 'Prefeitura 2024'))).toBe(
+      false
+    );
+    expect(mapperLayerNeedsCityGeoJson(layers.find((l) => l.name === 'Lista Transalvador'))).toBe(
+      false
+    );
   });
 
   it('hides GeoJSON pairing layers until the analytics sidebar is open', () => {
     const app = mountApp().current;
     app.pmtilesAvailableLayerNames = new Set(['Ciclovia']);
-    const closed = app.initLayers({}, false, true, undefined, true, false);
+    const closed = app.initLayers({}, false, true, undefined, true, false, CUIABA_AREA);
     const pairingClosed = closed.filter(mapperLayerNeedsCityGeoJson);
     expect(pairingClosed.length).toBeGreaterThan(0);
     expect(pairingClosed.every((l) => l.isAvailable === false)).toBe(true);
     expect(closed.find((l) => l.name === 'Diff v1→v2').isAvailable).toBe(true);
+    expect(closed.find((l) => l.name === 'Prefeitura 2024').isAvailable).toBe(true);
 
-    const open = app.initLayers({}, false, true, undefined, true, true);
+    const open = app.initLayers({}, false, true, undefined, true, true, CUIABA_AREA);
     expect(open.filter(mapperLayerNeedsCityGeoJson).every((l) => l.isAvailable)).toBe(true);
     expect(open.find((l) => l.name === 'Diff v1→v2').isAvailable).toBe(true);
     expect(open.find((l) => l.name === 'Diff v1→v2').isActive).toBe(true);
@@ -536,11 +633,31 @@ describe('App layers and PMTiles metadata', () => {
     expect(open.find((l) => l.name === 'Pareados').isActive).toBe(false);
   });
 
+  it('restores mapper overlay visibility from saved layersStates', () => {
+    const app = mountApp().current;
+    const layers = app.initLayers(
+      { 'lado-a': false, 'prefeitura-2024': false },
+      false,
+      true,
+      undefined,
+      true,
+      true
+    );
+    expect(layers.find((l) => l.name === 'Lado A').isActive).toBe(false);
+    expect(layers.find((l) => l.name === 'Prefeitura 2024').isActive).toBe(false);
+    expect(layers.find((l) => l.name === 'Lado B').isActive).toBe(true);
+  });
+
   it('initLayers includes pairing layers and the v1/v2 diff overlay in mapper mode', () => {
     const app = mountApp().current;
     const layers = app.initLayers({}, false, false, undefined, true);
     expect(layers.some((l) => l.onlyDebug)).toBe(true);
     expect(layers.some((l) => l.name === 'Diff v1→v2')).toBe(true);
+    const hallLayers = layers.filter(
+      (l) => l.mapperGroup && String(l.mapperGroup).endsWith('-hall')
+    );
+    expect(hallLayers.length).toBeGreaterThan(0);
+    expect(hallLayers.every((l) => l.isAvailable)).toBe(true);
   });
 
   it('loadPmtilesAvailableLayers no-ops without a tiles URL', async () => {
@@ -802,7 +919,7 @@ describe('App UI handlers', () => {
       app.setState({
         mapperMode: true,
         isSidebarOpen: true,
-        layers: app.initLayers({}, false, false, undefined, true, true),
+        layers: app.initLayers({}, false, false, undefined, true, true, CUIABA_AREA),
       });
     });
     expect(app.state.layers.find((l) => l.name === 'Lado A').isAvailable).toBe(true);
@@ -816,6 +933,7 @@ describe('App UI handlers', () => {
     expect(closed.isAvailable).toBe(false);
     expect(closed.isActive).toBe(true);
     expect(app.state.layers.find((l) => l.name === 'Diff v1→v2').isAvailable).toBe(true);
+    expect(app.state.layers.find((l) => l.name === 'Prefeitura 2024').isAvailable).toBe(true);
 
     await act(async () => {
       app.toggleSidebar(true);

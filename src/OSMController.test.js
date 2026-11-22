@@ -92,6 +92,22 @@ describe('OSMController.getLayers', () => {
     expect(mapper.find((l) => l.name === 'Tag + ciclovia').isActive).toBe(true);
     expect(mapper.find((l) => l.name === 'Ciclovias sobrepostas').isActive).toBe(true);
     expect(mapper.find((l) => l.name === 'Não pareados').isActive).toBe(true);
+    expect(mapper.find((l) => l.name === 'Prefeitura 2024').isActive).toBe(true);
+    expect(mapper.find((l) => l.name === 'OSM fora da lista').filters).toEqual([
+      ['ciclomapa:cuiaba_hall', 'extra'],
+    ]);
+    expect(mapper.find((l) => l.name === 'Lista Transalvador').mapperGroup).toBe('salvador-hall');
+    expect(mapper.find((l) => l.name === 'Só OSM (Rio)').mapperGroupSection).toBe('diff');
+    expect(mapper.find((l) => l.name === 'CET-Rio ciclovia').debugSource).toBe('hall-gis');
+    expect(mapper.find((l) => l.name === 'CET-Rio ciclovia').isActive).toBe(false);
+    expect(mapper.find((l) => l.name === 'IPPUC ciclovia').filters).toEqual([
+      ['ctba_tipo_ciclovia', 1],
+    ]);
+    expect(mapper.find((l) => l.name === 'Só OSM (Fortaleza)').mapperGroup).toBe('fortaleza-hall');
+    expect(mapper.find((l) => l.name === 'SCSP ciclovia').filters).toEqual([
+      ['tipologia', 'Ciclovia'],
+    ]);
+    expect(mapper.find((l) => l.name === 'SCSP ciclovia').isActive).toBe(false);
     expect(mapper.find((l) => l.name === 'Pareados').isActive).toBe(false);
     expect(mapper.filter((l) => l.mapperGroup === 'pairing').length).toBeGreaterThan(1);
   });

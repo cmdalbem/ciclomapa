@@ -10,6 +10,7 @@ import MapWrapper, {
   OSM_GEOJSON_SOURCE_ID,
 } from './Map.js';
 import { DEFAULT_ZOOM, PMTILES_SOURCE_ID, PMTILES_SOURCE_LAYER } from './config/constants.js';
+import { HALL_GIS_SOURCE_ID } from './config/hallOverlays.js';
 import { layersVersionDiffMapboxFilter } from './config/layersCatalog.js';
 
 const mockFlyMapTo = jest.fn();
@@ -373,6 +374,132 @@ describe('Map helpers', () => {
     expect(setData).toHaveBeenCalledWith(fc);
   });
 
+  it('initCyclepathLayerForSource paints hall GIS overlays from the official source', () => {
+    const map = mountMap({ mapperMode: true, layers: [] });
+    const addLayer = jest.fn();
+    map.map = fakeMapbox({
+      getSource: () => ({}),
+      getLayer: () => false,
+      addLayer,
+      on: jest.fn(),
+    });
+    map.initCyclepathLayerForSource(
+      {
+        id: 'cet-rio-ciclovia',
+        name: 'CET-Rio ciclovia',
+        onlyDebug: true,
+        debugSource: 'hall-gis',
+        filters: [['tipo_infra', 'Ciclovia']],
+        style: { lineColor: '#16A34A', lineWidth: 8 },
+      },
+      HALL_GIS_SOURCE_ID,
+      null
+    );
+    const added = addLayer.mock.calls.map(([spec]) => spec);
+    expect(added.length).toBeGreaterThan(0);
+    expect(added.every((spec) => spec.source === HALL_GIS_SOURCE_ID)).toBe(true);
+    expect(added.every((spec) => spec['source-layer'] === undefined)).toBe(true);
+  });
+
+  it('loadHallGis fetches CET-Rio geojson in Rio and clears it elsewhere', async () => {
+    const rioMap = mountMap({
+      mapperMode: true,
+      location: 'Rio de Janeiro, Rio de Janeiro, Brasil',
+    });
+    const setData = jest.fn();
+    rioMap.map = fakeMapbox({
+      getSource: (id) => (id === HALL_GIS_SOURCE_ID ? { setData } : null),
+    });
+    const fc = {
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', properties: { tipo_infra: 'Ciclovia' } }],
+    };
+    const fetchMock = jest.fn().mockResolvedValue({ json: async () => fc });
+    global.fetch = fetchMock;
+    await rioMap.loadHallGis();
+    expect(fetchMock).toHaveBeenCalled();
+    expect(String(fetchMock.mock.calls[0][0])).toContain('Rede_Ciclovi');
+    expect(setData).toHaveBeenCalledWith(fc);
+
+    const spMap = mountMap({ mapperMode: true, location: 'São Paulo, São Paulo, Brasil' });
+    const clearData = jest.fn();
+    spMap.map = fakeMapbox({
+      getSource: (id) => (id === HALL_GIS_SOURCE_ID ? { setData: clearData } : null),
+    });
+    fetchMock.mockClear();
+    await spMap.loadHallGis();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(clearData).toHaveBeenCalledWith({ type: 'FeatureCollection', features: [] });
+
+    const forMap = mountMap({
+      mapperMode: true,
+      location: 'Fortaleza, Ceará, Brasil',
+    });
+    const forData = jest.fn();
+    forMap.map = fakeMapbox({
+      getSource: (id) => (id === HALL_GIS_SOURCE_ID ? { setData: forData } : null),
+    });
+    fetchMock.mockClear();
+    await forMap.loadHallGis();
+    expect(fetchMock).toHaveBeenCalledWith('/hall-gis/fortaleza.geojson', { credentials: 'omit' });
+  });
+
+  it('loadHallGis writes hall_diff back onto the OSM geojson source', async () => {
+    const osm = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { type: 'Ciclovia' },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [0.01, 0],
+            ],
+          },
+        },
+      ],
+    };
+    const map = mountMap({
+      mapperMode: true,
+      location: 'Fortaleza, Ceará, Brasil',
+      data: osm,
+    });
+    const gisSet = jest.fn();
+    const osmSet = jest.fn();
+    map.map = fakeMapbox({
+      getSource: (id) => {
+        if (id === HALL_GIS_SOURCE_ID) return { setData: gisSet };
+        if (id === OSM_GEOJSON_SOURCE_ID) return { setData: osmSet };
+        return null;
+      },
+    });
+    global.fetch = jest.fn().mockResolvedValue({
+      json: async () => ({
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            properties: { tipologia: 'Ciclofaixa' },
+            geometry: {
+              type: 'LineString',
+              coordinates: [
+                [1, 1],
+                [1.01, 1],
+              ],
+            },
+          },
+        ],
+      }),
+    });
+    await map.loadHallGis();
+    expect(osmSet).toHaveBeenCalled();
+    expect(osmSet.mock.calls[0][0].features[0].properties['ciclomapa:hall_diff']).toBe(
+      'fortaleza:extra'
+    );
+  });
+
   it('initCyclepathLayerForSource omits source-layer on the GeoJSON overlay', () => {
     const map = mountMap({ debugMode: true, layers: [] });
     const addLayer = jest.fn();
@@ -621,6 +748,50 @@ describe('Map helpers', () => {
       expect.objectContaining({ id: 'boundary-mask' }),
       undefined
     );
+  });
+
+  it('updateLayerVisibility hides hall overlays that are off or for another city', () => {
+    const rio = {
+      id: 'so-osm-rio',
+      type: 'way',
+      isActive: false,
+      isAvailable: true,
+      onlyDebug: true,
+    };
+    const curitiba = {
+      id: 'so-osm-curitiba',
+      type: 'way',
+      isActive: true,
+      isAvailable: false,
+      onlyDebug: true,
+    };
+    const ippuc = {
+      id: 'so-ippuc',
+      type: 'way',
+      isActive: true,
+      isAvailable: true,
+      onlyDebug: true,
+      mapperGroup: 'curitiba-hall',
+      debugSource: 'hall-gis',
+      filters: [['ciclomapa:hall_diff', 'curitiba:only']],
+    };
+    const map = mountMap({
+      location: 'Fortaleza, Ceará, Brasil',
+      layers: [rio, curitiba, ippuc],
+    });
+    const setLayoutProperty = jest.fn();
+    map.map = fakeMapbox({
+      getLayer: (id) => String(id).endsWith('--pmtiles'),
+      setLayoutProperty,
+    });
+    map.updateLayerVisibility();
+    expect(setLayoutProperty).toHaveBeenCalledWith('so-osm-rio--pmtiles', 'visibility', 'none');
+    expect(setLayoutProperty).toHaveBeenCalledWith(
+      'so-osm-curitiba--pmtiles',
+      'visibility',
+      'none'
+    );
+    expect(setLayoutProperty).toHaveBeenCalledWith('so-ippuc--pmtiles', 'visibility', 'none');
   });
 
   it('updateLayerVisibility keeps PMTiles when there is no city GeoJSON copy', () => {
