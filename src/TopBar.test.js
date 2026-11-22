@@ -71,6 +71,7 @@ describe('TopBar (desktop)', () => {
   it('renders logo, search with the current city and the map action buttons', () => {
     renderTopBar();
     expect(screen.getByRole('link', { name: /ciclomapa/i })).toHaveAttribute('href', '/');
+    expect(screen.getByText('Beta')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Buscar. Cidade atual: Porto Alegre, Rio Grande do Sul' })
     ).toBeInTheDocument();
