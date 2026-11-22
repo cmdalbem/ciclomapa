@@ -26,7 +26,7 @@ import { useNavigate } from 'react-router-dom';
 import { getOsmUrl } from './utils/utils.js';
 import { searchWithCityPicker } from './config/routes.js';
 
-import { TOPBAR_HEIGHT, IS_MOBILE, ENABLE_COMMENTS } from './config/constants.js';
+import { TOPBAR_HEIGHT, IS_MOBILE, ENABLE_COMMENTS, IS_PROD } from './config/constants.js';
 
 import EditModal from './EditModal.js';
 import Logo from './components/Logo';
@@ -185,9 +185,16 @@ function TopBar(props) {
       >
         <div className="flex items-start justify-between text-white w-full">
           {!IS_MOBILE && (
-            <a href="/" className="mt-2">
-              <Logo className={embedMode ? 'text-white opacity-20' : 'text-sm'} />
-            </a>
+            <div className={`cm-topbar-brand${embedMode ? ' cm-topbar-brand--embed' : ''}`}>
+              <a href="/">
+                <Logo className="text-sm" />
+              </a>
+              {!IS_PROD && (
+                <span className="cm-topbar-beta" title="Esta não é a versão de produção">
+                  Beta
+                </span>
+              )}
+            </div>
           )}
 
           {!embedMode && (
