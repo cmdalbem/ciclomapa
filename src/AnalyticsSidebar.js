@@ -242,7 +242,7 @@ class AnalyticsSidebar extends Component {
     }
 
     const vias = this.getViasMetrics();
-    const hasLengthTotals = Boolean(lengths && vias.rawTotal > 0);
+    const hasLengthTotals = Boolean(lengths && Object.keys(lengths).length > 0);
     const showLengthsSkeleton = Boolean(this.props.loading) && !hasLengthTotals;
     const poiLayers = layers.filter((l) => l.type === 'poi' && l.name !== 'Comentários');
     const sourceMenuItems = [
@@ -529,7 +529,7 @@ class AnalyticsSidebar extends Component {
           >
             {this.props.debugMode && strategiesDropdown}
 
-            <div className={`relative${showLengthsSkeleton ? ' cm-analytics-skel-chart' : ''}`}>
+            <div className={`relative${showLengthsSkeleton ? ' animate-pulse-2x' : ''}`}>
               <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
                 <defs>{this.generatePatterns(layers)}</defs>
                 <Pie

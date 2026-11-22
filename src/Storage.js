@@ -239,14 +239,16 @@ class Storage {
   async save(name, geoJson, lengths, options = {}) {
     trackCall({ api: API_TYPES.FIREBASE_WRITE, details: name });
 
-    const now = new Date();
+    const now = options.updatedAt ? new Date(options.updatedAt) : new Date();
     const storageKey = this.normalizeStorageKey(options.storageKey || name);
 
     // Save to Local Storage
-    set(storageKey, {
+    const localRecord = {
       geoJson: geoJson,
       updatedAt: now,
-    });
+    };
+    if (options.queryAreaId != null) localRecord.queryAreaId = options.queryAreaId;
+    set(storageKey, localRecord);
 
     try {
       console.debug(`[Firebase] Saving GeoJSON ${name} using new chunked format...`);
@@ -258,7 +260,10 @@ class Storage {
         console.debug(`[Firebase] Lengths for ${name} saved successfully.`);
       }
 
-      await this.saveWithChunking(name, geoJson, lengthsForMetadata, storageKey);
+      await this.saveWithChunking(name, geoJson, lengthsForMetadata, storageKey, {
+        updatedAt: now,
+        queryAreaId: options.queryAreaId,
+      });
       console.debug(`[Firebase] GeoJSON ${name} saved successfully using new format.`);
     } catch (error) {
       console.error(`[Firebase] Error saving GeoJSON ${name}: `, error);
@@ -314,7 +319,7 @@ class Storage {
     // console.table(valuesTable);
   }
 
-  async saveWithChunking(name, geoJson, lengths, storageKeyOverride = null) {
+  async saveWithChunking(name, geoJson, lengths, storageKeyOverride = null, persist = {}) {
     const compressed = this.compressJson(geoJson);
     const slug = this.normalizeStorageKey(storageKeyOverride || name);
 
@@ -324,15 +329,18 @@ class Storage {
       `[Storage] Splitting ${name} into ${chunks.length} chunks (${compressed.length} bytes total)`
     );
 
-    // Save metadata first
-    await this.db.collection(DEFAULT_CITIES_COLLECTION).doc(`${slug}_metadata`).set({
+    const metadata = {
       name: name,
       totalChunks: chunks.length,
       totalSize: compressed.length,
       lengths: lengths,
-      updatedAt: new Date(),
+      updatedAt: persist.updatedAt || new Date(),
       format: 'chunked_v1',
-    });
+    };
+    if (persist.queryAreaId != null) metadata.queryAreaId = persist.queryAreaId;
+
+    // Save metadata first
+    await this.db.collection(DEFAULT_CITIES_COLLECTION).doc(`${slug}_metadata`).set(metadata);
 
     // Save chunks in parallel
     const chunkPromises = chunks.map((chunk, index) =>
@@ -359,7 +367,7 @@ class Storage {
   createChunksByUtf8Bytes(data) {
     const maxBytes = Storage.MAX_DOCUMENT_SIZE - Storage.ESTIMATED_OVERHEAD;
     const bytes = new TextEncoder().encode(data);
-    const decoder = new TextDecoder();
+    const decoder = new TextDecoder('utf-8', { ignoreBOM: true });
     const chunks = [];
     let offset = 0;
     while (offset < bytes.length) {
@@ -434,6 +442,7 @@ class Storage {
         geoJson: geoJson,
         updatedAt: metadata.updatedAt.toDate(),
         lengths: metadata.lengths,
+        queryAreaId: metadata.queryAreaId,
       };
     } catch (error) {
       console.debug(`[Storage] New format load failed for ${slug}:`, error);

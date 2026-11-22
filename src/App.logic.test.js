@@ -4,7 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 import App from './App.js';
 import OSMController from './OSMController.js';
-import { PMTILES_FALLBACK_MISSING_LAYER_NAMES } from './config/constants.js';
+import { AREA_ID_OVERRIDES, PMTILES_FALLBACK_MISSING_LAYER_NAMES } from './config/constants.js';
 import { guessPlaceFromViewport, reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 import { appNotification } from './antdNotification';
 import Analytics from './Analytics.js';
@@ -374,6 +374,72 @@ describe('App updateData Overpass backfill', () => {
     expect(app.state.lengths).toEqual({ ciclovia: 10 });
     expect(app.state.loading).toBe(false);
     expect(save).toHaveBeenCalledWith(area, app.state.geoJson, {}, expect.any(Object));
+  });
+
+  it('keeps the cached outline when a boundary-only Overpass repair returns nothing', async () => {
+    const app = mountApp().current;
+    const area = app.state.area;
+    act(() => {
+      app.setState({
+        geoJson: JSON.parse(JSON.stringify(withBoundaryGeoJson)),
+        lengths: { ciclovia: 10 },
+        loading: true,
+      });
+    });
+    jest.spyOn(OSMController, 'getData').mockResolvedValue({ geoJson: null });
+    const save = jest.spyOn(app.getStorage(), 'save').mockResolvedValue();
+
+    await act(async () => {
+      await app.getDataFromOSM({
+        areaName: area,
+        backgroundUpdate: true,
+        boundaryOnly: true,
+      });
+    });
+
+    expect(app.state.geoJson.features.map((f) => f.id)).toEqual(['way/1', 'relation/1']);
+    expect(app.state.loading).toBe(false);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('does a full Overpass refetch when the cache was built with a different query area', async () => {
+    const app = mountApp().current;
+    const area = Object.keys(AREA_ID_OVERRIDES)[0];
+    act(() => {
+      app.setState({ area });
+    });
+    mockCache(app, withBoundaryGeoJson, new Date());
+    const osm = jest.spyOn(app, 'getDataFromOSM').mockImplementation(() => {});
+    await act(async () => {
+      app.updateData();
+    });
+    await waitFor(() => {
+      expect(osm).toHaveBeenCalledTimes(1);
+    });
+    expect(osm.mock.calls[0][0].boundaryOnly).toBeFalsy();
+    expect(osm.mock.calls[0][0].backgroundUpdate).toBe(true);
+  });
+
+  it('still backfills only the outline when the cached query area already matches', async () => {
+    const app = mountApp().current;
+    const area = Object.keys(AREA_ID_OVERRIDES)[0];
+    act(() => {
+      app.setState({ area });
+    });
+    jest.spyOn(app.getStorage(), 'load').mockResolvedValue({
+      geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+      lengths: { ciclovia: 10 },
+      updatedAt: new Date(),
+      queryAreaId: AREA_ID_OVERRIDES[area],
+    });
+    const osm = jest.spyOn(app, 'getDataFromOSM').mockImplementation(() => {});
+    await act(async () => {
+      app.updateData();
+    });
+    await waitFor(() => {
+      expect(osm).toHaveBeenCalledWith(expect.objectContaining({ boundaryOnly: true }));
+    });
+    expect(osm).toHaveBeenCalledTimes(1);
   });
 });
 

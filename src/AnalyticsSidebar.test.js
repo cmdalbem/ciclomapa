@@ -134,12 +134,23 @@ describe('AnalyticsSidebar', () => {
     expect(screen.queryByRole('button', { name: /Alternar inclusão/ })).not.toBeInTheDocument();
   });
 
+  it('keeps zero km and POI counts while refreshing instead of swapping them for skeletons', () => {
+    renderSidebar({
+      loading: true,
+      lengths: { ciclovia: 0, ciclofaixa: 0, bicicletarios: 12 },
+    });
+    expect(screen.queryByTestId('analytics-skel-lg')).toBeNull();
+    expect(screen.getByText('TOTAL')).toBeInTheDocument();
+    expect(screen.getByText('Bicicletários')).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
+  });
+
   it('keeps real totals while refreshing a city that already has lengths', () => {
     renderSidebar({ loading: true });
     expect(screen.getByText('TOTAL')).toBeInTheDocument();
     expect(screen.getByText(/17\.0/)).toBeInTheDocument();
     expect(screen.queryByText('Sem dados')).not.toBeInTheDocument();
-    expect(document.querySelector('.cm-analytics-skel-chart')).toBeNull();
+    expect(screen.queryByTestId('analytics-skel-lg')).toBeNull();
   });
 
   it('PNB, IDECiclo and debug strategy select show when the data is there', async () => {
