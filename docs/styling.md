@@ -1,34 +1,38 @@
 # Styling convention
 
-CicloMapa uses **BEM (Block Element Modifier)** with the prefix **`cm-`** (CicloMapa) to avoid clashes with third-party and utility classes.
+**Default: Tailwind + Ant Design. Custom CSS is the exception.**
 
-## Rules
+- **Tailwind** for layout and utilities (`flex`, `gap-2`, `px-5`, `text-xs`, `rounded-full`, `animate-pulse`, …). Built via PostCSS in `src/styles/theme-tailwind-overrides.css` (purged; see `tailwind.config.js`, including `safelist` for MapPopups HTML strings). Extra utilities not in the default theme live in `App.less` (e.g. `text-xxs`, `animate-pulse-2x`).
+- **Ant Design** for widgets: `Button`, `Dropdown`, `Skeleton`, `Tag`, `Tooltip`, `Modal`, `Input`, … Theme is `ConfigProvider` in `src/config/antdTheme.js` via `AntdAppShell` (`antd/locale/pt_BR`, `dayjs` `pt-br`). `antd/dist/reset.css` is imported in `App.js`. Production builds use `babel-plugin-import` for `antd/es/*` (disabled under Jest).
 
-- **Block**: standalone component (e.g. `cm-panel`, `cm-topbar`). Use a single class per block.
-- **Element**: part of a block (e.g. `cm-panel__header`, `cm-panel__input`). Use `block__element`.
-- **Modifier**: variant or state (e.g. `cm-panel--collapsed`, `cm-panel--dark`). Use `block--modifier` or `block__element--modifier`.
+Do **not** add a new CSS file or a new `cm-*` BEM block for a row, badge, footer, skeleton, or similar. If AboutModal can pulse a placeholder with Tailwind classes, do that (or use `Skeleton`). Look at nearby JSX `className`s before opening a stylesheet.
 
-Use the `cm-` prefix for all BEM classes so they don’t conflict with Tailwind (build-time, purged) or Ant Design.
+## When custom CSS is actually warranted
 
-**CSS strategy**: We do **not** use CSS modules. Component styles are global; each component has its own stylesheet (e.g. `DirectionsPanel.css`) or shares `src/styles/`. BEM with the `cm-` prefix avoids clashes. **Style ownership**: classes under a block (e.g. `.cm-panel`, `.cm-panel__header`) belong to that component; don’t reuse another component’s BEM block for new styles. For new components, add a new block (e.g. `cm-myfeature`) and keep styles in a dedicated CSS file next to the component.
+- Fighting Ant specificity (glass buttons, dropdown item layout) after Tailwind/antd props failed
+- Theme tokens or light/dark that utilities cannot express cleanly (`body.theme-dark` / `body.theme-light`)
+- Map/popup HTML strings, Mapbox, or other non-React styling
+- Global/base in `App.less` (focus, loader, gradient)
+
+We do **not** use CSS modules. If you write CSS, put it in the existing stylesheet next to that component (or `src/styles/`), not a new file for a handful of rules.
+
+## If you must write CSS: BEM with `cm-`
+
+Prefix **`cm-`** (CicloMapa) so classes don’t clash with Tailwind or Ant.
+
+- **Block**: standalone component (e.g. `cm-panel`). One block per component.
+- **Element**: `block__element` (e.g. `cm-panel__header`).
+- **Modifier**: `block--modifier` or `block__element--modifier`.
+
+**Style ownership**: classes under a block belong to that component; don’t restyle another component’s BEM block. Existing files like `DirectionsPanel.css` are legacy skins, not a pattern to copy for new UI.
 
 ## Theming
 
-Theme (light/dark) is applied via a single wrapper: **`body.theme-dark`** / **`body.theme-light`**. Prefer design tokens (CSS custom properties) and theme-scoped selectors (e.g. `.theme-dark .cm-panel { ... }`) instead of repeating `.theme-dark` in many places. Tokens are defined in `src/config/design-tokens.js` and injected on `:root`.
+Theme is **`body.theme-dark`** / **`body.theme-light`**. Prefer design tokens (CSS custom properties) and theme-scoped selectors instead of repeating `.theme-dark` everywhere. Tokens live in `src/config/design-tokens.js` and are injected on `:root`.
 
-### Tokens derived from `layers.json`
+### Tokens derived from layer config
 
-In addition to “pure” UI tokens (surfaces, text, focus, spacing), CicloMapa also keeps **map + UI colors aligned** by deriving/centralizing some values based on layer configuration in `src/config/layers.json` (and related map constants). This is intentional: when a layer’s semantic color changes, the legend/badges/route UI and Mapbox paint can stay consistent.
-
-## Reference implementation
-
-The **DirectionsPanel** is the pilot: `#directionsPanel` uses BEM-style classes under the `cm-panel` block where possible, and theme variables for colors. New components should follow the same pattern.
-
-## Other styles
-
-- **Tailwind**: Used for layout and utilities only (e.g. `flex`, `rounded-full`, `px-1`). Built via PostCSS in `src/styles/theme-tailwind-overrides.css` (purged; see `tailwind.config.js`, including `safelist` for MapPopups HTML strings). Prefer BEM for component-specific, semantic styles. Extra utilities not in the default theme live in `App.less` (e.g. `text-xxs`).
-- **Ant Design**: Theme (`ConfigProvider`) in `src/config/antdTheme.js` via `AntdAppShell` with locale `antd/locale/pt_BR` and `dayjs` `pt-br`; `antd/dist/reset.css` imported in `App.js` for baseline typography. Production builds use `babel-plugin-import` for `antd/es/*` (disabled under Jest). Component-level CSS where needed.
-- **Global/base**: `App.less` (with design tokens for focus, loader, gradient).
+Map + UI colors stay aligned by deriving some values from `src/config/layers.v2.json` (and related map constants). When a layer’s semantic color changes, legend/badges/route UI and Mapbox paint can stay consistent.
 
 ## Accessibility
 
