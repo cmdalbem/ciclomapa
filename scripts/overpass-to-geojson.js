@@ -297,7 +297,10 @@ function generateQueryFromLayers(
     l.id = slugify(l.name);
   });
 
-  // Filter out layers without filters, debug layers, and POI layers (unless includePoi is true)
+  // Eligible for name validation: has filters, not a debug overlay, POI only with
+  // --include-poi. Inactive extras (Trilha, Proibido, ...) stay in this set so
+  // `--exclude-layers Trilha` does not throw "Unknown layer". Query selection
+  // still drops them unless `--include-layers` names them.
   let filteredLayers = layers.filter((l) => {
     if (!l.filters) return false;
     if (l.onlyDebug) return false;
@@ -352,6 +355,8 @@ function generateQueryFromLayers(
         `   ℹ️  Whitelist applied: ${afterCount} layer(s) included (from ${beforeCount} total)`
       );
     }
+  } else {
+    filteredLayers = filteredLayers.filter((l) => l.isActive !== false);
   }
 
   // Validate exclude layers - check all provided names exist
