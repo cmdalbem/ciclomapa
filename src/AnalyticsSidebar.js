@@ -478,7 +478,7 @@ class AnalyticsSidebar extends Component {
                         <XAxis
                           dataKey="year"
                           tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
-                          ticks={['2018', '2020', '2022', '2025']}
+                          ticks={['2018', '2021', '2023', '2025']}
                           interval={'preserveStartEnd'}
                           margin={{ left: 8, right: 8 }}
                           axisLine={false}
@@ -486,8 +486,8 @@ class AnalyticsSidebar extends Component {
                         />
                         <YAxis
                           // domain={['dataMin', 'dataMax']}
-                          domain={[0, 50]}
-                          ticks={[10, 30, 50]}
+                          domain={[0, 60]}
+                          ticks={[20, 40, 60]}
                           interval={'preserveEnd'}
                           tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
                           axisLine={false}
