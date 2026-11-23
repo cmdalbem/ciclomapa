@@ -41,6 +41,7 @@ import { PARALLEL_DEDUPE_ENGINES } from './utils/parallelDedupeEngines/engineTyp
 import { THIN_SPACE, appendKmUnit } from './utils/routeUtils.js';
 import { slugify, timeSince } from './utils/utils.js';
 import Storage from './Storage.js';
+import { hyphenateSync } from 'hyphen/pt';
 import { appModal } from './antdModal.js';
 import {
   listCitiesWithMetric,
@@ -57,6 +58,8 @@ import {
   CityInfraMiniRingPlaceholder,
   miniChartSliceTotalKm,
 } from './components/CityInfraMiniRing';
+
+const SOFT_HYPHEN = '\u00AD';
 
 const PIE_CHART_WIDTH_PX = 207;
 const nullableNumber = PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]);
@@ -303,13 +306,12 @@ const ANALYTICS_SKEL_SIZE = {
   bar: 'block w-full h-1 mt-1',
 };
 
-const AnalyticsSkeleton = ({ variant = 'md', isDarkMode }) => (
+const AnalyticsSkeleton = ({ variant = 'md' }) => (
   <span
     data-testid={`analytics-skel-${variant}`}
     className={[
-      'inline-block rounded-full animate-pulse-2x',
+      'inline-block rounded-full animate-pulse-2x bg-white bg-opacity-20',
       ANALYTICS_SKEL_SIZE[variant],
-      isDarkMode ? 'bg-white bg-opacity-20' : 'bg-black bg-opacity-10',
     ].join(' ')}
     aria-hidden
   />
@@ -317,7 +319,6 @@ const AnalyticsSkeleton = ({ variant = 'md', isDarkMode }) => (
 
 AnalyticsSkeleton.propTypes = {
   variant: PropTypes.oneOf(['lg', 'md', 'bar']),
-  isDarkMode: PropTypes.bool,
 };
 
 class AnalyticsSidebar extends Component {
@@ -438,7 +439,7 @@ class AnalyticsSidebar extends Component {
       yearPrefix: 'alianca_',
     });
     const currentCitySlug = citySlugFromLocationLabel(this.props.location);
-    const pnbEvolutionData = [2018, 2019, 2020, 2021, 2022, 2023, 2024]
+    const pnbEvolutionData = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
       .map((year) => {
         const value = this.props.cityMetadata && this.props.cityMetadata[`pnb_${year}`];
         return value !== undefined && value !== null
@@ -468,9 +469,6 @@ class AnalyticsSidebar extends Component {
     const hasLengthTotals = Boolean(lengths && Object.keys(lengths).length > 0);
     const showLengthsSkeleton = Boolean(this.props.loading) && !hasLengthTotals;
     const poiLayers = layers.filter((l) => l.type === 'poi' && l.name !== 'Comentários');
-    const cityNameParts = (this.props.location || '').split(',')[0].trim().split(/\s+/);
-    const cityNameLast = cityNameParts.pop();
-    const cityNameLead = cityNameParts.join(' ');
     const sourceMenuItems = [
       this.props.forceUpdate &&
         this.props.lastUpdate &&
@@ -500,6 +498,26 @@ class AnalyticsSidebar extends Component {
         ),
       },
     ].filter(Boolean);
+
+    const cityName = this.props.location ? this.props.location.split(',')[0].trim() : '';
+    const cityWords = cityName ? cityName.split(/\s+/) : [];
+    const isSingleWordCity = cityWords.length === 1;
+    let cityHead = '';
+    let cityTail = '';
+    if (cityName) {
+      if (isSingleWordCity) {
+        const syllables = hyphenateSync(cityName).split(SOFT_HYPHEN);
+        const glue = Math.min(2, syllables.length);
+        cityHead = syllables.slice(0, -glue).join(SOFT_HYPHEN);
+        if (cityHead) {
+          cityHead += SOFT_HYPHEN;
+        }
+        cityTail = syllables.slice(-glue).join('');
+      } else {
+        cityTail = cityWords[cityWords.length - 1];
+        cityHead = `${cityWords.slice(0, -1).join(' ')} `;
+      }
+    }
 
     const translateStrategy = {
       random: 'Aleatório',
@@ -594,7 +612,7 @@ class AnalyticsSidebar extends Component {
     return (
       <div
         id="analyticsSidebar"
-        className={`analytics-sidebar relative w-64 border-l border-opacity-10 border-white h-screen overflow-y-auto glass-bg flex flex-col ${
+        className={`analytics-sidebar relative w-64 border-l border-opacity-10 border-white h-screen overflow-y-auto overflow-x-hidden glass-bg flex flex-col ${
           this.props.open ? 'analytics-sidebar--open' : 'analytics-sidebar--closed'
         }`}
       >
@@ -619,16 +637,23 @@ class AnalyticsSidebar extends Component {
           {this.props.location && (
             <button
               type="button"
-              className="mt-3 mb-2 text-left bg-transparent border-0 p-0 cursor-pointer text-inherit hover:opacity-80 transition-opacity duration-200"
+              className="mt-3 mb-2 block w-full min-w-0 text-left bg-transparent border-0 p-0 cursor-pointer text-inherit hover:opacity-80 transition-opacity duration-200"
               onClick={this.props.openCityPicker}
               aria-label={`Trocar cidade. Cidade atual: ${this.props.location}`}
             >
-              <div className="text-3xl leading-snug uppercase font-heading-display">
-                {cityNameLead ? `${cityNameLead} ` : ''}
+              <div
+                className={[
+                  'text-3xl leading-snug uppercase font-heading-display',
+                  isSingleWordCity && 'hyphens-manual',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {cityHead}
                 <span className="whitespace-nowrap">
-                  {cityNameLast}
+                  {cityTail}
                   <IconCaret
-                    className="inline-block opacity-60 ml-[0.15em] align-[-0.08em]"
+                    className="inline align-middle opacity-60 ml-0.5"
                     size="0.55em"
                     aria-hidden
                   />
@@ -743,7 +768,7 @@ class AnalyticsSidebar extends Component {
 
               {pnbEvolutionData.length >= 2 && (
                 <div>
-                  <div className="w-full mt-3" style={{ height: 124, marginBottom: -24 }}>
+                  <div className="w-full mt-3" style={{ height: 132, marginBottom: -24 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart
                         data={pnbEvolutionData}
@@ -756,7 +781,7 @@ class AnalyticsSidebar extends Component {
                         <XAxis
                           dataKey="year"
                           tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
-                          ticks={['2018', '2020', '2022', '2024']}
+                          ticks={['2018', '2020', '2022', '2025']}
                           interval={'preserveStartEnd'}
                           margin={{ left: 8, right: 8 }}
                           axisLine={false}
@@ -765,7 +790,7 @@ class AnalyticsSidebar extends Component {
                         <YAxis
                           // domain={['dataMin', 'dataMax']}
                           domain={[0, 50]}
-                          ticks={[15, 30, 50]}
+                          ticks={[10, 30, 50]}
                           interval={'preserveEnd'}
                           tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
                           axisLine={false}
@@ -1008,23 +1033,20 @@ class AnalyticsSidebar extends Component {
         {(this.props.loading || this.props.lastUpdate || this.props.downloadData) && (
           <div className="mt-auto">
             <div className="flex items-start gap-2 px-5 py-3">
-              <IconDatabase
-                className="flex-shrink-0 w-[1.05em] h-[1.05em] mt-0.5 opacity-50"
-                aria-hidden
-              />
-              <p className="flex-1 min-w-0 m-0 text-xs leading-snug opacity-50">
+              <IconDatabase className="mt-0.5 h-4 w-4 flex-shrink-0 opacity-50" aria-hidden />
+              <p className="m-0 min-w-0 flex-1 text-xs leading-snug opacity-50">
                 {this.props.lastUpdate
                   ? `Dados obtidos do OpenStreetMap há ${timeSince(this.props.lastUpdate)}.`
                   : this.props.loading
                     ? 'Carregando dados desta cidade...'
                     : ''}
               </p>
-              <div className="flex items-center flex-shrink-0 -my-1.5 -mr-2">
+              <div className="-my-2 -mr-2 flex flex-shrink-0 items-center">
                 {this.props.loading && (
                   <Button
                     type="text"
                     size="small"
-                    className="!text-inherit opacity-70 hover:opacity-100 !text-xs !h-auto !px-1"
+                    className="h-auto px-1 text-xs text-inherit opacity-70"
                     onClick={this.props.cancelDataLoad}
                   >
                     Cancelar
@@ -1045,7 +1067,7 @@ class AnalyticsSidebar extends Component {
                     <Button
                       type="text"
                       shape="circle"
-                      className="!text-inherit opacity-70 hover:opacity-100"
+                      className="text-inherit opacity-60 hover:opacity-100"
                       icon={<IconMore />}
                       aria-label="Mais opções"
                     />

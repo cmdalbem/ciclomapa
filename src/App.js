@@ -951,9 +951,9 @@ export class App extends Component {
     const hasRouteParams = this.state.fromPoint && this.state.toPoint;
     const nextPath = hasRouteParams ? `/${areaSlug}/routes` : `/${areaSlug}`;
 
-    // Viewport-follow already has the camera over the new city: keep lat/lng so
-    // the slug change does not fly back to the city centre. A picker/URL switch
-    // must not freeze the previous city's camera into the new slug.
+    // A picker or URL switch must not freeze the previous city's camera into the new
+    // slug. Viewport-driven switches already have the camera over the new city, so
+    // those keep lat/lng and the slug change does not fly back to the city centre.
     const params = new URLSearchParams(window.location.search);
     params.delete(CITY_PICKER_QUERY_PARAM);
     const stampCurrentCamera = () => {
@@ -1567,17 +1567,29 @@ export class App extends Component {
 
           if (SAVE_TO_FIREBASE) {
             const storageKey = this.getStorageKeyForArea(areaName);
-            this.getStorage()
-              .save(
-                areaName,
-                merged,
-                {},
-                {
-                  storageKey,
-                  updatedAt: this.state.dataUpdatedAt,
-                  queryAreaId: AREA_ID_OVERRIDES[areaName],
+            const storage = this.getStorage();
+            const loadedAt = this.state.dataUpdatedAt;
+            // `merged` carries the roads we loaded earlier. If another client wrote the city
+            // while this request was in flight, saving now would overwrite its newer roads.
+            // If we can't read the stored timestamp, skip the write too.
+            storage
+              .getStoredUpdatedAt(storageKey)
+              .then((storedAt) => {
+                if (storedAt && loadedAt && storedAt.getTime() !== loadedAt.getTime()) {
+                  console.debug('Skipping boundary save: stored roads changed since load');
+                  return;
                 }
-              )
+                return storage.save(
+                  areaName,
+                  merged,
+                  {},
+                  {
+                    storageKey,
+                    updatedAt: loadedAt,
+                    queryAreaId: AREA_ID_OVERRIDES[areaName],
+                  }
+                );
+              })
               .catch((e) => {
                 console.debug('Could not persist city boundary:', e);
               });
@@ -1597,10 +1609,14 @@ export class App extends Component {
             this.state.lengthCalculationStrategy,
             this.state.parallelDedupeEngine
           );
+          const dropRetainedLengths = this._invalidateLengthsOnSave === areaName;
+          if (dropRetainedLengths) {
+            this._invalidateLengthsOnSave = null;
+          }
           const lengths =
-            Object.keys(computedLengths).length === 0
-              ? this.state.lengths || computedLengths
-              : computedLengths;
+            dropRetainedLengths || Object.keys(computedLengths).length > 0
+              ? computedLengths
+              : this.state.lengths || computedLengths;
 
           if (SAVE_TO_FIREBASE) {
             const storageKey = this.getStorageKeyForArea(areaName);
@@ -1608,6 +1624,7 @@ export class App extends Component {
               .save(areaName, newData.geoJson, computedLengths, {
                 storageKey,
                 queryAreaId: AREA_ID_OVERRIDES[areaName],
+                invalidateLengths: dropRetainedLengths,
               })
               .then(() => {
                 if (!IS_PROD) {
@@ -1785,6 +1802,9 @@ export class App extends Component {
         }
 
         if (needsFullRefetch) {
+          if (queryAreaMismatch) {
+            this._invalidateLengthsOnSave = area;
+          }
           if (shouldRefetchForBoundary) {
             this._boundaryRefetchAttemptedAreas.add(area);
           }

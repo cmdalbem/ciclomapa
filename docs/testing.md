@@ -44,3 +44,4 @@ Overpass is shared infrastructure and can be slow or return 5xx; the spec retrie
 - **App.logic.test.js** — Mocks `AppLayout`, Storage, Airtable, and geocoding so the class can mount in jsdom. The real `App` class is a named export for that.
 - **Map.test.js** — Mocks `mapbox-gl`; `/?e2e=1` skips `new mapboxgl.Map()`.
 - jsdom is missing `matchMedia` / `ResizeObserver`; those are stubbed in `src/setupTests.js` so antd Dropdowns can open.
+- jsdom's CSS selector parser also chokes on some Tailwind-generated classes during `getByRole` (`max-h-[60vh]`, `-my-1.5`, …). Use the integer scale or a `style` prop on nodes tests query. See [styling.md](styling.md).

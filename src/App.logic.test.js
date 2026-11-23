@@ -21,6 +21,9 @@ jest.mock('./Storage.js', () => {
     save() {
       return Promise.resolve();
     }
+    getStoredUpdatedAt() {
+      return Promise.resolve(null);
+    }
   }
   return { __esModule: true, default: Storage };
 });
@@ -458,6 +461,7 @@ describe('App updateData Overpass backfill', () => {
       geoJson: { type: 'FeatureCollection', features: [boundary] },
     });
     const save = jest.spyOn(app.getStorage(), 'save').mockResolvedValue();
+    jest.spyOn(app.getStorage(), 'getStoredUpdatedAt').mockResolvedValue(null);
 
     await act(async () => {
       await app.getDataFromOSM({
@@ -470,7 +474,49 @@ describe('App updateData Overpass backfill', () => {
     expect(app.state.geoJson.features.map((f) => f.id)).toEqual(['way/1', 'relation/1']);
     expect(app.state.lengths).toEqual({ ciclovia: 10 });
     expect(app.state.loading).toBe(false);
-    expect(save).toHaveBeenCalledWith(area, app.state.geoJson, {}, expect.any(Object));
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledWith(area, app.state.geoJson, {}, expect.any(Object));
+    });
+  });
+
+  it('skips the boundary save when the stored roads changed since this client loaded them', async () => {
+    const app = mountApp().current;
+    const area = app.state.area;
+    const loadedAt = new Date('2026-11-01T10:00:00Z');
+    const storedAt = new Date('2026-11-22T09:00:00Z');
+    const boundary = {
+      type: 'Feature',
+      id: 'relation/1',
+      properties: { boundary: 'administrative', admin_level: '8' },
+      geometry: { type: 'Polygon', coordinates: [] },
+    };
+    act(() => {
+      app.setState({
+        geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+        dataUpdatedAt: loadedAt,
+        lengths: { ciclovia: 10 },
+        loading: false,
+      });
+    });
+    jest.spyOn(OSMController, 'getData').mockResolvedValue({
+      geoJson: { type: 'FeatureCollection', features: [boundary] },
+    });
+    const save = jest.spyOn(app.getStorage(), 'save').mockResolvedValue();
+    jest.spyOn(app.getStorage(), 'getStoredUpdatedAt').mockResolvedValue(storedAt);
+
+    await act(async () => {
+      await app.getDataFromOSM({
+        areaName: area,
+        backgroundUpdate: true,
+        boundaryOnly: true,
+      });
+    });
+
+    expect(app.state.geoJson.features.map((f) => f.id)).toEqual(['way/1', 'relation/1']);
+    await waitFor(() => {
+      expect(app.getStorage().getStoredUpdatedAt).toHaveBeenCalled();
+    });
+    expect(save).not.toHaveBeenCalled();
   });
 
   it('keeps the cached outline when a boundary-only Overpass repair returns nothing', async () => {
@@ -515,6 +561,40 @@ describe('App updateData Overpass backfill', () => {
     });
     expect(osm.mock.calls[0][0].boundaryOnly).toBeFalsy();
     expect(osm.mock.calls[0][0].backgroundUpdate).toBe(true);
+    expect(app._invalidateLengthsOnSave).toBe(area);
+  });
+
+  it('does not keep old-area km when saving after a query-area change', async () => {
+    const app = mountApp().current;
+    const area = Object.keys(AREA_ID_OVERRIDES)[0];
+    act(() => {
+      app.setState({
+        area,
+        geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+        lengths: { ciclovia: 999 },
+        loading: true,
+      });
+    });
+    app._invalidateLengthsOnSave = area;
+    jest.spyOn(OSMController, 'getData').mockResolvedValue({
+      geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+    });
+    const save = jest.spyOn(app.getStorage(), 'save').mockResolvedValue();
+
+    await act(async () => {
+      await app.getDataFromOSM({ areaName: area, backgroundUpdate: true });
+    });
+
+    expect(app.state.lengths).not.toEqual({ ciclovia: 999 });
+    expect(save).toHaveBeenCalledWith(
+      area,
+      expect.any(Object),
+      expect.any(Object),
+      expect.objectContaining({
+        invalidateLengths: true,
+        queryAreaId: AREA_ID_OVERRIDES[area],
+      })
+    );
   });
 
   it('still backfills only the outline when the cached query area already matches', async () => {
