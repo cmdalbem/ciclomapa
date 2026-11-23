@@ -24,8 +24,9 @@ import { MdMyLocation } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 
 import { getOsmUrl } from './utils/utils.js';
+import { searchWithCityPicker } from './config/routes.js';
 
-import { TOPBAR_HEIGHT, IS_MOBILE, IS_PROD, ENABLE_COMMENTS } from './config/constants.js';
+import { TOPBAR_HEIGHT, IS_MOBILE, ENABLE_COMMENTS, IS_PROD } from './config/constants.js';
 
 import EditModal from './EditModal.js';
 import Logo from './components/Logo';
@@ -36,7 +37,6 @@ function TopBar(props) {
   const {
     title,
     embedMode,
-    debugMode,
     isDarkMode,
     toggleTheme,
     lat,
@@ -69,7 +69,9 @@ function TopBar(props) {
   }, []);
 
   const showCityPicker = useCallback(() => {
-    navigate({ search: '?buscar' });
+    // Read the live address bar, not React Router's location.search. Pan/zoom
+    // writes lat/lng via replaceState, so RR's search is often stale.
+    navigate({ search: searchWithCityPicker(window.location.search, true) });
   }, [navigate]);
 
   const newComment = useCallback(() => {
@@ -154,14 +156,6 @@ function TopBar(props) {
         label: 'Colaborar',
         children: collaborateMenu.items,
       },
-      ...(!IS_PROD && debugMode
-        ? [
-            {
-              key: 'review-icons',
-              label: 'Revisar ícones',
-            },
-          ]
-        : []),
       {
         key: 'about',
         icon: <IconAbout />,
@@ -177,7 +171,6 @@ function TopBar(props) {
     onClick: ({ key }) => {
       if (key === 'theme') toggleTheme();
       else if (key === 'about') openAboutModal();
-      else if (key === 'review-icons') navigate('/dev/place-type-icons');
       else if (key === 'metrics') toggleSidebar(true);
       else handleMenuClick({ key });
     },
@@ -192,9 +185,19 @@ function TopBar(props) {
       >
         <div className="flex items-start justify-between text-white w-full">
           {!IS_MOBILE && (
-            <a href="/" className="mt-2">
-              <Logo className={embedMode ? 'text-white opacity-20' : 'text-sm'} />
-            </a>
+            <div className={`flex items-center gap-2 mt-2${embedMode ? ' opacity-20' : ''}`}>
+              <a href="/">
+                <Logo className="text-sm" />
+              </a>
+              {!IS_PROD && (
+                <span
+                  className="inline-flex items-center px-[0.42em] pt-[0.18em] pb-[0.22em] rounded font-heading-display text-[1.05rem] tracking-wide leading-none text-neutral-900 bg-yellow-400 -rotate-[8deg] select-none"
+                  title="Esta não é a versão de produção"
+                >
+                  Beta
+                </span>
+              )}
+            </div>
           )}
 
           {!embedMode && (
@@ -285,12 +288,6 @@ function TopBar(props) {
                     Sobre
                   </Button>
 
-                  {!IS_PROD && debugMode && (
-                    <Button className="glass-bg" onClick={() => navigate('/dev/place-type-icons')}>
-                      Revisar ícones
-                    </Button>
-                  )}
-
                   <Dropdown menu={collaborateMenu}>
                     <Button className="glass-bg">
                       <span> Colaborar </span>
@@ -348,7 +345,6 @@ export default TopBar;
 TopBar.propTypes = {
   title: PropTypes.string.isRequired,
   embedMode: PropTypes.bool,
-  debugMode: PropTypes.bool,
   isDarkMode: PropTypes.bool,
   toggleTheme: PropTypes.func.isRequired,
   lat: PropTypes.number,
@@ -364,7 +360,6 @@ TopBar.propTypes = {
 
 TopBar.defaultProps = {
   embedMode: false,
-  debugMode: false,
   isDarkMode: false,
   lat: null,
   lng: null,

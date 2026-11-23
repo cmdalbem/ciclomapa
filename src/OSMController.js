@@ -7,8 +7,8 @@ import {
   DEFAULT_BORDER_WIDTH,
   OVERPASS_SERVERS,
   AREA_ID_OVERRIDES,
-  BLACKLISTED_CITIES_FOR_EXTRA_LAYERS,
   ENABLE_BOUNDARY_LAYER,
+  OUTRAS_VIAS_LAYER_NAMES,
 } from './config/constants.js';
 import { API_TYPES, trackCall } from './dev/apiTracker.js';
 import { slugify } from './utils/utils.js';
@@ -128,14 +128,20 @@ class OSMController {
     const bbox = constraints.bbox;
     const areaId = constraints.areaId;
 
-    const isBlacklisted = areaId && BLACKLISTED_CITIES_FOR_EXTRA_LAYERS.includes(areaId);
-    const extraLayersToExclude = ['Baixa velocidade', 'Trilha', 'Proibido'];
+    if (constraints.boundaryOnly) {
+      return `
+            [out:json][timeout:120];
+            area(${areaId})->.a;
+            nwr(pivot.a)->.citybnd;
+            (.citybnd;>;);
+            out geom;
+        `;
+    }
 
     const filteredLayers = layersDefinitions.default.filter((l) => {
       if (!l.filters) return false;
-      if (isBlacklisted && extraLayersToExclude.includes(l.name)) {
-        return false;
-      }
+      if (l.onlyDebug) return false;
+      if (OUTRAS_VIAS_LAYER_NAMES.has(l.name)) return false;
       return true;
     });
 
@@ -161,7 +167,8 @@ class OSMController {
     const boundaryQuery =
       !bbox && ENABLE_BOUNDARY_LAYER
         ? `
-                rel(area.a)["boundary"="administrative"]["admin_level"~"^(6|7|8|9|10)$"];
+                nwr(pivot.a)->.citybnd;
+                (.citybnd;>;);
                 out geom;
             `
         : '';
@@ -273,6 +280,7 @@ class OSMController {
           const query = OSMController.getQuery({
             areaId,
             areaName: constraints.area,
+            boundaryOnly: constraints.boundaryOnly,
           });
           console.debug('generated query: ', query);
 

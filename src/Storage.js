@@ -207,23 +207,38 @@ class Storage {
     });
   }
 
-  async resolveLengthsForSave(slug, lengths) {
+  async resolveLengthsForSave(slug, lengths, options = {}) {
     if (Object.keys(lengths).length > 0) {
       return lengths;
     }
+    if (options.invalidateLengths) {
+      return lengths;
+    }
+
+    const newAreaId = options.queryAreaId;
+    let existingAreaId;
 
     try {
       const metadataDoc = await this.db
         .collection(DEFAULT_CITIES_COLLECTION)
         .doc(`${slug}_metadata`)
         .get();
-      const existing = metadataDoc.exists ? metadataDoc.data()?.lengths : null;
+      const existingMeta = metadataDoc.exists ? metadataDoc.data() : null;
+      existingAreaId = existingMeta?.queryAreaId;
+      if (newAreaId != null && existingAreaId !== newAreaId) {
+        return lengths;
+      }
+      const existing = existingMeta?.lengths;
       if (existing && Object.keys(existing).length > 0) {
         console.debug(`[Storage] Preserving existing metadata lengths for ${slug}`);
         return existing;
       }
     } catch (error) {
       console.debug(`[Storage] Could not read metadata lengths for ${slug}:`, error);
+    }
+
+    if (newAreaId != null && existingAreaId !== newAreaId) {
+      return lengths;
     }
 
     const statsDoc = await this.getCityStatsDoc(slug);
@@ -236,29 +251,54 @@ class Storage {
     return lengths;
   }
 
+  // Metadata only. Lets a caller check whether the stored roads changed since it loaded them.
+  async getStoredUpdatedAt(storageKey) {
+    const slug = this.normalizeStorageKey(storageKey);
+    trackCall({ api: API_TYPES.FIREBASE_READ, details: slug });
+    const metadataDoc = await this.db
+      .collection(DEFAULT_CITIES_COLLECTION)
+      .doc(`${slug}_metadata`)
+      .get();
+    return metadataDoc.exists ? (metadataDoc.data()?.updatedAt?.toDate?.() ?? null) : null;
+  }
+
   async save(name, geoJson, lengths, options = {}) {
     trackCall({ api: API_TYPES.FIREBASE_WRITE, details: name });
 
-    const now = new Date();
+    const now = options.updatedAt ? new Date(options.updatedAt) : new Date();
     const storageKey = this.normalizeStorageKey(options.storageKey || name);
 
     // Save to Local Storage
-    set(storageKey, {
+    const localRecord = {
       geoJson: geoJson,
       updatedAt: now,
-    });
+    };
+    if (options.queryAreaId != null) localRecord.queryAreaId = options.queryAreaId;
+    set(storageKey, localRecord);
 
     try {
       console.debug(`[Firebase] Saving GeoJSON ${name} using new chunked format...`);
 
-      const lengthsForMetadata = await this.resolveLengthsForSave(storageKey, lengths);
+      const lengthsForMetadata = await this.resolveLengthsForSave(storageKey, lengths, options);
+      const hasLengths = Object.keys(lengthsForMetadata).length > 0;
 
       if (Object.keys(lengths).length > 0) {
         await this.saveStatsToFirestore(storageKey, lengths);
         console.debug(`[Firebase] Lengths for ${name} saved successfully.`);
+      } else if (!hasLengths && (options.invalidateLengths || options.queryAreaId != null)) {
+        await this.saveStatsToFirestore(storageKey, {});
       }
 
-      await this.saveWithChunking(name, geoJson, lengthsForMetadata, storageKey);
+      await this.saveWithChunking(
+        name,
+        geoJson,
+        hasLengths ? lengthsForMetadata : null,
+        storageKey,
+        {
+          updatedAt: now,
+          queryAreaId: options.queryAreaId,
+        }
+      );
       console.debug(`[Firebase] GeoJSON ${name} saved successfully using new format.`);
     } catch (error) {
       console.error(`[Firebase] Error saving GeoJSON ${name}: `, error);
@@ -314,27 +354,28 @@ class Storage {
     // console.table(valuesTable);
   }
 
-  async saveWithChunking(name, geoJson, lengths, storageKeyOverride = null) {
+  async saveWithChunking(name, geoJson, lengths, storageKeyOverride = null, persist = {}) {
     const compressed = this.compressJson(geoJson);
     const slug = this.normalizeStorageKey(storageKeyOverride || name);
 
-    // Calculate optimal chunk size
-    const chunkSize = this.calculateOptimalChunkSize(compressed);
-    const chunks = this.createChunks(compressed, chunkSize);
+    const chunks = this.createChunksByUtf8Bytes(compressed);
 
     console.debug(
       `[Storage] Splitting ${name} into ${chunks.length} chunks (${compressed.length} bytes total)`
     );
 
-    // Save metadata first
-    await this.db.collection(DEFAULT_CITIES_COLLECTION).doc(`${slug}_metadata`).set({
+    const metadata = {
       name: name,
       totalChunks: chunks.length,
       totalSize: compressed.length,
       lengths: lengths,
-      updatedAt: new Date(),
+      updatedAt: persist.updatedAt || new Date(),
       format: 'chunked_v1',
-    });
+    };
+    if (persist.queryAreaId != null) metadata.queryAreaId = persist.queryAreaId;
+
+    // Save metadata first
+    await this.db.collection(DEFAULT_CITIES_COLLECTION).doc(`${slug}_metadata`).set(metadata);
 
     // Save chunks in parallel
     const chunkPromises = chunks.map((chunk, index) =>
@@ -358,16 +399,19 @@ class Storage {
     );
   }
 
-  calculateOptimalChunkSize(compressed) {
-    const availableSize = Storage.MAX_DOCUMENT_SIZE - Storage.ESTIMATED_OVERHEAD;
-    const chunksNeeded = Math.ceil(compressed.length / availableSize);
-    return Math.ceil(compressed.length / chunksNeeded);
-  }
-
-  createChunks(data, chunkSize) {
+  createChunksByUtf8Bytes(data) {
+    const maxBytes = Storage.MAX_DOCUMENT_SIZE - Storage.ESTIMATED_OVERHEAD;
+    const bytes = new TextEncoder().encode(data);
+    const decoder = new TextDecoder('utf-8', { ignoreBOM: true });
     const chunks = [];
-    for (let i = 0; i < data.length; i += chunkSize) {
-      chunks.push(data.slice(i, i + chunkSize));
+    let offset = 0;
+    while (offset < bytes.length) {
+      let end = Math.min(offset + maxBytes, bytes.length);
+      if (end < bytes.length) {
+        while (end > offset && (bytes[end] & 0xc0) === 0x80) end--;
+      }
+      chunks.push(decoder.decode(bytes.subarray(offset, end)));
+      offset = end;
     }
     return chunks;
   }
@@ -433,6 +477,7 @@ class Storage {
         geoJson: geoJson,
         updatedAt: metadata.updatedAt.toDate(),
         lengths: metadata.lengths,
+        queryAreaId: metadata.queryAreaId,
       };
     } catch (error) {
       console.debug(`[Storage] New format load failed for ${slug}:`, error);

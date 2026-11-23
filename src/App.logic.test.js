@@ -3,7 +3,8 @@ import { render, waitFor, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 import App from './App.js';
-import { PMTILES_FALLBACK_MISSING_LAYER_NAMES } from './config/constants.js';
+import OSMController from './OSMController.js';
+import { AREA_ID_OVERRIDES, PMTILES_FALLBACK_MISSING_LAYER_NAMES } from './config/constants.js';
 import { guessPlaceFromViewport, reverseGeocodePlace } from './features/map/mapboxGeocoding.js';
 import { appNotification } from './antdNotification';
 import Analytics from './Analytics.js';
@@ -18,6 +19,9 @@ jest.mock('./Storage.js', () => {
     }
     save() {
       return Promise.resolve();
+    }
+    getStoredUpdatedAt() {
+      return Promise.resolve(null);
     }
   }
   return { __esModule: true, default: Storage };
@@ -48,7 +52,13 @@ jest.mock(
       children
 );
 jest.mock('./antdNotification', () => ({
-  appNotification: { info: jest.fn(), error: jest.fn(), success: jest.fn(), warning: jest.fn() },
+  appNotification: {
+    info: jest.fn(),
+    error: jest.fn(),
+    success: jest.fn(),
+    warning: jest.fn(),
+    destroy: jest.fn(),
+  },
   bindAntdNotification: jest.fn(),
 }));
 jest.mock('./utils/documentMeta.js', () => ({ updateDocumentMeta: jest.fn() }));
@@ -125,6 +135,28 @@ describe('App city / slug helpers', () => {
     expect(app.getCanonicalRouteCitySlug()).toBe('sao-paulo');
     expect(app.getSrOnlyDocumentTitle()).toBe('São Paulo — CicloMapa');
     expect(app.getPreferredCanonicalSlugForMeta('Pelotas')).toBe('sao-paulo');
+  });
+
+  it('ignores a URL camera that belongs to another city than the slug', () => {
+    const app = mountApp('/salvador?lat=-25.4469028&lng=-49.2580746&z=12.27').current;
+    expect(app.state.area).toBe('Salvador, Bahia, Brasil');
+    expect(app.urlViewportFitsRouteCity()).toBe(false);
+    expect(app.state.lat).toBeCloseTo(-12.9822499);
+    expect(app.state.lng).toBeCloseTo(-38.4812772);
+  });
+
+  it('keeps a URL camera that is still in the slug city', () => {
+    const app = mountApp('/salvador?lat=-13.0100000&lng=-38.5100000&z=14').current;
+    expect(app.hasExplicitViewportInURL()).toBe(true);
+    expect(app.state.lat).toBeCloseTo(-13.01);
+    expect(app.state.lng).toBeCloseTo(-38.51);
+  });
+
+  it('picker city change resolves the new city instead of keeping the old camera', () => {
+    const app = mountApp('/curitiba?lat=-25.4295963&lng=-49.2712724&z=12').current;
+    const spy = jest.spyOn(app, 'resolveCitySlugToAreaAndViewport').mockImplementation(() => {});
+    act(() => app.setArea('Salvador, Bahia, Brasil', { source: 'picker' }));
+    expect(spy).toHaveBeenCalledWith('salvador');
   });
 });
 
@@ -228,6 +260,297 @@ describe('App GeoJSON gate and area sync', () => {
   });
 });
 
+describe('App updateData Overpass backfill', () => {
+  const wayFeature = {
+    type: 'Feature',
+    id: 'way/1',
+    properties: { highway: 'cycleway' },
+    geometry: {
+      type: 'LineString',
+      coordinates: [
+        [-47, -15],
+        [-47.1, -15.1],
+      ],
+    },
+  };
+  const wayOnlyGeoJson = {
+    type: 'FeatureCollection',
+    features: [wayFeature],
+  };
+  const withBoundaryGeoJson = {
+    type: 'FeatureCollection',
+    features: [
+      wayFeature,
+      {
+        type: 'Feature',
+        id: 'relation/1',
+        properties: { boundary: 'administrative', admin_level: '8' },
+        geometry: { type: 'Polygon', coordinates: [] },
+      },
+    ],
+  };
+
+  function mockCache(app, geoJson, updatedAt) {
+    jest.spyOn(app.getStorage(), 'load').mockResolvedValue({
+      geoJson: JSON.parse(JSON.stringify(geoJson)),
+      lengths: { ciclovia: 10 },
+      updatedAt,
+    });
+  }
+
+  it('fetches only the admin boundary when cached GeoJSON is fresh but has none', async () => {
+    const app = mountApp().current;
+    mockCache(app, wayOnlyGeoJson, new Date());
+    const osm = jest.spyOn(app, 'getDataFromOSM').mockImplementation(() => {});
+    await act(async () => {
+      app.updateData();
+    });
+    await waitFor(() => {
+      expect(osm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          backgroundUpdate: true,
+          boundaryOnly: true,
+        })
+      );
+    });
+    expect(osm).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not hit Overpass when cached GeoJSON is fresh and already has a boundary', async () => {
+    const app = mountApp().current;
+    mockCache(app, withBoundaryGeoJson, new Date());
+    const osm = jest.spyOn(app, 'getDataFromOSM').mockImplementation(() => {});
+    await act(async () => {
+      app.updateData();
+    });
+    await waitFor(() => {
+      expect(app.state.geoJson?.features?.length).toBe(2);
+    });
+    expect(osm).not.toHaveBeenCalled();
+  });
+
+  it('backfills the city outline when the cache still has a pile of inner admin polygons', async () => {
+    const app = mountApp().current;
+    const closed = [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, 1],
+      [0, 0],
+    ];
+    const manyAdmins = {
+      type: 'FeatureCollection',
+      features: [1, 2, 3].map((n) => ({
+        type: 'Feature',
+        id: `relation/${n}`,
+        properties: { boundary: 'administrative', admin_level: '9' },
+        geometry: { type: 'Polygon', coordinates: [closed] },
+      })),
+    };
+    mockCache(app, manyAdmins, new Date());
+    const osm = jest.spyOn(app, 'getDataFromOSM').mockImplementation(() => {});
+    await act(async () => {
+      app.updateData();
+    });
+    await waitFor(() => {
+      expect(osm).toHaveBeenCalledWith(expect.objectContaining({ boundaryOnly: true }));
+    });
+  });
+
+  it('does a full Overpass refetch when cached GeoJSON is stale', async () => {
+    const app = mountApp().current;
+    const stale = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+    mockCache(app, wayOnlyGeoJson, stale);
+    const osm = jest.spyOn(app, 'getDataFromOSM').mockImplementation(() => {});
+    await act(async () => {
+      app.updateData();
+    });
+    await waitFor(() => {
+      expect(osm).toHaveBeenCalledTimes(1);
+    });
+    expect(osm.mock.calls[0][0].boundaryOnly).toBeFalsy();
+    expect(osm.mock.calls[0][0].backgroundUpdate).toBe(true);
+  });
+
+  it('merges admin boundary features into cached GeoJSON without replacing ways', async () => {
+    const app = mountApp().current;
+    const area = app.state.area;
+    const boundary = {
+      type: 'Feature',
+      id: 'relation/1',
+      properties: { boundary: 'administrative', admin_level: '8' },
+      geometry: { type: 'Polygon', coordinates: [] },
+    };
+    act(() => {
+      app.setState({
+        geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+        lengths: { ciclovia: 10 },
+        loading: false,
+      });
+    });
+    jest.spyOn(OSMController, 'getData').mockResolvedValue({
+      geoJson: { type: 'FeatureCollection', features: [boundary] },
+    });
+    const save = jest.spyOn(app.getStorage(), 'save').mockResolvedValue();
+    jest.spyOn(app.getStorage(), 'getStoredUpdatedAt').mockResolvedValue(null);
+
+    await act(async () => {
+      await app.getDataFromOSM({
+        areaName: area,
+        backgroundUpdate: true,
+        boundaryOnly: true,
+      });
+    });
+
+    expect(app.state.geoJson.features.map((f) => f.id)).toEqual(['way/1', 'relation/1']);
+    expect(app.state.lengths).toEqual({ ciclovia: 10 });
+    expect(app.state.loading).toBe(false);
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledWith(area, app.state.geoJson, {}, expect.any(Object));
+    });
+  });
+
+  it('skips the boundary save when the stored roads changed since this client loaded them', async () => {
+    const app = mountApp().current;
+    const area = app.state.area;
+    const loadedAt = new Date('2026-11-01T10:00:00Z');
+    const storedAt = new Date('2026-11-22T09:00:00Z');
+    const boundary = {
+      type: 'Feature',
+      id: 'relation/1',
+      properties: { boundary: 'administrative', admin_level: '8' },
+      geometry: { type: 'Polygon', coordinates: [] },
+    };
+    act(() => {
+      app.setState({
+        geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+        dataUpdatedAt: loadedAt,
+        lengths: { ciclovia: 10 },
+        loading: false,
+      });
+    });
+    jest.spyOn(OSMController, 'getData').mockResolvedValue({
+      geoJson: { type: 'FeatureCollection', features: [boundary] },
+    });
+    const save = jest.spyOn(app.getStorage(), 'save').mockResolvedValue();
+    jest.spyOn(app.getStorage(), 'getStoredUpdatedAt').mockResolvedValue(storedAt);
+
+    await act(async () => {
+      await app.getDataFromOSM({
+        areaName: area,
+        backgroundUpdate: true,
+        boundaryOnly: true,
+      });
+    });
+
+    expect(app.state.geoJson.features.map((f) => f.id)).toEqual(['way/1', 'relation/1']);
+    await waitFor(() => {
+      expect(app.getStorage().getStoredUpdatedAt).toHaveBeenCalled();
+    });
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('keeps the cached outline when a boundary-only Overpass repair returns nothing', async () => {
+    const app = mountApp().current;
+    const area = app.state.area;
+    act(() => {
+      app.setState({
+        geoJson: JSON.parse(JSON.stringify(withBoundaryGeoJson)),
+        lengths: { ciclovia: 10 },
+        loading: true,
+      });
+    });
+    jest.spyOn(OSMController, 'getData').mockResolvedValue({ geoJson: null });
+    const save = jest.spyOn(app.getStorage(), 'save').mockResolvedValue();
+
+    await act(async () => {
+      await app.getDataFromOSM({
+        areaName: area,
+        backgroundUpdate: true,
+        boundaryOnly: true,
+      });
+    });
+
+    expect(app.state.geoJson.features.map((f) => f.id)).toEqual(['way/1', 'relation/1']);
+    expect(app.state.loading).toBe(false);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('does a full Overpass refetch when the cache was built with a different query area', async () => {
+    const app = mountApp().current;
+    const area = Object.keys(AREA_ID_OVERRIDES)[0];
+    act(() => {
+      app.setState({ area });
+    });
+    mockCache(app, withBoundaryGeoJson, new Date());
+    const osm = jest.spyOn(app, 'getDataFromOSM').mockImplementation(() => {});
+    await act(async () => {
+      app.updateData();
+    });
+    await waitFor(() => {
+      expect(osm).toHaveBeenCalledTimes(1);
+    });
+    expect(osm.mock.calls[0][0].boundaryOnly).toBeFalsy();
+    expect(osm.mock.calls[0][0].backgroundUpdate).toBe(true);
+    expect(app._invalidateLengthsOnSave).toBe(area);
+  });
+
+  it('does not keep old-area km when saving after a query-area change', async () => {
+    const app = mountApp().current;
+    const area = Object.keys(AREA_ID_OVERRIDES)[0];
+    act(() => {
+      app.setState({
+        area,
+        geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+        lengths: { ciclovia: 999 },
+        loading: true,
+      });
+    });
+    app._invalidateLengthsOnSave = area;
+    jest.spyOn(OSMController, 'getData').mockResolvedValue({
+      geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+    });
+    const save = jest.spyOn(app.getStorage(), 'save').mockResolvedValue();
+
+    await act(async () => {
+      await app.getDataFromOSM({ areaName: area, backgroundUpdate: true });
+    });
+
+    expect(app.state.lengths).not.toEqual({ ciclovia: 999 });
+    expect(save).toHaveBeenCalledWith(
+      area,
+      expect.any(Object),
+      expect.any(Object),
+      expect.objectContaining({
+        invalidateLengths: true,
+        queryAreaId: AREA_ID_OVERRIDES[area],
+      })
+    );
+  });
+
+  it('still backfills only the outline when the cached query area already matches', async () => {
+    const app = mountApp().current;
+    const area = Object.keys(AREA_ID_OVERRIDES)[0];
+    act(() => {
+      app.setState({ area });
+    });
+    jest.spyOn(app.getStorage(), 'load').mockResolvedValue({
+      geoJson: JSON.parse(JSON.stringify(wayOnlyGeoJson)),
+      lengths: { ciclovia: 10 },
+      updatedAt: new Date(),
+      queryAreaId: AREA_ID_OVERRIDES[area],
+    });
+    const osm = jest.spyOn(app, 'getDataFromOSM').mockImplementation(() => {});
+    await act(async () => {
+      app.updateData();
+    });
+    await waitFor(() => {
+      expect(osm).toHaveBeenCalledWith(expect.objectContaining({ boundaryOnly: true }));
+    });
+    expect(osm).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('App layers and PMTiles metadata', () => {
   it('initLayers marks fallback-missing layers unavailable until metadata is known', () => {
     const app = mountApp().current;
@@ -249,6 +572,15 @@ describe('App layers and PMTiles metadata', () => {
     expect(layers.find((l) => l.name === 'Ciclovia').isAvailable).toBe(true);
     expect(layers.find((l) => l.name === 'Ciclofaixa').isAvailable).toBe(false);
     expect(layers.find((l) => l.name === 'Ciclofaixa').isActive).toBe(false);
+  });
+
+  it('keeps debug pairing layers available even when they are not in the PMTiles archive', () => {
+    const app = mountApp().current;
+    app.pmtilesAvailableLayerNames = new Set(['Ciclovia']);
+    const layers = app.initLayers({}, false, true);
+    const debugLayers = layers.filter((l) => l.onlyDebug);
+    expect(debugLayers.length).toBeGreaterThan(0);
+    expect(debugLayers.every((l) => l.isAvailable)).toBe(true);
   });
 
   it('loadPmtilesAvailableLayers no-ops without a tiles URL', async () => {

@@ -71,6 +71,7 @@ describe('TopBar (desktop)', () => {
   it('renders logo, search with the current city and the map action buttons', () => {
     renderTopBar();
     expect(screen.getByRole('link', { name: /ciclomapa/i })).toHaveAttribute('href', '/');
+    expect(screen.getByText('Beta')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Buscar. Cidade atual: Porto Alegre, Rio Grande do Sul' })
     ).toBeInTheDocument();
@@ -105,15 +106,6 @@ describe('TopBar (desktop)', () => {
   it('hides Métricas while the sidebar is open', () => {
     renderTopBar({ isSidebarOpen: true });
     expect(screen.queryByRole('button', { name: 'Métricas' })).not.toBeInTheDocument();
-  });
-
-  it('shows "Revisar ícones" only in debug mode and navigates to the dev page', () => {
-    const { unmount } = renderTopBar();
-    expect(screen.queryByRole('button', { name: 'Revisar ícones' })).not.toBeInTheDocument();
-    unmount();
-    renderTopBar({ debugMode: true });
-    fireEvent.click(screen.getByRole('button', { name: 'Revisar ícones' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/dev/place-type-icons');
   });
 
   it('Colaborar > Adicionar comentário dispatches the newComment event', async () => {
@@ -161,7 +153,7 @@ describe('TopBar (desktop)', () => {
   });
 
   it('overflow menu routes every entry to the right handler', async () => {
-    renderTopBar({ debugMode: true, isDarkMode: false });
+    renderTopBar({ isDarkMode: false });
     const more = screen.getByRole('button', { name: 'Mais opções' });
 
     const clickEntry = async (label) => {
@@ -179,9 +171,6 @@ describe('TopBar (desktop)', () => {
 
     await clickEntry('Métricas');
     expect(baseProps.toggleSidebar).toHaveBeenCalledWith(true);
-
-    await clickEntry('Revisar ícones');
-    expect(screen.getByTestId('location')).toHaveTextContent('/dev/place-type-icons');
   });
 
   it('overflow menu shows the light-theme label when dark', async () => {

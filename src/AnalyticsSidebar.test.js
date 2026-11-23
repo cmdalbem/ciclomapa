@@ -124,6 +124,35 @@ describe('AnalyticsSidebar', () => {
     expect(screen.getByText('Sem dados')).toBeInTheDocument();
   });
 
+  it('shows skeletons instead of Sem dados while city lengths are loading', () => {
+    renderSidebar({ loading: true, lengths: {}, lastUpdate: null });
+    expect(screen.queryByText('Sem dados')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('analytics-skel-md').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('analytics-skel-lg')).toHaveClass('bg-white', 'bg-opacity-20');
+    expect(screen.getByText('Ciclovia')).toBeInTheDocument();
+    expect(screen.getByText('Bicicletários')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Alternar inclusão/ })).not.toBeInTheDocument();
+  });
+
+  it('keeps zero km and POI counts while refreshing instead of swapping them for skeletons', () => {
+    renderSidebar({
+      loading: true,
+      lengths: { ciclovia: 0, ciclofaixa: 0, bicicletarios: 12 },
+    });
+    expect(screen.queryByTestId('analytics-skel-lg')).toBeNull();
+    expect(screen.getByText('TOTAL')).toBeInTheDocument();
+    expect(screen.getByText('Bicicletários')).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
+  });
+
+  it('keeps real totals while refreshing a city that already has lengths', () => {
+    renderSidebar({ loading: true });
+    expect(screen.getByText('TOTAL')).toBeInTheDocument();
+    expect(screen.getByText(/17\.0/)).toBeInTheDocument();
+    expect(screen.queryByText('Sem dados')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('analytics-skel-lg')).toBeNull();
+  });
+
   it('PNB, IDECiclo and debug strategy select show when the data is there', async () => {
     renderSidebar({
       debugMode: true,
@@ -164,7 +193,8 @@ describe('AnalyticsSidebar', () => {
         loading={false}
       />
     );
-    fireEvent.click(screen.getByRole('button', { name: /Atualizar/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mais opções' }));
+    fireEvent.click(await screen.findByText('Sincronizar'));
     expect(appModal.confirm).toHaveBeenCalledTimes(1);
     appModal.confirm.mock.calls[0][0].onOk();
     expect(handlers.forceUpdate).toHaveBeenCalledTimes(1);

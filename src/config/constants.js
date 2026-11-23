@@ -8,10 +8,6 @@ export const CICLOMAPA_USER_AGENT =
 
 export const OSM_DATA_MAX_AGE_DAYS = 30;
 
-export const BLACKLISTED_CITIES_FOR_EXTRA_LAYERS = [
-  3600062422, // Berlin, Berlin, Germany
-];
-
 export const LENGTH_CALCULATE_STRATEGIES = [
   'random', // Consider a random side each time
   'optimistic', // Consider always the side the longest
@@ -40,7 +36,8 @@ export const OVERPASS_SERVERS = [
 
 export const AREA_ID_OVERRIDES = {
   'Vitória, Espirito Santo, Brasil': 3601825817,
-  'Brasília, Distrito Federal, Brasil': 3602662005,
+  // DF itself (rel 421151). 2662005 is RIDE/Entorno, a much bigger planning region.
+  'Brasília, Distrito Federal, Brasil': 3600421151,
   'København, Capital RegionDenmark, Denmark': 3602192363,
   'Comuna 1, Buenos Aires, Argentina': 3601224652,
   'Stockholm, Stockholm, Sweden': 3600398021,

@@ -22,7 +22,12 @@ import {
   getPredefinedCitySlugDefinition,
   getPredefinedCityStaticLocation,
 } from './config/citySlugCatalog.js';
-import { isPrivacyPolicyLocation, PRIVACY_POLICY_PATH } from './config/routes.js';
+import {
+  CITY_PICKER_QUERY_PARAM,
+  isPrivacyPolicyLocation,
+  PRIVACY_POLICY_PATH,
+  searchWithCityPicker,
+} from './config/routes.js';
 import { flyMapToCityFocus } from './Map.js';
 import { flyMapTo, flyMapToCinematic } from './features/map/mapCamera.js';
 import { isAreaBrowsePlaceResult } from './GooglePlacesGeocoder.js';
@@ -49,6 +54,7 @@ import {
   ENABLE_SATELLITE_TOGGLE,
   ENABLE_BOUNDARY_LAYER,
   MAX_RECENT_CITIES,
+  AREA_ID_OVERRIDES,
 } from './config/constants.js';
 import {
   maybeAutoOpenWelcomeAboutModal,
@@ -70,6 +76,17 @@ import './styles/App.less';
 
 const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
 
+// URL `lat`/`lng` farther than this from the slug city's catalog center is treated
+// as leftover from a previous city (picker switched the slug but not the camera).
+const CITY_SLUG_VIEWPORT_MAX_KM = 80;
+
+function approxDistanceKm(lat1, lng1, lat2, lng2) {
+  const midLatRad = ((lat1 + lat2) / 2) * (Math.PI / 180);
+  const dLat = lat1 - lat2;
+  const dLng = (lng1 - lng2) * Math.cos(midLatRad);
+  return Math.hypot(dLat, dLng) * 111.32;
+}
+
 export class App extends Component {
   geoJson;
   _storage = null;
@@ -80,7 +97,7 @@ export class App extends Component {
   _geoJsonLoadedArea = null;
   _geoJsonLoadingArea = null;
   // Areas we already re-fetched from OSM once this session because the cached GeoJSON
-  // had no admin boundary (see updateData()).
+  // had no usable city outline (see updateData()).
   _boundaryRefetchAttemptedAreas = new Set();
   // Layer names present in the PMTiles archive (null until metadata is read).
   pmtilesAvailableLayerNames = null;
@@ -163,19 +180,21 @@ export class App extends Component {
     console.log('Previous saved state:', prev);
 
     const citySlug = this.getCitySlugFromRoute();
-    const hasExplicitLatLng = this.hasExplicitViewportInURL();
-    const shouldStartFromGlobeView = Boolean(citySlug) && !hasExplicitLatLng;
+    const hasUrlViewport = this.hasExplicitViewportInURL();
+    const hasExplicitLatLng = hasUrlViewport && this.urlViewportFitsRouteCity();
+    const shouldStartFromGlobeView = Boolean(citySlug) && !hasUrlViewport;
 
     // Derive the initial area from the URL slug (for catalog cities) so that a page
     // load/refresh always reflects the slug rather than potentially stale localStorage.
     // For unknown cities, componentDidMount will resolve via Nominatim.
     let initialArea = prev.area || '';
+    let slugStatic = null;
     if (citySlug) {
       const normalizedSlug = decodeURIComponent(citySlug).trim().toLowerCase();
       const canonicalSlug = getCanonicalCitySlug(normalizedSlug) || normalizedSlug;
-      const staticLocation = getPredefinedCityStaticLocation(canonicalSlug);
-      if (staticLocation?.areaLabel) {
-        initialArea = staticLocation.areaLabel;
+      slugStatic = getPredefinedCityStaticLocation(canonicalSlug);
+      if (slugStatic?.areaLabel) {
+        initialArea = slugStatic.areaLabel;
       }
     }
 
@@ -266,9 +285,21 @@ export class App extends Component {
           ? prev.showSatellite
           : false
         : false,
-      zoom: shouldStartFromGlobeView ? 1.8 : parseFloat(urlParams.z) || prev.zoom || DEFAULT_ZOOM,
-      lat: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lat) || prev.lat || DEFAULT_LAT,
-      lng: shouldStartFromGlobeView ? 0 : parseFloat(urlParams.lng) || prev.lng || DEFAULT_LNG,
+      zoom: shouldStartFromGlobeView
+        ? 1.8
+        : hasExplicitLatLng && Number.isFinite(parseFloat(urlParams.z))
+          ? parseFloat(urlParams.z)
+          : prev.zoom || DEFAULT_ZOOM,
+      lat: shouldStartFromGlobeView
+        ? 0
+        : hasExplicitLatLng && Number.isFinite(parseFloat(urlParams.lat))
+          ? parseFloat(urlParams.lat)
+          : slugStatic?.lat || prev.lat || DEFAULT_LAT,
+      lng: shouldStartFromGlobeView
+        ? 0
+        : hasExplicitLatLng && Number.isFinite(parseFloat(urlParams.lng))
+          ? parseFloat(urlParams.lng)
+          : slugStatic?.lng || prev.lng || DEFAULT_LNG,
       geoJson: null,
       debugMode: urlParams.debug || false,
       loading: false,
@@ -388,7 +419,9 @@ export class App extends Component {
 
   openCityPicker() {
     this.setState({ aboutModal: false, hideUI: false });
-    this.props.router.navigate({ search: '?buscar' });
+    this.props.router.navigate({
+      search: searchWithCityPicker(window.location.search, true),
+    });
   }
 
   openLayersLegendModal(scrollToSection = null) {
@@ -471,6 +504,10 @@ export class App extends Component {
     // metadata has been read we go with the fallback list.
     const availableNames = this.pmtilesAvailableLayerNames;
     layers.forEach((l) => {
+      if (l.onlyDebug) {
+        l.isAvailable = true;
+        return;
+      }
       if (!l.filters) return; // e.g. comments: not sourced from the tiles at all
       l.isAvailable = availableNames
         ? availableNames.has(l.name)
@@ -501,6 +538,7 @@ export class App extends Component {
 
     this.setState((prev) => ({
       layers: prev.layers.map((l) => {
+        if (l.onlyDebug) return { ...l, isAvailable: true };
         if (!l.filters) return l;
         const isAvailable = this.pmtilesAvailableLayerNames.has(l.name);
         return { ...l, isAvailable, isActive: isAvailable && l.isActive };
@@ -571,6 +609,22 @@ export class App extends Component {
   hasExplicitViewportInURL() {
     const params = new URLSearchParams(this.props?.location?.search || window.location.search);
     return params.has('lat') || params.has('lng') || params.has('z');
+  }
+
+  urlViewportFitsRouteCity() {
+    const params = new URLSearchParams(this.props?.location?.search || window.location.search);
+    const lat = parseFloat(params.get('lat'));
+    const lng = parseFloat(params.get('lng'));
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return true;
+    const citySlug = this.getCitySlugFromRoute();
+    if (!citySlug) return true;
+    const canonicalSlug = getCanonicalCitySlug(citySlug) || citySlug;
+    const staticLocation = getPredefinedCityStaticLocation(canonicalSlug);
+    if (!staticLocation) return true;
+    return (
+      approxDistanceKm(lat, lng, staticLocation.lat, staticLocation.lng) <=
+      CITY_SLUG_VIEWPORT_MAX_KM
+    );
   }
 
   getCitySlugFromRoute() {
@@ -716,16 +770,25 @@ export class App extends Component {
     const hasRouteParams = this.state.fromPoint && this.state.toPoint;
     const nextPath = hasRouteParams ? `/${areaSlug}/routes` : `/${areaSlug}`;
 
-    // Always embed the current viewport in the URL so that when componentDidUpdate
-    // detects the slug change, hasExplicitViewportInURL() returns true and
-    // resolveCitySlugToAreaAndViewport is not called (which would fly the map to the
-    // city centre, overriding the user's current position).
+    // A picker or URL switch must not freeze the previous city's camera into the new
+    // slug. Viewport-driven switches already have the camera over the new city, so
+    // those keep lat/lng and the slug change does not fly back to the city centre.
     const params = new URLSearchParams(window.location.search);
-    const viewport = this.getCurrentViewport();
-    if (Number.isFinite(viewport.lat) && Number.isFinite(viewport.lng)) {
-      params.set('lat', viewport.lat.toFixed(7));
-      params.set('lng', viewport.lng.toFixed(7));
-      params.set('z', viewport.zoom.toFixed(2));
+    params.delete(CITY_PICKER_QUERY_PARAM);
+    const stampCurrentCamera = () => {
+      const viewport = this.getCurrentViewport();
+      if (Number.isFinite(viewport.lat) && Number.isFinite(viewport.lng)) {
+        params.set('lat', viewport.lat.toFixed(7));
+        params.set('lng', viewport.lng.toFixed(7));
+        params.set('z', viewport.zoom.toFixed(2));
+      }
+    };
+    if (this._pendingAreaChangeSource && this._pendingAreaChangeSource !== 'viewport') {
+      params.delete('lat');
+      params.delete('lng');
+      params.delete('z');
+    } else {
+      stampCurrentCamera();
     }
     const nextUrl = `${nextPath}${params.toString() ? '?' + params.toString() : ''}`;
 
@@ -1222,7 +1285,7 @@ export class App extends Component {
   }
 
   getDataFromOSM(options = {}) {
-    const { areaName = this.state.area, forceUpdate, backgroundUpdate } = options;
+    const { areaName = this.state.area, forceUpdate, backgroundUpdate, boundaryOnly } = options;
 
     // Cancel any existing OSM request
     if (this.currentOSMRequest) {
@@ -1235,7 +1298,9 @@ export class App extends Component {
       this.abortCurrentOSMRequest();
     }
 
-    this.setState({ loading: true });
+    if (!boundaryOnly) {
+      this.setState({ loading: true });
+    }
 
     // const parts = areaName.split(',');
     // const city = parts[0];
@@ -1252,12 +1317,17 @@ export class App extends Component {
     //     duration: 0
     // });
 
-    const osmLoadToken = startDataLoad('geojson-osm', 'GeoJSON (Overpass)', {
-      area: areaName,
-      backgroundUpdate: !!backgroundUpdate,
-    });
+    const osmLoadToken = startDataLoad(
+      'geojson-osm',
+      boundaryOnly ? 'GeoJSON (Overpass boundary)' : 'GeoJSON (Overpass)',
+      {
+        area: areaName,
+        backgroundUpdate: !!backgroundUpdate,
+        boundaryOnly: !!boundaryOnly,
+      }
+    );
 
-    const request = OSMController.getData({ area: areaName });
+    const request = OSMController.getData({ area: areaName, boundaryOnly: !!boundaryOnly });
     this.currentOSMRequest = request;
     return request
       .then((newData) => {
@@ -1277,6 +1347,63 @@ export class App extends Component {
           return;
         }
 
+        if (boundaryOnly) {
+          const existing = this.state.geoJson;
+          if (!existing?.features) {
+            this.setState({ loading: false });
+            return;
+          }
+
+          const incoming = newData.geoJson?.features || [];
+          const boundaryFeatures = incoming.filter(
+            (f) => f.properties?.boundary === 'administrative'
+          );
+          if (boundaryFeatures.length === 0) {
+            this.setState({ loading: false });
+            return;
+          }
+          const withoutOldBoundary = existing.features.filter(
+            (f) => f.properties?.boundary !== 'administrative'
+          );
+          const merged = {
+            ...existing,
+            features: [...withoutOldBoundary, ...boundaryFeatures],
+          };
+
+          this.setState({ geoJson: merged, loading: false });
+
+          if (SAVE_TO_FIREBASE) {
+            const storageKey = this.getStorageKeyForArea(areaName);
+            const storage = this.getStorage();
+            const loadedAt = this.state.dataUpdatedAt;
+            // `merged` carries the roads we loaded earlier. If another client wrote the city
+            // while this request was in flight, saving now would overwrite its newer roads.
+            // If we can't read the stored timestamp, skip the write too.
+            storage
+              .getStoredUpdatedAt(storageKey)
+              .then((storedAt) => {
+                if (storedAt && loadedAt && storedAt.getTime() !== loadedAt.getTime()) {
+                  console.debug('Skipping boundary save: stored roads changed since load');
+                  return;
+                }
+                return storage.save(
+                  areaName,
+                  merged,
+                  {},
+                  {
+                    storageKey,
+                    updatedAt: loadedAt,
+                    queryAreaId: AREA_ID_OVERRIDES[areaName],
+                  }
+                );
+              })
+              .catch((e) => {
+                console.debug('Could not persist city boundary:', e);
+              });
+          }
+          return;
+        }
+
         this.geoJsonDiff(this.state.geoJson, newData.geoJson);
 
         if (forceUpdate && !this.isOSMDataHealthy(this.state.geoJson, newData.geoJson)) {
@@ -1288,15 +1415,23 @@ export class App extends Component {
             this.state.layers,
             this.state.lengthCalculationStrategy
           );
+          const dropRetainedLengths = this._invalidateLengthsOnSave === areaName;
+          if (dropRetainedLengths) {
+            this._invalidateLengthsOnSave = null;
+          }
           const lengths =
-            Object.keys(computedLengths).length === 0
-              ? this.state.lengths || computedLengths
-              : computedLengths;
+            dropRetainedLengths || Object.keys(computedLengths).length > 0
+              ? computedLengths
+              : this.state.lengths || computedLengths;
 
           if (SAVE_TO_FIREBASE) {
             const storageKey = this.getStorageKeyForArea(areaName);
             this.getStorage()
-              .save(areaName, newData.geoJson, computedLengths, { storageKey })
+              .save(areaName, newData.geoJson, computedLengths, {
+                storageKey,
+                queryAreaId: AREA_ID_OVERRIDES[areaName],
+                invalidateLengths: dropRetainedLengths,
+              })
               .then(() => {
                 if (!IS_PROD) {
                   appNotification.success({
@@ -1422,17 +1557,25 @@ export class App extends Component {
           meta: { area, features: data.geoJson?.features?.length ?? 0 },
         });
 
-        // Re-fetch when stale, or when cached GeoJSON lacks the city boundary (saves
-        // from before ENABLE_BOUNDARY_LAYER only stored cyclepath ways). The boundary
-        // retry happens at most once per city per session: if OSM has no matching
-        // admin boundary for this area we'd otherwise hit Overpass on every open.
-        const hasBoundaryFeature =
-          !ENABLE_BOUNDARY_LAYER ||
-          data.geoJson?.features?.some((f) => f.properties?.boundary === 'administrative');
+        // Re-fetch when stale. If the cache is fresh but missing the city outline
+        // (or it still has a pile of inner admin polygons, like Brasília RAs),
+        // only pull the area's own relation. Once per city per session.
+        const isFresh = this.isDataFresh(data.updatedAt);
+        const cityAdminLevels = new Set(['4', '6', '7', '8']);
+        const cityBoundaryCount = (data.geoJson?.features || []).filter(
+          (f) =>
+            f.properties?.boundary === 'administrative' &&
+            cityAdminLevels.has(String(f.properties?.admin_level || ''))
+        ).length;
+        const hasCityBoundary =
+          !ENABLE_BOUNDARY_LAYER || (cityBoundaryCount >= 1 && cityBoundaryCount <= 2);
         const shouldRefetchForBoundary =
-          !hasBoundaryFeature && !this._boundaryRefetchAttemptedAreas.has(area);
-        const needsBackgroundRefetch =
-          !this.isDataFresh(data.updatedAt) || shouldRefetchForBoundary;
+          !hasCityBoundary && !this._boundaryRefetchAttemptedAreas.has(area);
+        const expectedQueryAreaId = AREA_ID_OVERRIDES[area];
+        const queryAreaMismatch =
+          expectedQueryAreaId != null && data.queryAreaId !== expectedQueryAreaId;
+        const needsFullRefetch = !isFresh || queryAreaMismatch;
+        const needsBoundaryBackfill = isFresh && !queryAreaMismatch && shouldRefetchForBoundary;
 
         if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
           console.debug('Recalculating lengths...');
@@ -1450,7 +1593,7 @@ export class App extends Component {
           geoJson: data.geoJson,
           lengths: data.lengths,
           dataUpdatedAt: new Date(data.updatedAt),
-          loading: needsBackgroundRefetch,
+          loading: needsFullRefetch,
         });
 
         this._geoJsonLoadedArea = area;
@@ -1458,11 +1601,17 @@ export class App extends Component {
           this._geoJsonLoadingArea = null;
         }
 
-        if (needsBackgroundRefetch) {
+        if (needsFullRefetch) {
+          if (queryAreaMismatch) {
+            this._invalidateLengthsOnSave = area;
+          }
           if (shouldRefetchForBoundary) {
             this._boundaryRefetchAttemptedAreas.add(area);
           }
           this.getDataFromOSM({ areaName: area, backgroundUpdate: true });
+        } else if (needsBoundaryBackfill) {
+          this._boundaryRefetchAttemptedAreas.add(area);
+          this.getDataFromOSM({ areaName: area, backgroundUpdate: true, boundaryOnly: true });
         }
       })
       .catch((e) => {
@@ -1994,8 +2143,14 @@ export class App extends Component {
       // so that programmatic area switches (e.g. auto-switching to match a
       // selected route point) don't wipe out the user's from/to points.
       this._preserveRoutePointsOnAreaChange = options.keepRoutePoints === true;
-      this._pendingAreaChangeSource = options.source || null;
-      this.setState({ area: normalizedArea });
+      this._pendingAreaChangeSource = options.source || 'picker';
+      this.setState({ area: normalizedArea }, () => {
+        if (options.source === 'viewport') return;
+        const slug = this.getCitySlugFromArea(normalizedArea);
+        if (!slug) return;
+        this.lastResolvedCitySlug = null;
+        this.resolveCitySlugToAreaAndViewport(slug);
+      });
     }
   }
 

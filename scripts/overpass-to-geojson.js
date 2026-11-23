@@ -52,7 +52,7 @@ const DEFAULT_USER_AGENT = `${pkg.name}/${pkg.version} (+${pkg.homepage || 'http
 // Area ID overrides (from constants.js)
 const AREA_ID_OVERRIDES = {
   'Vitória, Espirito Santo, Brasil': 3601825817,
-  'Brasília, Distrito Federal, Brasil': 3602662005,
+  'Brasília, Distrito Federal, Brasil': 3600421151,
   'København, Capital RegionDenmark, Denmark': 3613707878,
   'Comuna 1, Buenos Aires, Argentina': 3601224652,
   'Stockholm, Stockholm, Sweden': 3600398021,
@@ -297,7 +297,10 @@ function generateQueryFromLayers(
     l.id = slugify(l.name);
   });
 
-  // Filter out layers without filters, debug layers, and POI layers (unless includePoi is true)
+  // Eligible for name validation: has filters, not a debug overlay, POI only with
+  // --include-poi. Inactive extras (Trilha, Proibido, ...) stay in this set so
+  // `--exclude-layers Trilha` does not throw "Unknown layer". Query selection
+  // still drops them unless `--include-layers` names them.
   let filteredLayers = layers.filter((l) => {
     if (!l.filters) return false;
     if (l.onlyDebug) return false;
@@ -352,6 +355,8 @@ function generateQueryFromLayers(
         `   ℹ️  Whitelist applied: ${afterCount} layer(s) included (from ${beforeCount} total)`
       );
     }
+  } else {
+    filteredLayers = filteredLayers.filter((l) => l.isActive !== false);
   }
 
   // Validate exclude layers - check all provided names exist
@@ -406,9 +411,18 @@ function generateQueryFromLayers(
     )
     .join('');
 
+  const boundaryQuery = !bbox
+    ? `
+            nwr(pivot.a)->.citybnd;
+            (.citybnd;>;);
+            out geom;
+        `
+    : '';
+
   const query = `
         [out:json][timeout:500];
         ${!bbox && `area(${areaId})->.a;`}
+        ${boundaryQuery}
         (
             ${body}
         );

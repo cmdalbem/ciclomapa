@@ -25,8 +25,8 @@ The `src/` directory is organized as follows:
 **TypeScript**: The project uses TypeScript with `allowJs` (see `tsconfig.json`). New components and modules should be written in TypeScript (`.tsx` for React components, `.ts` for non-JSX). Existing `.js` files remain supported during gradual migration.
 
 - **`utils/`** — Pure helpers and shared logic (e.g. `utils.js`, `routeUtils.js`, `geojsonUtils.js`). Prefer extending these (or another existing util in this folder) over adding a new file for a handful of small functions; see **Module size** above.
-- **`config/`** — App configuration and design tokens: `constants.js`, `design-tokens.js`, `layers.json`. API keys, feature flags, and theme/layout constants.
-- **`styles/`** — Global styles: `App.less`, `theme-tailwind-overrides.css` (Tailwind CDN theme hacks for `body.theme-light` / `theme-dark`). Ant Design tokens: `src/config/antdTheme.js`. Component-specific CSS/LESS stay next to the component (e.g. `DirectionsPanel.css` in `src/`).
+- **`config/`** — App configuration and design tokens: `constants.js`, `design-tokens.js`, OSM layer filters (`layers.json`). API keys, feature flags, and theme/layout constants.
+- **`styles/`** — Global styles: `App.less`, `theme-tailwind-overrides.css` (Tailwind theme hacks for `body.theme-light` / `theme-dark`). Ant Design tokens: `src/config/antdTheme.js`. Prefer Tailwind + Ant on the component; existing CSS/LESS next to a component (e.g. `DirectionsPanel.css`) is for leftovers, not a reason to add a new stylesheet. See [styling.md](styling.md).
 
 Feature-level modules (Map, DirectionsPanel, TopBar, LayersPanel, modals, etc.) currently live in the root of `src/`. They can be moved later into **`features/`** (or **`screens/`**) in batches, each with its own folder (component + styles + tests). Run `yarn test --watchAll=false` and `yarn start` after each move.
 

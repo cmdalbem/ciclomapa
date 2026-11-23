@@ -77,3 +77,10 @@ html {
   font-weight: 400 !important;
   text-transform: uppercase;
 }
+
+/* `*` in App.less sets Inter on every element, which beats inherited Boldonse. */
+.font-heading-display * {
+  font-family: inherit;
+  font-synthesis: inherit;
+  font-weight: inherit !important;
+}

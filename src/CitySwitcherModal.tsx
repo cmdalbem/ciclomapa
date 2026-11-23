@@ -14,6 +14,7 @@ import { HiSearch as IconSearch } from 'react-icons/hi';
 import { Button, Input } from 'antd';
 import Storage from './Storage.js';
 import { slugify } from './utils/utils.js';
+import { CITY_PICKER_QUERY_PARAM } from './config/routes.js';
 import { getCanonicalCitySlug, getPredefinedCitySlugDefinition } from './config/citySlugCatalog.js';
 import { TOP_CITY_SLUGS } from './config/topCitiesCatalog.js';
 import {
@@ -43,6 +44,12 @@ import {
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
 import OSMController from './OSMController.js';
+import {
+  CityInfraMiniRing,
+  CityInfraMiniRingPlaceholder,
+  miniChartSliceTotalKm,
+  type CityInfraLayer,
+} from './components/CityInfraMiniRing';
 import {
   readFavorites,
   toggleFavorite,
@@ -862,13 +869,7 @@ type CityPickerRowModel = {
   lengthsKmByLayer: Record<string, number> | null;
 };
 
-type CitySwitcherInfraLayer = {
-  id: string;
-  style?: {
-    lineStyle?: string;
-    lineColor?: string;
-  };
-};
+type CitySwitcherInfraLayer = CityInfraLayer;
 
 function useBodyThemeIsDark(): boolean {
   const [isDark, setIsDark] = useState(
@@ -882,158 +883,6 @@ function useBodyThemeIsDark(): boolean {
     return () => observer.disconnect();
   }, []);
   return isDark;
-}
-
-function miniChartSliceTotalKm(lengthsKmByLayer: Record<string, number>): number {
-  return CITY_SWITCHER_MINI_CHART_LAYER_IDS.reduce((sum, id) => {
-    const v = Number(lengthsKmByLayer[id]);
-    return Number.isFinite(v) && v > 0 ? sum + v : sum;
-  }, 0);
-}
-
-/** Degrees clockwise from top (12 o’clock); 0° = top center. */
-function polarOnRing(
-  cx: number,
-  cy: number,
-  r: number,
-  degCwFromTop: number
-): { x: number; y: number } {
-  const rad = ((degCwFromTop - 90) * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
-
-/**
- * Circular arc along one radius (stroke only). `sweepFlag` 1 = clockwise on screen (SVG y-down).
- */
-function ringArcD(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
-  const start = polarOnRing(cx, cy, r, startDeg);
-  const end = polarOnRing(cx, cy, r, endDeg);
-  const delta = endDeg - startDeg;
-  const largeArc = delta > 180 ? 1 : 0;
-  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
-}
-
-const CITY_INFRA_RING_SIZE = 18;
-const CITY_INFRA_RING_CX = CITY_INFRA_RING_SIZE / 2;
-const CITY_INFRA_RING_CY = CITY_INFRA_RING_SIZE / 2;
-const CITY_INFRA_RING_R = CITY_INFRA_RING_SIZE / 2;
-const CITY_INFRA_RING_STROKE = 2;
-/** Angular gap left empty between coloured segments. */
-const CITY_INFRA_RING_GAP_DEG = 32;
-/** When only one layer has length, opening (no background ring — just empty space). */
-const CITY_INFRA_RING_SINGLE_OPENING_DEG = 32;
-/** Trim each arc at both ends (deg) so round stroke caps don’t spill into the gap between segments. */
-const CITY_INFRA_RING_CAP_TRIM_DEG = 2;
-
-/**
- * Thin circular chart: ciclovia / ciclofaixa only, rounded stroke arcs, wide gaps, no track/background.
- * testid kept as `city-switcher-mini-pie` for tests.
- */
-function CityInfraMiniRing({
-  lengthsKmByLayer,
-  infraLayers,
-}: {
-  lengthsKmByLayer: Record<string, number>;
-  infraLayers: CitySwitcherInfraLayer[];
-}) {
-  const byId = Object.fromEntries(infraLayers.map((l) => [l.id, l]));
-  const segments = CITY_SWITCHER_MINI_CHART_LAYER_IDS.map((id) => {
-    const raw = Number(lengthsKmByLayer[id]);
-    const km = Number.isFinite(raw) && raw > 0 ? raw : 0;
-    const layer = byId[id];
-    const color = layer?.style?.lineColor || (id === 'ciclovia' ? '#386641' : '#A7C957');
-    return { id, km, color };
-  }).filter((s) => s.km > 0);
-
-  const totalKm = segments.reduce((sum, s) => sum + s.km, 0);
-  if (totalKm <= 0) return null;
-
-  const n = segments.length;
-  const gapTotalDeg = n === 1 ? CITY_INFRA_RING_SINGLE_OPENING_DEG : n * CITY_INFRA_RING_GAP_DEG;
-  const availDeg = 360 - gapTotalDeg;
-  const trimBase = n > 1 ? CITY_INFRA_RING_CAP_TRIM_DEG : CITY_INFRA_RING_CAP_TRIM_DEG * 0.75;
-
-  let cursor = 0;
-  const arcs: { id: string; d: string; color: string }[] = [];
-  for (let i = 0; i < n; i++) {
-    const seg = segments[i];
-    const span = (seg.km / totalKm) * availDeg;
-    const trim = Math.min(trimBase, Math.max(0, span / 2 - 0.75));
-    const arcStart = cursor + trim;
-    const arcEnd = cursor + span - trim;
-    if (arcEnd > arcStart) {
-      arcs.push({
-        id: seg.id,
-        d: ringArcD(CITY_INFRA_RING_CX, CITY_INFRA_RING_CY, CITY_INFRA_RING_R, arcStart, arcEnd),
-        color: seg.color,
-      });
-    }
-    const gapAfter = n === 1 ? CITY_INFRA_RING_SINGLE_OPENING_DEG : CITY_INFRA_RING_GAP_DEG;
-    cursor += span + gapAfter;
-  }
-
-  return (
-    <div
-      className="city-switcher-modal__cityInfraRing"
-      data-testid="city-switcher-mini-pie"
-      aria-hidden
-    >
-      <svg
-        width={CITY_INFRA_RING_SIZE}
-        height={CITY_INFRA_RING_SIZE}
-        viewBox={`0 0 ${CITY_INFRA_RING_SIZE} ${CITY_INFRA_RING_SIZE}`}
-        className="city-switcher-modal__cityInfraRingSvg"
-      >
-        {/* Horizontal mirror so segments grow counter‑clockwise from the chart’s start (toward the left). */}
-        <g
-          transform={`translate(${CITY_INFRA_RING_CX} ${CITY_INFRA_RING_CY}) scale(-1, 1) translate(${-CITY_INFRA_RING_CX} ${-CITY_INFRA_RING_CY})`}
-        >
-          {arcs.map((a) => (
-            <path
-              key={a.id}
-              d={a.d}
-              fill="none"
-              stroke={a.color}
-              strokeWidth={CITY_INFRA_RING_STROKE}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ))}
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-/** Same ring geometry as `CityInfraMiniRing` (radius, stroke width, caps); neutral stroke only = “empty” chart. */
-function CityInfraMiniRingPlaceholder() {
-  const s = CITY_INFRA_RING_SIZE;
-  const c = CITY_INFRA_RING_CX;
-  const r = CITY_INFRA_RING_R;
-  return (
-    <div
-      className="city-switcher-modal__cityInfraRing city-switcher-modal__cityInfraRing--placeholder"
-      data-testid="city-switcher-ring-placeholder"
-      aria-hidden
-    >
-      <svg
-        width={s}
-        height={s}
-        viewBox={`0 0 ${s} ${s}`}
-        className="city-switcher-modal__cityInfraRingSvg"
-      >
-        <circle
-          cx={c}
-          cy={c}
-          r={r}
-          fill="none"
-          strokeWidth={CITY_INFRA_RING_STROKE}
-          strokeLinecap="round"
-          className="city-switcher-modal__cityInfraRingPlaceholderStroke"
-        />
-      </svg>
-    </div>
-  );
 }
 
 function CityPickerCityCard({
@@ -1074,9 +923,13 @@ function CityPickerCityCard({
       >
         <div className="city-switcher-modal__cityTopRow">
           {hasRingData && city.lengthsKmByLayer ? (
-            <CityInfraMiniRing lengthsKmByLayer={city.lengthsKmByLayer} infraLayers={infraLayers} />
+            <CityInfraMiniRing
+              lengthsKmByLayer={city.lengthsKmByLayer}
+              infraLayers={infraLayers}
+              testId="city-switcher-mini-pie"
+            />
           ) : (
-            <CityInfraMiniRingPlaceholder />
+            <CityInfraMiniRingPlaceholder testId="city-switcher-ring-placeholder" />
           )}
           <div className="city-switcher-modal__cityNameWrap">
             <div className="city-switcher-modal__cityName">{city.name}</div>
@@ -1235,9 +1088,9 @@ function CitySwitcherModal({
     getAutocompleteOptions: getCitySwitcherAutocompleteOptions,
   });
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const isCityPickerOpen = searchParams.has('buscar');
+  const isCityPickerOpen = searchParams.has(CITY_PICKER_QUERY_PARAM);
   const cityPickerStaggerPlayedRef = useRef(false);
   const shouldStaggerEnterRef = useRef<boolean | null>(null);
 
@@ -1334,6 +1187,15 @@ function CitySwitcherModal({
     navigate(-1);
   }, [navigate]);
 
+  // After a pick, drop `?buscar` in place. `navigate(-1)` would undo a city Link
+  // (or a slug write) and send the URL back to the previous city.
+  const dismissCityPicker = useCallback(() => {
+    if (!searchParams.has(CITY_PICKER_QUERY_PARAM)) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete(CITY_PICKER_QUERY_PARAM);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const recordRecentlyVisitedCity = useCallback(
     (nextSlug: string, areaLabel: string | undefined) => {
       setRecentCityEntries((prev) => {
@@ -1429,7 +1291,7 @@ function CitySwitcherModal({
           placeTypes: resolved.properties?.types,
           areaContext,
         });
-        closeCityPicker();
+        dismissCityPicker();
         setGlobalSearchValue('');
         clearPlacesSearch();
       } catch (e) {
@@ -1439,7 +1301,7 @@ function CitySwitcherModal({
     },
     [
       clearPlacesSearch,
-      closeCityPicker,
+      dismissCityPicker,
       onPlacesResultSelected,
       recordRecentPlace,
       setPlacesSearchError,
@@ -1743,7 +1605,7 @@ function CitySwitcherModal({
                           placeTypes: fav.placeTypes,
                           areaContext: fav.areaContext,
                         });
-                        closeCityPicker();
+                        dismissCityPicker();
                       }}
                     >
                       <div className="city-switcher-modal__placeSearchRow">
@@ -1807,6 +1669,7 @@ function CitySwitcherModal({
                     {item.type === 'city' && item.citySlug ? (
                       <Link
                         to={`/${encodeURIComponent(item.citySlug)}`}
+                        replace
                         className="city-switcher-modal__cityBtn city-switcher-modal__placeSearchBtn"
                         onClick={() => {
                           if (item.citySlug) {
@@ -1817,7 +1680,6 @@ function CitySwitcherModal({
                             recordRecentlyVisitedCity(item.citySlug, areaLabel);
                           }
                           onCatalogCityPicked?.();
-                          closeCityPicker();
                         }}
                       >
                         <div className="city-switcher-modal__placeSearchRow">
@@ -1864,7 +1726,7 @@ function CitySwitcherModal({
                               areaContext: item.areaContext,
                             });
                           }
-                          closeCityPicker();
+                          dismissCityPicker();
                         }}
                       >
                         <div className="city-switcher-modal__placeSearchRow">

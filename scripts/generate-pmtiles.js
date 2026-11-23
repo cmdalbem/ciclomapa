@@ -301,6 +301,7 @@ async function resolveIncludedLayerNames(config) {
     .filter(
       (l) => !excludeSet || (!excludeSet.has(toKey(l.name)) && !excludeSet.has(slugify(l.name)))
     )
+    .filter((l) => includeSet || l.isActive !== false)
     .map((l) => l.name);
 }
 
