@@ -465,7 +465,7 @@ class AnalyticsSidebar extends Component {
 
               {pnbEvolutionData.length >= 2 && (
                 <div>
-                  <div className="w-full mt-3" style={{ height: 124, marginBottom: -24 }}>
+                  <div className="w-full mt-3" style={{ height: 132, marginBottom: -24 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart
                         data={pnbEvolutionData}
@@ -487,7 +487,7 @@ class AnalyticsSidebar extends Component {
                         <YAxis
                           // domain={['dataMin', 'dataMax']}
                           domain={[0, 50]}
-                          ticks={[15, 30, 50]}
+                          ticks={[10, 30, 50]}
                           interval={'preserveEnd'}
                           tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10 }}
                           axisLine={false}
