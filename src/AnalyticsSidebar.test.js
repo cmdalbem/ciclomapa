@@ -164,12 +164,14 @@ describe('AnalyticsSidebar', () => {
         pnb_women_less_one_salary: 8,
         pnb_2022: 18,
         pnb_2024: 22,
+        pnb_2025: 25,
         ideciclo: 0.42,
         ideciclo_year: 2023,
       },
     });
     expect(screen.getByText('PNB')).toBeInTheDocument();
-    expect(screen.getByText('22%')).toBeInTheDocument();
+    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.getByText('2025')).toBeInTheDocument();
     expect(screen.getByText('Mulheres negras')).toBeInTheDocument();
     expect(screen.getByText('IDECiclo')).toBeInTheDocument();
     expect(screen.getByText('0.42')).toBeInTheDocument();
@@ -262,7 +264,7 @@ describe('AnalyticsSidebar', () => {
         layers={infra}
         lengths={lengths}
         isDarkMode
-        cityMetadata={{ pnb_total: 1, pnb_2020: 1, pnb_2024: 2 }}
+        cityMetadata={{ pnb_2020: 1, pnb_2024: 2 }}
       />
     );
     expect(container.querySelector('#analyticsSidebar')).toHaveClass('analytics-sidebar--open');

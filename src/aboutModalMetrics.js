@@ -10,17 +10,27 @@ import { LENGTH_COUNTED_LAYER_IDS } from './config/constants.js';
 export function getAboutModalSpecialMetric(fields) {
   if (!fields || typeof fields !== 'object') return null;
 
-  const pnb = fields.pnb_total;
-  if (pnb !== undefined && pnb !== null && pnb !== '') {
-    const n = Number(pnb);
+  let latestPnbYear = null;
+  let latestPnbValue = null;
+  for (const [key, raw] of Object.entries(fields)) {
+    const match = /^pnb_(\d{4})$/.exec(key);
+    if (!match || raw === undefined || raw === null || raw === '') continue;
+    const year = Number(match[1]);
+    if (latestPnbYear === null || year > latestPnbYear) {
+      latestPnbYear = year;
+      latestPnbValue = raw;
+    }
+  }
+  if (latestPnbValue !== null) {
+    const n = Number(latestPnbValue);
     const valueText = Number.isFinite(n)
       ? `${n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
-      : `${pnb}%`;
+      : `${latestPnbValue}%`;
     return {
       key: 'pnb',
       title: 'PNB',
       valueText,
-      year: fields.pnb_year,
+      year: latestPnbYear,
       href: 'https://itdpbrasil.org/pnb/',
       blurb: 'Pessoas a até 300 m de ciclovias e ciclofaixas (ITDP Brasil).',
     };

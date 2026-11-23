@@ -224,6 +224,9 @@ class AnalyticsSidebar extends Component {
           : null;
       })
       .filter((item) => item !== null && !Number.isNaN(item.value));
+    const latestPnb = pnbEvolutionData.length
+      ? pnbEvolutionData[pnbEvolutionData.length - 1]
+      : null;
 
     /** Recharts Tooltip defaults are light-themed only; no native dark mode. */
     const pnbLineChartTooltipProps = isDarkMode
@@ -374,11 +377,11 @@ class AnalyticsSidebar extends Component {
             </button>
           )}
 
-          {this.props.cityMetadata && this.props.cityMetadata.pnb_total !== undefined && (
+          {latestPnb && (
             <Section
               title="PNB"
               link={'https://itdpbrasil.org/pnb/'}
-              year={this.props.cityMetadata.pnb_year}
+              year={latestPnb.year}
               description={
                 <>
                   <p>
@@ -390,7 +393,7 @@ class AnalyticsSidebar extends Component {
                 </>
               }
             >
-              <BigNum>{this.props.cityMetadata.pnb_total + '%'}</BigNum>
+              <BigNum>{latestPnb.value + '%'}</BigNum>
 
               {this.props.cityMetadata.pnb_black_women !== undefined && (
                 <DataLine

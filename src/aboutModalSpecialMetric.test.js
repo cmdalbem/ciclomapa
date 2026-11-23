@@ -2,9 +2,15 @@ import { getAboutModalSpecialMetric } from './aboutModalMetrics.js';
 
 describe('getAboutModalSpecialMetric', () => {
   it('prefers PNB over IDECiclo when both exist', () => {
-    const m = getAboutModalSpecialMetric({ pnb_total: 12, ideciclo: 0.4 });
+    const m = getAboutModalSpecialMetric({
+      pnb_2024: 12,
+      pnb_2025: 14,
+      pnb_total: 12,
+      ideciclo: 0.4,
+    });
     expect(m?.key).toBe('pnb');
-    expect(m?.valueText).toMatch(/12/);
+    expect(m?.valueText).toMatch(/14/);
+    expect(m?.year).toBe(2025);
   });
 
   it('returns IDECiclo when PNB absent', () => {
