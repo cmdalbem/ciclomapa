@@ -5,7 +5,7 @@
  * Layout/theme values used by JS (e.g. Map, TopBar) are imported from here or constants.
  *
  * Note: some “semantic” map/UI colors are intentionally kept consistent with layer styling
- * defined in `src/config/layers.json` and related map constants.
+ * defined in the versioned layer files (`layers.v1.json` / `layers.v2.json`) and related map constants.
  */
 
 export const colors = {
@@ -30,6 +30,9 @@ export const colors = {
   favoriteAccent: '#F63737',
   /** Favorites on dark surfaces (`theme-dark`); slightly lighter for contrast — align `poi-favorite.png` if needed. */
   favoriteAccentDark: '#FF6B6B',
+  /** Mapper mode extras (pairing layers, OSM tags, Street View). */
+  mapperAccent: '#C2410C',
+  mapperAccentDark: '#FB923C',
 };
 
 /** Map-specific colors for Mapbox paint (Map.js). Theme-based stroke, halo, route padding line, fallback. */
@@ -40,9 +43,9 @@ export const mapColors = {
   // Route border (outline): white in dark theme, black in light
   routeBorderDark: '#ffffff',
   routeBorderLight: '#000000',
-  // City admin boundary (Analytics/Routing context) — ciclovia greens, not route outline
-  boundaryLineDark: '#B9FAB7',
-  boundaryLineLight: '#386641',
+  // City admin boundary (Analytics/Routing context) — gray, no hue
+  boundaryLineDark: '#D9D9D9',
+  boundaryLineLight: '#4F4F4F',
   // Text/icon halo (readability on map)
   haloDark: '#1c1a17',
   haloLight: '#ffffff',
@@ -118,7 +121,7 @@ export const FAVORITE_COLORS = {
 
 /**
  * Infrastructure badge palette — route breakdown, legend, and panel tags.
- * Base hues: cycle types from layers.json (`lineColor` / `lineColorDark`), rua from
+ * Base hues: cycle types from the layer catalog (`lineColor` / `lineColorDark`), rua from
  * `ROUTE_COLORS.SELECTED`. `layerBrightnessAdjust` shifts each base for the badge fill (light
  * mode); the same delta is negated in dark mode. Text color uses WCAG 2.x AA in InfrastructureBadge.
  */
@@ -185,6 +188,8 @@ export function getCssCustomProperties() {
     '--color-logo-light': colors.logoLight,
     '--color-favorite-accent': colors.favoriteAccent,
     '--color-favorite-accent-dark': colors.favoriteAccentDark,
+    '--color-mapper-accent': colors.mapperAccent,
+    '--color-mapper-accent-dark': colors.mapperAccentDark,
     /* Legacy names used by loader keyframes */
     '--color1': colors.loader1,
     '--color2': colors.loader2,

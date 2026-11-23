@@ -65,6 +65,8 @@ export default function AppLayout({
               openAboutModal={handlers.openAboutModal}
               isDarkMode={state.isDarkMode}
               toggleTheme={handlers.toggleTheme}
+              mapperMode={state.mapperMode}
+              toggleMapperMode={handlers.toggleMapperMode}
               toggleDirectionsPanel={handlers.toggleDirectionsPanel}
               triggerGeolocate={handlers.triggerGeolocate}
             />
@@ -80,6 +82,7 @@ export default function AppLayout({
               }}
               data={state.geoJson}
               layers={state.layers}
+              layersVersion={state.layersVersion}
               style={state.mapStyle}
               zoom={state.zoom}
               lat={state.lat}
@@ -89,9 +92,11 @@ export default function AppLayout({
               onMapMoved={handlers.onMapMoved}
               onMapPositionChange={handlers.onMapPositionChange}
               needsCityGeoJsonContext={handlers.needsCityGeoJsonContext}
+              isSidebarOpen={state.isSidebarOpen}
               updateLengths={handlers.updateLengths}
               embedMode={state.embedMode}
               debugMode={state.debugMode}
+              mapperMode={state.mapperMode}
               isDarkMode={state.isDarkMode}
               setMapRef={handlers.setMapRef}
               directionsPanelRef={directionsPanelRef}
@@ -125,17 +130,23 @@ export default function AppLayout({
                   open={state.isSidebarOpen}
                   location={state.area}
                   cityMetadata={state.airtableCityFields}
+                  cityMetadataRecords={state.airtableMetadataRecords}
                   lengthCalculationStrategy={state.lengthCalculationStrategy}
+                  parallelDedupeEngine={state.parallelDedupeEngine}
                   debugMode={state.debugMode}
+                  mapperMode={state.mapperMode}
                   isDarkMode={state.isDarkMode}
                   toggle={handlers.toggleSidebar}
                   onChangeStrategy={handlers.onChangeStrategy}
+                  onChangeParallelDedupeEngine={handlers.onChangeParallelDedupeEngine}
                   downloadData={handlers.downloadData}
                   lastUpdate={state.dataUpdatedAt}
                   loading={state.loading}
                   forceUpdate={handlers.forceUpdate}
                   cancelDataLoad={handlers.cancelDataLoad}
                   openCityPicker={handlers.openCityPicker}
+                  followViewportCity={state.followViewportCity}
+                  onFollowViewportCityChange={handlers.setFollowViewportCity}
                 />
               </Suspense>
             </aside>
@@ -156,6 +167,9 @@ export default function AppLayout({
         <LayersBar
           layers={state.layers}
           onLayersChange={handlers.onLayersChange}
+          layersVersion={state.layersVersion}
+          onLayersVersionChange={handlers.onLayersVersionChange}
+          showLayersVersionSwitch={!state.embedMode && (state.mapperMode || state.debugMode)}
           embedMode={state.embedMode}
           isDarkMode={state.isDarkMode}
           openLayersLegendModal={handlers.openLayersLegendModal}
@@ -167,6 +181,9 @@ export default function AppLayout({
           layers={state.layers}
           lengths={state.lengths}
           onLayersChange={handlers.onLayersChange}
+          layersVersion={state.layersVersion}
+          onLayersVersionChange={handlers.onLayersVersionChange}
+          showLayersVersionSwitch={!state.embedMode && (state.mapperMode || state.debugMode)}
           embedMode={state.embedMode}
           isDarkMode={state.isDarkMode}
           openLayersLegendModal={handlers.openLayersLegendModal}
@@ -246,6 +263,7 @@ AppLayout.propTypes = {
     hideUI: PropTypes.bool,
     hideUIFromUrl: PropTypes.bool,
     isSidebarOpen: PropTypes.bool,
+    followViewportCity: PropTypes.bool,
     area: PropTypes.string,
     dataUpdatedAt: PropTypes.string,
     lat: PropTypes.number,
@@ -256,8 +274,10 @@ AppLayout.propTypes = {
     loading: PropTypes.bool,
     mapKey: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     debugMode: PropTypes.bool,
+    mapperMode: PropTypes.bool,
     geoJson: PropTypes.object,
     layers: PropTypes.array,
+    layersVersion: PropTypes.string,
     mapStyle: PropTypes.string,
     showSatellite: PropTypes.bool,
     toPoint: PropTypes.object,
@@ -268,6 +288,7 @@ AppLayout.propTypes = {
     cleanMode: PropTypes.bool,
     lengths: PropTypes.object,
     airtableCityFields: PropTypes.object,
+    airtableMetadataRecords: PropTypes.array,
     lengthCalculationStrategy: PropTypes.string,
     map: PropTypes.object,
     aboutModal: PropTypes.bool,
@@ -287,6 +308,7 @@ AppLayout.propTypes = {
     toggleSidebar: PropTypes.func,
     openAboutModal: PropTypes.func,
     toggleTheme: PropTypes.func,
+    toggleMapperMode: PropTypes.func,
     updateLengths: PropTypes.func,
     setMapRef: PropTypes.func,
     setMapComponentRef: PropTypes.func,
@@ -295,6 +317,7 @@ AppLayout.propTypes = {
     clearGlobalSearchPin: PropTypes.func,
     handleFavoritesChanged: PropTypes.func,
     onLayersChange: PropTypes.func,
+    onLayersVersionChange: PropTypes.func,
     openLayersLegendModal: PropTypes.func,
     handleGlobalSearchPlaceSelect: PropTypes.func,
     setDirectionsPanelRef: PropTypes.func,
@@ -310,5 +333,6 @@ AppLayout.propTypes = {
     openPrivacyPolicyModal: PropTypes.func,
     closePrivacyPolicyModal: PropTypes.func,
     onChangeStrategy: PropTypes.func,
+    setFollowViewportCity: PropTypes.func,
   }).isRequired,
 };

@@ -1,0 +1,809 @@
+[
+  {
+    "name": "Prefeitura 2024",
+    "onlyDebug": true,
+    "mapperGroup": "cuiaba-hall",
+    "mapperGroupSection": "views",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Temporário. OSM cujo nome bate com a lista da Semob de abril/2024 (14 ciclovias/ciclofaixas, 60,4 km). Não são geometrias oficiais, só match por nome.",
+    "filters": [["ciclomapa:cuiaba_hall", "list"]],
+    "style": {
+      "lineColor": "#E11D48",
+      "lineColorDark": "#FB7185",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Contorno Leste (anunciado)",
+    "onlyDebug": true,
+    "mapperGroup": "cuiaba-hall",
+    "mapperGroupSection": "views",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Temporário. OSM da Av. Contorno Leste, os 17 km de ciclofaixa que a Semob anunciou em abril/2024 e ainda não estavam na lista de 60,4 km.",
+    "filters": [["ciclomapa:cuiaba_hall", "announced"]],
+    "style": {
+      "lineColor": "#0284C7",
+      "lineColorDark": "#38BDF8",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "OSM fora da lista",
+    "onlyDebug": true,
+    "mapperGroup": "cuiaba-hall",
+    "mapperGroupSection": "views",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Temporário. Ciclovia/ciclofaixa no OSM que não está na lista nomeada da Semob. É a maior parte da divergência de Cuiabá vs Aliança.",
+    "filters": [["ciclomapa:cuiaba_hall", "extra"]],
+    "style": {
+      "lineColor": "#0E7490",
+      "lineColorDark": "#22D3EE",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Lista Transalvador",
+    "onlyDebug": true,
+    "mapperGroup": "salvador-hall",
+    "mapperGroupSection": "views",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Temporário. OSM cujo nome bate com a lista da Transalvador (136 trechos, 308,6 km, o número da Aliança 2025). Não são geometrias oficiais, só match por nome.",
+    "filters": [["ciclomapa:salvador_hall", "list"]],
+    "style": {
+      "lineColor": "#E11D48",
+      "lineColorDark": "#FB7185",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Fora da Transalvador",
+    "onlyDebug": true,
+    "mapperGroup": "salvador-hall",
+    "mapperGroupSection": "views",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Temporário. Ciclovia/ciclofaixa no OSM que não está na lista nomeada da Transalvador. Os buracos grandes são Afrânio/Suburbana, Pituaçu, CAB, orla de Mangabeira.",
+    "filters": [["ciclomapa:salvador_hall", "extra"]],
+    "style": {
+      "lineColor": "#0E7490",
+      "lineColorDark": "#22D3EE",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Só OSM (Rio)",
+    "onlyDebug": true,
+    "mapperGroup": "rio-hall",
+    "mapperGroupSection": "diff",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Temporário. Ciclovia/ciclofaixa no OSM sem ciclovia/ciclofaixa oficial da CET-Rio por perto (~30 m). Pode ser buraco no oficial ou OSM tratando calçada compartilhada como ciclovia.",
+    "filters": [["ciclomapa:hall_diff", "rio:extra"]],
+    "style": {
+      "lineColor": "#0E7490",
+      "lineColorDark": "#22D3EE",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Só CET-Rio",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "rio-hall",
+    "mapperGroupSection": "diff",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Temporário. Ciclovia/ciclofaixa oficial da CET-Rio sem OSM correspondente por perto. São os buracos no nosso mapa.",
+    "filters": [["ciclomapa:hall_diff", "rio:only"]],
+    "style": {
+      "lineColor": "#E11D48",
+      "lineColorDark": "#FB7185",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "CET-Rio ciclovia",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "rio-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial da CET-Rio, tipo Ciclovia, só trechos implantados e contabilizados.",
+    "filters": [["tipo_infra", "Ciclovia"]],
+    "style": {
+      "lineColor": "#16A34A",
+      "lineColorDark": "#4ADE80",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "CET-Rio ciclofaixa",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "rio-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial da CET-Rio, tipo Ciclofaixa.",
+    "filters": [["tipo_infra", "Ciclofaixa"]],
+    "style": {
+      "lineColor": "#A7C957",
+      "lineColorDark": "#C4E070",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "CET-Rio calçada",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "rio-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial da CET-Rio, faixa compartilhada na calçada. No OSM isso costuma aparecer como ciclovia.",
+    "filters": [["tipo_infra", "Faixa compartilhada na calçada"]],
+    "style": {
+      "lineColor": "#0284C7",
+      "lineColorDark": "#38BDF8",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "CET-Rio pista",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "rio-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial da CET-Rio, faixa compartilhada na pista.",
+    "filters": [["tipo_infra", "Faixa compartilhada na pista"]],
+    "style": {
+      "lineColor": "#7C3AED",
+      "lineColorDark": "#A78BFA",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Só OSM (Curitiba)",
+    "onlyDebug": true,
+    "mapperGroup": "curitiba-hall",
+    "mapperGroupSection": "diff",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Temporário. Ciclovia/ciclofaixa no OSM sem ciclovia/ciclofaixa oficial do IPPUC por perto (~30 m).",
+    "filters": [["ciclomapa:hall_diff", "curitiba:extra"]],
+    "style": {
+      "lineColor": "#0E7490",
+      "lineColorDark": "#22D3EE",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Só IPPUC",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "curitiba-hall",
+    "mapperGroupSection": "diff",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Temporário. Ciclovia/ciclofaixa/via calma oficial do IPPUC sem OSM correspondente por perto.",
+    "filters": [["ciclomapa:hall_diff", "curitiba:only"]],
+    "style": {
+      "lineColor": "#E11D48",
+      "lineColorDark": "#FB7185",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "IPPUC ciclovia",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "curitiba-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial do GeoCuritiba, tipo Ciclovia.",
+    "filters": [["ctba_tipo_ciclovia", 1]],
+    "style": {
+      "lineColor": "#16A34A",
+      "lineColorDark": "#4ADE80",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "IPPUC ciclofaixa",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "curitiba-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial do GeoCuritiba, tipo Ciclofaixa.",
+    "filters": [["ctba_tipo_ciclovia", 2]],
+    "style": {
+      "lineColor": "#A7C957",
+      "lineColorDark": "#C4E070",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "IPPUC via calma",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "curitiba-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial do GeoCuritiba, ciclofaixa em via calma.",
+    "filters": [["ctba_tipo_ciclovia", 3]],
+    "style": {
+      "lineColor": "#65A30D",
+      "lineColorDark": "#A3E635",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "IPPUC calçada",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "curitiba-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial do GeoCuritiba, ciclofaixa sobre a calçada.",
+    "filters": [["ctba_tipo_ciclovia", 4]],
+    "style": {
+      "lineColor": "#CA8A04",
+      "lineColorDark": "#FACC15",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "IPPUC passeio",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "curitiba-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial do GeoCuritiba, passeio compartilhado. No OSM isso costuma ser calçada compartilhada.",
+    "filters": [["ctba_tipo_ciclovia", 5]],
+    "style": {
+      "lineColor": "#0284C7",
+      "lineColorDark": "#38BDF8",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "IPPUC ciclorrota",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "curitiba-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial do GeoCuritiba, ciclorrota.",
+    "filters": [["ctba_tipo_ciclovia", 6]],
+    "style": {
+      "lineColor": "#7C3AED",
+      "lineColorDark": "#A78BFA",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Só OSM (Fortaleza)",
+    "onlyDebug": true,
+    "mapperGroup": "fortaleza-hall",
+    "mapperGroupSection": "diff",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Temporário. Ciclovia/ciclofaixa no OSM sem ciclovia/ciclofaixa oficial da SCSP por perto (~30 m).",
+    "filters": [["ciclomapa:hall_diff", "fortaleza:extra"]],
+    "style": {
+      "lineColor": "#0E7490",
+      "lineColorDark": "#22D3EE",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Só SCSP",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "fortaleza-hall",
+    "mapperGroupSection": "diff",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Temporário. Ciclovia/ciclofaixa oficial da SCSP 2026 sem OSM correspondente por perto.",
+    "filters": [["ciclomapa:hall_diff", "fortaleza:only"]],
+    "style": {
+      "lineColor": "#E11D48",
+      "lineColorDark": "#FB7185",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "SCSP ciclovia",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "fortaleza-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial da SCSP 2026, tipo Ciclovia.",
+    "filters": [["tipologia", "Ciclovia"]],
+    "style": {
+      "lineColor": "#16A34A",
+      "lineColorDark": "#4ADE80",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "SCSP ciclofaixa",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "fortaleza-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial da SCSP 2026, tipo Ciclofaixa.",
+    "filters": [["tipologia", "Ciclofaixa"]],
+    "style": {
+      "lineColor": "#A7C957",
+      "lineColorDark": "#C4E070",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "SCSP ciclorrota",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "fortaleza-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial da SCSP 2026, tipo Ciclorrota.",
+    "filters": [["tipologia", "Ciclorrota"]],
+    "style": {
+      "lineColor": "#7C3AED",
+      "lineColorDark": "#A78BFA",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "SCSP passeio",
+    "onlyDebug": true,
+    "debugSource": "hall-gis",
+    "mapperGroup": "fortaleza-hall",
+    "mapperGroupSection": "official",
+    "mapperGroupDefault": false,
+    "isActive": false,
+    "description": "Temporário. Geometria oficial da SCSP 2026, passeio compartilhado.",
+    "filters": [["tipologia", "Passeio compartilhado"]],
+    "style": {
+      "lineColor": "#0284C7",
+      "lineColorDark": "#38BDF8",
+      "lineWidth": 6,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Lado A",
+    "onlyDebug": true,
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "sides",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Vias automaticamente detectadas como sendo duplicadas.",
+    "filters": [
+      [
+        ["ciclomapa:paired", "true"],
+        ["ciclomapa:side", "a"]
+      ]
+    ],
+    "style": {
+      "lineColor": "#0B54FE",
+      "lineWidth": 8
+    }
+  },
+  {
+    "name": "Lado B",
+    "onlyDebug": true,
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "sides",
+    "mapperGroupDefault": true,
+    "isActive": true,
+    "description": "Vias automaticamente detectadas como sendo duplicadas.",
+    "filters": [
+      [
+        ["ciclomapa:paired", "true"],
+        ["ciclomapa:side", "b"]
+      ]
+    ],
+    "style": {
+      "lineColor": "#FC0FC0",
+      "lineWidth": 8
+    }
+  },
+  {
+    "name": "Pareados",
+    "onlyDebug": true,
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "sides",
+    "isActive": false,
+    "description": "Segmentos marcados como pareados/duplicados pelo motor de detecção paralela.",
+    "filters": [["ciclomapa:paired", "true"]],
+    "style": {
+      "lineColor": "#2A9D8F",
+      "lineWidth": 7,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Tag + ciclovia",
+    "onlyDebug": true,
+    "isActive": true,
+    "description": "Rua com cycleway=* na própria via (track, lane...) e uma highway=cycleway desenhada do lado. Pode ser ciclovia vs ciclofaixa. Costuma ser o mesmo trecho mapeado duas vezes.",
+    "filters": [["ciclomapa:pair_kind", "dual_mapped"]],
+    "style": {
+      "lineColor": "#D97706",
+      "lineWidth": 7,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Ciclovias sobrepostas",
+    "onlyDebug": true,
+    "isActive": true,
+    "description": "Duas highway=cycleway desenhadas no mesmo corredor. Costuma ser um traçado antigo que ficou no mapa quando mapearam de novo ao lado.",
+    "filters": [["ciclomapa:pair_kind", "overlapping_cycleway"]],
+    "style": {
+      "lineColor": "#7C3AED",
+      "lineWidth": 7,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Não pareados",
+    "onlyDebug": true,
+    "isActive": true,
+    "description": "Segmentos marcados como não pareados (ficam fora da dupla contagem controlada).",
+    "filters": [
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Ciclovia"]
+      ],
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Ciclofaixa"]
+      ],
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Ciclorrota"]
+      ],
+      [
+        ["ciclomapa:paired", "false"],
+        ["type", "Calçada compartilhada"]
+      ]
+    ],
+    "style": {
+      "lineColor": "#111111",
+      "lineColorDark": "#FFFFFF",
+      "lineWidth": 5,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Confiança alta",
+    "onlyDebug": true,
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "confidence",
+    "isActive": false,
+    "description": "Segmentos com alta confiança do pareamento (quando disponíveis).",
+    "filters": [["ciclomapa:match_confidence_bucket", "high"]],
+    "style": {
+      "lineColor": "#00CED1",
+      "lineWidth": 9,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Confiança média",
+    "onlyDebug": true,
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "confidence",
+    "isActive": false,
+    "description": "Segmentos com confiança média do pareamento (quando disponíveis).",
+    "filters": [["ciclomapa:match_confidence_bucket", "med"]],
+    "style": {
+      "lineColor": "#FFD700",
+      "lineWidth": 8,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Confiança baixa",
+    "onlyDebug": true,
+    "mapperGroup": "pairing",
+    "mapperGroupSection": "confidence",
+    "isActive": false,
+    "description": "Segmentos com baixa confiança do pareamento (quando disponíveis).",
+    "filters": [["ciclomapa:match_confidence_bucket", "low"]],
+    "style": {
+      "lineColor": "#FF4500",
+      "lineWidth": 7,
+      "lineStyle": "solid"
+    }
+  },
+  {
+    "name": "Bicicletários & paraciclos",
+    "displayName": "Bicicletários",
+    "shortName": "Bicicletários",
+    "description": "Estacionamentos de bicicleta variados, incluindo bicicletários e paraciclos. Sempre verifique a qualidade e segurança oferecida!",
+    "filters": [["amenity", "bicycle_parking"]],
+    "type": "poi",
+    "icon": "poi-bikeparking",
+    "zoomThreshold": 16.5,
+    "style": {
+      "textColor": "#2F904A"
+    }
+  },
+  {
+    "name": "Estações",
+    "displayName": "Estações",
+    "shortName": "Estações",
+    "description": "Estações de compartilhamento de bicicletas de diferentes operadoras.",
+    "filters": [["amenity", "bicycle_rental"]],
+    "type": "poi",
+    "icon": "poi-rental",
+    "zoomThreshold": 15,
+    "style": {
+      "textColor": "#E56119"
+    }
+  },
+  {
+    "name": "Lojas & oficinas",
+    "displayName": "Lojas e oficinas",
+    "shortName": "Lojas",
+    "description": "Estabelecimentos especializadas em venda e reparo de bicicletas e acessórios.",
+    "filters": [["shop", "bicycle"]],
+    "type": "poi",
+    "icon": "poi-bikeshop",
+    "zoomThreshold": 15,
+    "style": {
+      "textColor": "#2A7BF4"
+    }
+  },
+  {
+    "name": "Ciclovia",
+    "displayName": "Ciclovias",
+    "description": "Vias protegidas e exclusivas para bicicletas. Ciclovias são separadas fisicamente por meio-fio, muretas ou outros tipos de segregação fixa que impedem a circulação de veículos.",
+    "protectionLevel": "Alta",
+    "filters": [
+      ["highway", "cycleway"],
+      ["cycleway", "track"],
+      ["cycleway:left", "track"],
+      ["cycleway:right", "track"],
+      ["cycleway:both", "track"],
+      ["cycleway", "opposite_track"],
+      ["cycleway:left", "opposite_track"],
+      ["cycleway:right", "opposite_track"],
+      ["cycleway:both", "opposite_track"],
+      [
+        ["highway", "path"],
+        ["segregated", "yes"]
+      ],
+      [
+        ["highway", "footway"],
+        ["segregated", "yes"]
+      ]
+    ],
+    "except": [["segregated", "no"]],
+    "zoomThreshold": 15,
+    "style": {
+      "lineColor": "#386641",
+      "lineColorDark": "#B9FAB7",
+      "textColor": "#FFFFFF",
+      "textColorDark": "#000000",
+      "lineWidth": 8
+    }
+  },
+  {
+    "name": "Calçada compartilhada",
+    "displayName": "Calçadas",
+    "shortName": "Calçadas",
+    "description": "Calçadas com sinalização para circulação compartilhada de bicicletas. Lembre-se que pedestres possuem a prioridade.",
+    "protectionLevel": "Alta",
+    "filters": [
+      [
+        ["highway", "footway"],
+        ["bicycle", "designated"]
+      ],
+      [
+        ["highway", "pedestrian"],
+        ["bicycle", "designated"]
+      ],
+      [
+        ["highway", "pedestrian"],
+        ["bicycle", "yes"]
+      ],
+      [
+        ["highway", "cycleway"],
+        ["segregated", "no"]
+      ],
+      [
+        ["highway", "path"],
+        ["segregated", "no"]
+      ],
+      [
+        ["highway", "path"],
+        ["bicycle", "designated"]
+      ],
+      ["cycleway", "sidepath"],
+      ["cycleway:left", "sidepath"],
+      ["cycleway:right", "sidepath"],
+      ["cycleway:both", "sidepath"]
+    ],
+    "style": {
+      "lineColor": "#386641",
+      "lineColorDark": "#B9FAB7",
+      "textColor": "#FFFFFF",
+      "textColorDark": "#000000",
+      "lineWidth": 8,
+      "lineStyle": "dashed"
+    },
+    "except": [["segregated", "yes"]]
+  },
+  {
+    "name": "Ciclofaixa",
+    "displayName": "Ciclofaixas",
+    "description": "Vias exclusivas para bicicletas mas sem segregação física, apenas demarcada por faixa pintada no chão ou outra sinalização",
+    "protectionLevel": "Média",
+    "filters": [
+      ["cycleway", "lane"],
+      ["cycleway:left", "lane"],
+      ["cycleway:right", "lane"],
+      ["cycleway:both", "lane"],
+      ["cycleway", "opposite_lane"],
+      ["cycleway:right", "opposite_lane"],
+      ["cycleway:left", "opposite_lane"],
+      ["cycleway:both", "opposite_lane"],
+      ["cycleway", "buffered_lane"],
+      ["cycleway:left", "buffered_lane"],
+      ["cycleway:right", "buffered_lane"],
+      ["cycleway:both", "buffered_lane"]
+    ],
+    "style": {
+      "lineColor": "#A7C957",
+      "lineColorDark": "#486B2E",
+      "textColor": "#000000",
+      "textColorDark": "#FFFFFF",
+      "lineWidth": 8
+    }
+  },
+  {
+    "name": "Ciclorrota",
+    "displayName": "Ciclorrotas",
+    "description": "Ruas compartilhadas com carros com sinalização especial que indica preferência das bicicletas.",
+    "protectionLevel": "Baixa",
+    "filters": [
+      ["cycleway", "shared_lane"],
+      ["cycleway:left", "shared_lane"],
+      ["cycleway:right", "shared_lane"],
+      ["cycleway:both", "shared_lane"],
+      ["cycleway", "share_busway"],
+      ["cycleway:left", "share_busway"],
+      ["cycleway:right", "share_busway"],
+      ["cycleway:both", "share_busway"],
+      ["cycleway", "opposite_share_busway"],
+      ["cycleway:left", "opposite_share_busway"],
+      ["cycleway:right", "opposite_share_busway"],
+      ["cycleway:both", "opposite_share_busway"]
+    ],
+    "style": {
+      "lineColor": "#A7C957",
+      "lineColorDark": "#486B2E",
+      "textColor": "#000000",
+      "textColorDark": "#FFFFFF",
+      "lineWidth": 8,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Baixa velocidade",
+    "displayName": "Residenciais",
+    "shortName": "Residenciais",
+    "description": "Vias locais com limite de velocidade regulamentado de até 30km/h.",
+    "isActive": false,
+    "filters": [
+      ["maxspeed", "30"],
+      ["maxspeed", "20"],
+      [
+        ["highway", "living_street"],
+        ["bicycle", "yes"]
+      ]
+    ],
+    "style": {
+      "lineColor": "#4FA0AD",
+      "textColor": "#FFFFFF",
+      "lineWidth": 4,
+      "lineStyle": "dashed"
+    }
+  },
+  {
+    "name": "Trilha",
+    "displayName": "Trilhas",
+    "description": "Caminhos não pavimentados com acesso permitido ou destinado a bicicleta.",
+    "isActive": false,
+    "filters": [
+      [
+        ["highway", "track"],
+        ["bicycle", "designated"]
+      ],
+      [
+        ["highway", "track"],
+        ["bicycle", "yes"]
+      ],
+      [
+        ["highway", "path"],
+        ["bicycle", "yes"]
+      ]
+    ],
+    "style": {
+      "lineColor": "#583707",
+      "lineColorDark": "#DC7C3B",
+      "textColor": "#FFFFFF",
+      "lineWidth": 2,
+      "lineStyle": "dashed"
+    },
+    "except": [
+      ["segregated", "no"],
+      ["segregated", "yes"]
+    ]
+  },
+  {
+    "name": "Proibido",
+    "displayName": "Proibidas",
+    "description": "Vias onde é proibido pedalar. Você pode descer da bicicleta e passar empurrando ela.",
+    "isActive": false,
+    "filters": [
+      ["bicycle", "no"],
+      ["bicycle", "dismount"]
+    ],
+    "style": {
+      "lineColor": "#B61815",
+      "textColor": "#FFFFFF",
+      "lineWidth": 2,
+      "lineStyle": "dashed"
+    }
+  }
+]

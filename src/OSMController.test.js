@@ -43,6 +43,31 @@ describe('OSMController.getLayers', () => {
     const ciclovia = layers.find((l) => l.name === 'Ciclovia');
     expect(ciclovia.id).toBe('ciclovia');
     expect(ciclovia.style.lineStyle).toBeDefined();
+    expect(ciclovia.except).toEqual([['segregated', 'no']]);
+  });
+
+  it('loads production filters for v1 and the OSM 2026 filters for v2', () => {
+    const v1 = OSMController.getLayers(false, false, 'v1').find((l) => l.name === 'Ciclovia');
+    const v2 = OSMController.getLayers(false, false, 'v2').find((l) => l.name === 'Ciclovia');
+    expect(v1.except).toBeUndefined();
+    expect(v2.except).toEqual([['segregated', 'no']]);
+    expect(v2.filters).toEqual(
+      expect.arrayContaining([
+        ['cycleway:both', 'track'],
+        [
+          ['highway', 'path'],
+          ['segregated', 'yes'],
+        ],
+      ])
+    );
+    const v1Faixa = OSMController.getLayers(false, false, 'v1').find(
+      (l) => l.name === 'Ciclofaixa'
+    );
+    const v2Faixa = OSMController.getLayers(false, false, 'v2').find(
+      (l) => l.name === 'Ciclofaixa'
+    );
+    expect(v1Faixa.filters).not.toEqual(expect.arrayContaining([['cycleway', 'buffered_lane']]));
+    expect(v2Faixa.filters).toEqual(expect.arrayContaining([['cycleway', 'buffered_lane']]));
   });
 
   it('includes debug layers in debug mode', () => {
@@ -50,6 +75,56 @@ describe('OSMController.getLayers', () => {
     const debug = OSMController.getLayers(false, true);
     expect(debug.length).toBeGreaterThan(normal.length);
     expect(debug.some((l) => l.onlyDebug)).toBe(true);
+  });
+
+  it('includes pairing layers and the v1/v2 diff overlay in mapper mode', () => {
+    const mapper = OSMController.getLayers(false, false, 'v2', true);
+    expect(mapper.some((l) => l.onlyDebug)).toBe(true);
+    expect(mapper.some((l) => l.name === 'Lado A')).toBe(true);
+    expect(mapper.some((l) => l.name === 'Vias sem nome')).toBe(false);
+    expect(mapper.some((l) => l.name === 'Falsos positivos')).toBe(false);
+    expect(mapper[0].name).toBe('Diff v1→v2');
+    const ladoA = mapper.find((l) => l.name === 'Lado A');
+    expect(ladoA.mapperGroup).toBe('pairing');
+    expect(ladoA.mapperGroupDefault).toBe(true);
+    expect(ladoA.isActive).toBe(true);
+    expect(mapper.find((l) => l.name === 'Lado B').isActive).toBe(true);
+    expect(mapper.find((l) => l.name === 'Tag + ciclovia').isActive).toBe(true);
+    expect(mapper.find((l) => l.name === 'Ciclovias sobrepostas').isActive).toBe(true);
+    expect(mapper.find((l) => l.name === 'Não pareados').isActive).toBe(true);
+    expect(mapper.find((l) => l.name === 'Prefeitura 2024').isActive).toBe(true);
+    expect(mapper.find((l) => l.name === 'OSM fora da lista').filters).toEqual([
+      ['ciclomapa:cuiaba_hall', 'extra'],
+    ]);
+    expect(mapper.find((l) => l.name === 'Lista Transalvador').mapperGroup).toBe('salvador-hall');
+    expect(mapper.find((l) => l.name === 'Só OSM (Rio)').mapperGroupSection).toBe('diff');
+    expect(mapper.find((l) => l.name === 'CET-Rio ciclovia').debugSource).toBe('hall-gis');
+    expect(mapper.find((l) => l.name === 'CET-Rio ciclovia').isActive).toBe(false);
+    expect(mapper.find((l) => l.name === 'IPPUC ciclovia').filters).toEqual([
+      ['ctba_tipo_ciclovia', 1],
+    ]);
+    expect(mapper.find((l) => l.name === 'Só OSM (Fortaleza)').mapperGroup).toBe('fortaleza-hall');
+    expect(mapper.find((l) => l.name === 'SCSP ciclovia').filters).toEqual([
+      ['tipologia', 'Ciclovia'],
+    ]);
+    expect(mapper.find((l) => l.name === 'SCSP ciclovia').isActive).toBe(false);
+    expect(mapper.find((l) => l.name === 'Pareados').isActive).toBe(false);
+    expect(mapper.filter((l) => l.mapperGroup === 'pairing').length).toBeGreaterThan(1);
+  });
+
+  it('prepends the v1/v2 diff overlay in mapper or debug mode', () => {
+    const normal = OSMController.getLayers(false, false);
+    expect(normal.some((l) => l.name === 'Diff v1→v2')).toBe(false);
+
+    const debug = OSMController.getLayers(false, true);
+    const diff = debug[0];
+    expect(diff.name).toBe('Diff v1→v2');
+    expect(diff.id).toBe('diff-v1v2');
+    expect(diff.onlyDebug).toBe(true);
+    expect(diff.isActive).toBe(true);
+    expect(diff.debugSource).toBe('pmtiles');
+    expect(diff.mapboxFilter[0]).toBe('!=');
+    expect(debug.filter((l) => l.name === diff.name)).toHaveLength(1);
   });
 
   it('applies dark variants without mutating the shared layer definitions', () => {
@@ -112,6 +187,16 @@ describe('OSMController.getQuery', () => {
 
   it('expands compound filters into chained tag selectors', () => {
     const q = OSMController.getQuery({ areaId: 1 });
+    expect(q).toContain('way["highway"="path"]["segregated"="yes"](area.a);');
+    expect(q).toContain('way["highway"="cycleway"]["segregated"="no"](area.a);');
+    expect(q).toContain('way["cycleway:both"="shared_lane"](area.a);');
+    expect(q).toContain('way["highway"="path"]["bicycle"="designated"](area.a);');
+  });
+
+  it('builds v1 queries without the v2-only tag spellings', () => {
+    const q = OSMController.getQuery({ areaId: 1, layersVersion: 'v1' });
+    expect(q).not.toContain('way["cycleway:both"="shared_lane"]');
+    expect(q).not.toContain('way["highway"="cycleway"]["segregated"="no"]');
     expect(q).toContain('way["highway"="footway"]["bicycle"="designated"](area.a);');
   });
 
@@ -119,6 +204,7 @@ describe('OSMController.getQuery', () => {
     const q = OSMController.getQuery({ areaId: 3600000001 });
     expect(q).not.toContain('ciclomapa:');
     expect(q).not.toContain('match_confidence_bucket');
+    expect(q).not.toContain('Diff v1');
   });
 
   it('builds a short boundary-only query with no layer filters', () => {

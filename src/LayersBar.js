@@ -8,8 +8,17 @@ import bikeshopIconLight from './img/icons/poi-bikeshop-mini--light.png';
 import bikerentalIcon from './img/icons/poi-bikerental-mini.png';
 import bikerentalIconLight from './img/icons/poi-bikerental-mini--light.png';
 import { HiOutlineInformationCircle } from 'react-icons/hi';
+import { Popover } from 'antd';
+import LayersVersionSwitch from './components/LayersVersionSwitch';
+import PairingLayerOptions from './components/PairingLayerOptions';
+import {
+  pairingGroupIsActive,
+  pairingGroupSwatchLayers,
+  splitMapperLayerMenu,
+} from './config/layersCatalog.js';
 
 import './LayersBar.css';
+import './components/MapperBox.css';
 
 class LayersBar extends Component {
   constructor(props) {
@@ -27,6 +36,11 @@ class LayersBar extends Component {
   getActiveLayers() {
     const { layers } = this.props;
     return layers.filter((l) => !l.onlyDebug && l.isAvailable !== false);
+  }
+
+  getMapperLayers() {
+    const { layers } = this.props;
+    return layers.filter((l) => l.onlyDebug && l.isAvailable !== false);
   }
 
   getLayerCategories() {
@@ -183,6 +197,7 @@ class LayersBar extends Component {
     isActive,
     icon,
     lineStyle,
+    lineColors,
     label,
     className = '',
     shouldMergeWithNext = false,
@@ -218,7 +233,7 @@ class LayersBar extends Component {
         className={`${baseClasses} ${activeClasses} ${animationClasses} ${mergeClasses} ${className}`}
         style={style}
       >
-        {(icon || lineStyle) && (
+        {(icon || lineStyle || lineColors?.length > 0) && (
           <span
             className="flex"
             style={{
@@ -230,6 +245,12 @@ class LayersBar extends Component {
           >
             {icon ? (
               <img className="w-3 h-3" src={icon} alt="" />
+            ) : lineColors ? (
+              <span className="w-4 h-1 rounded overflow-hidden flex">
+                {lineColors.map((color, i) => (
+                  <span key={`${color}-${i}`} className="flex-1" style={{ background: color }} />
+                ))}
+              </span>
             ) : lineStyle ? (
               <span className="w-4 h-1 rounded" style={this.renderLineStyle(lineStyle)} />
             ) : null}
@@ -241,13 +262,22 @@ class LayersBar extends Component {
   }
 
   render() {
-    const { layers, embedMode, isDarkMode } = this.props;
+    const {
+      layers,
+      embedMode,
+      isDarkMode,
+      showLayersVersionSwitch,
+      layersVersion,
+      onLayersVersionChange,
+    } = this.props;
 
     if (!IS_MOBILE || !layers || embedMode) {
       return null;
     }
 
     const categories = this.getLayerCategories();
+    const mapperLayers = this.getMapperLayers();
+    const mapperMenu = splitMapperLayerMenu(mapperLayers);
 
     const categoryConfig = {
       pontos: {
@@ -268,6 +298,50 @@ class LayersBar extends Component {
         }}
       >
         <div className="flex justify-start space-x-1 transition-all duration-300">
+          {(mapperLayers.length > 0 || showLayersVersionSwitch) && (
+            <div className="cm-mapper-box cm-mapper-box--bar" data-mapper-box>
+              <span className="cm-mapper-box__label cm-mapper-box__label--inline">
+                Modo mapeador
+              </span>
+              {showLayersVersionSwitch && onLayersVersionChange && (
+                <LayersVersionSwitch value={layersVersion} onChange={onLayersVersionChange} />
+              )}
+              {mapperMenu.map((item) =>
+                item.type === 'group' ? (
+                  <Popover
+                    key={item.group.id}
+                    trigger="click"
+                    placement="bottomLeft"
+                    content={
+                      <PairingLayerOptions
+                        group={item.group}
+                        layers={item.layers}
+                        onLayersChange={this.props.onLayersChange}
+                      />
+                    }
+                  >
+                    {this.renderLayerButton({
+                      id: item.group.id,
+                      isActive: pairingGroupIsActive(item.layers),
+                      lineColors: pairingGroupSwatchLayers(item.layers).map(
+                        (layer) => layer.style.lineColor
+                      ),
+                      label: item.group.label,
+                    })}
+                  </Popover>
+                ) : (
+                  this.renderLayerButton({
+                    id: item.layer.id,
+                    onClick: () => this.props.onLayersChange(item.layer.id, !item.layer.isActive),
+                    isActive: item.layer.isActive,
+                    lineStyle: item.layer.style,
+                    label: item.layer.shortName || item.layer.displayName || item.layer.name,
+                  })
+                )
+              )}
+            </div>
+          )}
+
           {/* Cicloways category button (only when all cycleways are deactivated) */}
           {(() => {
             const config = categoryConfig.cicloways;

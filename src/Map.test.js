@@ -1,8 +1,17 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { DirectionsProvider } from './contexts/DirectionsContext';
-import MapWrapper, { flyMapToCityFocus } from './Map.js';
-import { DEFAULT_ZOOM, PMTILES_SOURCE_ID } from './config/constants.js';
+import MapWrapper, {
+  applyOverlapXray,
+  flyMapToCityFocus,
+  pickCityBoundaryFeature,
+  ringsAsPolygonHoles,
+  GEOJSON_LAYER_SUFFIX,
+  OSM_GEOJSON_SOURCE_ID,
+} from './Map.js';
+import { DEFAULT_ZOOM, PMTILES_SOURCE_ID, PMTILES_SOURCE_LAYER } from './config/constants.js';
+import { HALL_GIS_SOURCE_ID } from './config/hallOverlays.js';
+import { layersVersionDiffMapboxFilter } from './config/layersCatalog.js';
 
 const mockFlyMapTo = jest.fn();
 jest.mock('./features/map/mapCamera.js', () => ({
@@ -71,6 +80,7 @@ const defaultProps = {
   favorites: [],
   onFavoritesChanged: jest.fn(),
   cleanMode: false,
+  isSidebarOpen: false,
 };
 
 function fakeMapbox(extra = {}) {
@@ -135,6 +145,52 @@ describe('flyMapToCityFocus', () => {
   });
 });
 
+describe('city boundary helpers', () => {
+  const closed = (coords) => [...coords, coords[0]];
+  const small = closed([
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+  ]);
+  const large = closed([
+    [0, 0],
+    [10, 0],
+    [10, 10],
+    [0, 10],
+  ]);
+
+  it('picks the largest closed admin polygon among city-level features', () => {
+    const features = [
+      {
+        properties: { boundary: 'administrative', admin_level: '9', name: 'RA' },
+        geometry: { type: 'Polygon', coordinates: [large] },
+      },
+      {
+        properties: { boundary: 'administrative', admin_level: '4', name: 'DF' },
+        geometry: { type: 'Polygon', coordinates: [small] },
+      },
+      {
+        properties: { highway: 'cycleway' },
+        geometry: { type: 'Polygon', coordinates: [large] },
+      },
+    ];
+    expect(pickCityBoundaryFeature(features).properties.name).toBe('DF');
+  });
+
+  it('reverses CCW rings so they work as polygon holes', () => {
+    const ccw = closed([
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, 1],
+    ]);
+    const [hole] = ringsAsPolygonHoles([ccw]);
+    expect(hole[0]).toEqual(ccw[0]);
+    expect(hole[1]).toEqual(ccw[ccw.length - 2]);
+  });
+});
+
 describe('Map helpers', () => {
   it('renders the e2e container without creating a Mapbox map', () => {
     const { getByTestId } = render(
@@ -162,6 +218,56 @@ describe('Map helpers', () => {
       ['==', ['get', 'highway'], 'cycleway'],
       ['all', ['==', ['get', 'highway'], 'track'], ['==', ['get', 'bicycle'], 'yes']],
     ]);
+  });
+
+  it('applyOsmFiltersForLayer writes filters onto cyclepath layer ids', () => {
+    const map = mountMap();
+    const setFilter = jest.fn();
+    map.map = fakeMapbox({ getLayer: () => true, setFilter });
+    map.applyOsmFiltersForLayer({
+      id: 'ciclovia',
+      type: 'way',
+      filters: [['highway', 'cycleway']],
+      except: [['segregated', 'no']],
+    });
+    expect(setFilter).toHaveBeenCalledWith('ciclovia--pmtiles', [
+      'all',
+      ['any', ['==', ['get', 'highway'], 'cycleway']],
+      ['!=', ['get', 'segregated'], 'no'],
+    ]);
+  });
+
+  it('convertFilterToMapboxFilter excludes layer.except tags', () => {
+    const map = mountMap();
+    expect(
+      map.convertFilterToMapboxFilter({
+        filters: [['highway', 'cycleway']],
+        except: [['segregated', 'no']],
+      })
+    ).toEqual([
+      'all',
+      ['any', ['==', ['get', 'highway'], 'cycleway']],
+      ['!=', ['get', 'segregated'], 'no'],
+    ]);
+  });
+
+  it('convertFilterToMapboxFilter keeps a prebuilt mapboxFilter', () => {
+    const map = mountMap();
+    const mapboxFilter = layersVersionDiffMapboxFilter();
+    expect(map.convertFilterToMapboxFilter({ mapboxFilter })).toBe(mapboxFilter);
+  });
+
+  it('applyOsmFiltersForLayer writes a prebuilt mapboxFilter', () => {
+    const map = mountMap();
+    const setFilter = jest.fn();
+    map.map = fakeMapbox({ getLayer: () => true, setFilter });
+    const mapboxFilter = ['!=', ['get', 'a'], ['get', 'b']];
+    map.applyOsmFiltersForLayer({
+      id: 'diff-v1v2',
+      type: 'way',
+      mapboxFilter,
+    });
+    expect(setFilter).toHaveBeenCalledWith('diff-v1v2--pmtiles', mapboxFilter);
   });
 
   it('getLayerUnderneathName prefers road-label-small', () => {
@@ -208,6 +314,501 @@ describe('Map helpers', () => {
     map.props = { ...map.props, cleanMode: false };
     map.applyCleanModeBasemapLabels();
     expect(setLayoutProperty).toHaveBeenCalledWith('place-label', 'visibility', 'visible');
+  });
+
+  it('applyOverlapXray shows halo layers under visible cycle lines', () => {
+    const paint = { 'ciclovia--pmtiles': {} };
+    const layout = {
+      'ciclovia--pmtiles': { visibility: 'visible' },
+      'ciclovia--halo--pmtiles': { visibility: 'none' },
+    };
+    const map = {
+      getStyle: () => ({
+        layers: [
+          { id: 'ciclovia--halo--pmtiles', type: 'line' },
+          { id: 'ciclovia--pmtiles', type: 'line' },
+          { id: 'ciclovia--interactive--pmtiles', type: 'line' },
+          { id: 'boundary-layer', type: 'line' },
+        ],
+      }),
+      getLayer: (id) => layout[id] !== undefined,
+      getPaintProperty: (id, prop) => paint[id]?.[prop],
+      getLayoutProperty: (id, prop) => layout[id]?.[prop],
+      setPaintProperty: jest.fn((id, prop, value) => {
+        paint[id] = paint[id] || {};
+        paint[id][prop] = value;
+      }),
+      setLayoutProperty: jest.fn((id, prop, value) => {
+        layout[id] = layout[id] || {};
+        layout[id][prop] = value;
+      }),
+    };
+
+    applyOverlapXray(map, true);
+    expect(map.setLayoutProperty).toHaveBeenCalledWith(
+      'ciclovia--halo--pmtiles',
+      'visibility',
+      'visible'
+    );
+    expect(map.setPaintProperty).toHaveBeenCalledWith('ciclovia--pmtiles', 'line-opacity', 0.75);
+
+    map.setPaintProperty.mockClear();
+    map.setLayoutProperty.mockClear();
+    applyOverlapXray(map, false);
+    expect(map.setLayoutProperty).toHaveBeenCalledWith(
+      'ciclovia--halo--pmtiles',
+      'visibility',
+      'none'
+    );
+    expect(map.setPaintProperty).toHaveBeenCalledWith('ciclovia--pmtiles', 'line-opacity', 1);
+  });
+
+  it('setDedupeDebugData writes GeoJSON onto the overlay source in debug mode', () => {
+    const map = mountMap({ debugMode: true });
+    const setData = jest.fn();
+    map.map = fakeMapbox({
+      getSource: (id) => (id === 'dedupe-debug' ? { setData } : null),
+    });
+    const fc = { type: 'FeatureCollection', features: [{ type: 'Feature' }] };
+    map.setDedupeDebugData(fc);
+    expect(setData).toHaveBeenCalledWith(fc);
+  });
+
+  it('initCyclepathLayerForSource paints hall GIS overlays from the official source', () => {
+    const map = mountMap({ mapperMode: true, layers: [] });
+    const addLayer = jest.fn();
+    map.map = fakeMapbox({
+      getSource: () => ({}),
+      getLayer: () => false,
+      addLayer,
+      on: jest.fn(),
+    });
+    map.initCyclepathLayerForSource(
+      {
+        id: 'cet-rio-ciclovia',
+        name: 'CET-Rio ciclovia',
+        onlyDebug: true,
+        debugSource: 'hall-gis',
+        filters: [['tipo_infra', 'Ciclovia']],
+        style: { lineColor: '#16A34A', lineWidth: 8 },
+      },
+      HALL_GIS_SOURCE_ID,
+      null
+    );
+    const added = addLayer.mock.calls.map(([spec]) => spec);
+    expect(added.length).toBeGreaterThan(0);
+    expect(added.every((spec) => spec.source === HALL_GIS_SOURCE_ID)).toBe(true);
+    expect(added.every((spec) => spec['source-layer'] === undefined)).toBe(true);
+  });
+
+  it('loadHallGis fetches CET-Rio geojson in Rio and clears it elsewhere', async () => {
+    const rioMap = mountMap({
+      mapperMode: true,
+      location: 'Rio de Janeiro, Rio de Janeiro, Brasil',
+    });
+    const setData = jest.fn();
+    rioMap.map = fakeMapbox({
+      getSource: (id) => (id === HALL_GIS_SOURCE_ID ? { setData } : null),
+    });
+    const fc = {
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', properties: { tipo_infra: 'Ciclovia' } }],
+    };
+    const fetchMock = jest.fn().mockResolvedValue({ json: async () => fc });
+    global.fetch = fetchMock;
+    await rioMap.loadHallGis();
+    expect(fetchMock).toHaveBeenCalled();
+    expect(String(fetchMock.mock.calls[0][0])).toContain('Rede_Ciclovi');
+    expect(setData).toHaveBeenCalledWith(fc);
+
+    const spMap = mountMap({ mapperMode: true, location: 'São Paulo, São Paulo, Brasil' });
+    const clearData = jest.fn();
+    spMap.map = fakeMapbox({
+      getSource: (id) => (id === HALL_GIS_SOURCE_ID ? { setData: clearData } : null),
+    });
+    fetchMock.mockClear();
+    await spMap.loadHallGis();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(clearData).toHaveBeenCalledWith({ type: 'FeatureCollection', features: [] });
+
+    const forMap = mountMap({
+      mapperMode: true,
+      location: 'Fortaleza, Ceará, Brasil',
+    });
+    const forData = jest.fn();
+    forMap.map = fakeMapbox({
+      getSource: (id) => (id === HALL_GIS_SOURCE_ID ? { setData: forData } : null),
+    });
+    fetchMock.mockClear();
+    await forMap.loadHallGis();
+    expect(fetchMock).toHaveBeenCalledWith('/hall-gis/fortaleza.geojson', { credentials: 'omit' });
+  });
+
+  it('loadHallGis writes hall_diff back onto the OSM geojson source', async () => {
+    const osm = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { type: 'Ciclovia' },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [0.01, 0],
+            ],
+          },
+        },
+      ],
+    };
+    const map = mountMap({
+      mapperMode: true,
+      location: 'Fortaleza, Ceará, Brasil',
+      data: osm,
+    });
+    const gisSet = jest.fn();
+    const osmSet = jest.fn();
+    map.map = fakeMapbox({
+      getSource: (id) => {
+        if (id === HALL_GIS_SOURCE_ID) return { setData: gisSet };
+        if (id === OSM_GEOJSON_SOURCE_ID) return { setData: osmSet };
+        return null;
+      },
+    });
+    global.fetch = jest.fn().mockResolvedValue({
+      json: async () => ({
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            properties: { tipologia: 'Ciclofaixa' },
+            geometry: {
+              type: 'LineString',
+              coordinates: [
+                [1, 1],
+                [1.01, 1],
+              ],
+            },
+          },
+        ],
+      }),
+    });
+    await map.loadHallGis();
+    expect(osmSet).toHaveBeenCalled();
+    expect(osmSet.mock.calls[0][0].features[0].properties['ciclomapa:hall_diff']).toBe(
+      'fortaleza:extra'
+    );
+  });
+
+  it('initCyclepathLayerForSource omits source-layer on the GeoJSON overlay', () => {
+    const map = mountMap({ debugMode: true, layers: [] });
+    const addLayer = jest.fn();
+    map.map = fakeMapbox({
+      getSource: () => ({}),
+      getLayer: () => false,
+      addLayer,
+      on: jest.fn(),
+    });
+    map.initCyclepathLayerForSource(
+      {
+        id: 'lado-a',
+        name: 'Lado A',
+        onlyDebug: true,
+        filters: [
+          [
+            ['ciclomapa:paired', 'true'],
+            ['ciclomapa:side', 'a'],
+          ],
+        ],
+        style: { lineColor: '#0B54FE', lineWidth: 8 },
+      },
+      'dedupe-debug',
+      null
+    );
+    expect(addLayer).toHaveBeenCalled();
+    const added = addLayer.mock.calls.map(([spec]) => spec);
+    expect(added.every((spec) => spec.source === 'dedupe-debug')).toBe(true);
+    expect(added.every((spec) => spec['source-layer'] === undefined)).toBe(true);
+    const halo = added.find((spec) => spec.id === 'lado-a--halo--pmtiles');
+    expect(halo).toBeTruthy();
+    expect(halo.layout.visibility).toBe('none');
+    expect(halo.paint['line-opacity']).toBe(0.28);
+  });
+
+  it('initCyclepathLayerForSource paints the v1/v2 diff overlay from PMTiles', () => {
+    const map = mountMap({ debugMode: true, layers: [] });
+    const addLayer = jest.fn();
+    map.map = fakeMapbox({
+      getSource: () => ({}),
+      getLayer: () => false,
+      addLayer,
+      on: jest.fn(),
+    });
+    const mapboxFilter = ['==', ['get', 'highway'], 'cycleway'];
+    map.initCyclepathLayerForSource(
+      {
+        id: 'diff-v1v2',
+        name: 'Diff v1→v2',
+        onlyDebug: true,
+        debugSource: 'pmtiles',
+        mapboxFilter,
+        style: { lineColor: '#FF00AA', lineWidth: 20, lineStyle: 'dashed' },
+      },
+      PMTILES_SOURCE_ID
+    );
+    const added = addLayer.mock.calls.map(([spec]) => spec);
+    expect(added.length).toBeGreaterThan(0);
+    expect(added.every((spec) => spec.source === PMTILES_SOURCE_ID)).toBe(true);
+    expect(added.every((spec) => spec['source-layer'] === PMTILES_SOURCE_LAYER)).toBe(true);
+    expect(added.every((spec) => spec.filter === mapboxFilter)).toBe(true);
+    expect(added.some((spec) => spec.id?.endsWith('--arrows'))).toBe(false);
+    const line = added.find((spec) => spec.id === 'diff-v1v2--pmtiles');
+    expect(line.paint['line-dasharray']).toEqual([1, 1]);
+  });
+
+  it('initCyclepathLayerForSource paints city GeoJSON without a source-layer', () => {
+    const map = mountMap({ layers: [] });
+    const addLayer = jest.fn();
+    map.map = fakeMapbox({
+      getSource: () => ({}),
+      getLayer: () => false,
+      addLayer,
+      on: jest.fn(),
+    });
+    map.initCyclepathLayerForSource(
+      {
+        id: 'ciclovia',
+        name: 'Ciclovia',
+        filters: [['highway', 'cycleway']],
+        style: { lineColor: '#00aa00', lineWidth: 4 },
+      },
+      OSM_GEOJSON_SOURCE_ID,
+      null,
+      GEOJSON_LAYER_SUFFIX
+    );
+    const added = addLayer.mock.calls.map(([spec]) => spec);
+    expect(added.length).toBeGreaterThan(0);
+    expect(added.every((spec) => spec.source === OSM_GEOJSON_SOURCE_ID)).toBe(true);
+    expect(added.every((spec) => spec['source-layer'] === undefined)).toBe(true);
+    expect(added.some((spec) => spec.id === `ciclovia${GEOJSON_LAYER_SUFFIX}`)).toBe(true);
+    expect(added.some((spec) => spec.id === `ciclovia--interactive${GEOJSON_LAYER_SUFFIX}`)).toBe(
+      true
+    );
+    expect(added.some((spec) => spec.id?.endsWith('--arrows'))).toBe(true);
+  });
+
+  it('updateLayerVisibility paints city GeoJSON instead of PMTiles while analytics is open', () => {
+    const ciclovia = { id: 'ciclovia', type: 'way', isActive: true };
+    const map = mountMap({ isSidebarOpen: true, layers: [ciclovia] });
+    const setLayoutProperty = jest.fn();
+    map.map = fakeMapbox({
+      getLayer: () => true,
+      setLayoutProperty,
+    });
+    map.updateLayerVisibility();
+    expect(setLayoutProperty).toHaveBeenCalledWith('ciclovia--pmtiles', 'visibility', 'none');
+    expect(setLayoutProperty).toHaveBeenCalledWith(
+      `ciclovia${GEOJSON_LAYER_SUFFIX}`,
+      'visibility',
+      'visible'
+    );
+  });
+
+  it('reapplies route endpoint POI filters after a layers version change', () => {
+    const poi = {
+      id: 'bikeparking',
+      type: 'poi',
+      icon: 'poi-bikeparking',
+      isActive: true,
+      filters: [['amenity', 'bicycle_parking']],
+    };
+    const routeProps = {
+      layers: [poi],
+      layersVersion: 'v2',
+      routes: { routes: [{}] },
+      fromPoint: { result: { center: [0, 0] } },
+    };
+    const map = mountMap(routeProps);
+    map.map = fakeMapbox({
+      getLayer: () => true,
+      getSource: () => ({ setData: jest.fn() }),
+      querySourceFeatures: () => [],
+    });
+    const applySpy = jest.spyOn(map, 'applyOsmFiltersForLayer');
+    const visSpy = jest.spyOn(map, 'updateLayerVisibility').mockImplementation(() => {});
+    map.componentDidUpdate({
+      ...defaultProps,
+      ...routeProps,
+      layersVersion: 'v1',
+    });
+    expect(applySpy).toHaveBeenCalled();
+    expect(visSpy).toHaveBeenCalled();
+  });
+
+  it('rebuilds the city boundary when the analytics sidebar toggles', () => {
+    const map = mountMap({ isSidebarOpen: true });
+    map.map = fakeMapbox();
+    const spy = jest.spyOn(map, 'initBoundaryLayer');
+    map.componentDidUpdate({ ...defaultProps, isSidebarOpen: false, layers: [] });
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('initBoundaryLayer removes the mask when city GeoJSON context is off', () => {
+    const map = mountMap({
+      isSidebarOpen: false,
+      needsCityGeoJsonContext: () => false,
+    });
+    const removeLayer = jest.fn();
+    const removeSource = jest.fn();
+    map.map = fakeMapbox({
+      isStyleLoaded: () => true,
+      getLayer: (id) =>
+        id === 'boundary-mask' || id === 'boundary-layer' || id === 'boundary-layer-halo',
+      getSource: () => ({}),
+      removeLayer,
+      removeSource,
+      addSource: jest.fn(),
+      addLayer: jest.fn(),
+    });
+    map.initBoundaryLayer();
+    expect(removeLayer).toHaveBeenCalledWith('boundary-mask');
+    expect(removeSource).toHaveBeenCalledWith('boundaryMaskSrc');
+    expect(map.map.addLayer).not.toHaveBeenCalled();
+  });
+
+  it('initBoundaryLayer still removes the mask while the style is reloading', () => {
+    const map = mountMap({
+      isSidebarOpen: false,
+      needsCityGeoJsonContext: () => false,
+    });
+    const removeLayer = jest.fn();
+    const removeSource = jest.fn();
+    map.map = fakeMapbox({
+      isStyleLoaded: () => false,
+      getLayer: (id) => id === 'boundary-mask',
+      getSource: (id) => (id === 'boundaryMaskSrc' ? {} : null),
+      removeLayer,
+      removeSource,
+      addLayer: jest.fn(),
+    });
+    map.initBoundaryLayer();
+    expect(removeLayer).toHaveBeenCalledWith('boundary-mask');
+    expect(removeSource).toHaveBeenCalledWith('boundaryMaskSrc');
+    expect(map.map.addLayer).not.toHaveBeenCalled();
+  });
+
+  it('initBoundaryLayer retries adding the mask once the style is idle', () => {
+    const ring = [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, 1],
+      [0, 0],
+    ];
+    const map = mountMap({
+      isSidebarOpen: true,
+      needsCityGeoJsonContext: () => true,
+      data: {
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            properties: { boundary: 'administrative', admin_level: '8' },
+            geometry: { type: 'Polygon', coordinates: [ring] },
+          },
+        ],
+      },
+    });
+    let styleLoaded = false;
+    const listeners = {};
+    const addSource = jest.fn();
+    const addLayer = jest.fn();
+    const removeLayer = jest.fn();
+    map.map = fakeMapbox({
+      isStyleLoaded: () => styleLoaded,
+      getLayer: () => false,
+      getSource: () => null,
+      addSource,
+      addLayer,
+      removeLayer,
+      once: (ev, cb) => {
+        listeners[ev] = cb;
+      },
+      off: jest.fn(),
+    });
+    map.initBoundaryLayer();
+    expect(addLayer).not.toHaveBeenCalled();
+    expect(removeLayer).not.toHaveBeenCalled();
+    expect(listeners.idle).toEqual(expect.any(Function));
+
+    styleLoaded = true;
+    listeners.idle();
+    expect(addSource).toHaveBeenCalledWith('boundaryMaskSrc', expect.any(Object));
+    expect(addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'boundary-mask' }),
+      undefined
+    );
+  });
+
+  it('updateLayerVisibility hides hall overlays that are off or for another city', () => {
+    const rio = {
+      id: 'so-osm-rio',
+      type: 'way',
+      isActive: false,
+      isAvailable: true,
+      onlyDebug: true,
+    };
+    const curitiba = {
+      id: 'so-osm-curitiba',
+      type: 'way',
+      isActive: true,
+      isAvailable: false,
+      onlyDebug: true,
+    };
+    const ippuc = {
+      id: 'so-ippuc',
+      type: 'way',
+      isActive: true,
+      isAvailable: true,
+      onlyDebug: true,
+      mapperGroup: 'curitiba-hall',
+      debugSource: 'hall-gis',
+      filters: [['ciclomapa:hall_diff', 'curitiba:only']],
+    };
+    const map = mountMap({
+      location: 'Fortaleza, Ceará, Brasil',
+      layers: [rio, curitiba, ippuc],
+    });
+    const setLayoutProperty = jest.fn();
+    map.map = fakeMapbox({
+      getLayer: (id) => String(id).endsWith('--pmtiles'),
+      setLayoutProperty,
+    });
+    map.updateLayerVisibility();
+    expect(setLayoutProperty).toHaveBeenCalledWith('so-osm-rio--pmtiles', 'visibility', 'none');
+    expect(setLayoutProperty).toHaveBeenCalledWith(
+      'so-osm-curitiba--pmtiles',
+      'visibility',
+      'none'
+    );
+    expect(setLayoutProperty).toHaveBeenCalledWith('so-ippuc--pmtiles', 'visibility', 'none');
+  });
+
+  it('updateLayerVisibility keeps PMTiles when there is no city GeoJSON copy', () => {
+    const ciclovia = { id: 'ciclovia', type: 'way', isActive: true };
+    const map = mountMap({ isSidebarOpen: true, layers: [ciclovia] });
+    const setLayoutProperty = jest.fn();
+    map.map = fakeMapbox({
+      getLayer: (id) => !String(id).includes(GEOJSON_LAYER_SUFFIX),
+      setLayoutProperty,
+    });
+    map.updateLayerVisibility();
+    expect(setLayoutProperty).toHaveBeenCalledWith('ciclovia--pmtiles', 'visibility', 'visible');
+    expect(setLayoutProperty).not.toHaveBeenCalledWith(
+      `ciclovia${GEOJSON_LAYER_SUFFIX}`,
+      'visibility',
+      'visible'
+    );
   });
 
   it('updateRouteEndpointPoiFilters applies a within filter and restores it when routes clear', () => {

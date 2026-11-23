@@ -32,6 +32,8 @@ describe('design tokens', () => {
       expect(props['--color-bg-light']).toBe(colors.bgLight);
       expect(props['--color-logo-dark']).toBe(colors.logoDark);
       expect(props['--color-logo-light']).toBe(colors.logoLight);
+      expect(props['--color-mapper-accent']).toBe(colors.mapperAccent);
+      expect(props['--color-mapper-accent-dark']).toBe(colors.mapperAccentDark);
     });
 
     it('includes required spacing and layout tokens', () => {
@@ -81,10 +83,10 @@ describe('design tokens', () => {
     it('has DARK and LIGHT theme keys and CYCLEPATH_FALLBACK', () => {
       expect(MAP_COLORS.DARK.STROKE).toMatch(/^#[0-9a-fA-F]{6}$/);
       expect(MAP_COLORS.DARK.HALO).toMatch(/^#[0-9a-fA-F]{6}$/);
-      expect(MAP_COLORS.DARK.BOUNDARY).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(MAP_COLORS.DARK.BOUNDARY).toMatch(/^#([0-9a-fA-F]{2})\1\1$/);
       expect(MAP_COLORS.LIGHT.STROKE).toMatch(/^#[0-9a-fA-F]{6}$/);
       expect(MAP_COLORS.LIGHT.HALO).toMatch(/^#[0-9a-fA-F]{6}$/);
-      expect(MAP_COLORS.LIGHT.BOUNDARY).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(MAP_COLORS.LIGHT.BOUNDARY).toMatch(/^#([0-9a-fA-F]{2})\1\1$/);
       expect(MAP_COLORS.CYCLEPATH_FALLBACK).toMatch(/^#[0-9a-fA-F]{6}$/);
       expect(MAP_COLORS.LIGHT_COLOR).toMatch(/^#[0-9a-fA-F]{6}$/);
     });

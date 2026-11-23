@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { HiOutlineChevronDown as IconChevron } from 'react-icons/hi';
-import { HiBugAnt as IconDebug, HiOutlineXMark as IconClose } from 'react-icons/hi2';
+import {
+  HiBugAnt as IconDebug,
+  HiOutlineSquares2X2 as IconIcons,
+  HiOutlineXMark as IconClose,
+} from 'react-icons/hi2';
 import { IS_MOBILE } from '../config/constants.js';
 import { API_COLORS, API_GROUPS, API_LABELS, API_TYPES, subscribe } from './apiTracker.js';
 import { BRAND_LOGO_URLS } from './brandLogos.js';
@@ -310,23 +315,39 @@ function writeStoredOpen(open) {
 }
 
 const SAMPLES_STORAGE_KEY = 'ciclomapa-debug-viewport-samples';
+const OVERLAP_XRAY_STORAGE_KEY = 'ciclomapa-debug-overlap-xray';
+const OVERLAP_XRAY_EVENT = 'ciclomapa:overlap-xray';
+
+function readStoredFlag(key) {
+  try {
+    return window.localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeStoredFlag(key, on) {
+  try {
+    window.localStorage.setItem(key, on ? '1' : '0');
+  } catch {
+    // ignore
+  }
+}
 
 export default function ApiDebugOverlay({ initiallyOpen = false, map = null }) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(() => readStoredOpen(initiallyOpen));
-  const [showViewportSamples, setShowViewportSamples] = useState(() => {
-    try {
-      return window.localStorage.getItem(SAMPLES_STORAGE_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
+  const [showViewportSamples, setShowViewportSamples] = useState(() =>
+    readStoredFlag(SAMPLES_STORAGE_KEY)
+  );
+  const [overlapXray, setOverlapXray] = useState(() => readStoredFlag(OVERLAP_XRAY_STORAGE_KEY));
   useEffect(() => {
-    try {
-      window.localStorage.setItem(SAMPLES_STORAGE_KEY, showViewportSamples ? '1' : '0');
-    } catch {
-      // ignore
-    }
+    writeStoredFlag(SAMPLES_STORAGE_KEY, showViewportSamples);
   }, [showViewportSamples]);
+  useEffect(() => {
+    writeStoredFlag(OVERLAP_XRAY_STORAGE_KEY, overlapXray);
+    window.dispatchEvent(new CustomEvent(OVERLAP_XRAY_EVENT, { detail: { enabled: overlapXray } }));
+  }, [overlapXray]);
   const [collapsed, setCollapsed] = useState(IS_MOBILE);
   const [snapshot, setSnapshot] = useState({ entries: [], counts: {} });
   const [dataSnapshot, setDataSnapshot] = useState({ sources: {} });
@@ -406,6 +427,35 @@ export default function ApiDebugOverlay({ initiallyOpen = false, map = null }) {
           />
           <button
             type="button"
+            className={`m-0 flex h-[18px] shrink-0 cursor-pointer items-center justify-center rounded-[3px] border-0 px-1 py-0 font-medium ${
+              overlapXray
+                ? 'bg-emerald-800 text-emerald-200'
+                : 'bg-transparent text-gray-500 hover:bg-gray-800 hover:text-gray-100'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOverlapXray((v) => !v);
+            }}
+            title="Wide glow under cycle lanes so stacked ways look brighter"
+            aria-pressed={overlapXray}
+            aria-label="Overlap halo"
+          >
+            Halo
+          </button>
+          <button
+            type="button"
+            className="m-0 flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center rounded-[3px] border-0 bg-transparent p-0 text-gray-500 hover:bg-gray-800 hover:text-gray-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate('/dev/place-type-icons');
+            }}
+            title="Revisar ícones"
+            aria-label="Revisar ícones"
+          >
+            <IconIcons className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
             className="m-0 flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center rounded-[3px] border-0 bg-transparent p-0 text-gray-500 hover:bg-gray-800 hover:text-gray-100"
             onClick={(e) => {
               e.stopPropagation();
@@ -440,6 +490,18 @@ export default function ApiDebugOverlay({ initiallyOpen = false, map = null }) {
                     onChange={(e) => setShowViewportSamples(e.target.checked)}
                   />
                   <span className="flex-1 text-gray-200">Viewport city samples</span>
+                </label>
+                <label
+                  className="flex cursor-pointer items-center gap-2 px-2.5 py-[5px]"
+                  title="Wide translucent glow under cycle lanes. Two ways on top of each other look brighter. Turn off to go back to normal strokes."
+                >
+                  <input
+                    type="checkbox"
+                    className="m-0 h-3 w-3 cursor-pointer accent-emerald-400"
+                    checked={overlapXray}
+                    onChange={(e) => setOverlapXray(e.target.checked)}
+                  />
+                  <span className="flex-1 text-gray-200">Overlap halo</span>
                 </label>
               </section>
 

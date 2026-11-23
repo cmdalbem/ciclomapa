@@ -64,7 +64,7 @@ describe('LayersBar', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('shows cycleway and POI pills, skipping unavailable, debug and "outras vias" layers', () => {
+  it('shows cycleway and POI pills, skipping unavailable and "outras vias" layers', () => {
     renderBar();
     expect(screen.getByRole('button', { name: 'Ciclovia' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Faixa' })).toBeInTheDocument(); // shortName wins
@@ -75,8 +75,84 @@ describe('LayersBar', () => {
     expect(screen.queryByRole('button', { name: 'Trilha' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Lojas' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Baixa velocidade' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /DEBUG/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /DEBUG/ })).toBeInTheDocument();
+    expect(screen.getByText('Modo mapeador')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Vias cicláveis' })).not.toBeInTheDocument();
+    const mapperBox = screen.getByText('Modo mapeador').closest('[data-mapper-box]');
+    expect(mapperBox.parentElement.firstElementChild).toBe(mapperBox);
+  });
+
+  it('collapses pairing layers into one Pareamento pill', async () => {
+    renderBar({
+      layers: [
+        way('Ciclovia', true),
+        way('Lado A', true, {
+          id: 'lado-a',
+          onlyDebug: true,
+          mapperGroup: 'pairing',
+          mapperGroupSection: 'sides',
+          mapperGroupDefault: true,
+        }),
+        way('Lado B', false, {
+          id: 'lado-b',
+          onlyDebug: true,
+          mapperGroup: 'pairing',
+          mapperGroupSection: 'sides',
+          mapperGroupDefault: true,
+        }),
+        way('Não pareados', false, { id: 'nao-pareados', onlyDebug: true }),
+        way('DEBUG - Inclusas', true, { onlyDebug: true }),
+      ],
+    });
+    expect(screen.getByRole('button', { name: 'Pareamento' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Lado A/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Não pareados/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /DEBUG/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pareamento' }));
+    expect(await screen.findByText('Mostrar no mapa')).toBeInTheDocument();
+    expect(screen.getByText('Lado A')).toBeInTheDocument();
+  });
+
+  it('collapses Cuiabá hall layers into one Cuiabá pill', async () => {
+    renderBar({
+      layers: [
+        way('Ciclovia', true),
+        way('Prefeitura 2024', true, {
+          id: 'prefeitura-2024',
+          onlyDebug: true,
+          mapperGroup: 'cuiaba-hall',
+          mapperGroupSection: 'views',
+          mapperGroupDefault: true,
+        }),
+        way('OSM fora da lista', false, {
+          id: 'osm-fora-da-lista',
+          onlyDebug: true,
+          mapperGroup: 'cuiaba-hall',
+          mapperGroupSection: 'views',
+          mapperGroupDefault: true,
+        }),
+      ],
+    });
+    expect(screen.getByRole('button', { name: 'Cuiabá 2024' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Prefeitura 2024/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cuiabá 2024' }));
+    expect(await screen.findByText('Mostrar no mapa')).toBeInTheDocument();
+    expect(screen.getByText('Prefeitura 2024')).toBeInTheDocument();
+  });
+
+  it('puts the OSM version switch inside the mapper box', () => {
+    const onLayersVersionChange = jest.fn();
+    renderBar({
+      showLayersVersionSwitch: true,
+      layersVersion: 'v2',
+      onLayersVersionChange,
+    });
+    const box = screen.getByText('Modo mapeador').closest('[data-mapper-box]');
+    expect(box).toContainElement(screen.getByRole('button', { name: 'v1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'v1' }));
+    expect(onLayersVersionChange).toHaveBeenCalledWith('v1');
   });
 
   it('toggles a single layer and reports the new state', () => {

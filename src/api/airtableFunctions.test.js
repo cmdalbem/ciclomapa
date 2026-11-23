@@ -149,6 +149,72 @@ describe('Airtable Vercel functions', () => {
     expect(requestUrl).toContain('fields');
   });
 
+  it('GET comments?all=1 skips age and status filters', async () => {
+    const recent = new Date().toISOString();
+    const old = new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000).toISOString();
+    fetch.mockResolvedValueOnce(
+      jsonResponse(200, {
+        records: [
+          { id: 'tags', fields: { id: 44, tags: ['Infraestrutura'] } },
+          {
+            id: 'open',
+            fields: {
+              status: 'Aberta',
+              latlong: '-30.03,-51.21',
+              text: 'buraco',
+              email: 'secret@example.com',
+              createdAt: recent,
+            },
+          },
+          {
+            id: 'stale',
+            fields: {
+              status: 'Aberta',
+              latlong: '-30.04,-51.22',
+              text: 'comentario antigo',
+              createdAt: old,
+            },
+          },
+          {
+            id: 'invalid',
+            fields: {
+              status: 'Inválida',
+              latlong: '-30.05,-51.23',
+              text: 'lixo',
+              createdAt: recent,
+            },
+          },
+          {
+            id: 'no-coords',
+            fields: {
+              status: 'Aberta',
+              text: 'sem pin',
+              createdAt: recent,
+            },
+          },
+        ],
+      })
+    );
+
+    const res = createRes();
+    await commentsHandler({ method: 'GET', url: '/api/airtable/comments?all=1' }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.comments.map((c) => c.fields.text)).toEqual([
+      'buraco',
+      'comentario antigo',
+      'lixo',
+    ]);
+    expect(res.body.comments[0].fields.email).toBeUndefined();
+
+    const requestUrl = String(fetch.mock.calls[0][0]);
+    const formula = decodeURIComponent(requestUrl);
+    expect(formula).toContain('{id}=44');
+    expect(formula).toContain("{latlong}!=''");
+    expect(formula).not.toContain("{status}='Aberta'");
+    expect(formula).not.toContain('IS_AFTER({createdAt}');
+  });
+
   it('GET comments keeps a Nov 20 2024 comment under the 24-month calendar cutoff', async () => {
     // Fixed clock: under the old 720-day ms window this comment would be dropped,
     // but DATEADD(TODAY(), -24, 'months') from 2026-11-15 keeps it.

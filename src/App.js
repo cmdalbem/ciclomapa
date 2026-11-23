@@ -18,6 +18,13 @@ import { updateDocumentMeta } from './utils/documentMeta.js';
 import { getSystemThemePreference } from './utils/themeUtils';
 import { computeTypologies, cleanUpOSMTags, calculateLayersLengths } from './utils/geojsonUtils.js';
 import {
+  DEFAULT_LAYERS_VERSION,
+  mapperLayerNeedsCityGeoJson,
+  resolveLayersVersion,
+} from './config/layersCatalog.js';
+import { hallGroupIsAvailable, isHallMapperGroup } from './config/hallOverlays.js';
+import { DEFAULT_PARALLEL_DEDUPE_ENGINE } from './utils/parallelDedupeEngines/engineTypes.js';
+import {
   getCanonicalCitySlug,
   getPredefinedCitySlugDefinition,
   getPredefinedCityStaticLocation,
@@ -47,7 +54,6 @@ import {
   PMTILES_FILENAME,
   USE_PMTILES_SOURCE,
   FORCE_RECALCULATE_LENGTHS_ALWAYS,
-  DEFAULT_LENGTH_CALCULATE_STRATEGIES,
   MAP_STYLES,
   MAPBOX_ACCESS_TOKEN,
   DEFAULT_SIDEBAR_OPEN,
@@ -75,7 +81,9 @@ import './styles/theme-tailwind-overrides.css';
 import './styles/App.less';
 
 const RECENT_CITIES_STORAGE_KEY = 'ciclomapa_recent_cities_v1';
-
+// Below this, "cidade segue o mapa" stays quiet: the viewport is too wide for
+// a useful city guess (globe / state scale).
+const MIN_FOLLOW_VIEWPORT_ZOOM = 10;
 // URL `lat`/`lng` farther than this from the slug city's catalog center is treated
 // as leftover from a previous city (picker switched the slug but not the camera).
 const CITY_SLUG_VIEWPORT_MAX_KM = 80;
@@ -106,6 +114,7 @@ export class App extends Component {
   pendingFlyToTarget = null;
   lastResolvedCitySlug = null;
   lastNotifiedCitySlugError = null;
+  lastSelectedParallelDedupeEngine = null;
   initialBareRootEntry = false;
   _welcomeMapBootScheduled = false;
   _unmounted = false;
@@ -134,6 +143,7 @@ export class App extends Component {
     this.needsCityGeoJsonContext = this.needsCityGeoJsonContext.bind(this);
     this.getMapViewport = this.getMapViewport.bind(this);
     this.onLayersChange = this.onLayersChange.bind(this);
+    this.onLayersVersionChange = this.onLayersVersionChange.bind(this);
     this.downloadData = this.downloadData.bind(this);
     this.forceUpdate = this.forceUpdate.bind(this);
     this.cancelDataLoad = this.cancelDataLoad.bind(this);
@@ -147,16 +157,23 @@ export class App extends Component {
     this.closePrivacyPolicyModal = this.closePrivacyPolicyModal.bind(this);
     this.syncPrivacyPolicyFromRoute = this.syncPrivacyPolicyFromRoute.bind(this);
     this.onChangeStrategy = this.onChangeStrategy.bind(this);
+    this.onChangeParallelDedupeEngine = this.onChangeParallelDedupeEngine.bind(this);
+    this.togglePreviousParallelDedupeEngine = this.togglePreviousParallelDedupeEngine.bind(this);
+    this.onGlobalKeyDown = this.onGlobalKeyDown.bind(this);
     this.setMapRef = this.setMapRef.bind(this);
     this.setMapComponentRef = this.setMapComponentRef.bind(this);
     this.triggerGeolocate = this.triggerGeolocate.bind(this);
     this.toggleTheme = this.toggleTheme.bind(this);
+    this.toggleMapperMode = this.toggleMapperMode.bind(this);
     this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
     this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
     this.onDirectionsPanelToggle = this.onDirectionsPanelToggle.bind(this);
     this.toggleDirectionsPanel = this.toggleDirectionsPanel.bind(this);
     this.setArea = this.setArea.bind(this);
+    this.setFollowViewportCity = this.setFollowViewportCity.bind(this);
+    this.maybeFollowViewportCity = this.maybeFollowViewportCity.bind(this);
     this.debouncedUpdateURL = debounce(this.updateURL, 300);
+    this.debouncedFollowViewportCity = debounce(this.maybeFollowViewportCity, 800);
 
     // If user lands on "/" with no URL params and no city slug in route,
     // we treat this as the generic entrypoint and keep the URL clean.
@@ -172,6 +189,39 @@ export class App extends Component {
       !initialHasCitySlug;
 
     this.state = this.buildInitialState();
+  }
+
+  isTypingInFormField(target) {
+    if (!target) return false;
+    const tag = (target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+    return Boolean(target.isContentEditable);
+  }
+
+  togglePreviousParallelDedupeEngine() {
+    const current = this.state.parallelDedupeEngine;
+    const previous = this.lastSelectedParallelDedupeEngine || DEFAULT_PARALLEL_DEDUPE_ENGINE;
+
+    // Swap: after toggling, "previous" becomes whatever we were on.
+    this.lastSelectedParallelDedupeEngine = current;
+    this.setState({ parallelDedupeEngine: previous });
+  }
+
+  onGlobalKeyDown(e) {
+    // Shortcut: press "m" to toggle current engine <-> previously selected engine.
+    if (!e) return;
+    if (this.isTypingInFormField(e.target)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!this.state.debugMode && !this.state.mapperMode) return;
+
+    const key = String(e.key || '').toLowerCase();
+    if (key !== 'm') return;
+
+    // Avoid repeat firing when user holds the key.
+    if (e.repeat) return;
+
+    e.preventDefault();
+    this.togglePreviousParallelDedupeEngine();
   }
 
   buildInitialState() {
@@ -278,6 +328,12 @@ export class App extends Component {
     const isPrivacyPolicyRoute =
       typeof window !== 'undefined' && isPrivacyPolicyLocation(window.location.pathname);
 
+    const isDebugMode = urlParams.debug || false;
+    const mapperMode = Boolean(prev.mapperMode) && !embedMode;
+    const layersVersion = resolveLayersVersion(urlParams.layers || prev.layersVersion);
+    const isSidebarOpen =
+      prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : DEFAULT_SIDEBAR_OPEN;
+
     return {
       area: initialArea,
       showSatellite: ENABLE_SATELLITE_TOGGLE
@@ -301,14 +357,24 @@ export class App extends Component {
           ? parseFloat(urlParams.lng)
           : slugStatic?.lng || prev.lng || DEFAULT_LNG,
       geoJson: null,
-      debugMode: urlParams.debug || false,
+      debugMode: isDebugMode,
+      mapperMode,
       loading: false,
       mapStyle: isDarkMode ? MAP_STYLES.DARK : MAP_STYLES.LIGHT,
-      layers: this.initLayers(prev.layersStates, isDarkMode, urlParams.debug || false),
+      layers: this.initLayers(
+        prev.layersStates,
+        isDarkMode,
+        isDebugMode,
+        layersVersion,
+        mapperMode,
+        isSidebarOpen,
+        initialArea
+      ),
+      layersVersion,
       lengths: {},
       isTrackingUserLocation: IS_MOBILE && prev.isTrackingUserLocation === true ? true : false,
       embedMode,
-      isSidebarOpen: prev.isSidebarOpen !== undefined ? prev.isSidebarOpen : DEFAULT_SIDEBAR_OPEN,
+      isSidebarOpen,
       hideUI: shouldAutoOpenWelcomeModal || isPrivacyPolicyRoute,
       hideUIFromUrl: urlFlagEnabled(urlParams.hideui),
       aboutModal: shouldAutoOpenWelcomeModal && !isPrivacyPolicyRoute,
@@ -318,7 +384,9 @@ export class App extends Component {
       darkModeFromUrl: urlFlagEnabled(urlParams.dark),
       layersLegendModal: false,
       layersLegendScrollToSection: null,
-      lengthCalculationStrategy: DEFAULT_LENGTH_CALCULATE_STRATEGIES,
+      lengthCalculationStrategy: 'pessimistic',
+      parallelDedupeEngine: 'geometry_first',
+      followViewportCity: Boolean(prev.followViewportCity) && !embedMode,
       map: null,
       isDarkMode: isDarkMode,
       mapKey: 0,
@@ -359,6 +427,14 @@ export class App extends Component {
     this.setState({ lengthCalculationStrategy: strategy });
   }
 
+  onChangeParallelDedupeEngine(engineId) {
+    const current = this.state.parallelDedupeEngine;
+    if (engineId !== current) {
+      this.lastSelectedParallelDedupeEngine = current;
+    }
+    this.setState({ parallelDedupeEngine: engineId });
+  }
+
   toggleTheme(newIsDark) {
     const currentIsDark = this.state.isDarkMode;
 
@@ -372,6 +448,7 @@ export class App extends Component {
 
     // Apply theme class to body
     document.body.className = newIsDark ? 'theme-dark' : 'theme-light';
+    document.body.classList.toggle('mapper-mode', this.state.mapperMode);
 
     // // Update map style if default style is selected (not satellite)
     // if (!this.state.showSatellite) {
@@ -383,7 +460,13 @@ export class App extends Component {
 
     this.setState(
       {
-        layers: this.initLayers(this.state.layers, newIsDark, this.state.debugMode),
+        layers: this.initLayers(
+          this.state.layers,
+          newIsDark,
+          this.state.debugMode,
+          this.state.layersVersion,
+          this.state.mapperMode
+        ),
         isDarkMode: newIsDark,
       },
       () => {
@@ -397,12 +480,35 @@ export class App extends Component {
   }
 
   toggleSidebar(state) {
-    this.setState({ isSidebarOpen: state }, () => {
-      if (state) {
-        this.syncAreaWithViewportThenLoadCityData();
+    this.setState(
+      (prev) => ({
+        isSidebarOpen: state,
+        layers: this.withMapperGeoJsonAvailability(prev.layers, { isSidebarOpen: state }),
+      }),
+      () => {
+        if (state) {
+          this.syncAreaWithViewportThenLoadCityData();
+        } else {
+          this.debouncedFollowViewportCity?.cancel?.();
+        }
+        // Boundary visibility follows the same Analytics/Routing gate as GeoJSON loading.
+        this.mapComponent?.initBoundaryLayer?.();
       }
-      // Boundary visibility follows the same Analytics/Routing gate as GeoJSON loading.
-      this.mapComponent?.initBoundaryLayer?.();
+    );
+  }
+
+  setFollowViewportCity(enabled) {
+    const next = Boolean(enabled);
+    this.setState({ followViewportCity: next }, () => {
+      this.saveStateToLocalStorage();
+      if (!next) {
+        this._followViewportSyncId = (this._followViewportSyncId || 0) + 1;
+        this.debouncedFollowViewportCity?.cancel?.();
+        return;
+      }
+      if (!IS_MOBILE && this.state.isSidebarOpen && this.isViewportCityFollowActive()) {
+        this.syncAreaWithViewportThenLoadCityData({ fromFollow: true });
+      }
     });
   }
 
@@ -487,25 +593,91 @@ export class App extends Component {
     }
   }
 
-  initLayers(prevLayersStates, isDarkMode, isDebugMode) {
-    const layers = OSMController.getLayers(isDarkMode, isDebugMode);
-
-    // Merge with locally saved state
-    if (prevLayersStates && Object.keys(prevLayersStates).length > 0) {
-      layers.forEach((l) => {
-        if (prevLayersStates[l.id] !== undefined) {
-          l.isActive = prevLayersStates[l.id];
+  toggleMapperMode() {
+    if (this.state.embedMode) return;
+    const next = !this.state.mapperMode;
+    const viewport = this.getCurrentViewport();
+    document.body.classList.toggle('mapper-mode', next);
+    this.setState(
+      {
+        mapperMode: next,
+        lat: viewport.lat,
+        lng: viewport.lng,
+        zoom: viewport.zoom,
+        layers: this.initLayers(
+          this.state.layers,
+          this.state.isDarkMode,
+          this.state.debugMode,
+          this.state.layersVersion,
+          next
+        ),
+        mapKey: this.state.mapKey + 1,
+      },
+      () => {
+        this.saveStateToLocalStorage();
+        if (!next) {
+          this.debouncedFollowViewportCity?.cancel?.();
+          return;
         }
+        if (this.shouldLoadCityGeoJson()) this.ensureCityDataLoaded();
+        if (!IS_MOBILE && !this.state.isSidebarOpen) {
+          this.toggleSidebar(true);
+        }
+      }
+    );
+  }
+
+  mapperGeoJsonLayersAreLive(overrides = {}) {
+    const isSidebarOpen =
+      overrides.isSidebarOpen ?? this.state?.isSidebarOpen ?? DEFAULT_SIDEBAR_OPEN;
+    // Pairing tags are stamped in calculateLayersLengths, which only runs on
+    // desktop once city GeoJSON is in play (Analytics sidebar).
+    return !IS_MOBILE && Boolean(isSidebarOpen);
+  }
+
+  withMapperGeoJsonAvailability(layers, overrides) {
+    const live = this.mapperGeoJsonLayersAreLive(overrides);
+    let changed = false;
+    const next = layers.map((l) => {
+      if (!mapperLayerNeedsCityGeoJson(l)) return l;
+      if (l.isAvailable === live) return l;
+      changed = true;
+      return { ...l, isAvailable: live };
+    });
+    return changed ? next : layers;
+  }
+
+  initLayers(prevLayersStates, isDarkMode, isDebugMode, layersVersion, mapperMode, isSidebarOpen) {
+    const layers = OSMController.getLayers(
+      isDarkMode,
+      isDebugMode,
+      layersVersion ?? this.state?.layersVersion,
+      mapperMode ?? this.state?.mapperMode
+    );
+
+    let savedActive = prevLayersStates;
+    if (Array.isArray(prevLayersStates)) {
+      savedActive = {};
+      prevLayersStates.forEach((l) => {
+        if (l?.id != null) savedActive[l.id] = l.isActive;
+      });
+    }
+
+    if (savedActive && Object.keys(savedActive).length > 0) {
+      layers.forEach((l) => {
+        if (savedActive[l.id] === undefined) return;
+        l.isActive = savedActive[l.id];
       });
     }
 
     // Layers missing from the tiles can't render anywhere: hide their toggle and keep
     // them off even if an old localStorage state had them on. Until the archive
     // metadata has been read we go with the fallback list.
+    const pairingLive = this.mapperGeoJsonLayersAreLive({ isSidebarOpen });
     const availableNames = this.pmtilesAvailableLayerNames;
     layers.forEach((l) => {
       if (l.onlyDebug) {
-        l.isAvailable = true;
+        l.isAvailable = mapperLayerNeedsCityGeoJson(l) ? pairingLive : true;
         return;
       }
       if (!l.filters) return; // e.g. comments: not sourced from the tiles at all
@@ -538,7 +710,12 @@ export class App extends Component {
 
     this.setState((prev) => ({
       layers: prev.layers.map((l) => {
-        if (l.onlyDebug) return { ...l, isAvailable: true };
+        if (mapperLayerNeedsCityGeoJson(l)) {
+          return { ...l, isAvailable: this.mapperGeoJsonLayersAreLive() };
+        }
+        if (l.onlyDebug) {
+          return { ...l, isAvailable: true };
+        }
         if (!l.filters) return l;
         const isAvailable = this.pmtilesAvailableLayerNames.has(l.name);
         return { ...l, isAvailable, isActive: isAvailable && l.isActive };
@@ -570,6 +747,9 @@ export class App extends Component {
       layersStates: layersStates,
       isDarkMode: this.state.isDarkMode,
       isTrackingUserLocation: this.state.isTrackingUserLocation,
+      layersVersion: this.state.layersVersion,
+      mapperMode: this.state.mapperMode,
+      followViewportCity: this.state.followViewportCity,
     };
 
     let str = JSON.stringify(state);
@@ -590,6 +770,7 @@ export class App extends Component {
       'hideui',
       'dark',
       'flyto',
+      'layers',
     ];
     const urlParams = new URLSearchParams(this.props.location.search);
     let paramsObj = {};
@@ -1137,6 +1318,12 @@ export class App extends Component {
       currentParams.delete('hideui');
     }
 
+    if (this.state.layersVersion && this.state.layersVersion !== DEFAULT_LAYERS_VERSION) {
+      currentParams.set('layers', this.state.layersVersion);
+    } else {
+      currentParams.delete('layers');
+    }
+
     if (this.state.fromPoint && this.state.toPoint) {
       currentParams.set(
         'from',
@@ -1287,8 +1474,13 @@ export class App extends Component {
   getDataFromOSM(options = {}) {
     const { areaName = this.state.area, forceUpdate, backgroundUpdate, boundaryOnly } = options;
 
-    // Cancel any existing OSM request
+    // Cancel any existing OSM request. A boundary-only backfill must not abort
+    // a full refresh the user already started (Atualizar / stale cache refetch).
     if (this.currentOSMRequest) {
+      if (boundaryOnly && this._currentOSMRequestIsFull) {
+        console.debug('Skipping boundary-only OSM request; a full refresh is already in flight');
+        return Promise.resolve();
+      }
       console.debug('Cancelling previous OSM request');
       // notification.warning({
       //     message: 'OSM Request Cancelled',
@@ -1329,6 +1521,7 @@ export class App extends Component {
 
     const request = OSMController.getData({ area: areaName, boundaryOnly: !!boundaryOnly });
     this.currentOSMRequest = request;
+    this._currentOSMRequestIsFull = !boundaryOnly;
     return request
       .then((newData) => {
         finishDataLoad('geojson-osm', {
@@ -1413,7 +1606,8 @@ export class App extends Component {
           const computedLengths = calculateLayersLengths(
             newData.geoJson,
             this.state.layers,
-            this.state.lengthCalculationStrategy
+            this.state.lengthCalculationStrategy,
+            this.state.parallelDedupeEngine
           );
           const dropRetainedLengths = this._invalidateLengthsOnSave === areaName;
           if (dropRetainedLengths) {
@@ -1577,12 +1771,18 @@ export class App extends Component {
         const needsFullRefetch = !isFresh || queryAreaMismatch;
         const needsBoundaryBackfill = isFresh && !queryAreaMismatch && shouldRefetchForBoundary;
 
-        if (!data.lengths || FORCE_RECALCULATE_LENGTHS_ALWAYS) {
+        const shouldRecalculateLengths =
+          !data.lengths ||
+          FORCE_RECALCULATE_LENGTHS_ALWAYS ||
+          this.state.parallelDedupeEngine !== DEFAULT_PARALLEL_DEDUPE_ENGINE;
+
+        if (shouldRecalculateLengths) {
           console.debug('Recalculating lengths...');
           const computedLengths = calculateLayersLengths(
             data.geoJson,
             this.state.layers,
-            this.state.lengthCalculationStrategy
+            this.state.lengthCalculationStrategy,
+            this.state.parallelDedupeEngine
           );
           if (Object.keys(computedLengths).length > 0) {
             data.lengths = computedLengths;
@@ -1627,10 +1827,11 @@ export class App extends Component {
       });
   }
 
-  // Map rendering runs entirely off the regional PMTiles, so per-city GeoJSON is only
-  // needed by routing coverage, analytics/km stats, the city boundary outline, and the
-  // GeoJSON export. Call this right before any of those features are used instead of
-  // loading eagerly on every city change.
+  // Map rendering is PMTiles by default. Per-city GeoJSON is for routing coverage,
+  // analytics/km stats, the city boundary outline, GeoJSON export, mapper overlays
+  // that tag that extract, and painting the map from it while Analytics is open.
+  // Call this right before any of those features are used instead of loading
+  // eagerly on every city change.
   ensureCityDataLoaded() {
     const area = this.state.area;
     if (!area || this._geoJsonLoadedArea === area || this._geoJsonLoadingArea === area) {
@@ -1645,8 +1846,11 @@ export class App extends Component {
   // different city than state.area. Guess the city from the viewport first; a real
   // area change then goes through componentDidUpdate, which reloads GeoJSON when a
   // panel that needs it is open. Falls back to the current area if geocoding fails.
-  async syncAreaWithViewportThenLoadCityData() {
+  // Optional "cidade segue o mapa" in Analytics also calls this after pan/zoom.
+  async syncAreaWithViewportThenLoadCityData(options = {}) {
+    const fromFollow = Boolean(options.fromFollow);
     const requestId = (this._viewportAreaSyncId = (this._viewportAreaSyncId || 0) + 1);
+    const followIdAtStart = this._followViewportSyncId || 0;
     const { lng, lat } = this.getCurrentViewport();
     const areaWhenStarted = this.state.area;
 
@@ -1668,6 +1872,12 @@ export class App extends Component {
     ) {
       return;
     }
+    if (
+      fromFollow &&
+      (followIdAtStart !== this._followViewportSyncId || !this.isViewportCityFollowActive())
+    ) {
+      return;
+    }
 
     if (viewportArea && viewportArea !== this.state.area) {
       console.debug(`Viewport is over "${viewportArea}", switching from "${this.state.area}"`);
@@ -1675,6 +1885,25 @@ export class App extends Component {
       return; // componentDidUpdate's area branch triggers ensureCityDataLoaded()
     }
     this.ensureCityDataLoaded();
+  }
+
+  isViewportCityFollowActive() {
+    return Boolean(
+      this.state.followViewportCity && (this.state.mapperMode || this.state.debugMode)
+    );
+  }
+
+  maybeFollowViewportCity() {
+    if (
+      !this.isViewportCityFollowActive() ||
+      IS_MOBILE ||
+      !this.state.isSidebarOpen ||
+      this.state.embedMode
+    ) {
+      return;
+    }
+    if (this.getCurrentViewport().zoom < MIN_FOLLOW_VIEWPORT_ZOOM) return;
+    this.syncAreaWithViewportThenLoadCityData({ fromFollow: true });
   }
 
   onMapStyleChange(newMapStyle) {
@@ -1716,7 +1945,22 @@ export class App extends Component {
       newLayers[layerIndex] = { ...newLayers[layerIndex], isActive: newVal };
     }
 
-    this.setState({ layers: newLayers });
+    this.setState({ layers: newLayers }, () => {
+      if (this.shouldLoadCityGeoJson()) this.ensureCityDataLoaded();
+    });
+  }
+
+  onLayersVersionChange(version) {
+    const resolved = resolveLayersVersion(version);
+    if (resolved === this.state.layersVersion) return;
+    const layers = this.initLayers(
+      this.state.layers,
+      this.state.isDarkMode,
+      this.state.debugMode,
+      resolved,
+      this.state.mapperMode
+    );
+    this.setState({ layersVersion: resolved, layers });
   }
 
   downloadData() {
@@ -1808,8 +2052,13 @@ export class App extends Component {
       this.abortCurrentOSMRequest();
       this._geoJsonLoadedArea = null;
       this._geoJsonLoadingArea = null;
-      this.setState({ geoJson: null, lengths: {}, dataUpdatedAt: null, loading: false });
-      if (this.needsCityGeoJsonContext()) {
+      this.setState({
+        geoJson: null,
+        lengths: {},
+        dataUpdatedAt: null,
+        loading: false,
+      });
+      if (this.shouldLoadCityGeoJson()) {
         this.ensureCityDataLoaded();
       }
 
@@ -1884,7 +2133,8 @@ export class App extends Component {
       const computedLengths = calculateLayersLengths(
         clone,
         this.state.layers,
-        this.state.lengthCalculationStrategy
+        this.state.lengthCalculationStrategy,
+        this.state.parallelDedupeEngine
       );
       this.setState({
         geoJson: clone,
@@ -1892,6 +2142,44 @@ export class App extends Component {
           Object.keys(computedLengths).length === 0
             ? this.state.lengths || computedLengths
             : computedLengths,
+      });
+    }
+
+    if (this.state.layersVersion !== prevState.layersVersion) {
+      this.debouncedUpdateURL();
+      if (this.state.geoJson) {
+        const clone = JSON.parse(JSON.stringify(this.state.geoJson));
+        const computedVersionLengths = calculateLayersLengths(
+          clone,
+          this.state.layers,
+          this.state.lengthCalculationStrategy,
+          this.state.parallelDedupeEngine
+        );
+        this.setState({
+          geoJson: clone,
+          lengths:
+            Object.keys(computedVersionLengths).length === 0
+              ? this.state.lengths || computedVersionLengths
+              : computedVersionLengths,
+        });
+      }
+    }
+
+    if (this.state.parallelDedupeEngine !== prevState.parallelDedupeEngine) {
+      // Deep clone geoJson data to force Mapbox to update the data layers
+      const clone = JSON.parse(JSON.stringify(this.state.geoJson));
+      const computedDedupeLengths = calculateLayersLengths(
+        clone,
+        this.state.layers,
+        this.state.lengthCalculationStrategy,
+        this.state.parallelDedupeEngine
+      );
+      this.setState({
+        geoJson: clone,
+        lengths:
+          Object.keys(computedDedupeLengths).length === 0
+            ? this.state.lengths || computedDedupeLengths
+            : computedDedupeLengths,
       });
     }
 
@@ -1912,7 +2200,8 @@ export class App extends Component {
     const computedLengths = calculateLayersLengths(
       this.state.geoJson,
       this.state.layers,
-      this.state.lengthCalculationStrategy
+      this.state.lengthCalculationStrategy,
+      this.state.parallelDedupeEngine
     );
     if (Object.keys(computedLengths).length === 0) {
       return;
@@ -1939,6 +2228,8 @@ export class App extends Component {
   }
 
   componentDidMount() {
+    window.addEventListener('keydown', this.onGlobalKeyDown);
+
     if (!this.state.mapBootReady) {
       this.scheduleWelcomeMapBootAfterPaint();
     }
@@ -1949,6 +2240,7 @@ export class App extends Component {
 
     // Initialize theme
     document.body.className = this.state.isDarkMode ? 'theme-dark' : 'theme-light';
+    document.body.classList.toggle('mapper-mode', this.state.mapperMode);
 
     // Listen for system theme changes
     if (window.matchMedia) {
@@ -1996,7 +2288,7 @@ export class App extends Component {
 
     // Sidebar/routes open state can be restored from localStorage before any toggle
     // fires — kick off deferred GeoJSON (boundary, metrics, freshness) in that case.
-    if (this.needsCityGeoJsonContext()) {
+    if (this.shouldLoadCityGeoJson()) {
       this.ensureCityDataLoaded();
     }
 
@@ -2008,6 +2300,7 @@ export class App extends Component {
 
   componentWillUnmount() {
     this._unmounted = true;
+    window.removeEventListener('keydown', this.onGlobalKeyDown);
 
     // Clean up theme change listener
     if (this.themeChangeListener && window.matchMedia) {
@@ -2030,6 +2323,7 @@ export class App extends Component {
     if (this.debouncedUpdateURL) {
       this.debouncedUpdateURL.cancel();
     }
+    this.debouncedFollowViewportCity?.cancel?.();
 
     if (this._mapReadyFallbackTimer) {
       clearTimeout(this._mapReadyFallbackTimer);
@@ -2048,6 +2342,9 @@ export class App extends Component {
   // that made panning janky.
   onMapPositionChange() {
     this.debouncedUpdateURL();
+    if (this.isViewportCityFollowActive()) {
+      this.debouncedFollowViewportCity();
+    }
   }
 
   // Single source of truth for the current viewport. Prefers the live map (always
@@ -2075,8 +2372,8 @@ export class App extends Component {
 
   onMapMoved(newState) {
     // This does NOT control the map - the map manages its own position.
-    // City/area is no longer inferred from pan/zoom; it only changes via the
-    // city picker, URL slug, or an explicit setArea (e.g. routing).
+    // City/area is not inferred from every pan; it changes via the city picker,
+    // URL slug, explicit setArea, or the opt-in "cidade segue o mapa" follow.
     requestAnimationFrame(() => {
       const nextState = { ...newState };
       if (typeof nextState.area === 'string' && nextState.area.trim()) {
@@ -2114,10 +2411,27 @@ export class App extends Component {
 
   // Shared gate for anything that needs per-city GeoJSON: Analytics sidebar,
   // Routing panel, and the city boundary outline. Idle map browsing stays on
-  // PMTiles only; city/area itself is only changed via the picker / URL.
+  // PMTiles only. City/area changes via the picker, URL, or the opt-in follow.
   needsCityGeoJsonContext() {
     // isSidebarOpen is persisted, but the Analytics sidebar isn't rendered on mobile.
     return (!IS_MOBILE && this.state.isSidebarOpen) || this._isDirectionsPanelOpen;
+  }
+
+  // OSM hall overlays paint from the city extract and tag names themselves, so they
+  // should fetch GeoJSON even with Analytics closed. Boundary/stats still use
+  // needsCityGeoJsonContext so closing the sidebar does not keep the city mask on.
+  shouldLoadCityGeoJson() {
+    if (this.needsCityGeoJsonContext()) return true;
+    if (IS_MOBILE || this.state.embedMode) return false;
+    if (!(this.state.mapperMode || this.state.debugMode)) return false;
+    return Boolean(
+      this.state.layers?.some(
+        (l) =>
+          l.isActive &&
+          isHallMapperGroup(l.mapperGroup) &&
+          hallGroupIsAvailable(l.mapperGroup, this.state.area)
+      )
+    );
   }
 
   toggleDirectionsPanel() {
@@ -2236,6 +2550,7 @@ export class App extends Component {
       toggleSidebar: this.toggleSidebar,
       openAboutModal: this.openAboutModal,
       toggleTheme: this.toggleTheme,
+      toggleMapperMode: this.toggleMapperMode,
       updateLengths: this.updateLengths,
       setMapRef: this.setMapRef,
       setMapComponentRef: this.setMapComponentRef,
@@ -2247,7 +2562,10 @@ export class App extends Component {
       onMapStyleChange: this.onMapStyleChange,
       onMapShowSatelliteChanged: this.onMapShowSatelliteChanged,
       onLayersChange: this.onLayersChange,
+      onLayersVersionChange: this.onLayersVersionChange,
       onChangeStrategy: this.onChangeStrategy,
+      onChangeParallelDedupeEngine: this.onChangeParallelDedupeEngine,
+      setFollowViewportCity: this.setFollowViewportCity,
       setDirectionsPanelRef: this.setDirectionsPanelRef,
       setFromPoint: this.setFromPoint,
       setToPoint: this.setToPoint,

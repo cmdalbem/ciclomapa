@@ -77,6 +77,7 @@ const baseState = {
   zoom: 12,
   embedMode: false,
   debugMode: false,
+  mapperMode: false,
   isDarkMode: false,
   mapBootReady: true,
   mapKey: 0,

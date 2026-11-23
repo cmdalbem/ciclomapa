@@ -119,6 +119,14 @@ describe('TopBar (desktop)', () => {
     document.removeEventListener('newComment', listener);
   });
 
+  it('Colaborar > Modo mapeador toggles mapper mode', async () => {
+    const toggleMapperMode = jest.fn();
+    renderTopBar({ toggleMapperMode, mapperMode: false });
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /Colaborar/ }));
+    fireEvent.click(await screen.findByText('Modo mapeador'));
+    expect(toggleMapperMode).toHaveBeenCalledTimes(1);
+  });
+
   it('Colaborar > Editar mapa opens the EditModal first, then OSM directly once dismissed', async () => {
     const open = jest.spyOn(window, 'open').mockImplementation(() => null);
     const getViewport = jest.fn(() => ({ lat: -30.1, lng: -51.1, zoom: 14 }));

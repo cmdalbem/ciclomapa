@@ -1,8 +1,10 @@
-import React, { Component } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { Popover, Button, Select, Checkbox, Dropdown } from 'antd';
+import { Popover, Button, Select, Checkbox, Dropdown, Switch, Modal, Tooltip } from 'antd';
+import { Link } from 'react-router-dom';
 
 import './AnalyticsSidebar.css';
+import './components/MapperBox.css';
 
 import {
   PieChart,
@@ -24,19 +26,38 @@ import {
   HiDownload as IconDownload,
   HiDotsVertical as IconMore,
   HiOutlineDatabase as IconDatabase,
+  HiTable as IconCitiesCompare,
 } from 'react-icons/hi';
 
-import { HiMiniCheckBadge as IconVerified } from 'react-icons/hi2';
+import { MdAccountBalance as IconOfficial } from 'react-icons/md';
 
 import {
+  CITY_SWITCHER_MINI_CHART_LAYER_IDS,
   ENABLE_OFFICIAL_CITY_HALL_METRICS_COMPARISON,
   LENGTH_CALCULATE_STRATEGIES,
   LENGTH_COUNTED_LAYER_IDS,
 } from './config/constants.js';
+import { PARALLEL_DEDUPE_ENGINES } from './utils/parallelDedupeEngines/engineTypes.js';
 import { THIN_SPACE, appendKmUnit } from './utils/routeUtils.js';
-import { timeSince } from './utils/utils.js';
+import { slugify, timeSince } from './utils/utils.js';
+import Storage from './Storage.js';
 import { hyphenateSync } from 'hyphen/pt';
 import { appModal } from './antdModal.js';
+import {
+  listCitiesWithMetric,
+  citySlugFromLocationLabel,
+  metricHistoryYears,
+} from './AirtableDatabase.js';
+import {
+  getCanonicalCitySlug,
+  getPredefinedCitySlugDefinition,
+  getPredefinedCityStaticLocation,
+} from './config/citySlugCatalog.js';
+import {
+  CityInfraMiniRing,
+  CityInfraMiniRingPlaceholder,
+  miniChartSliceTotalKm,
+} from './components/CityInfraMiniRing';
 
 const SOFT_HYPHEN = '\u00AD';
 
@@ -53,6 +74,116 @@ const DEFAULT_LENGTHS_INCLUDE = () =>
 
 const STORAGE_KEY_LENGTHS_INCLUDE = 'analyticsViasLengthsInclude';
 
+function formatCitiesMetricValue(value, kind) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  if (kind === 'percent') {
+    return `${n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+  }
+  if (kind === 'index') {
+    return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  if (kind === 'km') {
+    return appendKmUnit(n.toFixed(1));
+  }
+  return String(n);
+}
+
+function rankingCityCopy(slug, cityName) {
+  const areaLabel = getPredefinedCityStaticLocation(slug)?.areaLabel;
+  const parts = String(areaLabel || cityName)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return {
+    name: parts[0] || cityName,
+    meta: parts[1] || '',
+  };
+}
+
+/** Same localStorage key as CitySwitcherModal. Ranking peeks cached OSM lengths for the mini ring. */
+const CITY_SWITCHER_STATS_KM_CACHE_KEY = 'ciclomapa_city_switcher_stats_km_v3';
+
+function peekCachedLengthsKmByLayer(slug) {
+  if (!slug || typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(CITY_SWITCHER_STATS_KM_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const row = parsed && typeof parsed === 'object' ? parsed[slug] : null;
+    const lengths = row?.lengthsKmByLayer;
+    return lengths && typeof lengths === 'object' ? lengths : null;
+  } catch {
+    return null;
+  }
+}
+
+function lengthsKmByLayerFromStatsDoc(lengths) {
+  if (!lengths || typeof lengths !== 'object') return null;
+  const out = {};
+  for (const id of LENGTH_COUNTED_LAYER_IDS) {
+    const v = Number(lengths[id]);
+    if (Number.isFinite(v) && v >= 0) out[id] = v;
+  }
+  return miniChartSliceTotalKm(out) > 0 ? out : null;
+}
+
+function statsDocIdsForRankingSlug(slug) {
+  const ids = [];
+  const seen = new Set();
+  const push = (value) => {
+    const id = slugify(String(value || ''));
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    ids.push(id);
+  };
+  const canonical = getCanonicalCitySlug(slug) || slug;
+  const def = getPredefinedCitySlugDefinition(canonical);
+  push(canonical);
+  push(slug);
+  push(def?.staticLocation?.areaLabel);
+  push(getPredefinedCityStaticLocation(slug)?.areaLabel);
+  push(def?.query);
+  return ids;
+}
+
+async function fetchRankingLengthsBySlug(slugs) {
+  const unique = [...new Set((slugs || []).filter(Boolean))];
+  if (unique.length === 0) return {};
+  const storage = new Storage();
+  const out = {};
+  let nextIndex = 0;
+  const concurrency = Math.min(10, unique.length);
+
+  async function worker() {
+    for (;;) {
+      const i = nextIndex++;
+      if (i >= unique.length) return;
+      const slug = unique[i];
+      const cached = lengthsKmByLayerFromStatsDoc(peekCachedLengthsKmByLayer(slug));
+      if (cached) {
+        out[slug] = cached;
+        continue;
+      }
+      for (const docId of statsDocIdsForRankingSlug(slug)) {
+        try {
+          const doc = await storage.getCityStatsDoc(docId);
+          const lengths = lengthsKmByLayerFromStatsDoc(doc?.lengths);
+          if (lengths) {
+            out[slug] = lengths;
+            break;
+          }
+        } catch {
+          // Keep trying the other doc ids for this city.
+        }
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  return out;
+}
+
 function readLengthsIncludeFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_LENGTHS_INCLUDE);
@@ -68,6 +199,106 @@ function readLengthsIncludeFromStorage() {
     return null;
   }
 }
+
+const layerShape = PropTypes.shape({
+  id: PropTypes.string.isRequired,
+  name: PropTypes.string.isRequired,
+  shortName: PropTypes.string,
+  displayName: PropTypes.string,
+  type: PropTypes.string,
+  style: PropTypes.shape({
+    lineStyle: PropTypes.string,
+    lineColor: PropTypes.string,
+  }),
+});
+
+const OpenStreetMapDisclaimer = () => (
+  <p className="italic opacity-50">
+    Estes números se baseiam no estado atual do mapeamento colaborativo no OpenStreetMap e podem não
+    refletir a realidade com precisão.
+  </p>
+);
+
+const OfficialDisclaimer = () => (
+  <p className="italic opacity-50">
+    Estes números são dados da prefeitura mas podem não refletir a realidade com precisão.
+  </p>
+);
+
+function comparableAliancaKm(lengths) {
+  return CITY_SWITCHER_MINI_CHART_LAYER_IDS.reduce(
+    (sum, id) => sum + (lengths && lengths[id] ? Number(lengths[id]) || 0 : 0),
+    0
+  );
+}
+
+/** OSM ciclovia+ciclofaixa vs Aliança. Green / yellow / red, no in-between hues. */
+const OFFICIAL_KM_CLOSE = 0.8;
+const OFFICIAL_KM_MID = 0.5;
+
+export function officialKmMatch(oursKm, officialKm) {
+  const ours = Number(oursKm);
+  const official = Number(officialKm);
+  if (!Number.isFinite(ours) || !Number.isFinite(official) || official <= 0 || ours < 0) {
+    return null;
+  }
+  const closeness = Math.min(ours, official) / Math.max(ours, official);
+  const grade =
+    closeness >= OFFICIAL_KM_CLOSE ? 'close' : closeness >= OFFICIAL_KM_MID ? 'mid' : 'far';
+  return { ours, official, grade };
+}
+
+const OFFICIAL_KM_GRADE_TEXT = {
+  close: { dark: 'text-green-400', light: 'text-green-800' },
+  mid: { dark: 'text-amber-400', light: 'text-amber-700' },
+  far: { dark: 'text-red-400', light: 'text-red-700' },
+};
+
+const RANKING_ROW_CLASS = 'flex items-center gap-3 box-border w-full px-3.5';
+const RANKING_VALUE_CLASS =
+  'w-20 flex-shrink-0 box-border text-right text-xs leading-tight whitespace-nowrap tabular-nums';
+
+const LENGTH_STRATEGY_OPTION_HINTS = {
+  pessimistic: 'Usa sempre o lado mais curto',
+  optimistic: 'Usa sempre o lado mais longo',
+  average: 'Ignora os lados e divide o comprimento bruto por dois',
+  random: 'Pega um lado ao acaso',
+};
+
+const PARALLEL_DEDUPE_OPTION_HINTS = {
+  geometry_first: 'Pareia pelo traçado (distância e direção)',
+  topology_first: 'Pareia pelas pontas / nós da via',
+  hybrid_tag_geometry: 'Mistura tags OSM com a geometria',
+  corridor_merge: 'Agrupa trechos que correm juntos no mesmo corredor',
+};
+
+const MapperSelectField = ({ label, infoLabel, hint, children }) => (
+  <div className="cm-mapper-box__field">
+    <div className="cm-mapper-box__field-head">
+      <span className="cm-mapper-box__field-label">{label}</span>
+      <Tooltip
+        placement="left"
+        trigger={['hover', 'click']}
+        align={{ offset: [-10, 0] }}
+        classNames={{ root: 'cm-mapper-box-tip' }}
+        mouseEnterDelay={0.15}
+        title={<div className="cm-mapper-box-tip__body">{hint}</div>}
+      >
+        <button type="button" className="cm-mapper-box__field-info" aria-label={infoLabel}>
+          <IconInfo />
+        </button>
+      </Tooltip>
+    </div>
+    {children}
+  </div>
+);
+
+MapperSelectField.propTypes = {
+  label: PropTypes.string.isRequired,
+  infoLabel: PropTypes.string.isRequired,
+  hint: PropTypes.node.isRequired,
+  children: PropTypes.node.isRequired,
+};
 
 const ANALYTICS_SKEL_SIZE = {
   lg: 'w-[5.5rem] h-7 mt-1',
@@ -90,38 +321,22 @@ AnalyticsSkeleton.propTypes = {
   variant: PropTypes.oneOf(['lg', 'md', 'bar']),
 };
 
-const layerShape = PropTypes.shape({
-  id: PropTypes.string.isRequired,
-  name: PropTypes.string.isRequired,
-  shortName: PropTypes.string,
-  displayName: PropTypes.string,
-  type: PropTypes.string,
-  style: PropTypes.shape({
-    lineStyle: PropTypes.string,
-    lineColor: PropTypes.string,
-  }),
-});
-
-const OpenStreetMapDisclaimer = () => (
-  <p className="italic opacity-50">
-    Estes números se baseiam no estado atual do mapeamento colaborativo no OpenStreetMap e não são
-    dados oficiais, podendo não refletir a realidade com precisão.
-  </p>
-);
-
-const OfficialDisclaimer = () => (
-  <p className="italic opacity-50">
-    Estes números são dados oficiais da prefeitura mas podem não refletir a realidade com precisão.
-  </p>
-);
-
 class AnalyticsSidebar extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
       lengthsInclude: readLengthsIncludeFromStorage() || DEFAULT_LENGTHS_INCLUDE(),
+      citiesRanking: null,
     };
+  }
+
+  openCitiesRanking(spec) {
+    this.setState({ citiesRanking: spec });
+  }
+
+  closeCitiesRanking() {
+    this.setState({ citiesRanking: null });
   }
 
   generatePatterns(layers) {
@@ -215,7 +430,15 @@ class AnalyticsSidebar extends Component {
   }
 
   render() {
-    const { lengths, layers, isDarkMode } = this.props;
+    const { lengths, layers, isDarkMode, cityMetadataRecords } = this.props;
+    const pnbCities = listCitiesWithMetric(cityMetadataRecords, 'pnb_total', {
+      yearPrefix: 'pnb_',
+    });
+    const idecicloCities = listCitiesWithMetric(cityMetadataRecords, 'ideciclo');
+    const officialCities = listCitiesWithMetric(cityMetadataRecords, 'alianca_2026', {
+      yearPrefix: 'alianca_',
+    });
+    const currentCitySlug = citySlugFromLocationLabel(this.props.location);
     const pnbEvolutionData = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
       .map((year) => {
         const value = this.props.cityMetadata && this.props.cityMetadata[`pnb_${year}`];
@@ -302,20 +525,88 @@ class AnalyticsSidebar extends Component {
       pessimistic: 'Pessimista',
       average: 'Média',
     };
+    const translateParallelDedupeEngine = {
+      hybrid_tag_geometry: 'Híbrido',
+      geometry_first: 'Geometria-first',
+      topology_first: 'Topologia-first',
+      corridor_merge: 'Corredor',
+    };
     const strategiesDropdown = (
-      <div className="w-full flex justify-center mb-2">
+      <MapperSelectField
+        label="Extensão"
+        infoLabel="Sobre o cálculo da extensão"
+        hint={
+          <>
+            <p>Quando a via tem estrutura dos dois lados, escolhe o que entra no total.</p>
+            <ul>
+              <li>
+                <strong>Pessimista:</strong> lado mais curto
+              </li>
+              <li>
+                <strong>Otimista:</strong> lado mais longo
+              </li>
+              <li>
+                <strong>Média:</strong> metade do comprimento bruto
+              </li>
+              <li>
+                <strong>Aleatório:</strong> um lado ao acaso
+              </li>
+            </ul>
+          </>
+        }
+      >
         <Select
           size="small"
-          className="w-full max-w-[200px]"
+          className="w-full"
           value={this.props.lengthCalculationStrategy}
           onChange={this.props.onChangeStrategy}
           options={LENGTH_CALCULATE_STRATEGIES.map((s) => ({
             value: s,
             label: translateStrategy[s],
+            title: LENGTH_STRATEGY_OPTION_HINTS[s],
           }))}
           aria-label="Estratégia de cálculo de extensão"
         />
-      </div>
+      </MapperSelectField>
+    );
+
+    const parallelDedupeEnginesDropdown = (
+      <MapperSelectField
+        label="Pareamento"
+        infoLabel="Sobre o pareamento de vias"
+        hint={
+          <>
+            <p>Como achar as duas geometrias da mesma via, pra não contar o km duas vezes.</p>
+            <ul>
+              <li>
+                <strong>Geometria-first:</strong> compara o traçado
+              </li>
+              <li>
+                <strong>Topologia-first:</strong> compara as pontas / nós
+              </li>
+              <li>
+                <strong>Híbrido:</strong> tags OSM + geometria
+              </li>
+              <li>
+                <strong>Corredor:</strong> agrupa trechos que correm juntos
+              </li>
+            </ul>
+          </>
+        }
+      >
+        <Select
+          size="small"
+          className="w-full"
+          value={this.props.parallelDedupeEngine}
+          onChange={this.props.onChangeParallelDedupeEngine}
+          options={PARALLEL_DEDUPE_ENGINES.map((engineId) => ({
+            value: engineId,
+            label: translateParallelDedupeEngine[engineId] || engineId,
+            title: PARALLEL_DEDUPE_OPTION_HINTS[engineId],
+          }))}
+          aria-label="Motor de detecção de vias paralelas"
+        />
+      </MapperSelectField>
     );
 
     return (
@@ -379,6 +670,18 @@ class AnalyticsSidebar extends Component {
               title="PNB"
               link={'https://itdpbrasil.org/pnb/'}
               year={this.props.cityMetadata.pnb_year}
+              onCompare={
+                pnbCities.length >= 2
+                  ? () =>
+                      this.openCitiesRanking({
+                        title: 'PNB',
+                        valueLabel: 'PNB',
+                        valueKind: 'percent',
+                        rows: pnbCities,
+                        years: metricHistoryYears(pnbCities),
+                      })
+                  : undefined
+              }
               description={
                 <>
                   <p>
@@ -520,6 +823,18 @@ class AnalyticsSidebar extends Component {
               title="IDECiclo"
               link="https://www.ideciclo.org/"
               year={this.props.cityMetadata.ideciclo_year}
+              onCompare={
+                idecicloCities.length >= 2
+                  ? () =>
+                      this.openCitiesRanking({
+                        title: 'IDECiclo',
+                        valueLabel: 'IDECiclo',
+                        valueKind: 'index',
+                        rows: idecicloCities,
+                        years: metricHistoryYears(idecicloCities),
+                      })
+                  : undefined
+              }
               description={
                 <>
                   <p>
@@ -551,14 +866,41 @@ class AnalyticsSidebar extends Component {
                   OpenStreetMap.
                 </p>
                 <p>
-                  Para vias que tem estrutura dos dois lados nós desenvolvemos um método que
-                  automaticamente detecta estes casos e remove esta contagem dupla do total.
+                  Vias com estrutura dos dois lados são automaticamente detectadas para evitar
+                  contagem dupla do total.
                 </p>
                 <OpenStreetMapDisclaimer />
               </>
             }
           >
-            {this.props.debugMode && strategiesDropdown}
+            {(this.props.debugMode || this.props.mapperMode) && (
+              <div className="cm-mapper-box mb-4" data-mapper-box>
+                <div className="cm-mapper-box__label">Modo mapeador</div>
+                <div className="flex flex-col gap-2">
+                  {this.props.onFollowViewportCityChange && (
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        size="small"
+                        checked={!!this.props.followViewportCity}
+                        onChange={this.props.onFollowViewportCityChange}
+                        title="Troca as métricas quando o mapa vai para outro município"
+                        aria-label="Mudar de cidade automaticamente com o mapa"
+                      />
+                      <span
+                        className="text-xs font-normal opacity-60 leading-snug cursor-pointer"
+                        onClick={() =>
+                          this.props.onFollowViewportCityChange(!this.props.followViewportCity)
+                        }
+                      >
+                        Mudar cidade automaticamente
+                      </span>
+                    </div>
+                  )}
+                  {strategiesDropdown}
+                  {parallelDedupeEnginesDropdown}
+                </div>
+              </div>
+            )}
 
             <div className={`relative${showLengthsSkeleton ? ' animate-pulse-2x' : ''}`}>
               <PieChart width={PIE_CHART_WIDTH_PX} height={PIE_CHART_WIDTH_PX}>
@@ -585,7 +927,7 @@ class AnalyticsSidebar extends Component {
                 {showLengthsSkeleton ? (
                   <span className="inline-flex flex-col items-center" aria-hidden>
                     <span className="tracking-wides text-xs opacity-40">TOTAL</span>
-                    <AnalyticsSkeleton variant="lg" />
+                    <AnalyticsSkeleton variant="lg" isDarkMode={this.props.isDarkMode} />
                   </span>
                 ) : hasLengthTotals ? (
                   <>
@@ -600,50 +942,30 @@ class AnalyticsSidebar extends Component {
                     </span>
                     {ENABLE_OFFICIAL_CITY_HALL_METRICS_COMPARISON &&
                       this.props.cityMetadata &&
-                      this.props.cityMetadata.alianca_2025 !== undefined &&
-                      this.props.cityMetadata.alianca_2025 !== null && (
-                        <>
-                          {/* <span className="tracking-widest mt-2">OFICIAL</span> */}
-                          <Popover
-                            placement="left"
-                            arrow={{ pointAtCenter: true }}
-                            content={
-                              <div
-                                className="flex flex-col gap-3 leading-normal"
-                                style={{ width: 320 }}
-                              >
-                                <h3 className="text-lg flex items-center gap-1">
-                                  <IconVerified className="inline-block text-green-300 text-xl" />{' '}
-                                  Dado Oficial da Prefeitura
-                                </h3>
-                                <p>
-                                  Quilometragem total de ciclovias e ciclofaixas divulgada como dado
-                                  oficial da Prefeitura com base no levantamento anual da Aliança
-                                  Bike. Última atualização: julho de 2025.
-                                </p>
-                                <OfficialDisclaimer />
-                                <Button
-                                  type="primary"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  href="https://aliancabike.org.br/dados-do-setor/ciclovias-e-ciclofaixas/"
-                                >
-                                  Saiba mais
-                                </Button>
-                              </div>
-                            }
-                          >
-                            <span className="flex items-center decoration-dotted tracking-tight gap-0.5">
-                              <IconVerified className="inline-block opacity-50" />
-                              <div className="flex items-center items-baseline opacity-70">
-                                {appendKmUnit(
-                                  Number(this.props.cityMetadata.alianca_2025).toFixed(1)
-                                )}
-                              </div>
-                              {/* <IconInfo /> */}
-                            </span>
-                          </Popover>
-                        </>
+                      this.props.cityMetadata.alianca_2026 !== undefined &&
+                      this.props.cityMetadata.alianca_2026 !== null && (
+                        <OfficialKmInfo
+                          kmLabel={appendKmUnit(
+                            Number(this.props.cityMetadata.alianca_2026).toFixed(1)
+                          )}
+                          isDarkMode={this.props.isDarkMode}
+                          match={officialKmMatch(
+                            comparableAliancaKm(lengths),
+                            this.props.cityMetadata.alianca_2026
+                          )}
+                          onCompare={
+                            officialCities.length >= 2
+                              ? () =>
+                                  this.openCitiesRanking({
+                                    title: 'Dado oficial da Prefeitura',
+                                    valueLabel: 'km',
+                                    valueKind: 'km',
+                                    rows: officialCities,
+                                    years: metricHistoryYears(officialCities),
+                                  })
+                              : undefined
+                          }
+                        />
                       )}
                   </>
                 ) : (
@@ -658,9 +980,9 @@ class AnalyticsSidebar extends Component {
                     <div key={l.id} className="mb-2" aria-hidden>
                       <div className="flex items-center justify-between px-0 py-0 text-xs font-semibold leading-5">
                         <span>{l.shortName || l.displayName || l.name}</span>
-                        <AnalyticsSkeleton variant="md" />
+                        <AnalyticsSkeleton variant="md" isDarkMode={this.props.isDarkMode} />
                       </div>
-                      <AnalyticsSkeleton variant="bar" />
+                      <AnalyticsSkeleton variant="bar" isDarkMode={this.props.isDarkMode} />
                     </div>
                   ))
                 : vias.infraLayers.map((l) => (
@@ -686,7 +1008,7 @@ class AnalyticsSidebar extends Component {
                     aria-hidden
                   >
                     <span>{l.name}</span>
-                    <AnalyticsSkeleton variant="md" />
+                    <AnalyticsSkeleton variant="md" isDarkMode={this.props.isDarkMode} />
                   </div>
                 ))
               : poiLayers.map(
@@ -698,6 +1020,15 @@ class AnalyticsSidebar extends Component {
                 )}
           </Section>
         </div>
+
+        <CitiesRankingModal
+          spec={this.state.citiesRanking}
+          currentSlug={currentCitySlug}
+          currentLengths={lengths}
+          infraLayers={this.getInfraLayersSorted()}
+          isDarkMode={this.props.isDarkMode}
+          onClose={() => this.closeCitiesRanking()}
+        />
 
         {(this.props.loading || this.props.lastUpdate || this.props.downloadData) && (
           <div className="mt-auto">
@@ -763,18 +1094,24 @@ AnalyticsSidebar.propTypes = {
   toggle: PropTypes.func.isRequired,
   location: PropTypes.string,
   cityMetadata: PropTypes.object,
+  cityMetadataRecords: PropTypes.array,
   lengths: PropTypes.objectOf(nullableNumber),
   layers: PropTypes.arrayOf(layerShape),
   isDarkMode: PropTypes.bool,
   debugMode: PropTypes.bool,
+  mapperMode: PropTypes.bool,
   onChangeStrategy: PropTypes.func,
   lengthCalculationStrategy: PropTypes.string,
+  parallelDedupeEngine: PropTypes.string,
+  onChangeParallelDedupeEngine: PropTypes.func,
   downloadData: PropTypes.func,
   lastUpdate: PropTypes.oneOfType([PropTypes.instanceOf(Date), PropTypes.string]),
   loading: PropTypes.bool,
   forceUpdate: PropTypes.func,
   cancelDataLoad: PropTypes.func,
   openCityPicker: PropTypes.func,
+  followViewportCity: PropTypes.bool,
+  onFollowViewportCityChange: PropTypes.func,
 };
 
 const BigNum = ({ children }) => (
@@ -956,59 +1293,170 @@ DataLine.propTypes = {
   unit: PropTypes.string,
 };
 
-const Section = (props) => (
-  <div className="mt-7">
-    <div className="flex w-full justify-between items-center">
-      <h3 className="font-regular m-0 opacity-50">
-        {props.title}
-
-        {props.beta && (
-          <span
-            className="bg-white opacity-75 ml-2 px-1 py-0 rounded-full text-black text-xs"
-            style={{ fontSize: 10 }}
-          >
-            BETA
-          </span>
-        )}
-      </h3>
-
-      <div className="flex items-center">
-        {props.year && <span className="opacity-50 text-xs">{props.year}</span>}
-
-        {props.description && (
-          <Popover
-            placement="left"
-            arrow={{ pointAtCenter: true }}
-            key={props.title}
-            content={
-              <div className="flex flex-col gap-3 leading-normal" style={{ width: 320 }}>
-                <h3 className="text-lg">{props.title}</h3>
-
-                {props.description}
-
-                {props.link && (
-                  <Button type="primary" target="_blank" href={props.link}>
-                    Saiba mais
-                  </Button>
-                )}
-              </div>
-            }
-          >
-            <Button
-              type="text"
-              shape="circle"
-              className="opacity-50 hover:opacity-100 -mr-2 text-inherit"
-              icon={<IconInfo />}
-              aria-label={`Informações: ${props.title}`}
-            />
-          </Popover>
-        )}
-      </div>
+const MetricInfoActions = ({ compareLabel, onCompare, link }) => {
+  if (!onCompare && !link) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      {onCompare && (
+        <Button
+          type="primary"
+          block
+          icon={<IconCitiesCompare />}
+          onClick={onCompare}
+          aria-label={compareLabel}
+        >
+          Comparar cidades
+        </Button>
+      )}
+      {link && (
+        <Button target="_blank" rel="noopener noreferrer" href={link} block>
+          Saiba mais
+        </Button>
+      )}
     </div>
+  );
+};
 
-    <div className="mt-2">{props.children}</div>
-  </div>
-);
+MetricInfoActions.propTypes = {
+  compareLabel: PropTypes.string,
+  onCompare: PropTypes.func,
+  link: PropTypes.string,
+};
+
+const OfficialKmInfo = ({ kmLabel, onCompare, match, isDarkMode }) => {
+  const [infoOpen, setInfoOpen] = React.useState(false);
+  const osmSharePct =
+    match && match.official > 0 ? Math.round((match.ours / match.official) * 100) : null;
+  const gradeClass =
+    OFFICIAL_KM_GRADE_TEXT[match?.grade]?.[isDarkMode ? 'dark' : 'light'] || 'text-inherit';
+  return (
+    <Popover
+      placement="left"
+      arrow={{ pointAtCenter: true }}
+      trigger={['hover', 'click']}
+      mouseEnterDelay={0.1}
+      mouseLeaveDelay={0.3}
+      open={infoOpen}
+      onOpenChange={setInfoOpen}
+      content={
+        <div className="flex flex-col gap-3 w-80 leading-normal">
+          <h3 className="text-lg flex items-center gap-1">
+            <IconOfficial className="inline-block text-xl opacity-70" /> Dado Oficial da Prefeitura
+          </h3>
+          <p className="m-0">
+            Quilometragem total de ciclovias e ciclofaixas divulgada como dado oficial da Prefeitura
+            com base no levantamento anual da Aliança Bike. Última atualização: outubro de 2026.
+          </p>
+          <OfficialDisclaimer />
+          <MetricInfoActions
+            compareLabel="Comparar dado oficial entre cidades"
+            onCompare={
+              onCompare
+                ? () => {
+                    setInfoOpen(false);
+                    onCompare();
+                  }
+                : undefined
+            }
+            link="https://aliancabike.org.br/dados-do-setor/ciclovias-e-ciclofaixas/"
+          />
+        </div>
+      }
+    >
+      <button
+        type="button"
+        data-km-grade={match?.grade || undefined}
+        className={`flex items-center gap-0.5 m-0 p-0 border-0 bg-transparent cursor-pointer tracking-tight font-inherit ${gradeClass}`}
+        aria-label={
+          osmSharePct === null
+            ? 'Informações: Dado oficial da Prefeitura'
+            : `Informações: Dado oficial da Prefeitura. OSM em ${osmSharePct}% desse valor`
+        }
+      >
+        <IconOfficial className="flex-shrink-0 opacity-90" />
+        <span className="flex items-baseline">{kmLabel}</span>
+      </button>
+    </Popover>
+  );
+};
+
+OfficialKmInfo.propTypes = {
+  kmLabel: PropTypes.string.isRequired,
+  onCompare: PropTypes.func,
+  isDarkMode: PropTypes.bool,
+  match: PropTypes.shape({
+    ours: PropTypes.number.isRequired,
+    official: PropTypes.number.isRequired,
+    grade: PropTypes.oneOf(['close', 'mid', 'far']).isRequired,
+  }),
+};
+
+const Section = (props) => {
+  const [infoOpen, setInfoOpen] = React.useState(false);
+  return (
+    <div className="mt-7">
+      <div className="flex w-full justify-between items-center">
+        <h3 className="font-regular m-0 opacity-50">
+          {props.title}
+
+          {props.beta && (
+            <span
+              className="bg-white opacity-75 ml-2 px-1 py-0 rounded-full text-black text-xs"
+              style={{ fontSize: 10 }}
+            >
+              BETA
+            </span>
+          )}
+        </h3>
+
+        <div className="flex items-center -mr-2">
+          {props.year && <span className="text-xs leading-none opacity-50">{props.year}</span>}
+
+          {props.description && (
+            <Popover
+              placement="left"
+              arrow={{ pointAtCenter: true }}
+              trigger={['hover', 'click']}
+              mouseEnterDelay={0.1}
+              mouseLeaveDelay={0.3}
+              open={infoOpen}
+              onOpenChange={setInfoOpen}
+              key={props.title}
+              content={
+                <div className="flex flex-col gap-3 w-80 leading-normal">
+                  <h3 className="text-lg">{props.title}</h3>
+                  {props.description}
+                  <MetricInfoActions
+                    compareLabel={`Comparar ${props.title} entre cidades`}
+                    onCompare={
+                      props.onCompare
+                        ? () => {
+                            setInfoOpen(false);
+                            props.onCompare();
+                          }
+                        : undefined
+                    }
+                    link={props.link}
+                  />
+                </div>
+              }
+            >
+              <Button
+                type="text"
+                shape="circle"
+                className="!text-inherit opacity-50 hover:opacity-100"
+                icon={<IconInfo />}
+                aria-label={`Informações: ${props.title}`}
+              />
+            </Popover>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-2">{props.children}</div>
+    </div>
+  );
+};
 
 Section.propTypes = {
   title: PropTypes.string.isRequired,
@@ -1017,6 +1465,210 @@ Section.propTypes = {
   link: PropTypes.string,
   year: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   beta: PropTypes.bool,
+  onCompare: PropTypes.func,
+};
+
+const CitiesRankingModal = ({
+  spec,
+  currentSlug,
+  currentLengths,
+  infraLayers,
+  isDarkMode,
+  onClose,
+}) => {
+  const open = Boolean(spec);
+  const rows = spec?.rows || [];
+  const title = spec?.title || '';
+  const years = Array.isArray(spec?.years) ? spec.years : [];
+  const showHistory = years.length >= 2;
+  const latestYear = showHistory ? years[years.length - 1] : null;
+  const yearCols = showHistory
+    ? [...years, spec?.valueLabel || title]
+    : [spec?.valueLabel || title];
+  const showOsmKm = spec?.valueKind === 'km';
+  const valueCols = showOsmKm ? [...yearCols, 'OSM'] : yearCols;
+  const [lengthsBySlug, setLengthsBySlug] = useState({});
+
+  useEffect(() => {
+    if (!open) {
+      setLengthsBySlug({});
+      return undefined;
+    }
+    const seed = {};
+    for (const row of rows) {
+      const cached = lengthsKmByLayerFromStatsDoc(peekCachedLengthsKmByLayer(row.slug));
+      if (cached) seed[row.slug] = cached;
+    }
+    setLengthsBySlug(seed);
+    const missing = rows.map((row) => row.slug).filter((slug) => slug && !seed[slug]);
+    if (missing.length === 0) return undefined;
+    let cancelled = false;
+    void fetchRankingLengthsBySlug(missing)
+      .then((map) => {
+        if (!cancelled) setLengthsBySlug((prev) => ({ ...prev, ...map }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, spec]);
+
+  return (
+    <Modal
+      title={title}
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      centered
+      destroyOnHidden
+      width={showHistory || showOsmKm ? Math.min(880, 280 + valueCols.length * 76) : 440}
+    >
+      {open && (
+        <div className="overflow-auto -mx-2 flex flex-col gap-2" style={{ maxHeight: '60vh' }}>
+          <div
+            className={`${RANKING_ROW_CLASS} pt-0 pb-0.5 sticky top-0 z-10 text-xs leading-tight text-current text-opacity-50`}
+            style={{ background: 'var(--ant-color-bg-container)' }}
+          >
+            <span className="min-w-0 flex-1">Cidade</span>
+            <div className="flex items-center justify-end">
+              {valueCols.map((year) => (
+                <span
+                  key={year}
+                  className={`${RANKING_VALUE_CLASS}${
+                    year === latestYear ? ' text-current opacity-100' : ''
+                  }`}
+                >
+                  {year}
+                </span>
+              ))}
+            </div>
+          </div>
+          <ul className="list-none m-0 p-0 flex flex-col gap-2" aria-label={`${title} por cidade`}>
+            {rows.map((row) => {
+              const isCurrent = Boolean(currentSlug && row.slug === currentSlug);
+              const { name, meta } = rankingCityCopy(row.slug, row.cityName);
+              const lengthsKmByLayer =
+                isCurrent && currentLengths && typeof currentLengths === 'object'
+                  ? currentLengths
+                  : lengthsBySlug[row.slug] ||
+                    lengthsKmByLayerFromStatsDoc(peekCachedLengthsKmByLayer(row.slug));
+              const hasRingData = miniChartSliceTotalKm(lengthsKmByLayer) > 0;
+              const osmKm = miniChartSliceTotalKm(lengthsKmByLayer);
+              const values = [
+                ...(showHistory
+                  ? years.map((year) => ({
+                      key: year,
+                      text:
+                        row.history?.[year] == null
+                          ? ''
+                          : formatCitiesMetricValue(row.history[year], spec.valueKind),
+                      latest: false,
+                    }))
+                  : []),
+                {
+                  key: 'value',
+                  text: formatCitiesMetricValue(row.value, spec.valueKind),
+                  latest: true,
+                },
+              ];
+              if (showOsmKm) {
+                const match = officialKmMatch(osmKm, row.value);
+                values.push({
+                  key: 'osm',
+                  text: osmKm > 0 ? formatCitiesMetricValue(osmKm, 'km') : '',
+                  latest: false,
+                  grade: match?.grade,
+                });
+              }
+
+              return (
+                <li key={row.slug}>
+                  <Link
+                    className={[
+                      RANKING_ROW_CLASS,
+                      'rounded-2xl no-underline cursor-pointer text-inherit py-3.5',
+                      'bg-white bg-opacity-5 hover:bg-opacity-10 hover:text-inherit hover:no-underline',
+                      'motion-safe:transition motion-safe:hover:-translate-y-px',
+                      isCurrent ? 'bg-opacity-10' : '',
+                    ].join(' ')}
+                    to={`/${encodeURIComponent(row.slug)}`}
+                    aria-label={meta ? `${name}, ${meta}` : name}
+                    aria-current={isCurrent ? 'page' : undefined}
+                    onClick={onClose}
+                  >
+                    <div className="min-w-0 flex-1 flex items-center gap-3">
+                      {hasRingData ? (
+                        <CityInfraMiniRing
+                          lengthsKmByLayer={lengthsKmByLayer}
+                          infraLayers={infraLayers || []}
+                        />
+                      ) : (
+                        <CityInfraMiniRingPlaceholder />
+                      )}
+                      <div className="flex-1 min-w-0 flex flex-col items-stretch justify-center gap-1">
+                        <div className="text-xs leading-tight min-w-0 overflow-hidden overflow-ellipsis whitespace-nowrap">
+                          {name}
+                        </div>
+                        {meta ? (
+                          <div className="text-xs leading-tight opacity-50 min-w-0 overflow-hidden overflow-ellipsis whitespace-nowrap">
+                            {meta}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end">
+                      {values.map((cell) => {
+                        const gradeClass = cell.grade
+                          ? OFFICIAL_KM_GRADE_TEXT[cell.grade]?.[isDarkMode ? 'dark' : 'light']
+                          : '';
+                        return (
+                          <span
+                            key={cell.key}
+                            data-km-grade={cell.grade || undefined}
+                            className={[
+                              RANKING_VALUE_CLASS,
+                              cell.latest || cell.grade ? 'opacity-100 font-medium' : 'opacity-50',
+                              gradeClass || (cell.latest ? 'text-current' : ''),
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                          >
+                            {cell.text}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </Modal>
+  );
+};
+
+CitiesRankingModal.propTypes = {
+  spec: PropTypes.shape({
+    title: PropTypes.string.isRequired,
+    valueLabel: PropTypes.string,
+    valueKind: PropTypes.oneOf(['percent', 'index', 'km']).isRequired,
+    years: PropTypes.arrayOf(PropTypes.number),
+    rows: PropTypes.arrayOf(
+      PropTypes.shape({
+        cityName: PropTypes.string.isRequired,
+        slug: PropTypes.string.isRequired,
+        value: PropTypes.number.isRequired,
+        history: PropTypes.object,
+      })
+    ).isRequired,
+  }),
+  currentSlug: PropTypes.string,
+  currentLengths: PropTypes.object,
+  infraLayers: PropTypes.array,
+  isDarkMode: PropTypes.bool,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default AnalyticsSidebar;

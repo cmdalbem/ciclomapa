@@ -3,7 +3,7 @@
 /**
  * Overpass Query to GeoJSON Converter
  *
- * Generates Overpass queries from layers.json and converts results to GeoJSON.
+ * Generates Overpass queries from the layers catalog and converts results to GeoJSON.
  *
  * Usage:
  *   node scripts/overpass-to-geojson.js [options]
@@ -48,6 +48,7 @@ const OVERPASS_RETRY_BASE_MS = 30_000;
 
 const DEFAULT_OVERPASS_ENDPOINT = OVERPASS_SERVERS[0];
 const DEFAULT_USER_AGENT = `${pkg.name}/${pkg.version} (+${pkg.homepage || 'https://ciclomapa.app'})`;
+const LAYERS_CATALOG_VERSION = 'v2';
 
 // Area ID overrides (from constants.js)
 const AREA_ID_OVERRIDES = {
@@ -97,7 +98,7 @@ function parseArgs() {
       console.log(`
 Overpass Query to GeoJSON Converter
 
-Generates Overpass queries from layers.json and converts results to GeoJSON.
+Generates Overpass queries from the layers catalog and converts results to GeoJSON.
 
 Usage:
   node scripts/overpass-to-geojson.js [options]
@@ -147,9 +148,9 @@ Examples:
   return config;
 }
 
-// Generate query from layers.json
+// Generate query from the layers catalog
 async function generateQuery(config) {
-  console.log('📋 Generating query from layers.json...');
+  console.log('📋 Generating query from layers catalog...');
   const spinner = new Spinner('Resolving area...');
   spinner.start();
 
@@ -281,7 +282,7 @@ async function getAreaId(areaName, spinner = null) {
   return resolved.areaId;
 }
 
-// Generate query from layers.json (same logic as OSMController.getQuery)
+// Generate query from the layers catalog (same logic as OSMController.getQuery)
 function generateQueryFromLayers(
   areaId,
   bbox = null,
@@ -289,7 +290,13 @@ function generateQueryFromLayers(
   excludeLayers = null,
   includePoi = false
 ) {
-  const layersPath = path.join(__dirname, '..', 'src', 'config', 'layers.json');
+  const layersPath = path.join(
+    __dirname,
+    '..',
+    'src',
+    'config',
+    `layers.${LAYERS_CATALOG_VERSION}.json`
+  );
   const layers = JSON.parse(fs.readFileSync(layersPath, 'utf8'));
 
   // Generate IDs for layers (same as OSMController.getLayers)
@@ -701,13 +708,13 @@ async function saveGeoJSON(geoJson, outputPath, layerNames) {
   const stamped = {
     ...geoJson,
     // So generate-pmtiles can refuse --skip-geojson reuse when layer options differ.
-    ciclomapa: { layers: layerNames },
+    ciclomapa: { layers: layerNames, layersVersion: LAYERS_CATALOG_VERSION },
   };
   const jsonString = JSON.stringify(stamped, null, 2);
   await fs.promises.writeFile(outputPath, jsonString, 'utf8');
   console.log(`✅ GeoJSON saved to: ${outputPath}`);
   console.log(`   Features: ${geoJson.features.length}`);
-  console.log(`   Layers: ${layerNames.join(', ')}`);
+  console.log(`   Layers (${LAYERS_CATALOG_VERSION}): ${layerNames.join(', ')}`);
 }
 
 // Main function
@@ -716,7 +723,7 @@ async function main() {
     const config = parseArgs();
 
     console.log('');
-    console.log('📥 Generating Overpass query from layers.json...');
+    console.log('📥 Generating Overpass query from layers catalog...');
     const queryResult = await generateQuery(config);
     const query = queryResult.query;
     const layers = queryResult.layers;
