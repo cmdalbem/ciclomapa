@@ -26,3 +26,13 @@ playwright-report/
 blob-report/
 coverage/
 .env*.local
+
+# Local BRouter jar + tiles + debug logs
+routing/brouter/*.jar
+routing/brouter/segments4/
+routing/brouter/META-INF/
+routing/brouter/_debug/
+routing/brouter/profiles2/_debug/
+routing/brouter/profiles2/_v/
+routing/brouter/debug.txt
+routing/brouter/stacks.txt

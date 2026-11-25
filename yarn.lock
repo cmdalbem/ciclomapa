@@ -4151,6 +4151,16 @@
   resolved "https://registry.yarnpkg.com/@tsconfig/node16/-/node16-1.0.4.tgz#0b92dcc0cc1c81f6f306a381f28e31b1a56536e9"
   integrity sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==
 
+"@turf/bbox-clip@^7.2.0":
+  version "7.4.0"
+  resolved "https://registry.yarnpkg.com/@turf/bbox-clip/-/bbox-clip-7.4.0.tgz#dc8a4b6fe9dc27ac58ccdbff5696e627b3c543d2"
+  integrity sha512-Vxi8XznT/vhLHfqE9C1IMw0wi73+6EP3Bn51Vm0v9AWLUEv1zKPqR9/a4cj+s7f3diPE1g238rS48+BB5nYKSQ==
+  dependencies:
+    "@turf/helpers" "7.4.0"
+    "@turf/invariant" "7.4.0"
+    "@types/geojson" "^7946.0.10"
+    tslib "^2.8.1"
+
 "@turf/bbox@7.4.0", "@turf/bbox@^7.2.0":
   version "7.4.0"
   resolved "https://registry.yarnpkg.com/@turf/bbox/-/bbox-7.4.0.tgz#29a3d64231741e323d63009bc50f1fc2b827e8be"
@@ -4278,7 +4288,7 @@
     "@types/geojson" "^7946.0.10"
     tslib "^2.8.1"
 
-"@turf/nearest-point-on-line@7.4.0":
+"@turf/nearest-point-on-line@7.4.0", "@turf/nearest-point-on-line@^7.2.0":
   version "7.4.0"
   resolved "https://registry.yarnpkg.com/@turf/nearest-point-on-line/-/nearest-point-on-line-7.4.0.tgz#b4d46251eb6335ffc794eae315dd22932362d951"
   integrity sha512-eKTKf/qODIsPankYMZrNfI3LjLaVtQvYV/1hcj9kH/Zr3GfLUszevjhTRDZtMgTFrv8+awW3+MyhmN+PJGuLdQ==

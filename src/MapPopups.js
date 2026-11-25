@@ -775,17 +775,28 @@ class MapPopups {
     this.clearRouteTooltips();
 
     if (directions && directions.routes && directions.routes.length > 0) {
-      directions.routes.forEach((route) => {
+      directions.routes.forEach((route, displayIndex) => {
         if (!route.geometry || route.geometry.type !== 'LineString') {
           return;
         }
 
-        console.debug('updateRouteTooltips - route', route, route.sortedIndex);
-
-        // Calculate midpoint of the route
         const coordinates = route.geometry.coordinates;
-        const percentageSlot = (route.sortedIndex + 1) / (directions.routes.length + 1);
-        const midPoint = coordinates[Math.floor(coordinates.length * percentageSlot)];
+        if (!coordinates?.length) return;
+
+        // Use display order, not sortedIndex: after max-routes filtering the painted
+        // list is shorter and sortedIndex can be >> length (setLngLat(undefined) crash).
+        const percentageSlot = (displayIndex + 1) / (directions.routes.length + 1);
+        const midIndex = Math.min(
+          coordinates.length - 1,
+          Math.max(0, Math.floor(coordinates.length * percentageSlot))
+        );
+        const midPoint = coordinates[midIndex];
+        if (!midPoint || midPoint.length < 2) return;
+
+        const routeIndex =
+          route.sortedIndex !== undefined && route.sortedIndex !== null
+            ? route.sortedIndex
+            : displayIndex;
 
         // Create popup for this route
         const popup = new mapboxgl.Popup({
@@ -795,14 +806,14 @@ class MapPopups {
           className: 'route-tooltip-popup',
         })
           .setLngLat(midPoint)
-          .setHTML(this.createRouteTooltipHTML(route, route.sortedIndex, selectedRouteIndex))
+          .setHTML(this.createRouteTooltipHTML(route, routeIndex, selectedRouteIndex))
           .addTo(this.map);
 
         // Add click handler to the popup content
         popup.getElement().addEventListener('click', (e) => {
           e.stopPropagation();
           if (onRouteSelected) {
-            onRouteSelected(route.sortedIndex);
+            onRouteSelected(routeIndex);
           }
         });
 

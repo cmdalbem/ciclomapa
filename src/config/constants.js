@@ -78,6 +78,8 @@ export const HYBRID_MAX_RESULTS = IS_MOBILE
   ? HYBRID_MAX_RESULTS_MOBILE
   : HYBRID_MAX_RESULTS_DESKTOP;
 export const MIN_ROUTE_COVERAGE_PERCENT_TO_DISPLAY = 5;
+/** Total climb (m) at/above which route cards tint ↑ elevation as a soft warning. */
+export const ROUTE_ASCEND_WARNING_M = 100;
 
 /**
  * Route score weights by infrastructure type (keys match `coverageByType` labels where
@@ -100,6 +102,12 @@ export const MAX_RECENT_ITEMS_STORED = 10;
 export const MAX_RECENT_ITEMS_DISPLAY = IS_MOBILE ? 3 : 5;
 export const ENABLE_MAP_CLICK_TO_SET_POINTS = false;
 export const ENABLE_AUTO_AREA_CHANGE_ON_POINT = true;
+/**
+ * Score routes against cyclepaths read from the PMTiles archive along the route
+ * corridor, instead of the current city's Overpass GeoJSON. Unlocks cross-city
+ * routing without a backend. Prototype: leave on while evaluating score fidelity.
+ */
+export const USE_PMTILES_ROUTE_COVERAGE = true;
 // Auto-fill the route panel's origin with the user's current location when
 // they open it. Mobile-only by default; flip to `true` to also enable on
 // desktop (will require a one-time permission prompt for new users).
@@ -196,12 +204,112 @@ export const INTERACTIVE_LAYERS_ZOOM_THRESHOLD = 15;
 export const COMMENTS_ZOOM_THRESHOLD = 13;
 export const MAP_AUTOCHANGE_AREA_ZOOM_THRESHOLD = 12;
 
+// Disposable São Paulo maxzoom compare: zg (old tippecanoe guess) / z13 (new default) / analysis (z15 no limits).
+export const PMTILES_COMPARE_KIND = {
+  zg: 'zg',
+  z13: 'z13',
+  analysis: 'analysis',
+};
+/** Ordered kinds for the disposable São Paulo maxzoom compare. */
+export const MAP_PMTILES_COMPARE_KINDS = [
+  PMTILES_COMPARE_KIND.zg,
+  PMTILES_COMPARE_KIND.z13,
+  PMTILES_COMPARE_KIND.analysis,
+];
+
+/** Disposable map/routing PoC: Off = normal env tiles; otherwise preset archives. */
+export const PMTILES_POC_REGION = {
+  off: 'off',
+  saoPaulo: 'sao-paulo',
+  brazil: 'brazil',
+  spain: 'spain',
+};
+export const PMTILES_POC_REGIONS = {
+  [PMTILES_POC_REGION.off]: {
+    id: PMTILES_POC_REGION.off,
+    label: 'Off',
+    citySlug: null,
+  },
+  [PMTILES_POC_REGION.saoPaulo]: {
+    id: PMTILES_POC_REGION.saoPaulo,
+    label: 'SP',
+    citySlug: 'sao-paulo',
+    filenames: {
+      zg: 'sao-paulo-zg.pmtiles',
+      z13: 'sao-paulo-z13.pmtiles',
+      analysis: 'sao-paulo-analysis.pmtiles',
+    },
+  },
+  [PMTILES_POC_REGION.brazil]: {
+    id: PMTILES_POC_REGION.brazil,
+    label: 'BR',
+    // Country-wide archive; Brasília is a sane starting viewpoint.
+    citySlug: 'brasilia',
+    filenames: {
+      zg: 'brazil-poi.pmtiles',
+      z13: 'brazil-poi.pmtiles',
+      analysis: 'brazil-poi.pmtiles',
+    },
+  },
+  [PMTILES_POC_REGION.spain]: {
+    id: PMTILES_POC_REGION.spain,
+    label: 'ES',
+    citySlug: 'barcelona',
+    filenames: {
+      // Spain only has display + analysis builds; reuse display for zg/z13 slots.
+      zg: 'spain-poi.pmtiles',
+      z13: 'spain-poi.pmtiles',
+      analysis: 'spain-analysis.pmtiles',
+    },
+  },
+};
+export const MAP_PMTILES_POC_REGION_IDS = [
+  PMTILES_POC_REGION.off,
+  PMTILES_POC_REGION.saoPaulo,
+  PMTILES_POC_REGION.brazil,
+  PMTILES_POC_REGION.spain,
+];
+
+export const PMTILES_COMPARE_FILENAMES = {
+  zg: process.env.REACT_APP_PMTILES_ZG_FILENAME || 'sao-paulo-zg.pmtiles',
+  z13: process.env.REACT_APP_PMTILES_Z13_FILENAME || 'sao-paulo-z13.pmtiles',
+  analysis: process.env.REACT_APP_PMTILES_ANALYSIS_FILENAME || 'sao-paulo-analysis.pmtiles',
+};
+
 // The map has no GeoJSON fallback anymore, so this must be a build that includes POIs.
-const DEFAULT_PMTILES_FILENAME = 'brazil-poi.pmtiles';
+const DEFAULT_PMTILES_FILENAME = PMTILES_COMPARE_FILENAMES.z13;
 export const PMTILES_FILENAME = process.env.REACT_APP_PMTILES_FILENAME || DEFAULT_PMTILES_FILENAME;
+/** High-zoom / no-limit archive (also used for route coverage scoring compare). */
+export const PMTILES_ANALYSIS_FILENAME = PMTILES_COMPARE_FILENAMES.analysis;
+
+/** Filenames for a PoC region. `off` / unknown → normal env display + analysis archives. */
+export function filenamesForPmtilesPocRegion(regionId) {
+  const preset = PMTILES_POC_REGIONS[regionId]?.filenames;
+  if (preset) return preset;
+  return {
+    zg: PMTILES_FILENAME,
+    z13: PMTILES_FILENAME,
+    analysis: PMTILES_ANALYSIS_FILENAME || PMTILES_FILENAME,
+  };
+}
+
+export function filenameForMapPmtilesKind(kind, regionId) {
+  const files = filenamesForPmtilesPocRegion(regionId);
+  return files[kind] || files.z13;
+}
 /** Mapbox source id for the PMTiles archive, and the single source-layer tippecanoe writes (`-l default`). */
 export const PMTILES_SOURCE_ID = 'pmtiles-source';
 export const PMTILES_SOURCE_LAYER = 'default';
+
+/** Per-compare-kind vector source id (all stay loaded; toggles only flip layer visibility). */
+export function pmtilesSourceIdForKind(kind) {
+  return `${PMTILES_SOURCE_ID}--${kind}`;
+}
+
+/** Layer id suffix for a compare kind, e.g. `--pmtiles--z13`. */
+export function pmtilesLayerSuffixForKind(kind) {
+  return `--pmtiles--${kind}`;
+}
 
 /*
  * Debug & local development
@@ -260,6 +368,11 @@ export const OPENROUTESERVICE_BASE_URL = 'https://api.openrouteservice.org/v2/di
 
 export const GRAPHHOPPER_API_KEY = process.env.REACT_APP_GRAPHHOPPER_API_KEY;
 export const GRAPHHOPPER_BASE_URL = 'https://graphhopper.com/api/1/route';
+
+export const BROUTER_LOCAL_BASE_URL = process.env.REACT_APP_BROUTER_LOCAL_BASE_URL || '';
+export const USE_BROUTER_LOCAL = Boolean(BROUTER_LOCAL_BASE_URL);
+/** Drop a BRouter alt if this fraction of its ~100m cells already sits on a kept route. 1 = keep all. */
+export const BROUTER_ALT_MAX_SHARE_DEFAULT = 0.65;
 
 export const VALHALLA_BASE_URL = 'https://valhalla1.openstreetmap.de/route';
 

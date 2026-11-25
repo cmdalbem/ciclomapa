@@ -154,6 +154,7 @@ export class App extends Component {
     this.forceMapReinitialization = this.forceMapReinitialization.bind(this);
     this.setDirectionsPanelRef = this.setDirectionsPanelRef.bind(this);
     this.onDirectionsPanelToggle = this.onDirectionsPanelToggle.bind(this);
+    this.onRoutingProviderChange = this.onRoutingProviderChange.bind(this);
     this.toggleDirectionsPanel = this.toggleDirectionsPanel.bind(this);
     this.setArea = this.setArea.bind(this);
     this.debouncedUpdateURL = debounce(this.updateURL, 300);
@@ -172,6 +173,7 @@ export class App extends Component {
       !initialHasCitySlug;
 
     this.state = this.buildInitialState();
+    this._routingProvider = this.getParamsFromURL().provider || 'hybrid';
   }
 
   buildInitialState() {
@@ -590,6 +592,16 @@ export class App extends Component {
       'hideui',
       'dark',
       'flyto',
+      // Directions prefs (also read/written by DirectionsPanel via routeUtils)
+      'provider',
+      'sort',
+      'maxroutes',
+      'cobertura',
+      'elev',
+      'unpaved',
+      'noise',
+      'river',
+      'forest',
     ];
     const urlParams = new URLSearchParams(this.props.location.search);
     let paramsObj = {};
@@ -2104,7 +2116,7 @@ export class App extends Component {
 
   onDirectionsPanelToggle(isOpen) {
     this._isDirectionsPanelOpen = isOpen;
-    if (isOpen) {
+    if (isOpen && this.needsCityGeoJsonContext()) {
       this.syncAreaWithViewportThenLoadCityData();
     }
     // Directions open state is kept off React state (avoids App-wide re-renders), so
@@ -2112,12 +2124,22 @@ export class App extends Component {
     this.mapComponent?.initBoundaryLayer?.();
   }
 
+  onRoutingProviderChange(provider) {
+    this._routingProvider = provider || 'hybrid';
+    if (this.needsCityGeoJsonContext()) {
+      this.syncAreaWithViewportThenLoadCityData();
+    }
+    this.mapComponent?.initBoundaryLayer?.();
+  }
+
   // Shared gate for anything that needs per-city GeoJSON: Analytics sidebar,
   // Routing panel, and the city boundary outline. Idle map browsing stays on
-  // PMTiles only; city/area itself is only changed via the picker / URL.
+  // PMTiles only. BRouter scores from WayTags, so it does not load a city dump
+  // (that dump is one municipality and the mask is the wrong shape for metro ODs).
   needsCityGeoJsonContext() {
     // isSidebarOpen is persisted, but the Analytics sidebar isn't rendered on mobile.
-    return (!IS_MOBILE && this.state.isSidebarOpen) || this._isDirectionsPanelOpen;
+    const routingNeedsCity = this._isDirectionsPanelOpen && this._routingProvider !== 'brouter';
+    return (!IS_MOBILE && this.state.isSidebarOpen) || routingNeedsCity;
   }
 
   toggleDirectionsPanel() {
@@ -2153,6 +2175,12 @@ export class App extends Component {
       });
     }
   }
+
+  /** Disposable PMTiles PoC control: fly to SP / Barcelona when switching archives. */
+  jumpToPmtilesPocCity = (citySlug) => {
+    this.lastResolvedCitySlug = null;
+    return this.resolveCitySlugToAreaAndViewport(citySlug);
+  };
 
   clearGlobalSearchPin = () => {
     this.setState({ globalSearchPin: null });
@@ -2253,8 +2281,10 @@ export class App extends Component {
       setToPoint: this.setToPoint,
       clearRoutePoints: this.clearRoutePoints,
       onDirectionsPanelToggle: this.onDirectionsPanelToggle,
+      onRoutingProviderChange: this.onRoutingProviderChange,
       toggleDirectionsPanel: this.toggleDirectionsPanel,
       setArea: this.setArea,
+      jumpToPmtilesPocCity: this.jumpToPmtilesPocCity,
       openLayersLegendModal: this.openLayersLegendModal,
       closeAboutModal: this.closeAboutModal,
       openCityPicker: this.openCityPicker,

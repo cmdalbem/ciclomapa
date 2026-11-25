@@ -2,25 +2,34 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import debounce from 'lodash.debounce';
 import { useDirections } from './contexts/DirectionsContext';
-import { Button, Select } from 'antd';
-import { HiX as IconClose, HiOutlineArrowLeft as IconBack } from 'react-icons/hi';
-import { HiOutlineArrowsUpDown as IconSwap, HiTrash as IconTrash } from 'react-icons/hi2';
-import { LuBike } from 'react-icons/lu';
-import { HiCog as IconCog } from 'react-icons/hi';
-import { HiInformationCircle as IconInfoCircle } from 'react-icons/hi';
+import { Button, Dropdown, Segmented, Tooltip } from 'antd';
+import {
+  HiX as IconClose,
+  HiOutlineArrowLeft as IconBack,
+  HiChevronDown as IconCaretDown,
+  HiInformationCircle as IconInfoCircle,
+  HiOutlineInformationCircle as IconInfoOutline,
+} from 'react-icons/hi';
+import { HiOutlineArrowsUpDown as IconSwap } from 'react-icons/hi2';
+import { LuBike, LuLeaf, LuMountain, LuShield, LuTimer, LuVolumeX } from 'react-icons/lu';
+import { TbRoad, TbRuler } from 'react-icons/tb';
+import { MdOutlineTerrain } from 'react-icons/md';
 import mapboxgl from 'mapbox-gl';
-import { Popover } from 'antd';
 
 import './DirectionsPanel.css';
 
 import {
   IS_MOBILE,
-  HYBRID_MAX_RESULTS,
   ENABLE_MAP_CLICK_TO_SET_POINTS,
   ENABLE_AUTO_AREA_CHANGE_ON_POINT,
   ENABLE_AUTOFILL_ORIGIN_ON_PANEL_OPEN,
+  USE_PMTILES_ROUTE_COVERAGE,
+  USE_BROUTER_LOCAL,
 } from './config/constants.js';
-import DirectionsManager from './DirectionsManager.js';
+import DirectionsManager, {
+  applyCoverageVariant,
+  buildCoverageBundle,
+} from './DirectionsManager.js';
 import { flyMapTo } from './features/map/mapCamera.js';
 import userLocationCache from './features/geolocation/userLocationCache.js';
 import LocationSearchInput from './features/directions/components/LocationSearchInput.js';
@@ -47,6 +56,14 @@ import {
   prefetchGooglePlaces,
   searchPlacesForAutocomplete,
 } from './placesAutocomplete.js';
+import {
+  BROUTER_OBJECTIVE_OPTIONS,
+  BROUTER_PROFILE_DEFAULTS,
+  BROUTER_SURFACE_OPTIONS,
+  brouterRoutingObjectiveFromSort,
+  readDirectionsUrlParams,
+  writeDirectionsUrlParams,
+} from './utils/routeUtils.js';
 
 // How fresh a cached position must be to skip the navigator round trip.
 const GEOLOC_CACHE_FRESH_MS = 120_000;
@@ -54,14 +71,23 @@ const GEOLOC_CACHE_FRESH_MS = 120_000;
 class DirectionsPanel extends Component {
   constructor(props) {
     super(props);
+    const urlPrefs = readDirectionsUrlParams();
+
     this.state = {
       collapsed: true,
       fromGeocoderAttached: false,
       toGeocoderAttached: false,
       focusedInput: null,
-      selectedProvider: 'hybrid',
-      settingsVisible: false,
-      routeSortMode: 'score',
+      routeSortMode: urlPrefs.sort || 'score',
+      preferredCoverageSource: urlPrefs.coverage || null,
+      consider_elevation:
+        urlPrefs.consider_elevation ?? BROUTER_PROFILE_DEFAULTS.consider_elevation,
+      unpavedPenalty: BROUTER_SURFACE_OPTIONS.some((o) => o.value === urlPrefs.unpavedPenalty)
+        ? urlPrefs.unpavedPenalty
+        : BROUTER_PROFILE_DEFAULTS.unpavedPenalty,
+      consider_noise: urlPrefs.consider_noise ?? BROUTER_PROFILE_DEFAULTS.consider_noise,
+      consider_river: urlPrefs.consider_river ?? BROUTER_PROFILE_DEFAULTS.consider_river,
+      consider_forest: urlPrefs.consider_forest ?? BROUTER_PROFILE_DEFAULTS.consider_forest,
       fromSuggestions: [],
       toSuggestions: [],
       fromSearchValue: '',
@@ -82,6 +108,9 @@ class DirectionsPanel extends Component {
     // typed in the origin field or selected something in the meantime.
     this.geolocationRequestId = 0;
     this.placesSearchSeq = 0;
+    // Same idea for in-flight route calc: cancel bumps this and aborts fetches.
+    this.directionsRequestId = 0;
+    this.directionsAbortController = null;
 
     this.runPlacesSearch = this.runPlacesSearch.bind(this);
     this.debouncedRunPlacesSearch = debounce(this.runPlacesSearch, PLACES_AUTOCOMPLETE_DEBOUNCE_MS);
@@ -103,10 +132,12 @@ class DirectionsPanel extends Component {
     this.handleClearInput = this.handleClearInput.bind(this);
     this.handleManualInputChange = this.handleManualInputChange.bind(this);
     this.calculateDirections = this.calculateDirections.bind(this);
+    this.cancelDirectionsCalculation = this.cancelDirectionsCalculation.bind(this);
     this.swapOriginDestination = this.swapOriginDestination.bind(this);
-    this.handleProviderChange = this.handleProviderChange.bind(this);
-    this.toggleSettings = this.toggleSettings.bind(this);
+    this.handleCoverageSourceChange = this.handleCoverageSourceChange.bind(this);
     this.handleRouteSortChange = this.handleRouteSortChange.bind(this);
+    this.handleBrouterPrefChange = this.handleBrouterPrefChange.bind(this);
+    this.getBrouterProfile = this.getBrouterProfile.bind(this);
     this.getSortedRoutes = this.getSortedRoutes.bind(this);
     this.getInputDisplayValue = this.getInputDisplayValue.bind(this);
   }
@@ -125,6 +156,12 @@ class DirectionsPanel extends Component {
   }
 
   validateSameCity(type, newResultLike) {
+    // PMTiles corridor scoring is not city-scoped, so cross-city A→B is fine.
+    if (USE_PMTILES_ROUTE_COVERAGE) {
+      this.setState({ cityValidationError: null });
+      return true;
+    }
+
     // Determine the other point
     const otherPoint = type === 'to' ? this.props.fromPoint : this.props.toPoint;
     if (!otherPoint) {
@@ -148,12 +185,9 @@ class DirectionsPanel extends Component {
 
   componentDidMount() {
     this.setupMapClickListener();
-
-    // Store initial points for later processing
-    this.pendingInitialPoints = {
-      from: this.props.fromPoint,
-      to: this.props.toPoint,
-    };
+    if (this.props.map) {
+      this.syncMarkersWithProps();
+    }
 
     // Initialize search input values if points are already set (e.g., from URL)
     if (
@@ -167,19 +201,25 @@ class DirectionsPanel extends Component {
       this.setState({ toSearchValue: this.getInputDisplayValue(this.props.toPoint) });
     }
 
+    this.props.onRoutingProviderChange?.(this.props.routingProvider);
+
     // Auto-expand the panel when route points are loaded from URL
     if (this.props.fromPoint && this.props.toPoint) {
       this.setState({ collapsed: false });
       if (this.props.onDirectionsPanelToggle) {
         this.props.onDirectionsPanelToggle(true);
       }
+      // Points can already be set on first paint (URL boot). componentDidUpdate
+      // only fires on *changes*, so kick the calc here or it sits idle.
+      this.requestDirectionsCalculation();
     }
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps, prevState) {
     if (this.props.map && !prevProps.map) {
       console.debug('Map became available, setting up map click listener');
       this.setupMapClickListener();
+      this.syncMarkersWithProps();
     }
 
     if (this.props.map && prevProps.map && this.props.map !== prevProps.map) {
@@ -222,15 +262,49 @@ class DirectionsPanel extends Component {
     // 1. Points changed, or
     // 2. GeoJson reference changed (initial load OR area auto-switched and new
     //    city's data finished loading)
+    // With PMTiles corridor coverage we don't need city GeoJSON to score.
+    const coverageReady = USE_PMTILES_ROUTE_COVERAGE || this.props.geoJson;
+    const geoJsonBecameReady =
+      !USE_PMTILES_ROUTE_COVERAGE && this.props.geoJson && this.props.geoJson !== prevProps.geoJson;
+    const providerChanged = this.props.routingProvider !== prevProps.routingProvider;
+    const altShareChanged = this.props.brouterAltMaxShare !== prevProps.brouterAltMaxShare;
+    if (providerChanged) {
+      writeDirectionsUrlParams({ provider: this.props.routingProvider });
+      this.props.onRoutingProviderChange?.(this.props.routingProvider);
+    }
+
     const shouldCalculateDirections =
       this.props.fromPoint &&
       this.props.toPoint &&
-      this.props.geoJson &&
-      (pointsChanged || this.props.geoJson !== prevProps.geoJson);
+      coverageReady &&
+      (pointsChanged ||
+        geoJsonBecameReady ||
+        providerChanged ||
+        altShareChanged ||
+        // Map often mounts after URL OD is already on props; treat that as a kick.
+        (Boolean(this.props.map) && !prevProps.map));
 
     if (shouldCalculateDirections) {
       console.debug('Conditions met for directions calculation');
       this.requestDirectionsCalculation();
+    } else if (pointsChanged && (!this.props.fromPoint || !this.props.toPoint)) {
+      this.clearDirectionsOnly();
+    } else if (
+      USE_PMTILES_ROUTE_COVERAGE &&
+      this.props.geoJson &&
+      this.props.geoJson !== prevProps.geoJson &&
+      this.props.directions?.routes?.length
+    ) {
+      // City dump arrived after PMTiles scoring — attach the GeoJSON variant for the switcher.
+      this.enrichCityCoverageVariants();
+    }
+
+    if (
+      this.props.directions !== prevProps.directions ||
+      this.props.maxRoutesShown !== prevProps.maxRoutesShown ||
+      this.state.routeSortMode !== prevState.routeSortMode
+    ) {
+      this.syncVisibleRouteIndices();
     }
   }
 
@@ -242,6 +316,7 @@ class DirectionsPanel extends Component {
     if (this.debouncedRunPlacesSearch) {
       this.debouncedRunPlacesSearch.cancel();
     }
+    this.cancelDirectionsCalculation();
     this.cleanup();
     this.removeMapClickListener();
   }
@@ -250,7 +325,7 @@ class DirectionsPanel extends Component {
     if (!this.props.map) return;
 
     const { fromPoint, toPoint } = this.props;
-    if (fromPoint) {
+    if (fromPoint?.result?.center) {
       const fromCoords = fromPoint.result.center;
       if (this.fromMarker) {
         this.fromMarker.setLngLat(fromCoords).addTo(this.props.map);
@@ -267,7 +342,7 @@ class DirectionsPanel extends Component {
       this.setState({ fromSearchValue: '' });
     }
 
-    if (toPoint) {
+    if (toPoint?.result?.center) {
       const toCoords = toPoint.result.center;
       if (this.toMarker) {
         this.toMarker.setLngLat(toCoords).addTo(this.props.map);
@@ -543,6 +618,14 @@ class DirectionsPanel extends Component {
     marker.addTo(this.props.map);
     marker.on('dragstart', () => {
       this.isDraggingMarker = true;
+      if (this.props.fromPoint && this.props.toPoint) {
+        this.cancelDirectionsCalculation({ keepLoading: true });
+        this.props.setLoading?.(true);
+        this.syncCalculatingHintFromMarkers();
+      }
+    });
+    marker.on('drag', () => {
+      if (this.isDraggingMarker) this.syncCalculatingHintFromMarkers();
     });
     marker.on('dragend', () => this.handleMarkerDrag(marker, type));
 
@@ -677,7 +760,47 @@ class DirectionsPanel extends Component {
     this.reverseGeocode(coords, inputType, isAutoTriggered, requestId, { simplifyAddress: true });
   }
 
+  cancelDirectionsCalculation({ keepLoading = false } = {}) {
+    this.directionsRequestId += 1;
+    this._inflightRequestKey = null;
+    if (this.directionsAbortController) {
+      this.directionsAbortController.abort();
+      this.directionsAbortController = null;
+    }
+    if (!keepLoading && this.props.setLoading) {
+      this.props.setLoading(false);
+    }
+  }
+
+  directionsRequestKey(fromCoords, toCoords) {
+    const profile = this.getBrouterProfile();
+    return [
+      fromCoords[0],
+      fromCoords[1],
+      toCoords[0],
+      toCoords[1],
+      this.props.routingProvider,
+      profile.consider_elevation,
+      profile.unpavedPenalty,
+      profile.consider_noise,
+      profile.consider_river,
+      profile.consider_forest,
+      profile.routingObjective,
+      profile.altMaxShare,
+    ].join('|');
+  }
+
   async calculateDirections(fromCoords, toCoords, provider) {
+    this._inflightRequestKey = this.directionsRequestKey(fromCoords, toCoords);
+    // Drop any previous in-flight calc before starting a new one.
+    if (this.directionsAbortController) {
+      this.directionsAbortController.abort();
+    }
+
+    const requestId = (this.directionsRequestId += 1);
+    const controller = new AbortController();
+    this.directionsAbortController = controller;
+
     if (this.props.setLoading) {
       this.props.setLoading(true);
     }
@@ -692,11 +815,32 @@ class DirectionsPanel extends Component {
         provider,
         this.props.geoJson,
         this.props.layers,
-        this.props.isDarkMode
+        this.props.isDarkMode,
+        {
+          signal: controller.signal,
+          brouterProfile: this.getBrouterProfile(),
+          pmtilesPocRegion: this.props.mapPmtilesPocRegion,
+        }
       );
 
-      this.props.setDirectionsData(result);
+      if (requestId !== this.directionsRequestId) {
+        return;
+      }
+
+      const preferred = this.state.preferredCoverageSource;
+      const canApplyPreferred =
+        preferred &&
+        (result.availableCoverageSources?.includes(preferred) ||
+          result.routes?.some((r) => r.coverageVariants?.[preferred]));
+      if (canApplyPreferred) {
+        this.applyCoverageSourceToDirections(result, preferred);
+      } else {
+        this.props.setDirectionsData(result);
+      }
     } catch (error) {
+      if (requestId !== this.directionsRequestId || error?.name === 'AbortError') {
+        return;
+      }
       if (this.props.setError) {
         this.props.setError(error.message);
       }
@@ -704,12 +848,16 @@ class DirectionsPanel extends Component {
         this.props.setLoading(false);
       }
       console.error('Directions error:', error);
+    } finally {
+      if (this.directionsAbortController === controller) {
+        this.directionsAbortController = null;
+      }
     }
   }
 
   requestDirectionsCalculation() {
     if (this.props.fromPoint && this.props.toPoint) {
-      if (!this.props.geoJson) {
+      if (!USE_PMTILES_ROUTE_COVERAGE && !this.props.geoJson) {
         console.debug('GeoJson data not ready yet, deferring directions calculation');
         return;
       }
@@ -717,14 +865,23 @@ class DirectionsPanel extends Component {
       const fromCoords = this.props.fromPoint.result.center;
       const toCoords = this.props.toPoint.result.center;
 
+      const requestKey = this.directionsRequestKey(fromCoords, toCoords);
+      if (
+        requestKey === this._inflightRequestKey &&
+        (this.props.directionsLoading || this.props.directions)
+      ) {
+        return;
+      }
+
       console.debug('Requesting directions calculation from:', fromCoords, 'to:', toCoords);
-      this.calculateDirections(fromCoords, toCoords, this.state.selectedProvider);
+      this.calculateDirections(fromCoords, toCoords, this.props.routingProvider);
     } else {
       console.debug('No from or to point, skipping directions calculation');
     }
   }
 
   clearDirections() {
+    this.cancelDirectionsCalculation();
     this.props.onClearRoutePoints();
 
     this.cleanup();
@@ -742,6 +899,7 @@ class DirectionsPanel extends Component {
   }
 
   clearDirectionsOnly() {
+    this.cancelDirectionsCalculation();
     // Only clear the calculated directions, keep origin/destination
     if (this.props.onDirectionsCleared) {
       this.props.onDirectionsCleared();
@@ -765,40 +923,202 @@ class DirectionsPanel extends Component {
     });
   }
 
-  handleProviderChange(provider) {
-    this.setState({
-      selectedProvider: provider,
+  handleCoverageSourceChange(source) {
+    this.setState({ preferredCoverageSource: source });
+    writeDirectionsUrlParams({ coverage: source });
+
+    const directions = this.props.directions;
+    if (!directions?.routes?.length) return;
+
+    this.applyCoverageSourceToDirections(directions, source, { preserveSelection: true });
+  }
+
+  applyCoverageSourceToDirections(directions, source, { preserveSelection = false } = {}) {
+    if (!directions?.routes?.length || !source) return directions;
+
+    // Engine-tag sources only exist on that engine's routes. Don't rewrite Mapbox etc.
+    const routes = directions.routes.map((route) =>
+      route.coverageVariants?.[source] ? applyCoverageVariant(route, source) : route
+    );
+    const selectedIdx = this.props.selectedRouteIndex ?? 0;
+    const selected = routes[selectedIdx] || routes[0];
+    console.debug(
+      `Cobertura → ${source}: coverage=${selected?.coverage?.toFixed?.(1) ?? selected?.coverage}% score=${selected?.score} segments=${selected?.overlappingCyclepaths?.length ?? 0}`
+    );
+
+    const next = {
+      ...directions,
+      routes,
+      coverageSource: source,
+    };
+    this.props.setDirectionsData(next, { preserveSelection });
+    return next;
+  }
+
+  enrichCityCoverageVariants() {
+    const { directions, geoJson, layers, isDarkMode } = this.props;
+    if (!directions?.routes?.length || !geoJson || !layers) return;
+
+    let addedAny = false;
+    const routes = directions.routes.map((route) => {
+      const variants = { ...(route.coverageVariants || {}) };
+      let changed = false;
+      if (!variants.cityOriginal) {
+        const cityOriginalBundle = buildCoverageBundle(route, geoJson, layers, isDarkMode, {
+          matcher: 'overlap',
+        });
+        if (cityOriginalBundle) {
+          variants.cityOriginal = cityOriginalBundle;
+          changed = true;
+        }
+      }
+      if (!variants.city) {
+        const cityBundle = buildCoverageBundle(route, geoJson, layers, isDarkMode, {
+          matcher: 'nearest',
+        });
+        if (cityBundle) {
+          variants.city = cityBundle;
+          changed = true;
+        }
+      }
+      if (!changed) return route;
+      addedAny = true;
+      // Keep the active top-level fields in sync if this route is already on a city variant.
+      const next = { ...route, coverageVariants: variants };
+      if (route.coverageSource === 'city' || route.coverageSource === 'cityOriginal') {
+        return applyCoverageVariant(next, route.coverageSource);
+      }
+      return next;
     });
 
-    // Recalculate directions with the new provider if we have both points
-    if (this.props.fromPoint && this.props.toPoint) {
-      const fromCoords = this.props.fromPoint.result.center;
-      const toCoords = this.props.toPoint.result.center;
-      this.calculateDirections(fromCoords, toCoords, provider);
+    if (!addedAny) return;
+
+    const availableCoverageSources = [...(directions.availableCoverageSources || [])];
+    if (!availableCoverageSources.includes('cityOriginal')) {
+      availableCoverageSources.unshift('cityOriginal');
+    }
+    if (!availableCoverageSources.includes('city')) {
+      const insertAt = availableCoverageSources.includes('cityOriginal') ? 1 : 0;
+      availableCoverageSources.splice(insertAt, 0, 'city');
+    }
+
+    const next = {
+      ...directions,
+      routes,
+      availableCoverageSources,
+    };
+    const preferred = this.state.preferredCoverageSource;
+    if (
+      preferred &&
+      (availableCoverageSources.includes(preferred) ||
+        routes.some((r) => r.coverageVariants?.[preferred]))
+    ) {
+      this.applyCoverageSourceToDirections(next, preferred, { preserveSelection: true });
+    } else {
+      this.props.setDirectionsData(next, { preserveSelection: true });
     }
   }
 
-  toggleSettings() {
-    this.setState({
-      settingsVisible: !this.state.settingsVisible,
+  renderCoverageSourceSwitcher() {
+    const directions = this.props.directions;
+    if (!directions?.routes?.length) return null;
+
+    const selectedIdx = this.props.selectedRouteIndex ?? 0;
+    const selectedRoute = directions.routes[selectedIdx] || directions.routes[0];
+    const variants = selectedRoute?.coverageVariants || {};
+
+    // Stable set across the whole result (union). Per-route filtering made the
+    // chips jump whenever you picked another hybrid provider.
+    const sourceOrder = ['cityOriginal', 'city', 'pmtiles', 'analysis', 'ghDetails', 'brTags'];
+    const labels = {
+      cityOriginal: 'Old',
+      city: 'Near',
+      pmtiles: 'Tiles',
+      analysis: 'Hi-Z',
+      ghDetails: 'GH tags',
+      brTags: 'BR tags',
+    };
+    const available = new Set(
+      directions.availableCoverageSources?.length
+        ? directions.availableCoverageSources
+        : Object.keys(variants)
+    );
+    const options = sourceOrder
+      .filter((value) => available.has(value))
+      .map((value) => {
+        const bundle = variants[value];
+        const hasOnSelected = Boolean(bundle);
+        const pct =
+          hasOnSelected && typeof bundle.coverage === 'number'
+            ? ` ${Math.round(bundle.coverage)}%`
+            : '';
+        return {
+          value,
+          label: `${labels[value]}${pct}`,
+          disabled: !hasOnSelected,
+          title: hasOnSelected
+            ? undefined
+            : 'Indisponível nesta rota (só em rotas do motor correspondente)',
+        };
+      });
+
+    if (options.length < 2) return null;
+
+    const preferred = directions.coverageSource;
+    const value = available.has(preferred) ? preferred : options[0].value;
+    const selectedHasPreferred = Boolean(variants[value]);
+    const activeFallback = selectedRoute?.coverageSource;
+
+    return (
+      <div className="directions-coverage-source mb-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs opacity-60 flex-shrink-0">Cobertura</span>
+          <Segmented
+            size="small"
+            value={value}
+            onChange={this.handleCoverageSourceChange}
+            options={options}
+            className="directions-coverage-source-switcher"
+          />
+        </div>
+        <div className="mt-1 text-[10px] leading-snug opacity-50">
+          A/B de como medimos proteção nesta rota (não muda o traçado).
+          {!selectedHasPreferred && activeFallback && labels[activeFallback]
+            ? ` Esta rota não tem “${labels[value]}”; score/overlay ainda usam “${labels[activeFallback]}”.`
+            : null}
+        </div>
+      </div>
+    );
+  }
+
+  getBrouterProfile() {
+    return {
+      consider_elevation: this.state.consider_elevation,
+      unpavedPenalty: this.state.unpavedPenalty,
+      consider_noise: this.state.consider_noise,
+      consider_river: this.state.consider_river,
+      consider_forest: this.state.consider_forest,
+      routingObjective: brouterRoutingObjectiveFromSort(this.state.routeSortMode),
+      altMaxShare: this.props.brouterAltMaxShare,
+    };
+  }
+
+  handleBrouterPrefChange(patch) {
+    this.setState(patch, () => {
+      writeDirectionsUrlParams({
+        ...this.getBrouterProfile(),
+        sort: this.state.routeSortMode,
+      });
+      if (this.props.fromPoint && this.props.toPoint) {
+        const fromCoords = this.props.fromPoint.result.center;
+        const toCoords = this.props.toPoint.result.center;
+        this.calculateDirections(fromCoords, toCoords, this.props.routingProvider);
+      }
     });
   }
 
   handleRouteSortChange(sortMode) {
-    this.setState({
-      routeSortMode: sortMode,
-    });
-
-    const originalRoutes =
-      this.props.directions && this.props.directions.routes ? this.props.directions.routes : [];
-    if (originalRoutes.length > 0) {
-      const sorted = this.getSortedRoutes(originalRoutes, sortMode);
-      const first = sorted[0];
-      const originalIndex = originalRoutes.findIndex((r) => r === first);
-      if (originalIndex !== -1) {
-        this.selectRoute(originalIndex);
-      }
-    }
+    this.handleBrouterPrefChange({ routeSortMode: sortMode });
   }
 
   getSortedRoutes(routes, mode = this.state.routeSortMode) {
@@ -869,11 +1189,53 @@ class DirectionsPanel extends Component {
     this.selectRoute(routeIndex);
   }
 
+  syncCalculatingHintFromMarkers() {
+    const map = this.props.map;
+    const source = map?.getSource?.('route-calculating');
+    const from = this.fromMarker?.getLngLat?.();
+    const to = this.toMarker?.getLngLat?.();
+    if (!source || !from || !to) return;
+    source.setData({
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [from.lng, from.lat],
+              [to.lng, to.lat],
+            ],
+          },
+        },
+      ],
+    });
+  }
+
   handleMarkerDrag(marker, type) {
     const coordinates = marker.getLngLat();
+    const lngLat = [coordinates.lng, coordinates.lat];
     console.debug(`${type} marker dragged to:`, coordinates);
 
-    this.reverseGeocode(coordinates, type);
+    const prev = type === 'from' ? this.props.fromPoint : this.props.toPoint;
+    const newPoint = {
+      result: applyDirectionsInputLabelToResult(
+        {
+          ...(prev?.result || {}),
+          center: lngLat,
+        },
+        { area: this.props.area }
+      ),
+    };
+
+    if (type === 'from') {
+      this.props.onFromPointChange(newPoint);
+    } else {
+      this.props.onToPointChange(newPoint);
+    }
+
+    this.reverseGeocode(coordinates, type, false, null, { keepDroppedCenter: true });
   }
 
   async reverseGeocode(
@@ -881,7 +1243,7 @@ class DirectionsPanel extends Component {
     type,
     isAutoTriggered = false,
     requestId = null,
-    { simplifyAddress = false } = {}
+    { simplifyAddress = false, keepDroppedCenter = false } = {}
   ) {
     if (!coordinates) return;
 
@@ -926,8 +1288,8 @@ class DirectionsPanel extends Component {
       const newPoint = {
         result: applyDirectionsInputLabelToResult(
           {
-            center: lngLat,
             ...result,
+            center: keepDroppedCenter ? lngLat : result.center || lngLat,
             place_name: address,
           },
           { area: this.props.area }
@@ -1100,43 +1462,154 @@ class DirectionsPanel extends Component {
     }
   }
 
-  renderSettingsContent() {
-    return (
-      <div className="text-white" style={{ width: 200 }}>
-        <h3 className="font-semibold mb-3">Serviço de Rotas</h3>
+  renderCalcOptions() {
+    const prefs = USE_BROUTER_LOCAL ? this.renderBrouterPrefs() : null;
+    if (!prefs) return null;
+    return <div className="directions-route-options">{prefs}</div>;
+  }
 
-        <Select
-          value={this.state.selectedProvider}
-          onChange={this.handleProviderChange}
-          className="w-full"
-          size="small"
-          options={[
-            {
-              value: 'hybrid',
-              label: '✨ Combinado',
-            },
-            {
-              value: 'valhalla',
-              label: 'Valhalla',
-            },
-            {
-              value: 'graphhopper',
-              label: 'GraphHopper',
-            },
-            {
-              value: 'mapbox',
-              label: 'Mapbox',
-            },
+  renderResultOptions() {
+    if (this.props.routingProvider !== 'hybrid') return null;
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-0 mb-3">
+        <RouteSortDropdown
+          label=""
+          currentKey={String(this.props.maxRoutesShown)}
+          onChange={(key) => {
+            const n = Number(key);
+            this.props.setMaxRoutesShown?.(n);
+            writeDirectionsUrlParams({ maxRoutes: n });
+          }}
+          items={[
+            { key: '5', label: 'Max 5' },
+            { key: '8', label: 'Max 8' },
+            { key: '12', label: 'Max 12' },
+            { key: '20', label: 'Max 20' },
+            { key: '0', label: 'Max todas' },
           ]}
         />
       </div>
     );
   }
 
-  render() {
-    const { directions, directionsLoading, directionsError } = this.props;
-    const originalRoutes = directions && directions.routes ? directions.routes : [];
+  renderBrouterPrefs() {
+    if (this.props.routingProvider !== 'brouter' && this.props.routingProvider !== 'hybrid') {
+      return null;
+    }
+    // Engine knobs are "avoid X"; chips are positive ("include X"). Invert elev for the UI.
+    const allowHills = !this.state.consider_elevation;
+    const surface =
+      BROUTER_SURFACE_OPTIONS.find((o) => o.value === this.state.unpavedPenalty) ||
+      BROUTER_SURFACE_OPTIONS.find((o) => o.value === BROUTER_PROFILE_DEFAULTS.unpavedPenalty);
+    const SurfaceIcon = surface.value >= 2 ? TbRoad : MdOutlineTerrain;
+    const objective =
+      BROUTER_OBJECTIVE_OPTIONS.find((o) => o.key === this.state.routeSortMode) ||
+      BROUTER_OBJECTIVE_OPTIONS[0];
+    const ObjectiveIcon =
+      objective.key === 'fastest' ? LuTimer : objective.key === 'shortest' ? TbRuler : LuShield;
 
+    const toggleChip = (pref) => {
+      const Icon = pref.icon;
+      return (
+        <button
+          key={pref.key}
+          type="button"
+          className={`cm-brouter-pref${pref.on ? ' cm-brouter-pref--on' : ''}`}
+          aria-pressed={pref.on}
+          aria-label={pref.title}
+          onClick={pref.onClick}
+        >
+          <Icon className="cm-brouter-pref__icon" aria-hidden />
+          <span className="cm-brouter-pref__text">{pref.label}</span>
+        </button>
+      );
+    };
+
+    const dropdownChip = ({ key, label, title, icon: Icon, menu }) => (
+      <Dropdown key={key} trigger={['click']} placement="bottomLeft" menu={menu}>
+        <button
+          type="button"
+          className="cm-brouter-pref cm-brouter-pref--dropdown"
+          aria-haspopup="listbox"
+          aria-label={title}
+        >
+          <Icon className="cm-brouter-pref__icon" aria-hidden />
+          <span className="cm-brouter-pref__text">
+            {label}
+            <IconCaretDown className="cm-brouter-pref__caret" aria-hidden />
+          </span>
+        </button>
+      </Dropdown>
+    );
+
+    return (
+      <div className="cm-brouter-prefs">
+        <div className="cm-brouter-prefs__dropdowns">
+          {dropdownChip({
+            key: 'objective',
+            label: objective.label,
+            title: 'Priorizar na rota',
+            icon: ObjectiveIcon,
+            menu: {
+              items: BROUTER_OBJECTIVE_OPTIONS.map((o) => ({
+                key: o.key,
+                label: o.label,
+              })),
+              selectedKeys: [objective.key],
+              onClick: ({ key }) => this.handleRouteSortChange(key),
+            },
+          })}
+          {dropdownChip({
+            key: 'surface',
+            label: surface.shortLabel,
+            title: surface.label,
+            icon: SurfaceIcon,
+            menu: {
+              items: BROUTER_SURFACE_OPTIONS.map((o) => ({
+                key: String(o.value),
+                label: o.label,
+              })),
+              selectedKeys: [String(surface.value)],
+              onClick: ({ key }) => this.handleBrouterPrefChange({ unpavedPenalty: Number(key) }),
+            },
+          })}
+        </div>
+        <div className="cm-brouter-prefs__toggles">
+          {toggleChip({
+            key: 'elev',
+            label: 'Permitir subidas',
+            title: 'Permitir subidas',
+            icon: LuMountain,
+            on: allowHills,
+            onClick: () => this.handleBrouterPrefChange({ consider_elevation: allowHills }),
+          })}
+          {toggleChip({
+            key: 'noise',
+            label: 'Evitar ruído',
+            title: 'Evitar ruído',
+            icon: LuVolumeX,
+            on: Boolean(this.state.consider_noise),
+            onClick: () =>
+              this.handleBrouterPrefChange({ consider_noise: !this.state.consider_noise }),
+          })}
+          {toggleChip({
+            key: 'nature',
+            label: 'Natureza',
+            title: 'Preferir rios e parques',
+            icon: LuLeaf,
+            on: Boolean(this.state.consider_river || this.state.consider_forest),
+            onClick: () => {
+              const next = !(this.state.consider_river || this.state.consider_forest);
+              this.handleBrouterPrefChange({ consider_river: next, consider_forest: next });
+            },
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  getDisplayedRoutes() {
+    const originalRoutes = this.props.directions?.routes || [];
     const sortedRoutes = this.getSortedRoutes(originalRoutes).map((route, sortedIndex) => {
       const originalIndex = originalRoutes.findIndex((r) => r === route);
       return {
@@ -1145,8 +1618,29 @@ class DirectionsPanel extends Component {
         _originalIndex: originalIndex !== -1 ? originalIndex : sortedIndex,
       };
     });
+    const max = this.props.maxRoutesShown;
+    return max > 0 ? sortedRoutes.slice(0, max) : sortedRoutes;
+  }
 
-    const routes = sortedRoutes.slice(0, HYBRID_MAX_RESULTS);
+  syncVisibleRouteIndices() {
+    if (!this.props.setVisibleRouteIndices) return;
+    const displayed = this.getDisplayedRoutes();
+    const indices = displayed.map((r) => r._originalIndex);
+    const prev = this.props.visibleRouteIndices;
+    if (prev && prev.length === indices.length && prev.every((v, i) => v === indices[i])) {
+      return;
+    }
+    this.props.setVisibleRouteIndices(indices);
+
+    const selected = this.props.selectedRouteIndex;
+    if (selected != null && indices.length > 0 && !indices.includes(selected)) {
+      this.selectRoute(indices[0]);
+    }
+  }
+
+  render() {
+    const { directions, directionsLoading, directionsError } = this.props;
+    const routes = this.getDisplayedRoutes();
     const showResultsOnMobile = IS_MOBILE && (directions || directionsLoading);
     const panelOpenClass = !this.state.collapsed
       ? `directions-panel-open ${
@@ -1172,7 +1666,7 @@ class DirectionsPanel extends Component {
           <div className="cm-panel__body p-4">
             <div
               id="directionsPanel--header"
-              className="cm-panel__header flex justify-between items-start md:mb-0 mb-2"
+              className="cm-panel__header flex justify-between items-start"
             >
               {showResultsOnMobile ? (
                 <div className="flex w-full items-center justify-between gap-2">
@@ -1186,10 +1680,6 @@ class DirectionsPanel extends Component {
                       aria-label="Voltar para origem e destino"
                     />
                   </div>
-                  <RouteSortDropdown
-                    currentKey={this.state.routeSortMode}
-                    onChange={(key) => this.handleRouteSortChange(key)}
-                  />
                   <Button
                     onClick={this.toggleCollapse}
                     type="text"
@@ -1210,93 +1700,67 @@ class DirectionsPanel extends Component {
                   </h3>
 
                   <div
-                    className="flex items-start -mr-1 flex-shrink-0 opacity-50"
+                    className="flex items-center -mr-1 flex-shrink-0"
                     style={{ marginTop: '-5px' }}
                   >
-                    {this.props.openLayersLegendModal && (
-                      <Button
-                        type="text"
-                        shape="circle"
-                        data-testid="directions-panel-legend-link"
-                        icon={<IconInfoCircle />}
-                        aria-label="Como interpretar o mapa e as rotas"
-                        onClick={() => this.props.openLayersLegendModal('routes-section')}
-                      />
-                    )}
-
-                    {/* {(directions || this.props.fromPoint || this.props.toPoint) && (
-                      <Button
-                        onClick={this.clearDirections}
-                        type="text"
-                        shape="circle"
-                        icon={<IconTrash />}
-                        aria-label="Limpar rotas"
-                      />
-                    )} */}
-
-                    {!IS_MOBILE && this.props.debugMode && (
-                      <Popover
-                        content={this.renderSettingsContent()}
-                        title={null}
-                        trigger="click"
-                        open={this.state.settingsVisible}
-                        onOpenChange={this.toggleSettings}
-                        placement="bottomRight"
-                      >
+                    <div className="flex items-center opacity-50">
+                      {this.props.openLayersLegendModal && (
                         <Button
                           type="text"
                           shape="circle"
-                          icon={<IconCog />}
-                          className="flex-shrink-0 text-white"
-                          title="Configurações do serviço"
-                          aria-label="Configurações do serviço de rotas"
+                          data-testid="directions-panel-legend-link"
+                          icon={<IconInfoCircle />}
+                          aria-label="Como interpretar o mapa e as rotas"
+                          onClick={() => this.props.openLayersLegendModal('routes-section')}
                         />
-                      </Popover>
-                    )}
+                      )}
 
-                    {/* { IS_MOBILE && ( */}
-                    <Button
-                      onClick={this.toggleCollapse}
-                      type="text"
-                      shape="circle"
-                      icon={<IconClose />}
-                      aria-label="Fechar painel de rotas"
-                    />
-                    {/* // )} */}
+                      <Button
+                        onClick={this.toggleCollapse}
+                        type="text"
+                        shape="circle"
+                        icon={<IconClose />}
+                        aria-label="Fechar painel de rotas"
+                      />
+                    </div>
                   </div>
                 </>
               )}
             </div>
             {!showResultsOnMobile && (
-              <div className="cm-route-points mt-3">
-                <div className="cm-route-points__inputs">
-                  <LocationSearchInput
-                    inputType="from"
-                    parentComponent={this}
-                    className="w-full cm-route-points__input cm-route-points__input--from"
-                  />
-                  <LocationSearchInput
-                    inputType="to"
-                    parentComponent={this}
-                    className="w-full cm-route-points__input cm-route-points__input--to"
-                  />
-                </div>
-                <Button
-                  type="text"
-                  shape="circle"
-                  disabled={!this.props.fromPoint || !this.props.toPoint}
-                  icon={
-                    <IconSwap
-                      style={{
-                        display: 'inline-block',
-                      }}
+              <div className="cm-panel__controls">
+                {this.renderCalcOptions()}
+                <div className="cm-route-points">
+                  <div className="cm-route-points__inputs">
+                    <LocationSearchInput
+                      inputType="from"
+                      parentComponent={this}
+                      className="w-full cm-route-points__input cm-route-points__input--from"
                     />
-                  }
-                  onClick={this.swapOriginDestination}
-                  className="swap-button cm-route-points__swap"
-                  title="Trocar origem e destino"
-                  aria-label="Trocar origem e destino"
-                />
+                    <LocationSearchInput
+                      inputType="to"
+                      parentComponent={this}
+                      className="w-full cm-route-points__input cm-route-points__input--to"
+                    />
+                  </div>
+                  <Tooltip title="Trocar origem e destino" mouseEnterDelay={0.3}>
+                    <Button
+                      type="text"
+                      shape="circle"
+                      disabled={!this.props.fromPoint || !this.props.toPoint}
+                      icon={
+                        <IconSwap
+                          style={{
+                            display: 'inline-block',
+                          }}
+                        />
+                      }
+                      onClick={this.swapOriginDestination}
+                      className="swap-button cm-route-points__swap"
+                      aria-label="Trocar origem e destino"
+                    />
+                  </Tooltip>
+                </div>
               </div>
             )}
 
@@ -1316,18 +1780,15 @@ class DirectionsPanel extends Component {
             {directionsLoading && (
               <div
                 id="directionsPanel--results"
-                className="cm-panel__results directionsPanel--results md:mt-3 md:space-y-2 space-y-2"
+                className="cm-panel__results directionsPanel--results md:space-y-2 space-y-2"
               >
-                {!IS_MOBILE && (
-                  <div className="flex mb-2">
-                    <div
-                      className="h-7 w-44 max-w-full rounded-md bg-white bg-opacity-10 animate-pulse-2x"
-                      aria-hidden
-                    />
-                  </div>
+                {!IS_MOBILE ? (
+                  this.renderResultOptions()
+                ) : (
+                  <span className="text-sm opacity-70">Calculando rotas…</span>
                 )}
-                {Array.from({ length: HYBRID_MAX_RESULTS }, (_, i) => (
-                  <div key={i} className="rounded-lg p-2 md:p-3 -m-2 flex justify-between gap-1">
+                {Array.from({ length: 3 }, (_, i) => (
+                  <div key={i} className="cm-route-option flex justify-between gap-1">
                     <div className="flex items-start min-w-0 flex-1">
                       <div
                         className="w-8 h-8 md:w-9 md:h-9 rounded-md bg-white bg-opacity-10 animate-pulse-2x flex-shrink-0 mr-2"
@@ -1348,6 +1809,14 @@ class DirectionsPanel extends Component {
                     </div>
                   </div>
                 ))}
+                <button
+                  type="button"
+                  className="cm-panel__footer-action"
+                  onClick={this.cancelDirectionsCalculation}
+                  aria-label="Cancelar cálculo de rota"
+                >
+                  Cancelar
+                </button>
               </div>
             )}
             {(directionsError || this.state.cityValidationError) && (
@@ -1364,15 +1833,9 @@ class DirectionsPanel extends Component {
               </div>
             )}
             {directions && !directionsLoading && (
-              <div id="directionsPanel--results" className="md:mt-3">
-                <div className="flex mb-2">
-                  {!IS_MOBILE && (
-                    <RouteSortDropdown
-                      currentKey={this.state.routeSortMode}
-                      onChange={(key) => this.handleRouteSortChange(key)}
-                    />
-                  )}
-                </div>
+              <div id="directionsPanel--results" className="cm-panel__results">
+                {this.renderResultOptions()}
+                {this.renderCoverageSourceSwitcher()}
                 <RoutesList
                   routes={routes}
                   selectedRouteIndex={this.props.selectedRouteIndex}
@@ -1383,18 +1846,17 @@ class DirectionsPanel extends Component {
                 />
 
                 {!IS_MOBILE && (
-                  <div className="mt-2 text-gray-500 hover:text-white text-xs flex flex-col">
-                    <div
-                      className="cursor-pointer flex items-center mb-0"
-                      onClick={() =>
-                        this.props.openLayersLegendModal &&
-                        this.props.openLayersLegendModal('routes-section')
-                      }
-                    >
-                      <IconInfoCircle className="mr-1" />
-                      <span>Leia mais sobre os níveis de proteção das rotas</span>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    className="cm-panel__footer-action"
+                    onClick={() =>
+                      this.props.openLayersLegendModal &&
+                      this.props.openLayersLegendModal('routes-section')
+                    }
+                  >
+                    <IconInfoOutline className="cm-panel__footer-action-icon" aria-hidden />
+                    Leia mais sobre os níveis de proteção das rotas
+                  </button>
                 )}
               </div>
             )}
@@ -1429,6 +1891,17 @@ const DirectionsPanelWrapper = React.forwardRef((props, ref) => {
       setLoading={directionsContext.setLoading}
       setError={directionsContext.setError}
       setDirectionsData={directionsContext.setDirectionsData}
+      hideRouteOverlay={directionsContext.hideRouteOverlay}
+      setHideRouteOverlay={directionsContext.setHideRouteOverlay}
+      segmentedRoutePaint={directionsContext.segmentedRoutePaint}
+      setSegmentedRoutePaint={directionsContext.setSegmentedRoutePaint}
+      maxRoutesShown={directionsContext.maxRoutesShown}
+      setMaxRoutesShown={directionsContext.setMaxRoutesShown}
+      visibleRouteIndices={directionsContext.visibleRouteIndices}
+      setVisibleRouteIndices={directionsContext.setVisibleRouteIndices}
+      mapPmtilesPocRegion={directionsContext.mapPmtilesPocRegion}
+      routingProvider={directionsContext.routingProvider}
+      brouterAltMaxShare={directionsContext.brouterAltMaxShare}
       geoJson={props.geoJson}
       layers={props.layers}
     />

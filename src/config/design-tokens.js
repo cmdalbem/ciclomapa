@@ -14,7 +14,7 @@ export const colors = {
   bgLight: '#EDEEED',
   // Route line (map)
   routeSelectedDark: '#C8681E',
-  routeUnselectedDark: '#999999',
+  routeUnselectedDark: '#779977',
   routeSelectedLight: '#EA9010',
   routeUnselectedLight: '#cac7c4',
   // routeUnselectedLight: '#8F8A86',
